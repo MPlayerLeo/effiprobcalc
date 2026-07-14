@@ -1,0 +1,1682 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>宝可梦Sleep · 效率概率计算器</title>
+<style>
+  :root{
+    --gold-bg:#e8c15a; --gold-bd:#a97e12; --gold-tx:#4a3600;
+    --blue-bg:#8fb8e8; --blue-bd:#2e5fa3; --blue-tx:#0d2a4d;
+    --white-bg:#eef0f2; --white-bd:#9aa3ad; --white-tx:#2b323a;
+    --ink:#1c1f24; --paper:#f6f4ee; --panel:#ffffff;
+    --line:#d9d4c6; --accent:#7a4f9e; --accent-dk:#4f3167;
+    --inc:#2f8f4e; --dec:#c1443a;
+    --fruit-bg:#bfe3c0; --fruit-bd:#3f8a44; --fruit-tx:#1c4a20;
+    --food-bg:#f3e3a0; --food-bd:#b58a1a; --food-tx:#4a3800;
+    --skill-bg:#b7d2f5; --skill-bd:#2f5fa0; --skill-tx:#12305c;
+    font-family: "Zen Kaku Gothic New","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:linear-gradient(180deg,#efe9d8 0%, #e7e0cc 100%);
+    color:var(--ink); padding:24px 16px 80px;
+  }
+  h1{ font-size:22px; letter-spacing:.02em; margin:0 0 4px; font-weight:800; }
+  .sub{color:#6b6558; font-size:13px; margin-bottom:20px;}
+  .wrap{max-width:640px; margin:0 auto;}
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    padding:16px 18px; margin-bottom:16px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+  }
+  .card h2{font-size:14px; margin:0 0 10px; color:var(--accent-dk); letter-spacing:.04em; display:flex; align-items:center; gap:8px;}
+  .card h2 .n{width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;display:inline-flex;align-items:center;justify-content:center;font-weight:700;}
+  .group-label{font-size:11px; color:#8a8375; margin:10px 0 6px; text-transform:uppercase; letter-spacing:.06em;}
+  .btnrow{display:flex; flex-wrap:wrap; gap:8px;}
+  .skillbtn{
+    position:relative; border:1.5px solid; border-radius:8px; padding:7px 10px;
+    font-size:12.5px; cursor:pointer; font-weight:600; transition:transform .08s;
+    display:flex; align-items:center; gap:6px;
+  }
+  .skillbtn:hover{transform:translateY(-1px);}
+  .skillbtn.gold{background:var(--gold-bg); border-color:var(--gold-bd); color:var(--gold-tx);}
+  .skillbtn.blue{background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue-tx);}
+  .skillbtn.white{background:var(--white-bg); border-color:var(--white-bd); color:var(--white-tx);}
+  .skillbtn.selected{outline:3px solid var(--accent); outline-offset:1px;}
+  .skillbtn.disabled{opacity:.35; cursor:not-allowed; transform:none;}
+  .badge{ background:var(--accent-dk); color:#fff; border-radius:5px; font-size:10px; padding:1px 5px; font-weight:700; }
+
+  .clearbtn-big{
+    display:block; width:100%; background:#fff; color:#a33; border:2px solid #a33; border-radius:10px;
+    padding:13px 18px; font-size:15px; font-weight:800; cursor:pointer; letter-spacing:.05em;
+  }
+  .clearbtn-big:hover{ background:#fdeceb; }
+
+  .persona-display-wrap{ margin-bottom:14px; }
+  .persona-capsule{
+    display:inline-flex; align-items:center; gap:8px;
+    background:#f0e6fa; border:1.5px solid var(--accent); border-radius:999px;
+    padding:9px 18px; font-size:13px; font-weight:700; color:var(--accent-dk);
+  }
+  .persona-capsule .persona-name{ font-size:15px; font-weight:800; }
+  .persona-capsule .persona-mark.inc{ color:var(--inc); }
+  .persona-capsule .persona-mark.dec{ color:var(--dec); }
+  .persona-capsule .persona-dash{ color:var(--accent); font-weight:900; letter-spacing:-1px; }
+  .persona-row{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:8px;}
+  .pbtn{ border:1.5px solid; border-radius:8px; padding:6px 12px; font-size:12.5px; cursor:pointer; font-weight:600; background:#fff; }
+  .pbtn.inc{border-color:var(--inc); color:var(--inc);}
+  .pbtn.inc.selected{background:var(--inc); color:#fff;}
+  .pbtn.dec{border-color:var(--dec); color:var(--dec);}
+  .pbtn.dec.selected{background:var(--dec); color:#fff;}
+  .grid25{display:grid; grid-template-columns:60px repeat(5,1fr); gap:4px; font-size:12.5px; margin-top:8px;}
+  .grid25 .hd{font-weight:700; text-align:center; color:#8a8375; padding:4px 0; font-size:12.5px;}
+  .grid25 .hd.corner{color:#8a8375;}
+  .grid25 .hd.col{color:var(--dec); font-weight:800;}
+  .grid25 .rowhd{font-weight:800; color:var(--inc); display:flex; align-items:center; font-size:12.5px;}
+  .gbtn{ border:1px solid var(--line); border-radius:6px; padding:6px 2px; text-align:center; cursor:pointer; background:#fbfaf6; }
+  .gbtn.neutral{background:#f0efe9; color:#999; cursor:pointer;}
+  .gbtn.selected{background:var(--accent); color:#fff; border-color:var(--accent-dk);}
+
+  .effgrid{display:grid; grid-template-columns:80px repeat(3,1fr); gap:6px; font-size:12.5px;}
+  .effgrid div{padding:6px 8px; border-radius:6px; background:#faf9f5; text-align:center;}
+  .effgrid .hd{background:transparent; font-weight:700; color:#8a8375;}
+  .effgrid .rl{background:transparent; font-weight:700; color:#8a8375; text-align:left;}
+
+  .controls{display:flex; flex-wrap:wrap; gap:18px; align-items:flex-start;}
+  .ctrl-block{min-width:150px;}
+  .ctrl-block .lab{font-size:11px; color:#8a8375; margin-bottom:6px; text-transform:uppercase; letter-spacing:.05em;}
+  .ctrl-inline{ flex:1 1 340px; }
+  .inline-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .inline-note{ margin:0; max-width:320px; flex:1 1 220px; }
+
+  .typebtn{border:1.5px solid; border-radius:7px; padding:7px 14px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .typebtn.fruit{background:var(--fruit-bg); border-color:var(--fruit-bd); color:var(--fruit-tx);}
+  .typebtn.food{background:var(--food-bg); border-color:var(--food-bd); color:var(--food-tx);}
+  .typebtn.skill{background:var(--skill-bg); border-color:var(--skill-bd); color:var(--skill-tx);}
+  .typebtn.energy{background:#e8d5f0; border-color:#8a4fb0; color:#4a1f66;}
+
+  .energy-row{display:flex; gap:20px; flex-wrap:wrap; margin-top:8px;}
+  .energy-block{min-width:150px;}
+  .pity-group{ display:flex; flex-direction:column; gap:6px; max-width:100%; }
+  .pity-btnrow{ display:flex; gap:8px; }
+  .pity-btnrow .segbtn{ flex:1 1 0; text-align:center; padding:6px 4px; }
+  .pity-info-row{display:flex; gap:8px; margin-top:0; flex-wrap:nowrap;}
+  .pity-info-box{
+    background:#f4effa; border:1px solid var(--accent); border-radius:8px; padding:6px 8px;
+    font-size:10.5px; color:#6b6558; flex:1 1 0; min-width:0; text-align:center;
+  }
+  .pity-info-box b{ font-size:13px; color:var(--accent-dk); display:inline-block; margin-top:3px; }
+
+  .panel-summary{margin-top:18px; padding-top:14px; border-top:1px solid var(--line);}
+  .ps-skills{display:flex; gap:8px; margin-bottom:12px;}
+  .ps-skill{border:1.5px solid; border-radius:7px; padding:8px 4px; font-size:12.5px; font-weight:700; text-align:center; flex:1 1 0; min-width:0;}
+  .ps-skill.gold{background:var(--gold-bg); border-color:var(--gold-bd); color:var(--gold-tx);}
+  .ps-skill.blue{background:var(--blue-bg); border-color:var(--blue-bd); color:var(--blue-tx);}
+  .ps-skill.white{background:var(--white-bg); border-color:var(--white-bd); color:var(--white-tx);}
+  .ps-skill.empty{background:#eee; border-color:#ccc; color:#999;}
+  .ps-row2{display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;}
+  .ps-persona-capsule{ padding:8px 14px; }
+  .ps-type{display:flex; gap:8px; align-items:center; flex-wrap:wrap;}
+  .pkbtn{border:1.5px solid; border-radius:7px; padding:7px 12px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .pkbtn.selected{outline:3px solid var(--accent-dk); outline-offset:1px;}
+  .pkbtn.disabled{ background:#e2e2e2 !important; border-color:#aaa !important; color:#999 !important; cursor:not-allowed; }
+  .disabled-block{ opacity:.5; }
+  .pkbtn.pk-taiyang{background:#e3d3f5; border-color:#8a4fb0; color:#4a1f66;}
+  .pkbtn.pk-taiyang.selected{background:#b98fe0;}
+  .pkbtn.pk-dianlong{background:#faf0a0; border-color:#b8a220; color:#4a3f00;}
+  .pkbtn.pk-dianlong.selected{background:#d9c94a;}
+  .pkbtn.pk-miao{background:#c9a8e8; border-color:#7a3fa8; color:#3a1550;}
+  .pkbtn.pk-miao.selected{background:#9d5fd1; color:#fff;}
+  .pkbtn.pk-xiyi{background:#c9ecc9; border-color:#4c9a4c; color:#1c4a1c;}
+  .pkbtn.pk-xiyi.selected{background:#5cb85c; color:#fff;}
+  .pkbtn.pk-lieyan{background:#ffddb0; border-color:#c9761a; color:#6b3900;}
+  .pkbtn.pk-lieyan.selected{background:#e08a2e; color:#fff;}
+  .pkbtn.pk-yongshi{background:#cdeaf5; border-color:#3a8fae; color:#0d3a4a;}
+  .pkbtn.pk-yongshi.selected{background:#4fa8c9; color:#fff;}
+  .pkbtn.pk-yinbo{background:#a8d4e8; border-color:#1f5f7a; color:#0a2733;}
+  .pkbtn.pk-yinbo.selected{background:#2f7a9e; color:#fff;}
+  .pkbtn.pk-latios{background:#a8d4e8; border-color:#1f5f7a; color:#0a2733;}
+  .pkbtn.pk-latios.selected{background:#2f7a9e; color:#fff;}
+  .pkbtn.pk-latias{background:#f5c9c9; border-color:#b04f4f; color:#5a1010;}
+  .pkbtn.pk-latias.selected{background:#d15c5c; color:#fff;}
+  .pkbtn.dir-normal{background:#c9ecc9; border-color:#4c9a4c; color:#1c4a1c;}
+  .pkbtn.dir-normal.selected{background:#5cb85c; color:#fff;}
+  .pkbtn.dir-reverse{background:#f5c9c9; border-color:#b04f4f; color:#5a1010;}
+  .pkbtn.dir-reverse.selected{background:#d15c5c; color:#fff;}
+  .pkbtn.pk-dragoncount{background:#a8d4e8; border-color:#1f5f7a; color:#0a2733;}
+  .pkbtn.pk-dragoncount.selected{background:#2f7a9e; color:#fff;}
+  .pkbtn.pk-dragoncount.disabled{opacity:.35; cursor:not-allowed; background:#ddd; border-color:#999; color:#777;}
+  .pkbtn.pk-dragoncount.striped{
+    background: repeating-linear-gradient(45deg, #d15c5c 0 10px, #2f7a9e 10px 20px);
+    color:#fff; border-color:#333; text-shadow:0 0 3px rgba(0,0,0,.6);
+  }
+  .typebtn.selected{outline:3px solid var(--accent-dk); outline-offset:1px;}
+
+  .segbtn{border:1.5px solid var(--accent); background:#fff; color:var(--accent); padding:6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:600;}
+  .segbtn.selected{background:var(--accent); color:#fff;}
+
+  .lockbtn{border:1.5px solid var(--gold-bd); background:var(--gold-bg); color:var(--gold-tx); padding:6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .lockbtn.selected{outline:3px solid var(--accent-dk); outline-offset:1px;}
+  .lockcircle{
+    width:36px; height:36px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+    border:2px solid #a8a8a8; background:linear-gradient(145deg,#f0f0f0,#c4c4c4);
+    cursor:pointer; font-weight:800; font-size:14px; color:#666; margin-right:8px;
+  }
+  .lockcircle .lockdot{ width:18px; height:18px; border-radius:50%; border:2px solid #a8a8a8; background:transparent; display:inline-block; }
+  .lockcircle.active{
+    border-color:var(--gold-bd); background:linear-gradient(145deg,#f3d78a,var(--gold-bd)); color:var(--gold-tx);
+    box-shadow:0 0 0 2px rgba(169,126,18,.25);
+  }
+  .level-lock-row{ display:flex; gap:28px; flex-wrap:wrap; align-items:flex-start; }
+  .level-lock-sub{ min-width:150px; }
+
+  .squadbtn{border:1.5px solid var(--gold-bd); background:#fff7e0; color:var(--gold-tx); padding:6px 14px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .squadbtn.selected{background:var(--gold-bg); outline:3px solid var(--accent-dk); outline-offset:1px;}
+
+  .forcebtn{border:1.5px solid #999; background:#eee; color:#555; padding:7px 14px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .forcebtn.on{background:var(--gold-bg); border-color:var(--gold-bd); color:var(--gold-tx); outline:3px solid var(--accent-dk); outline-offset:1px;}
+
+  .shinybtn{border:1.5px solid #999; background:#eee; color:#555; padding:7px 14px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
+  .shinybtn.on{
+    background: linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%;
+    animation: shinyMove 2.5s ease infinite;
+    color:#fff; border:1.5px solid #fff; font-weight:900;
+    box-shadow: 0 0 10px 2px rgba(255,255,255,.7), 0 0 22px 5px rgba(120,115,245,.55), 0 0 30px 8px rgba(255,110,196,.35);
+    text-shadow: 0 0 5px rgba(0,0,0,.35);
+    letter-spacing:.03em;
+  }
+  @keyframes shinyMove{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+  }
+  .resultbox .row.shiny-row{
+    background: linear-gradient(135deg,#1b1035 0%,#2a1250 45%,#180c2e 100%);
+    border-radius:10px; padding:14px 16px; margin:8px 0; border:1px solid rgba(255,255,255,.18);
+    box-shadow: 0 0 14px 2px rgba(255,110,196,.35), 0 0 26px 6px rgba(120,115,245,.28), inset 0 0 18px rgba(120,115,245,.18);
+    position:relative; overflow:hidden; align-items:center; flex-wrap:wrap; row-gap:4px;
+  }
+  .resultbox .row.shiny-row::before{
+    content:"";
+    position:absolute; top:0; left:-60%; width:45%; height:100%;
+    background: linear-gradient(120deg, transparent, rgba(255,255,255,.45), transparent);
+    animation: shimmerSweep 2.6s ease-in-out infinite;
+    pointer-events:none;
+  }
+  @keyframes shimmerSweep{
+    0%{left:-60%;}
+    100%{left:130%;}
+  }
+  .shiny-row span{ font-weight:800; color:#f4e9ff; position:relative; z-index:1; font-size:13.5px; white-space:nowrap; }
+  .shiny-row span::before{ content:"✨ "; filter:drop-shadow(0 0 3px #fff); }
+  .shiny-row span::after{ content:" ✨"; filter:drop-shadow(0 0 3px #fff); }
+  .shiny-row .val{
+    white-space:nowrap;
+    color:#ffd166; /* fallback fill for browsers without background-clip:text support */
+    background: linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%;
+    animation: shinyMove 1.8s ease infinite;
+    -webkit-background-clip:text;
+    background-clip:text;
+    -webkit-text-fill-color:transparent;
+    color:transparent;
+    font-weight:900; font-size:22px; position:relative; z-index:1;
+    line-height:1.3; letter-spacing:.02em;
+    filter:drop-shadow(0 0 6px rgba(255,255,255,.45)) drop-shadow(0 0 14px rgba(120,115,245,.35));
+  }
+
+  .effbox{ border:2px solid var(--accent); border-radius:9px; padding:14px 16px; background:#f8f5fc; }
+  .effbox .label{font-size:11px; color:#8a8375; text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px;}
+  .effbox .val{font-size:26px; font-weight:800; color:var(--accent-dk); font-family:"SFMono-Regular",Consolas,monospace;}
+  .effbox input{ font-size:26px; font-weight:800; color:var(--accent-dk); border:none; background:transparent; width:100%; font-family:"SFMono-Regular",Consolas,monospace; outline:none; border-bottom:2px dashed var(--accent); }
+  .effbox .hint{font-size:11px; color:#a08fc0; margin-top:6px;}
+  .eff-seed-note{
+    margin-top:10px; padding:10px 14px; border-radius:8px;
+    background:#fff3cd; border:1.5px solid #e0b23d; color:#7a5b00;
+    font-weight:800; font-size:13px; text-align:center; letter-spacing:.02em;
+  }
+
+  .bigbtn{ background:var(--accent); color:#fff; border:none; border-radius:8px; padding:11px 22px; font-size:14px; font-weight:700; cursor:pointer; letter-spacing:.02em; }
+  .bigbtn:hover{background:var(--accent-dk);}
+
+  .resultbox{ background:#fbfaf6; border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-top:14px; }
+  .resultbox .row{display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #eee; font-size:13.5px; gap:12px;}
+  .resultbox .row:last-child{border-bottom:none;}
+  .resultbox .row b{color:var(--accent-dk);}
+  .resultbox .val{font-family:"SFMono-Regular",Consolas,monospace; font-size:12.5px; word-break:break-all; text-align:right;}
+  .note{font-size:11px; color:#999; margin-top:8px; line-height:1.6;}
+  .status{font-size:12.5px; color:var(--accent); font-weight:600;}
+  .footer-actions{display:flex; gap:12px; align-items:center; margin-top:14px; flex-wrap:wrap;}
+
+  .grad-outer{ border-radius:16px; }
+  .grad-outer.grad-shiny-border{
+    padding:14px; border-radius:24px;
+    background: linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%;
+    animation: shinyMove 2s linear infinite;
+    box-shadow: 0 0 16px 3px rgba(255,110,196,.4), 0 0 28px 6px rgba(120,115,245,.3);
+  }
+  .grad-inner{
+    background: var(--panel);
+    border-radius:12px;
+    padding:24px 16px 18px;
+    text-align:center;
+  }
+  .grad-rule{ height:0; margin:8px auto; }
+  .grad-primary .grad-grade{font-weight:900; letter-spacing:.05em;}
+  .grad-grade .gline{ display:block; white-space:nowrap; line-height:1.15; }
+  .grad-grade .gline + .gline{ margin-top:2px; }
+  .grad-primary .grad-comment{font-weight:600; letter-spacing:.03em; margin-top:4px;}
+  .grad-rank-line{font-weight:800; margin-bottom:4px; letter-spacing:.02em;}
+  .grad-sub{ margin-top:18px; }
+  .grad-sub .grad-grade{font-weight:800;}
+  .grad-sub .grad-comment{font-weight:600; margin-top:3px;}
+
+  @media (max-width: 420px){
+    body{ padding:14px 10px 60px; }
+    h1{ font-size:19px; }
+    .card{ padding:12px 12px; }
+    .skillbtn, .pbtn, .typebtn, .segbtn, .lockbtn, .forcebtn, .shinybtn, .squadbtn{ font-size:11.5px; padding:6px 8px; }
+    .grid25{ font-size:10.5px; grid-template-columns:44px repeat(5,1fr); }
+    .grid25 .hd, .grid25 .rowhd{ font-size:10.5px; }
+    .gbtn{ padding:5px 1px; }
+    .effbox .val, .effbox input{ font-size:20px; }
+    .shiny-row .val{ font-size:18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>宝可梦Sleep · 效率概率计算器</h1>
+
+  <div class="card">
+    <h2><span class="n">1</span>选择副技能</h2>
+    <div class="group-label">帮忙速度与树果</div>
+    <div class="btnrow" id="grp-speed"></div>
+    <div class="group-label">食材概率与持有</div>
+    <div class="btnrow" id="grp-ing"></div>
+    <div class="group-label">技能概率与等级</div>
+    <div class="btnrow" id="grp-skill"></div>
+    <div class="group-label">金色抱枕</div>
+    <div class="btnrow" id="grp-pillow"></div>
+  </div>
+
+  <button class="clearbtn-big" id="clearBtn">清空已选（副技能与性格全部清空）</button>
+
+  <div class="card" style="margin-top:16px;">
+    <h2><span class="n">2</span>选择性格</h2>
+    <div id="personaDisplay" class="persona-display-wrap"></div>
+    <div class="persona-row" id="incRow"></div>
+    <div class="persona-row" id="decRow"></div>
+    <div class="grid25" id="grid25"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">3</span>控制面板</h2>
+    <div class="controls">
+      <div class="ctrl-block level-lock-row" style="flex:1 1 100%;">
+        <div class="level-lock-sub">
+          <div class="lab">宝可梦等级 / 效率等级</div>
+          <div class="btnrow" id="levelSel"></div>
+        </div>
+        <div class="level-lock-sub">
+          <div class="lab">锁金数量（前N个副技能固定为金色）</div>
+          <div class="btnrow" id="lockSel"></div>
+        </div>
+      </div>
+      <div class="ctrl-block" style="flex:1 1 100%;">
+        <div class="lab">宝可梦类型</div>
+        <div class="btnrow" id="typeSel"></div>
+        <div id="energySubmenu"></div>
+      </div>
+      <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
+        <div class="lab">强求金帮</div>
+        <div class="inline-row">
+          <div class="btnrow" id="forceSel"></div>
+          <div class="note inline-note">开启后：只有当前等级对应的前 N 位副技能（50→前3位 / 70→前4位 / 80→前5位）中含有"帮手奖励"的面板，才计入满足条件的分子；概率分母不受影响，仍为全体（含/不含帮手奖励）面板。</div>
+        </div>
+      </div>
+      <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
+        <div class="lab">异色闪光</div>
+        <div class="inline-row">
+          <div class="btnrow" id="shinySel"></div>
+          <div class="note inline-note">开启后额外显示"闪光概率"与"闪光期望捕捉次数"，即在原概率基础上再乘以 0.8%。</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">4</span>毕业判定</h2>
+    <div id="gradBox"></div>
+    <div id="panelSummaryBox"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">5</span>效率阈值</h2>
+    <div class="group-label">同队金帮数量（仅影响下方显示的效率值，不影响概率计算所用的效率值）</div>
+    <div class="btnrow" id="squadSel" style="margin-bottom:12px;"></div>
+    <div class="effbox" id="effBox"></div>
+    <div class="eff-seed-note">默认全部副技能已使用银瓜子升级</div>
+    <div class="group-label" style="margin-top:14px;">实时参考：全部 9 种类型×等级组合的效率值</div>
+    <div class="effgrid" id="effGrid"></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="n">6</span>计算概率</h2>
+    <div class="footer-actions">
+      <button class="bigbtn" id="calcBtn">计算概率</button>
+      <span class="status" id="statusMsg"></span>
+    </div>
+    <div class="resultbox" id="resultBox" style="display:none;"></div>
+    <div class="note">概率倒数即"期望捕捉次数"，四舍五入取整。效率值排名仅在当前锁金/强求金帮筛选条件下的面板集合中排序（同一效率值只占一个名次），以"排名 / 总数"格式显示。效率值显示四舍五入到小数点后 3 位；概率显示四舍五入到百分比小数点后 3 位，但当概率 ≤ 0.5% 时改为显示未经四舍五入的精确展开值。</div>
+  </div>
+</div>
+
+<script>
+/* ============ 精确分数 (BigInt) ============ */
+function gcdBig(a,b){ a=a<0n?-a:a; b=b<0n?-b:b; while(b){ [a,b]=[b, a% b]; } return a||1n; }
+function F(n,d=1n){ n=BigInt(n); d=BigInt(d); if(d<0n){n=-n; d=-d;} const g=gcdBig(n,d)||1n; return {n:n/g, d:d/g}; }
+function fadd(a,b){ return F(a.n*b.d + b.n*a.d, a.d*b.d); }
+function fsub(a,b){ return F(a.n*b.d - b.n*a.d, a.d*b.d); }
+function fmul(a,b){ return F(a.n*b.n, a.d*b.d); }
+function fdiv(a,b){ return F(a.n*b.d, a.d*b.n); }
+function fcmp(a,b){ const l=a.n*b.d, r=b.n*a.d; return l<r?-1:(l>r?1:0); }
+function fzero(){ return {n:0n,d:1n}; }
+function fone(){ return {n:1n,d:1n}; }
+
+function fracRoundDecimalString(f, digits){
+  const neg = f.n<0n;
+  let n = neg? -f.n: f.n;
+  const d = f.d;
+  const scale = 10n**BigInt(digits);
+  const scaled = n*scale;
+  const numerator2 = scaled*2n + d;
+  const denom2 = 2n*d;
+  let rounded = numerator2/denom2;
+  let s = rounded.toString().padStart(digits+1,'0');
+  const intPart = s.slice(0, s.length-digits) || '0';
+  const fracPart = s.slice(s.length-digits);
+  return (neg?'-':'') + intPart + (digits>0? '.'+fracPart : '');
+}
+function fracToPercentExact(f, digits=24){
+  let n = f.n*100n, d=f.d;
+  const neg = n<0n; if(neg) n=-n;
+  let intPart = n/d, rem = n%d;
+  let s = intPart.toString();
+  if(rem===0n) return (neg?'-':'')+s+'%';
+  s+='.';
+  let out='';
+  for(let i=0;i<digits;i++){
+    rem*=10n;
+    out += (rem/d).toString();
+    rem%=d;
+    if(rem===0n) break;
+  }
+  return (neg?'-':'')+s+out+'%'+(rem!==0n?'…':'');
+}
+function fracToSigFigString(f, sig){
+  if(f.n===0n) return '0';
+  const neg = f.n<0n;
+  let n = neg? -f.n : f.n;
+  let d = f.d;
+  let e;
+  if(n>=d){
+    e = (n/d).toString().length - 1;
+  } else {
+    let num=n, mult=0;
+    while(num<d){ num*=10n; mult++; }
+    e = -mult;
+  }
+  const shift = (sig-1) - e;
+  let scaledNum, scaledDen;
+  if(shift>=0){ scaledNum = n*(10n**BigInt(shift)); scaledDen = d; }
+  else { scaledNum = n; scaledDen = d*(10n**BigInt(-shift)); }
+  const numerator2 = scaledNum*2n + scaledDen;
+  const denom2 = 2n*scaledDen;
+  const R = numerator2/denom2;
+  const lastDigitExp = e-(sig-1);
+  let Rstr = R.toString();
+  let out;
+  if(lastDigitExp>=0){
+    out = Rstr + '0'.repeat(lastDigitExp);
+  } else {
+    const k = -lastDigitExp;
+    if(Rstr.length<=k) Rstr = '0'.repeat(k-Rstr.length+1)+Rstr;
+    const intPart = Rstr.slice(0, Rstr.length-k) || '0';
+    const fracPart = Rstr.slice(Rstr.length-k);
+    out = intPart+'.'+fracPart;
+  }
+  return (neg?'-':'')+out;
+}
+function formatProbability(p){
+  // p: probability as Frac in [0,1] (exact). Display only is rounded; underlying value used elsewhere stays exact.
+  const smallThreshold = F(5,1000); // 0.5%
+  const percent = fmul(p, F(100,1));
+  if(fcmp(p, smallThreshold) <= 0){
+    return fracToSigFigString(percent, 5) + '%';
+  }
+  return fracRoundDecimalString(percent, 3) + '%';
+}
+function fracToFractionString(f){ return f.n.toString()+' / '+f.d.toString(); }
+function fracReciprocalRounded(f){
+  if(f.n===0n) return '∞（概率为 0）';
+  const num = 2n*f.d + f.n, den = 2n*f.n;
+  const r = num/den;
+  return r.toString();
+}
+function parseDecimalToFrac(str){
+  str = (str||'').trim();
+  if(!/^-?\d+(\.\d+)?$/.test(str)) return null;
+  let neg = false;
+  if(str.startsWith('-')){ neg=true; str=str.slice(1); }
+  const parts = str.split('.');
+  const intPart = parts[0]||'0', fracPart = parts[1]||'';
+  const d = 10n**BigInt(fracPart.length);
+  let n = BigInt(intPart)*d + BigInt(fracPart||'0');
+  if(neg) n = -n;
+  return F(n, d);
+}
+
+/* ============ 副技能定义 ============ */
+const SKILL_DEFS = [
+  {id:'helperBonus', name:'帮手奖励',   color:'gold',  cat:'G2', group:'grp-speed'},
+  {id:'speedM',       name:'帮忙速度m', color:'blue',  cat:'B1', group:'grp-speed'},
+  {id:'speedS',       name:'帮忙速度s', color:'white', cat:'W1', group:'grp-speed'},
+  {id:'fruitS',       name:'树果数量s', color:'gold',  cat:'G1', group:'grp-speed'},
+
+  {id:'ingM',  name:'食材概率m', color:'blue',  cat:'B2', group:'grp-ing'},
+  {id:'ingS',  name:'食材概率s', color:'white', cat:'W2', group:'grp-ing'},
+  {id:'invL',  name:'持有上升L', color:'blue',  cat:'BX', group:'grp-ing'},
+  {id:'invM',  name:'持有上升m', color:'blue',  cat:'BX', group:'grp-ing'},
+  {id:'invS',  name:'持有上升s', color:'white', cat:'WX', group:'grp-ing'},
+
+  {id:'skillM', name:'技能概率m', color:'blue',  cat:'B3', group:'grp-skill'},
+  {id:'skillS', name:'技能概率s', color:'white', cat:'W3', group:'grp-skill'},
+  {id:'lvM',    name:'技能等级m', color:'gold',  cat:'GX', group:'grp-skill'},
+  {id:'lvS',    name:'技能等级s', color:'blue',  cat:'BX', group:'grp-skill'},
+
+  {id:'expR',     name:'研究exp奖励',   color:'gold', cat:'GX', group:'grp-pillow'},
+  {id:'expSleep', name:'睡眠exp奖励',   color:'gold', cat:'GX', group:'grp-pillow'},
+  {id:'energy',   name:'活力回复奖励',  color:'gold', cat:'GX', group:'grp-pillow'},
+  {id:'dream',    name:'梦之碎片奖励',  color:'gold', cat:'GX', group:'grp-pillow'},
+];
+const SKILL_ABBR = {
+  helperBonus:'金帮', speedM:'帮速m', speedS:'帮速s', fruitS:'树果s',
+  ingM:'食概m', ingS:'食概s', invL:'持有L', invM:'持有m', invS:'持有s',
+  skillM:'技概m', skillS:'技概s', lvM:'技等m', lvS:'技等s',
+  expR:'研究', expSleep:'睡眠', energy:'活力', dream:'梦碎',
+};
+const ORDER_TAGS = [10,25,50,70,80];
+
+/* ============ 性格定义 ============ */
+const ATTRS = ['H','F','S','E','V'];
+const ATTR_NAME = {H:'帮忙速度', F:'食材概率', S:'技能概率', E:'exp', V:'活力'};
+const NAMED = {
+  'H+F-':'固执','H+V-':'怕寂寞','H+S-':'顽皮','H+E-':'勇敢',
+  'F+V-':'慢吞吞','F+H-':'内敛','F+S-':'马虎','F+E-':'冷静',
+  'S+V-':'温顺','S+H-':'温和','S+F-':'慎重','S+E-':'自大',
+  'E+H-':'胆小','E+S-':'天真','E+F-':'爽朗','E+V-':'急躁',
+  'V+H-':'大胆','V+E-':'悠闲','V+F-':'淘气','V+S-':'乐天',
+};
+const NEUTRAL = ['认真','浮躁','害羞','坦率','勤奋'];
+
+const PERSONA_CASES = [
+  {h:0,f:0,s:0,w:7},
+  {h:1,f:-1,s:0,w:1}, {h:1,f:0,s:0,w:2}, {h:1,f:0,s:-1,w:1},
+  {h:0,f:1,s:0,w:2}, {h:-1,f:1,s:0,w:1}, {h:0,f:1,s:-1,w:1},
+  {h:0,f:0,s:1,w:2}, {h:-1,f:0,s:1,w:1}, {h:0,f:-1,s:1,w:1},
+  {h:-1,f:0,s:0,w:2}, {h:0,f:0,s:-1,w:2}, {h:0,f:-1,s:0,w:2},
+];
+
+/* ============ 概率引擎 ============ */
+const CAT_QTY = {G1:1,G2:1,GX:5,B1:1,B2:1,B3:1,BX:3,W1:1,W2:1,W3:1,WX:1};
+const CAT_COLOR = {G1:'gold',G2:'gold',GX:'gold',B1:'blue',B2:'blue',B3:'blue',BX:'blue',W1:'white',W2:'white',W3:'white',WX:'white'};
+const CAT_IDS = Object.keys(CAT_QTY);
+
+function applyUpgrade(labels){
+  const hasB1 = labels.includes('B1'), hasB2 = labels.includes('B2'), hasB3 = labels.includes('B3');
+  return labels.map(l=>{
+    if(l==='W1' && !hasB1) return 'B1';
+    if(l==='W2' && !hasB2) return 'B2';
+    if(l==='W3' && !hasB3) return 'B3';
+    return l;
+  });
+}
+
+let SEQS = null;
+function generateSequences(){
+  const results = [];
+  const labels = new Array(5), colors = new Array(5);
+  function rec(depth, prob, counts){
+    if(depth===5){
+      results.push({prob, colors:colors.slice(), labels: applyUpgrade(labels.slice())});
+      return;
+    }
+    const goldTotal = counts.G1+counts.G2+counts.GX;
+    const blueTotal = counts.B1+counts.B2+counts.B3+counts.BX;
+    const whiteTotal = counts.W1+counts.W2+counts.W3+counts.WX;
+    const whiteAlive = whiteTotal>0;
+    const goldP = whiteAlive?14:67, blueP=33, whiteP = whiteAlive?53:0;
+    for(const c of CAT_IDS){
+      if(counts[c]<=0) continue;
+      const col = CAT_COLOR[c];
+      const colorTotal = col==='gold'?goldTotal:(col==='blue'?blueTotal:whiteTotal);
+      const colorP = col==='gold'?goldP:(col==='blue'?blueP:whiteP);
+      if(colorP===0) continue;
+      const stepProb = fmul(F(colorP,100), F(counts[c], colorTotal));
+      counts[c]--;
+      labels[depth]=c; colors[depth]=col;
+      rec(depth+1, fmul(prob, stepProb), counts);
+      counts[c]++;
+    }
+  }
+  rec(0, fone(), {...CAT_QTY});
+  return results;
+}
+function ensureSeqs(){ if(!SEQS){ SEQS = generateSequences(); } return SEQS; }
+
+const EFF = { speedM:F(7,50), speedS:F(7,100), helper:F(1,20), majorM:F(9,25), majorS:F(9,50) };
+function windowSums(labels, windowSize){
+  let h=fzero(), f=fzero(), s=fzero(), hasFruit=false;
+  for(let i=0;i<windowSize;i++){
+    const l = labels[i];
+    if(!l) continue;
+    if(l==='B1') h = fadd(h, EFF.speedM);
+    else if(l==='W1') h = fadd(h, EFF.speedS);
+    else if(l==='G2') h = fadd(h, EFF.helper);
+    else if(l==='B2') f = fadd(f, EFF.majorM);
+    else if(l==='W2') f = fadd(f, EFF.majorS);
+    else if(l==='B3') s = fadd(s, EFF.majorM);
+    else if(l==='W3') s = fadd(s, EFF.majorS);
+    else if(l==='G1') hasFruit = true;
+  }
+  return {h,f,s,hasFruit};
+}
+function windowSizeOf(level){ return level===50?3:(level===70?4:5); }
+function sumsToFloat(sums){ return {h: Number(sums.h.n)/Number(sums.h.d), s: Number(sums.s.n)/Number(sums.s.d), hasFruit: sums.hasFruit}; }
+
+function computeEfficiencyFromSums(sums, type, persona){
+  let val = fone();
+  const invSpeed = fdiv(fone(), fsub(fone(), sums.h));
+  if(type==='fruit'){
+    if(sums.hasFruit) val = fmul(val, F(3,2));
+    val = fmul(val, invSpeed);
+    if(persona.h===1) val = fdiv(val, F(9,10));
+    else if(persona.h===-1) val = fdiv(val, F(43,40));
+  } else if(type==='food'){
+    val = fmul(val, fadd(fone(), sums.f));
+    val = fmul(val, invSpeed);
+    if(persona.f===1) val = fmul(val, F(6,5));
+    else if(persona.f===-1) val = fmul(val, F(4,5));
+    if(persona.h===1) val = fdiv(val, F(9,10));
+    else if(persona.h===-1) val = fdiv(val, F(43,40));
+  } else {
+    val = fmul(val, fadd(fone(), sums.s));
+    val = fmul(val, invSpeed);
+    if(persona.s===1) val = fmul(val, F(6,5));
+    else if(persona.s===-1) val = fmul(val, F(4,5));
+    if(persona.h===1) val = fdiv(val, F(9,10));
+    else if(persona.h===-1) val = fdiv(val, F(43,40));
+  }
+  return val;
+}
+function computeEfficiency(labels, type, level, persona){
+  const ws = windowSizeOf(level);
+  const sums = windowSums(labels, ws);
+  return computeEfficiencyFromSums(sums, type, persona);
+}
+function computeDisplayEfficiency(labels, type, level, persona, squadN){
+  const ws = windowSizeOf(level);
+  const sums = windowSums(labels, ws);
+  let boostedH = fadd(sums.h, F(5*squadN,100));
+  const cap = F(35,100);
+  if(fcmp(boostedH, cap) > 0) boostedH = cap;
+  const sums2 = {h:boostedH, f:sums.f, s:sums.s, hasFruit:sums.hasFruit};
+  return computeEfficiencyFromSums(sums2, type, persona);
+}
+
+/* ============ 毕业判定表 ============ */
+// 顺序即等级严重程度递增：不合格 < 和解 < 毕业 < 大毕业 < 超级毕业（分金帮/非金帮两组）
+// future70/future80：从"不合格/和解"追到该档时使用；chase70/chase80：从"毕业/大毕业"追到该档时使用
+/* ============ 能量型技能型：宝可梦数据与能量引擎 ============ */
+const POKEMON = {
+  miao:     {id:'miao', name:'谜拟Q',    interval:2500, baseProb:0.035, fruitE:{50:87,70:143,80:183}, skillType:'fruit', skillNormal:56.17, skillReverse:40.278},
+  xiyi:     {id:'xiyi', name:'蜥蜴王',   interval:2300, baseProb:0.03,  fruitE:{50:101,70:165,80:211}, skillType:'fruit', skillNormal:50, skillReverse:36.6},
+  lieyan:   {id:'lieyan', name:'烈焰猴',  interval:2400, baseProb:0.033, fruitE:{50:91,70:148,80:190}, skillType:'fruit', skillNormal:50, skillReverse:37.2},
+  yongshi:  {id:'yongshi', name:'勇士雄鹰', interval:2400, baseProb:0.035, fruitE:{50:80,70:132,80:169}, skillType:'fruit', skillNormal:50, skillReverse:39},
+  yinbo:    {id:'yinbo', name:'音波龙',   interval:2700, baseProb:0.048, fruitE:{50:117,70:192,80:246}, skillType:'fruit', skillNormal:50, skillReverse:36.6},
+  taiyang:  {id:'taiyang', name:'太阳伊布', interval:2400, baseProb:0.044, fruitE:{50:87,70:143,80:183}, skillType:'fixed', skillFixed:6858},
+  dianlong: {id:'dianlong', name:'电龙',   interval:2500, baseProb:0.047, fruitE:{50:84,70:137,80:176}, skillType:'fixed', skillFixed:6858},
+  latios:   {id:'latios', name:'拉帝欧斯', interval:2800, baseProb:0.03,  fruitE:{50:117,70:192,80:246}, skillType:'dragon',
+             dragonTable:{solo:51.6, d2:57.6, d3:65.4, d4:71.5, d5:78}},
+};
+const REFERENCE_POKEMON_ORDER = ['xiyi','yinbo','lieyan','miao','yongshi','taiyang','dianlong'];
+
+function pityCount(baseIntervalSeconds){ return Math.ceil((40*3600) / baseIntervalSeconds); }
+function expectedTriggerRatePerHelp(prob, pityN, usePity){
+  if(!usePity) return prob;
+  let ET = 0, q = 1-prob, qk = 1;
+  for(let k=1; k<=pityN-1; k++){ ET += k*prob*qk; qk *= q; }
+  ET += pityN*qk;
+  return 1/ET;
+}
+function energyIntervalSeconds(baseInterval, effH_capped, personaH){
+  let interval = baseInterval * (1 - effH_capped);
+  if(personaH===1) interval *= 0.9;
+  else if(personaH===-1) interval *= 1.075;
+  return interval;
+}
+function energySkillProb(baseProb, effSkillBoost, personaS){
+  let prob = baseProb * (1 + effSkillBoost);
+  if(personaS===1) prob *= 1.2;
+  else if(personaS===-1) prob *= 0.8;
+  return prob;
+}
+function energySkillPerTrigger(pokemon, level, options){
+  if(pokemon.skillType==='fixed') return pokemon.skillFixed;
+  if(pokemon.skillType==='fruit'){
+    const f = options.direction==='normal' ? pokemon.skillNormal : pokemon.skillReverse;
+    return f * pokemon.fruitE[level];
+  }
+  if(pokemon.skillType==='dragon'){
+    let f = pokemon.dragonTable[options.dragonCount];
+    if(options.latiasActive) f += 10;
+    return f * pokemon.fruitE[level];
+  }
+}
+function computeEnergyFromSums(pokemon, sums, persona, level, options){
+  const effH = Math.min(sums.h, 0.35);
+  const interval = energyIntervalSeconds(pokemon.interval, effH, persona.h);
+  const helpsPerDay = 86400/interval;
+  const fruitsPerHelp = sums.hasFruit ? 2 : 1;
+  const prob = energySkillProb(pokemon.baseProb, sums.s, persona.s);
+  const pityN = pityCount(pokemon.interval);
+  const rate = expectedTriggerRatePerHelp(prob, pityN, options.pityOn);
+  const triggersPerDay = helpsPerDay * rate;
+  const fruitEnergy = helpsPerDay * fruitsPerHelp * pokemon.fruitE[level];
+  const skillEnergy = triggersPerDay * energySkillPerTrigger(pokemon, level, options);
+  return fruitEnergy + skillEnergy;
+}
+function computeBlankEnergy(pokemon, level, options){
+  return computeEnergyFromSums(pokemon, {h:0,s:0,hasFruit:false}, {h:0,s:0}, level, options);
+}
+function computeEnergyEfficiency(pokemon, sums, persona, level, options){
+  return computeEnergyFromSums(pokemon, sums, persona, level, options) / computeBlankEnergy(pokemon, level, options);
+}
+function currentEnergyOptions(){
+  return {pityOn: state.pityOn, direction: state.fruitDirection, latiasActive: state.latiasActive, dragonCount: state.dragonCount};
+}
+function formatIntComma(n){
+  n = Math.round(n);
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+}
+
+const GRAD_TABLE = [
+  {gold:false, grade:'不合格',   normal:'时运不济 命途多舛', shiny:'星途暗淡 哑然陨灭', future70:null, future80:null, chase70:null, chase80:null,
+    fruit:'1.77以下', food:'1.58以下', skill:'1.6以下'},
+  {gold:false, grade:'和解',     normal:'棋差一招 功亏一篑', shiny:'差之毫厘 谬以千里', future70:null, future80:null, chase70:null, chase80:null,
+    fruit:'1.7~1.8', food:'1.58~1.63', skill:'1.6~1.75'},
+  {gold:false, grade:'毕业',     normal:'中流砥柱 栋梁之材', shiny:'鹰击长空 鱼翔浅底', future70:'临渊羡鱼 退而结网', future80:null, chase70:null, chase80:null,
+    fruit:'1.8~2', food:'1.63~1.75', skill:'1.75~1.84'},
+  {gold:false, grade:'大毕业',   normal:'臻至化境 炉火纯青', shiny:'霓衣风马 位列仙班', future70:'水滴石穿 绳锯木断', future80:'关山难越 望尘莫及', chase70:'百尺竿头 更进一步', chase80:'柳暗花明 否极泰来',
+    fruit:null, food:'1.75~2', skill:'1.84~2'},
+  {gold:false, grade:'超级毕业', normal:'羚羊挂角 无迹可求', shiny:'扶摇直上 九天揽月', future70:'道阻且长 行则将至', future80:'峰回路转 沉舟千帆', chase70:'欲穷千里 更上一层', chase80:'众星捧月 百转千回',
+    fruit:'2以上', food:'2以上', skill:'2以上'},
+  {gold:true, grade:'金帮不合格', normal:'金帮孤悬 泯然众人', shiny:'金玉其外 败絮其中', future70:null, future80:null, chase70:null, chase80:null,
+    fruit:'1.55以下', food:'1.48以下', skill:'1.55以下'},
+  {gold:true, grade:'金帮和解',   normal:'报团取暖 独木难支', shiny:'星光乍现 一闪而逝', future70:null, future80:null, chase70:null, chase80:null,
+    fruit:null, food:'1.48~1.55', skill:'1.55~1.6'},
+  {gold:true, grade:'金帮毕业',   normal:'聚沙成塔 集腋成裘', shiny:'将星闪耀 熠熠生辉', future70:'靡不有初 鲜克有终', future80:null, chase70:null, chase80:null,
+    fruit:'1.55~1.75', food:'1.55~1.7', skill:'1.6~1.7'},
+  {gold:true, grade:'金帮大毕业', normal:'金声玉振 一呼百应', shiny:'雄州雾列 俊采星驰', future70:'精诚所至 金石为开', future80:'天高路远 莫问归期', chase70:'拨云见日 雨过天晴', chase80:'千金散尽 天生我材',
+    fruit:'1.75~2', food:'1.7~1.9', skill:'1.7~1.9'},
+  {gold:true, grade:'金帮超级毕业', normal:'襟江带湖 控荆引越', shiny:'星汉灿烂 若出其里', future70:'精卫填海 愚公移山', future80:'雄关漫道 迈步从头', chase70:'云销雨霁 彩彻区明', chase80:'提携玉龙 报君金意',
+    fruit:'2以上', food:'1.9以上', skill:'1.9以上'},
+];
+const GRAD_RANK = {'不合格':0,'和解':1,'毕业':2,'大毕业':3,'超级毕业':4,
+  '金帮不合格':0,'金帮和解':1,'金帮毕业':2,'金帮大毕业':3,'金帮超级毕业':4};
+function parseLowerFrac(str){
+  if(str==null) return null;
+  if(str.endsWith('以下')) return {neginf:true};
+  let numStr;
+  if(str.endsWith('以上')) numStr = str.slice(0, str.length-2);
+  else if(str.includes('~')) numStr = str.split('~')[0];
+  else numStr = str;
+  return {neginf:false, frac: parseDecimalToFrac(numStr)};
+}
+function classifyGrade(type, goldHelper, effFrac){
+  const key = type; // 'fruit'|'food'|'skill'
+  const candidates = GRAD_TABLE.filter(r=>r.gold===goldHelper && r[key]!=null);
+  let best = candidates.length? candidates[0] : null;
+  for(const r of candidates){
+    const lowerObj = parseLowerFrac(r[key]);
+    const qualifies = lowerObj.neginf || fcmp(effFrac, lowerObj.frac) >= 0;
+    if(qualifies) best = r;
+  }
+  return best;
+}
+
+/* ---- probability query ---- */
+function computeProbability(type, level, threshold, lockN, forceGoldHelper){
+  ensureSeqs();
+  const ws = windowSizeOf(level);
+  let numer = fzero(), denom = fzero();
+  for(const seq of SEQS){
+    if(lockN>0){
+      let ok=true;
+      for(let i=0;i<lockN;i++){ if(seq.colors[i]!=='gold'){ ok=false; break; } }
+      if(!ok) continue;
+    }
+    denom = fadd(denom, seq.prob);
+    if(forceGoldHelper){
+      let has=false;
+      for(let i=0;i<ws;i++){ if(seq.labels[i]==='G2'){ has=true; break; } }
+      if(!has) continue;
+    }
+    const sums = windowSums(seq.labels, ws);
+    for(const persona of PERSONA_CASES){
+      const eff = computeEfficiencyFromSums(sums, type, persona);
+      if(fcmp(eff, threshold) >= 0){
+        numer = fadd(numer, fmul(seq.prob, F(persona.w,25)));
+      }
+    }
+  }
+  return {numer, denom};
+}
+
+/* ---- ranking, restricted to the currently filtered (lock + forceGoldHelper) population ---- */
+const distinctCache = {};
+function getDistinctValuesFiltered(type, level, lockN, forceGoldHelper){
+  const key = [type, level, lockN, forceGoldHelper].join('|');
+  if(distinctCache[key]) return distinctCache[key];
+  ensureSeqs();
+  const ws = windowSizeOf(level);
+  const map = new Map();
+  for(const seq of SEQS){
+    if(lockN>0){
+      let ok=true;
+      for(let i=0;i<lockN;i++){ if(seq.colors[i]!=='gold'){ ok=false; break; } }
+      if(!ok) continue;
+    }
+    if(forceGoldHelper){
+      let has=false;
+      for(let i=0;i<ws;i++){ if(seq.labels[i]==='G2'){ has=true; break; } }
+      if(!has) continue;
+    }
+    const sums = windowSums(seq.labels, ws);
+    for(const persona of PERSONA_CASES){
+      const eff = computeEfficiencyFromSums(sums, type, persona);
+      const k = eff.n+'/'+eff.d;
+      if(!map.has(k)) map.set(k, eff);
+    }
+  }
+  const arr = [...map.values()];
+  arr.sort((a,b)=>{ const c=fcmp(a,b); return c>0?-1:(c<0?1:0); });
+  distinctCache[key] = arr;
+  return arr;
+}
+function getRankFiltered(type, level, value, lockN, forceGoldHelper){
+  const arr = getDistinctValuesFiltered(type, level, lockN, forceGoldHelper);
+  let count = 0;
+  for(const v of arr){
+    if(fcmp(v, value) > 0) count++;
+    else break;
+  }
+  return {rank: count+1, total: arr.length};
+}
+
+/* ============ 能量型技能型：概率与排名（浮点效率值，序列概率仍为精确分数） ============ */
+function computeProbabilityEnergy(pokemon, level, thresholdFloat, lockN, forceGoldHelper, options){
+  ensureSeqs();
+  const ws = windowSizeOf(level);
+  let numer = fzero(), denom = fzero();
+  for(const seq of SEQS){
+    if(lockN>0){
+      let ok=true;
+      for(let i=0;i<lockN;i++){ if(seq.colors[i]!=='gold'){ ok=false; break; } }
+      if(!ok) continue;
+    }
+    denom = fadd(denom, seq.prob);
+    if(forceGoldHelper){
+      let has=false;
+      for(let i=0;i<ws;i++){ if(seq.labels[i]==='G2'){ has=true; break; } }
+      if(!has) continue;
+    }
+    const sums = sumsToFloat(windowSums(seq.labels, ws));
+    for(const persona of PERSONA_CASES){
+      const eff = computeEnergyEfficiency(pokemon, sums, persona, level, options);
+      if(eff >= thresholdFloat){
+        numer = fadd(numer, fmul(seq.prob, F(persona.w,25)));
+      }
+    }
+  }
+  return {numer, denom};
+}
+const energyDistinctCache = {};
+function getEnergyDistinctValues(pokemonId, level, options, hasHelperGroup){
+  const key = [pokemonId, level, options.pityOn, options.direction, options.latiasActive, options.dragonCount, hasHelperGroup].join('|');
+  if(energyDistinctCache[key]) return energyDistinctCache[key];
+  ensureSeqs();
+  const pokemon = POKEMON[pokemonId];
+  const ws = windowSizeOf(level);
+  const map = new Map();
+  for(const seq of SEQS){
+    let has=false;
+    for(let i=0;i<ws;i++){ if(seq.labels[i]==='G2'){ has=true; break; } }
+    if(has !== hasHelperGroup) continue;
+    const sums = sumsToFloat(windowSums(seq.labels, ws));
+    for(const persona of PERSONA_CASES){
+      const eff = computeEnergyEfficiency(pokemon, sums, persona, level, options);
+      const k = eff.toPrecision(12);
+      if(!map.has(k)) map.set(k, eff);
+    }
+  }
+  const arr = [...map.values()];
+  arr.sort((a,b)=> b-a);
+  energyDistinctCache[key] = arr;
+  return arr;
+}
+function getEnergyRank(pokemonId, level, value, options, hasHelperGroup){
+  const arr = getEnergyDistinctValues(pokemonId, level, options, hasHelperGroup);
+  let count = 0;
+  for(const v of arr){ if(v > value) count++; else break; }
+  return {rank: count+1, total: arr.length};
+}
+function energyGradeFromRank(rank, hasHelperGroup){
+  if(hasHelperGroup){
+    if(rank<=5) return '金帮超级毕业';
+    if(rank<=15) return '金帮大毕业';
+    if(rank<=30) return '金帮毕业';
+    if(rank<=50) return '金帮和解';
+    return '金帮不合格';
+  } else {
+    if(rank<=3) return '超级毕业';
+    if(rank<=10) return '大毕业';
+    if(rank<=20) return '毕业';
+    if(rank<=30) return '和解';
+    return '不合格';
+  }
+}
+
+/* ============ UI 状态 ============ */
+const state = {
+  selected: [],
+  incAttr: null,
+  decAttr: null,
+  type: 'fruit',
+  level: 50,
+  lockN: 0,
+  forceHelper: false,
+  shiny: false,
+  squadN: 0,
+  manualThresholdStr: '',
+  energyPokemon: null,
+  pityOn: false,
+  fruitDirection: 'normal',
+  latiasActive: false,
+  dragonCount: 'solo',
+};
+
+function currentLabels(){
+  const labels = state.selected.map(id => SKILL_DEFS.find(s=>s.id===id).cat);
+  while(labels.length<5) labels.push(null);
+  return applyUpgrade(labels);
+}
+function currentPersona(){
+  const h = state.incAttr==='H'?1:(state.decAttr==='H'?-1:0);
+  const f = state.incAttr==='F'?1:(state.decAttr==='F'?-1:0);
+  const s = state.incAttr==='S'?1:(state.decAttr==='S'?-1:0);
+  return {h,f,s};
+}
+function hasSelection(){ return state.selected.length>0 || !!state.incAttr || !!state.decAttr; }
+
+/* ---- render skill buttons ---- */
+function renderSkillButtons(){
+  const groups = {'grp-speed':[], 'grp-ing':[], 'grp-skill':[], 'grp-pillow':[]};
+  SKILL_DEFS.forEach(s=>groups[s.group].push(s));
+  Object.keys(groups).forEach(gid=>{
+    const el = document.getElementById(gid);
+    el.innerHTML = '';
+    groups[gid].forEach(s=>{
+      const idx = state.selected.indexOf(s.id);
+      const btn = document.createElement('div');
+      btn.className = 'skillbtn '+s.color + (idx>=0?' selected':'') + (idx<0 && state.selected.length>=5 ? ' disabled':'');
+      btn.innerHTML = s.name + (idx>=0? ` <span class="badge">${ORDER_TAGS[idx]}</span>` : '');
+      btn.onclick = ()=>{
+        const i = state.selected.indexOf(s.id);
+        if(i>=0){ state.selected.splice(i,1); }
+        else if(state.selected.length<5){ state.selected.push(s.id); }
+        renderAll();
+      };
+      el.appendChild(btn);
+    });
+  });
+}
+
+function renderPersonaRows(){
+  const incEl = document.getElementById('incRow'); incEl.innerHTML='';
+  const decEl = document.getElementById('decRow'); decEl.innerHTML='';
+  ATTRS.forEach(a=>{
+    const b1 = document.createElement('div');
+    b1.className = 'pbtn inc' + (state.incAttr===a?' selected':'');
+    b1.textContent = ATTR_NAME[a]+' +';
+    b1.onclick = ()=>{
+      state.incAttr = state.incAttr===a? null : a;
+      if(state.decAttr===state.incAttr) state.decAttr=null;
+      renderAll();
+    };
+    incEl.appendChild(b1);
+
+    const b2 = document.createElement('div');
+    b2.className = 'pbtn dec' + (state.decAttr===a?' selected':'');
+    b2.textContent = ATTR_NAME[a]+' −';
+    b2.onclick = ()=>{
+      state.decAttr = state.decAttr===a? null : a;
+      if(state.incAttr===state.decAttr) state.incAttr=null;
+      renderAll();
+    };
+    decEl.appendChild(b2);
+  });
+}
+
+function renderGrid25(){
+  const el = document.getElementById('grid25');
+  el.innerHTML = '';
+  const corner = document.createElement('div');
+  corner.className = 'hd corner';
+  corner.innerHTML = '<span style="color:var(--inc);">增</span>\\<span style="color:var(--dec);">减</span>';
+  el.appendChild(corner);
+  ATTRS.forEach(a=> el.appendChild(Object.assign(document.createElement('div'), {className:'hd col', textContent:ATTR_NAME[a]})));
+  let neutralIdx = 0;
+  ATTRS.forEach(inc=>{
+    el.appendChild(Object.assign(document.createElement('div'), {className:'rowhd', textContent:ATTR_NAME[inc]}));
+    ATTRS.forEach(dec=>{
+      const btn = document.createElement('div');
+      if(inc===dec){
+        btn.className='gbtn neutral';
+        btn.textContent = NEUTRAL[neutralIdx % NEUTRAL.length];
+        neutralIdx++;
+        btn.onclick = ()=>{ state.incAttr=null; state.decAttr=null; renderAll(); };
+      } else {
+        const key = inc+'+'+dec+'-';
+        const name = NAMED[key];
+        const isSel = state.incAttr===inc && state.decAttr===dec;
+        btn.className = 'gbtn'+(isSel?' selected':'');
+        btn.textContent = name;
+        btn.onclick = ()=>{
+          if(isSel){ state.incAttr=null; state.decAttr=null; }
+          else { state.incAttr=inc; state.decAttr=dec; }
+          renderAll();
+        };
+      }
+      el.appendChild(btn);
+    });
+  });
+}
+
+function personaCapsuleInnerHtml(){
+  const {incAttr, decAttr} = state;
+  if(!incAttr && !decAttr){
+    return `<span class="persona-name">认真</span><span class="persona-dash">━</span>`;
+  }
+  const key = incAttr && decAttr ? incAttr+'+'+decAttr+'-' : null;
+  const name = key ? NAMED[key] : '未完全指定';
+  let marks = '';
+  if(incAttr) marks += `<span class="persona-mark inc">▲▲${ATTR_NAME[incAttr]}</span>`;
+  if(decAttr) marks += `<span class="persona-mark dec">▼▼${ATTR_NAME[decAttr]}</span>`;
+  return `<span class="persona-name">${name}</span>${marks}`;
+}
+function renderPersonaDisplay(){
+  document.getElementById('personaDisplay').innerHTML = `<div class="persona-capsule">${personaCapsuleInnerHtml()}</div>`;
+}
+
+function computeEnergyDisplayEfficiency(pokemon, labels, persona, level, squadN, options){
+  const ws = windowSizeOf(level);
+  const sums = sumsToFloat(windowSums(labels, ws));
+  const boostedH = Math.min(sums.h + 0.05*squadN, 0.35);
+  const sums2 = {h:boostedH, s:sums.s, hasFruit:sums.hasFruit};
+  return computeEnergyFromSums(pokemon, sums2, persona, level, options) / computeBlankEnergy(pokemon, level, options);
+}
+function renderEffGrid(){
+  const el = document.getElementById('effGrid');
+  const labels = currentLabels();
+  const persona = currentPersona();
+  if(state.type==='energy'){
+    const options = currentEnergyOptions();
+    let html = '<div class="hd"></div><div class="hd">50</div><div class="hd">70</div><div class="hd">80</div>';
+    REFERENCE_POKEMON_ORDER.forEach(pid=>{
+      const pk = POKEMON[pid];
+      html += `<div class="rl">${pk.name}</div>`;
+      [50,70,80].forEach(lv=>{
+        const eff = computeEnergyEfficiency(pk, sumsToFloat(windowSums(labels, windowSizeOf(lv))), persona, lv, options);
+        html += `<div>${eff.toFixed(3)}</div>`;
+      });
+    });
+    el.innerHTML = html;
+    return;
+  }
+  const types = [['fruit','树果'],['food','食材'],['skill','功能']];
+  let html = '<div class="hd"></div><div class="hd">50</div><div class="hd">70</div><div class="hd">80</div>';
+  types.forEach(([tid,tname])=>{
+    html += `<div class="rl">${tname}效率</div>`;
+    [50,70,80].forEach(lv=>{
+      const eff = computeEfficiency(labels, tid, lv, persona);
+      html += `<div>${fracRoundDecimalString(eff,3)}</div>`;
+    });
+  });
+  el.innerHTML = html;
+}
+
+function renderEffBox(){
+  const el = document.getElementById('effBox');
+  if(state.type==='energy'){
+    if(!state.energyPokemon){
+      el.innerHTML = `<div class="label">请先在上方"能量填充 / 树果剧增 / 龙星群"中选择一只宝可梦</div>`;
+      return;
+    }
+    const pk = POKEMON[state.energyPokemon];
+    const labels = currentLabels();
+    const persona = currentPersona();
+    const options = currentEnergyOptions();
+    const displayEff = computeEnergyDisplayEfficiency(pk, labels, persona, state.level, state.squadN, options);
+    const squadNote = state.squadN>0
+      ? `<div class="hint">已计入同队金帮 ×${state.squadN} 的显示加成（帮速上限35%）；用于计算概率的效率阈值不含此加成。</div>`
+      : '';
+    el.innerHTML = `<div class="label">${pk.name} · Lv${state.level} 效率值（自动计算）</div>
+                     <div class="val">${displayEff.toFixed(3)}</div>
+                     ${squadNote}`;
+    return;
+  }
+  if(hasSelection()){
+    const labels = currentLabels();
+    const persona = currentPersona();
+    const displayEff = computeDisplayEfficiency(labels, state.type, state.level, persona, state.squadN);
+    const squadNote = state.squadN>0
+      ? `<div class="hint">已计入同队金帮 ×${state.squadN} 的显示加成（帮速总效能上限 0.35）；用于计算概率的效率阈值不含此加成。</div>`
+      : '';
+    el.innerHTML = `<div class="label">当前面板 · ${typeLabel(state.type)} · Lv${state.level} 效率值（自动计算）</div>
+                     <div class="val">${fracRoundDecimalString(displayEff,3)}</div>
+                     ${squadNote}`;
+  } else {
+    el.innerHTML = `<div class="label">未选择副技能与性格 —— 可直接输入效率阈值（${typeLabel(state.type)} · Lv${state.level}）</div>
+                     <input type="text" id="manualEffInput" placeholder="例如 1.579" value="${state.manualThresholdStr}">
+                     <div class="hint">将计算「效率 ≥ 此输入值」的概率</div>`;
+    const inp = document.getElementById('manualEffInput');
+    inp.oninput = (e)=>{ state.manualThresholdStr = e.target.value; };
+  }
+}
+function typeLabel(t){ return t==='fruit'?'树果型':(t==='food'?'食材型':(t==='skill'?'功能型技能型':'能量型技能型')); }
+function renderSquadRow(){
+  const el = document.getElementById('squadSel');
+  el.innerHTML = '';
+  [0,1,2,3,4].forEach(n=>{
+    const b = document.createElement('div');
+    b.className = 'squadbtn'+(state.squadN===n?' selected':'');
+    b.textContent = n;
+    b.onclick = ()=>{ state.squadN = n; renderAll(); };
+    el.appendChild(b);
+  });
+}
+
+function renderEnergySubmenu(){
+  const el = document.getElementById('energySubmenu');
+  if(state.type !== 'energy'){ el.innerHTML=''; return; }
+  const isLatios = state.energyPokemon === 'latios';
+
+  let html = '<div class="energy-menu">';
+  html += '<div class="energy-block" style="margin-top:12px;"><div class="lab">技能保底</div>';
+  html += '<div class="pity-group" id="pityGroup">';
+  html += '<div class="btnrow pity-btnrow" id="pitySel"></div>';
+  html += '<div class="pity-info-row">';
+  html += '<div class="pity-info-box">不含保底 · 面板技能概率<br><b id="noPityProbVal">--</b></div>';
+  html += '<div class="pity-info-box">含保底 · 保底技能概率<br><b id="pityProbVal">--</b></div>';
+  html += '</div></div></div>';
+  html += `<div class="energy-block${isLatios?' disabled-block':''}" style="margin-top:12px;"><div class="lab">队友树果</div><div class="btnrow" id="fruitDirSel"></div></div>`;
+  html += `<div class="note${isLatios?' disabled-block':''}" style="margin-top:6px;">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
+  html += '<div class="group-label" style="margin-top:12px;">龙星群</div>';
+  html += '<div class="btnrow" id="pkDragonSel"></div>';
+  if(isLatios){
+    html += '<div class="group-label" style="margin-top:12px;">队伍中的龙宝可梦数量</div>';
+    html += '<div class="btnrow" id="dragonCountSel"></div>';
+  }
+  html += '<div class="group-label" style="margin-top:12px;">树果剧增</div>';
+  html += '<div class="btnrow" id="pkBoostSel"></div>';
+  html += '<div class="group-label" style="margin-top:12px;">能量填充</div>';
+  html += '<div class="btnrow" id="pkFillSel"></div>';
+  html += '</div>';
+  el.innerHTML = html;
+
+  const pityEl = document.getElementById('pitySel');
+  [[true,'含保底'],[false,'不含保底']].forEach(([val,label])=>{
+    const b = document.createElement('div');
+    b.className = 'segbtn'+(state.pityOn===val?' selected':'');
+    b.textContent = label;
+    b.onclick = ()=>{ state.pityOn=val; renderAll(); };
+    pityEl.appendChild(b);
+  });
+
+  {
+    const dirEl = document.getElementById('fruitDirSel');
+    [['normal','队友顺果','dir-normal'],['reverse','队友逆果','dir-reverse']].forEach(([val,label,cls])=>{
+      const b = document.createElement('div');
+      b.className = 'pkbtn '+cls+(state.fruitDirection===val?' selected':'')+(isLatios?' disabled':'');
+      b.textContent = label;
+      if(!isLatios) b.onclick = ()=>{ state.fruitDirection=val; renderAll(); };
+      dirEl.appendChild(b);
+    });
+  }
+
+  const fillEl = document.getElementById('pkFillSel');
+  [['taiyang','太阳伊布'],['dianlong','电龙']].forEach(([id,name])=>{
+    const b = document.createElement('div');
+    b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'');
+    b.textContent = name;
+    b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
+    fillEl.appendChild(b);
+  });
+
+  const boostEl = document.getElementById('pkBoostSel');
+  [['miao','谜拟Q'],['xiyi','蜥蜴王'],['lieyan','烈焰猴'],['yongshi','勇士雄鹰'],['yinbo','音波龙']].forEach(([id,name])=>{
+    const b = document.createElement('div');
+    b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'');
+    b.textContent = name;
+    b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
+    boostEl.appendChild(b);
+  });
+
+  const dragonEl = document.getElementById('pkDragonSel');
+  const latiosBtn = document.createElement('div');
+  latiosBtn.className = 'pkbtn pk-latios'+(state.energyPokemon==='latios'?' selected':'');
+  latiosBtn.textContent = '拉帝欧斯';
+  latiosBtn.onclick = ()=>{
+    state.energyPokemon = (state.energyPokemon==='latios'? null : 'latios');
+    if(state.energyPokemon!=='latios'){ state.latiasActive=false; state.dragonCount='solo'; }
+    renderAll();
+  };
+  dragonEl.appendChild(latiosBtn);
+
+  if(isLatios){
+    const latiasBtn = document.createElement('div');
+    latiasBtn.className = 'pkbtn pk-latias'+(state.latiasActive?' selected':'');
+    latiasBtn.textContent = '拉帝亚斯';
+    latiasBtn.onclick = ()=>{
+      state.latiasActive = !state.latiasActive;
+      if(state.latiasActive && state.dragonCount==='solo') state.dragonCount='d2';
+      renderAll();
+    };
+    dragonEl.appendChild(latiasBtn);
+
+    const dcEl = document.getElementById('dragonCountSel');
+    const options = [['solo','仅自身'], ['d2', state.latiasActive?'相依为命':'2龙'], ['d3','3龙'], ['d4','4龙'], ['d5','5龙']];
+    options.forEach(([val,label])=>{
+      const disabled = (val==='solo' && state.latiasActive);
+      let cls = 'pkbtn pk-dragoncount';
+      if(val==='d2' && state.latiasActive) cls += ' striped';
+      if(state.dragonCount===val) cls += ' selected';
+      if(disabled) cls += ' disabled';
+      const b = document.createElement('div');
+      b.className = cls;
+      b.textContent = label;
+      if(!disabled) b.onclick = ()=>{ state.dragonCount = val; renderAll(); };
+      dcEl.appendChild(b);
+    });
+  }
+
+  const noPityEl = document.getElementById('noPityProbVal');
+  const pityValEl = document.getElementById('pityProbVal');
+  if(state.energyPokemon){
+    const pk = POKEMON[state.energyPokemon];
+    const ws = windowSizeOf(state.level);
+    const sums = sumsToFloat(windowSums(currentLabels(), ws));
+    const persona = currentPersona();
+    const rawProb = energySkillProb(pk.baseProb, sums.s, persona.s);
+    const pityN = pityCount(pk.interval);
+    const pityRate = expectedTriggerRatePerHelp(rawProb, pityN, true);
+    noPityEl.textContent = (rawProb*100).toFixed(3)+'%';
+    pityValEl.textContent = (pityRate*100).toFixed(3)+'%';
+  } else {
+    noPityEl.textContent = '--';
+    pityValEl.textContent = '--';
+  }
+
+  // 让"含/不含保底"按钮组及其下方显示框的总宽度，对齐到"树果剧增"整行（含音波龙）的宽度
+  const pityGroup = document.getElementById('pityGroup');
+  const boostRow = document.getElementById('pkBoostSel');
+  if(pityGroup && boostRow && boostRow.offsetWidth > 0){
+    pityGroup.style.width = boostRow.offsetWidth + 'px';
+  }
+}
+
+function renderControls(){
+  const typeEl = document.getElementById('typeSel'); typeEl.innerHTML='';
+  [['fruit','树果型'],['food','食材型'],['skill','功能型技能型'],['energy','能量型技能型']].forEach(([id,name])=>{
+    const b = document.createElement('div');
+    b.className = 'typebtn '+(id==='energy'?'energy':id)+(state.type===id?' selected':'');
+    b.textContent = name;
+    b.onclick = ()=>{ state.type=id; renderAll(); };
+    typeEl.appendChild(b);
+  });
+  renderEnergySubmenu();
+  const lvEl = document.getElementById('levelSel'); lvEl.innerHTML='';
+  [50,70,80].forEach(lv=>{
+    const b = document.createElement('div');
+    b.className = 'segbtn'+(state.level===lv?' selected':'');
+    b.textContent = lv;
+    b.onclick = ()=>{ state.level=lv; renderAll(); };
+    lvEl.appendChild(b);
+  });
+  const lockEl = document.getElementById('lockSel'); lockEl.innerHTML='';
+  [1,2,3].forEach(n=>{
+    const active = state.lockN >= n;
+    const b = document.createElement('div');
+    b.className = 'lockcircle'+(active?' active':'');
+    b.innerHTML = active ? n : '<span class="lockdot"></span>';
+    b.onclick = ()=>{ state.lockN = (state.lockN===n ? 0 : n); renderAll(); };
+    lockEl.appendChild(b);
+  });
+  const forceEl = document.getElementById('forceSel'); forceEl.innerHTML='';
+  const fb = document.createElement('div');
+  fb.className = 'forcebtn'+(state.forceHelper?' on':'');
+  fb.textContent = state.forceHelper? '强求金帮：开启' : '强求金帮：关闭';
+  fb.onclick = ()=>{ state.forceHelper = !state.forceHelper; renderAll(); };
+  forceEl.appendChild(fb);
+
+  const shinyEl = document.getElementById('shinySel'); shinyEl.innerHTML='';
+  const sb = document.createElement('div');
+  sb.className = 'shinybtn'+(state.shiny?' on':'');
+  sb.textContent = state.shiny? '✨ 异色闪光：开启 ✨' : '异色闪光：关闭';
+  sb.onclick = ()=>{ state.shiny = !state.shiny; renderAll(); };
+  shinyEl.appendChild(sb);
+}
+
+// 字体列（表格第五列）指定的每档颜色；金帮大毕业/超级毕业额外标注"大号/超级大号字体"
+const TIER_STYLE = {
+  '不合格':       {color:'#8b1a2b', boost:1},   // 暗红色
+  '和解':         {color:'#b5651d', boost:1},   // 暗橙色
+  '毕业':         {color:'#1f8a3d', boost:1},   // 绿色
+  '大毕业':       {color:'#1d4fd8', boost:1},   // 蓝色
+  '超级毕业':     {color:'#7c3aed', boost:1},   // 紫色
+  '金帮不合格':   {color:'#8b1a2b', boost:1},   // 暗红色
+  '金帮和解':     {color:'#b5651d', boost:1},   // 暗橙色
+  '金帮毕业':     {color:'#b8860b', boost:1},   // 金色
+  '金帮大毕业':   {color:'#b8860b', boost:1.15},// 金色大号字体
+  '金帮超级毕业': {color:'#b8860b', boost:1.3}, // 金色超级大号字体
+};
+function tierStyleOf(gradeName){ return TIER_STYLE[gradeName] || {color:'#333333', boost:1}; }
+const TIER70_COLOR = '#1291d6'; // 天蓝色，固定，与具体等级内容无关
+const TIER80_COLOR = '#1e3a8a'; // 深蓝色，固定，与具体等级内容无关
+
+function gradBlockHtml(cls, gradeText, commentText, baseGradeSize, baseCommentSize, color){
+  return `<div class="grad-sub ${cls}">
+    <div class="grad-grade" data-text="${gradeText}" style="color:${color}; font-size:${baseGradeSize}px;"></div>
+    <div class="grad-rule" style="border-top:2px solid ${color}; width:${cls==='tier70'?'46%':'38%'}; margin:6px auto;"></div>
+    <div class="grad-comment" style="color:${color}; font-size:${baseCommentSize}px;">${commentText}</div>
+  </div>`;
+}
+// 把等级文字拆成语义块：70级/80级 前缀、闪光前缀、金帮前缀、核心等级名（超级毕业再拆成"超级"+"毕业"）
+const CORE_GRADE_NAMES = ['不合格','和解','毕业','大毕业','超级毕业'];
+function chunkGradeText(fullText){
+  let rest = fullText;
+  let levelChunk = null;
+  if(rest.startsWith('70级') || rest.startsWith('80级')){ levelChunk = rest.slice(0,3); rest = rest.slice(3); }
+  let shinyChunk = null;
+  if(rest.startsWith('闪光')){ shinyChunk = '闪光'; rest = rest.slice(2); }
+  let goldChunk = null;
+  if(rest.startsWith('金帮')){
+    const maybeCore = rest.slice(2);
+    if(CORE_GRADE_NAMES.includes(maybeCore)){ goldChunk = '金帮'; rest = maybeCore; }
+  }
+  const coreChunks = (rest === '超级毕业') ? ['超级','毕业'] : [rest];
+  const prefixChunks = [levelChunk, shinyChunk, goldChunk].filter(Boolean);
+  return {prefixChunks, coreChunks};
+}
+function fitGradeLines(el, containerWidthPad){
+  const container = el.closest('.grad-inner') || el.parentElement;
+  if(!container || !container.clientWidth) return false; // 测不到宽度时，保守起见按“装不下”处理，走最细的拆分
+  const maxWidth = container.clientWidth - containerWidthPad;
+  const lines = el.querySelectorAll(':scope > .gline');
+  if(lines.length===0) return false;
+  for(const l of lines){ if(l.scrollWidth > maxWidth) return false; }
+  return true;
+}
+function renderGradeText(el){
+  const fullText = el.getAttribute('data-text');
+  if(!fullText) return;
+  const {prefixChunks, coreChunks} = chunkGradeText(fullText);
+  const allChunks = [...prefixChunks, ...coreChunks];
+  const candidates = [[allChunks.join('')]];
+  if(prefixChunks.length>0){
+    candidates.push([prefixChunks.join(''), coreChunks.join('')]);
+  } else if(coreChunks.length>1){
+    candidates.push([...coreChunks]);
+  }
+  if(allChunks.length>1 && !(candidates.length>1 && candidates[candidates.length-1].length===allChunks.length)){
+    candidates.push(allChunks);
+  }
+
+  let lastCandidate = candidates[0];
+  for(let i=0;i<candidates.length;i++){
+    lastCandidate = candidates[i];
+    el.innerHTML = candidates[i].map(l=>`<span class="gline">${l}</span>`).join('');
+    if(fitGradeLines(el, 12)) return;
+  }
+  // 所有候选都装不下（极窄屏幕）：保留拆分最细的最后一个候选
+  el.innerHTML = lastCandidate.map(l=>`<span class="gline">${l}</span>`).join('');
+}
+function renderGraduation(){
+  const el = document.getElementById('gradBox');
+  const borderClass = state.shiny? 'grad-shiny-border' : '';
+
+  if(state.selected.length===0){
+    const grayColor = '#adb2ba';
+    el.innerHTML = `<div class="grad-outer ${borderClass}"><div class="grad-inner">
+        <div class="grad-primary">
+          <div class="grad-grade" data-text="未知" style="color:${grayColor}; font-size:34px;"></div>
+          <div class="grad-rule" style="border-top:3px solid ${grayColor}; width:56%; margin:10px auto;"></div>
+          <div class="grad-comment" style="color:${grayColor}; font-size:26px;">旦夕祸福 一念之间</div>
+        </div>
+      </div></div>`;
+    el.querySelectorAll('.grad-grade').forEach(renderGradeText);
+    return;
+  }
+
+  const labels = currentLabels();
+  const persona = currentPersona();
+
+  if(state.type==='energy'){
+    if(!state.energyPokemon){
+      el.innerHTML = `<div class="grad-outer"><div class="grad-inner"><div class="grad-primary">
+          <div class="grad-grade" data-text="未选择宝可梦" style="color:#adb2ba; font-size:26px;"></div>
+          <div class="grad-rule" style="border-top:3px solid #adb2ba; width:56%; margin:10px auto;"></div>
+          <div class="grad-comment" style="color:#adb2ba; font-size:18px;">请先选择一只能量型技能型宝可梦</div>
+        </div></div></div>`;
+      el.querySelectorAll('.grad-grade').forEach(renderGradeText);
+      return;
+    }
+    const pk = POKEMON[state.energyPokemon];
+    const options = currentEnergyOptions();
+    const ws = windowSizeOf(state.level);
+    let hasHelper = false;
+    for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper=true; break; } }
+    const sums = sumsToFloat(windowSums(labels, ws));
+    const eff = computeEnergyEfficiency(pk, sums, persona, state.level, options); // 精确原始效率，不含同队金帮加成
+    const {rank, total} = getEnergyRank(state.energyPokemon, state.level, eff, options, hasHelper);
+    const gradeName = energyGradeFromRank(rank, hasHelper);
+    const gradeRow = GRAD_TABLE.find(r=>r.grade===gradeName);
+    const gradeText = (state.shiny?'闪光':'')+gradeName;
+    const commentText = gradeRow ? (state.shiny? gradeRow.shiny : gradeRow.normal) : '';
+    const primaryStyle = tierStyleOf(gradeName);
+    const primaryGradeSize = Math.round(36 * primaryStyle.boost);
+    const primaryCommentSize = Math.round(28 * primaryStyle.boost);
+    const rankText = formatIntComma(rank)+' / '+formatIntComma(total);
+
+    let extraHtml = '';
+    if(state.level===50 && GRAD_RANK[gradeName] < 4){
+      const baseRank = GRAD_RANK[gradeName];
+      const field70 = baseRank<=1 ? 'future70' : 'chase70';
+      const field80 = baseRank<=1 ? 'future80' : 'chase80';
+      const isChase = baseRank > 1;
+
+      let hasHelper70=false; for(let i=0;i<4;i++){ if(labels[i]==='G2'){hasHelper70=true;break;} }
+      let hasHelper80=false; for(let i=0;i<5;i++){ if(labels[i]==='G2'){hasHelper80=true;break;} }
+      const sums70 = sumsToFloat(windowSums(labels,4));
+      const sums80 = sumsToFloat(windowSums(labels,5));
+      const eff70 = computeEnergyEfficiency(pk, sums70, persona, 70, options);
+      const eff80 = computeEnergyEfficiency(pk, sums80, persona, 80, options);
+      const rk70 = getEnergyRank(state.energyPokemon, 70, eff70, options, hasHelper70);
+      const rk80 = getEnergyRank(state.energyPokemon, 80, eff80, options, hasHelper80);
+      const grade70 = energyGradeFromRank(rk70.rank, hasHelper70);
+      const grade80 = energyGradeFromRank(rk80.rank, hasHelper80);
+      const row70 = GRAD_TABLE.find(r=>r.grade===grade70);
+      const row80 = GRAD_TABLE.find(r=>r.grade===grade80);
+      const show70 = row70 && GRAD_RANK[grade70] > baseRank && row70[field70];
+      if(show70){
+        const color70 = isChase ? tierStyleOf(grade70).color : TIER70_COLOR;
+        extraHtml += gradBlockHtml('tier70', '70级'+(state.shiny?'闪光':'')+grade70, row70[field70], 24, 20, color70);
+      }
+      const rankFloorFor80 = show70 ? GRAD_RANK[grade70] : baseRank;
+      if(row80 && GRAD_RANK[grade80] > rankFloorFor80 && row80[field80]){
+        const color80 = isChase ? tierStyleOf(grade80).color : TIER80_COLOR;
+        extraHtml += gradBlockHtml('tier80', '80级'+(state.shiny?'闪光':'')+grade80, row80[field80], 16, 15, color80);
+      }
+    }
+
+    el.innerHTML = `<div class="grad-outer ${borderClass}"><div class="grad-inner">
+        <div class="grad-primary">
+          <div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;">${rankText}</div>
+          <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;"></div>
+          <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
+          <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${commentText}</div>
+        </div>
+        ${extraHtml}
+      </div></div>`;
+    el.querySelectorAll('.grad-grade').forEach(renderGradeText);
+    return;
+  }
+
+  const ws = windowSizeOf(state.level);
+  let hasHelper = false;
+  for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper=true; break; } }
+  const eff = computeEfficiency(labels, state.type, state.level, persona); // 精确原始效率，不含同队金帮加成
+  const row = classifyGrade(state.type, hasHelper, eff);
+
+  let extraHtml = '';
+  if(row && state.level===50 && GRAD_RANK[row.grade] < 4){
+    const baseRank = GRAD_RANK[row.grade];
+    const field70 = baseRank<=1 ? 'future70' : 'chase70';
+    const field80 = baseRank<=1 ? 'future80' : 'chase80';
+    const isChase = baseRank > 1;
+
+    let hasHelper70 = false;
+    for(let i=0;i<4;i++){ if(labels[i]==='G2'){ hasHelper70=true; break; } }
+    let hasHelper80 = false;
+    for(let i=0;i<5;i++){ if(labels[i]==='G2'){ hasHelper80=true; break; } }
+
+    const eff70 = computeEfficiency(labels, state.type, 70, persona);
+    const eff80 = computeEfficiency(labels, state.type, 80, persona);
+    const row70 = classifyGrade(state.type, hasHelper70, eff70);
+    const row80 = classifyGrade(state.type, hasHelper80, eff80);
+    const show70 = row70 && GRAD_RANK[row70.grade] > baseRank && row70[field70];
+    if(show70){
+      const color70 = isChase ? tierStyleOf(row70.grade).color : TIER70_COLOR;
+      extraHtml += gradBlockHtml('tier70', '70级'+(state.shiny?'闪光':'')+row70.grade, row70[field70], 24, 20, color70);
+    }
+    const rankFloorFor80 = show70 ? GRAD_RANK[row70.grade] : baseRank;
+    if(row80 && GRAD_RANK[row80.grade] > rankFloorFor80 && row80[field80]){
+      const color80 = isChase ? tierStyleOf(row80.grade).color : TIER80_COLOR;
+      extraHtml += gradBlockHtml('tier80', '80级'+(state.shiny?'闪光':'')+row80.grade, row80[field80], 16, 15, color80);
+    }
+  }
+
+  const gradeText = row ? ((state.shiny?'闪光':'')+row.grade) : '暂无匹配等级';
+  const commentText = row ? (state.shiny? row.shiny : row.normal) : '（当前效率值未落在评分表任何区间内）';
+  const primaryStyle = row ? tierStyleOf(row.grade) : {color:'#333333', boost:1};
+  const primaryGradeSize = Math.round(36 * primaryStyle.boost);
+  const primaryCommentSize = Math.round(28 * primaryStyle.boost);
+
+  el.innerHTML = `<div class="grad-outer ${borderClass}"><div class="grad-inner">
+      <div class="grad-primary">
+        <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;"></div>
+        <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
+        <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${commentText}</div>
+      </div>
+      ${extraHtml}
+    </div></div>`;
+  el.querySelectorAll('.grad-grade').forEach(renderGradeText);
+}
+
+function renderPanelSummary(){
+  const el = document.getElementById('panelSummaryBox');
+  let skillsHtml = '';
+  for(let i=0;i<5;i++){
+    const id = state.selected[i];
+    if(id){
+      const def = SKILL_DEFS.find(s=>s.id===id);
+      skillsHtml += `<div class="ps-skill ${def.color}">${SKILL_ABBR[id]}</div>`;
+    } else {
+      skillsHtml += `<div class="ps-skill empty">—</div>`;
+    }
+  }
+
+  let typeHtml = '';
+  if(state.type==='energy'){
+    if(state.energyPokemon){
+      const pk = POKEMON[state.energyPokemon];
+      typeHtml += `<div class="pkbtn pk-${state.energyPokemon}" style="cursor:default;">${pk.name}</div>`;
+    }
+    typeHtml += `<div class="typebtn energy" style="cursor:default;">能量型技能型</div>`;
+  } else {
+    typeHtml = `<div class="typebtn ${state.type}" style="cursor:default;">${typeLabel(state.type)}</div>`;
+  }
+
+  el.innerHTML = `<div class="panel-summary">
+      <div class="ps-skills">${skillsHtml}</div>
+      <div class="ps-row2">
+        <div class="persona-capsule ps-persona-capsule">${personaCapsuleInnerHtml()}</div>
+        <div class="ps-type">${typeHtml}</div>
+      </div>
+    </div>`;
+}
+
+function renderAll(){
+  renderSkillButtons();
+  renderPersonaRows();
+  renderGrid25();
+  renderPersonaDisplay();
+  renderEffGrid();
+  renderControls();
+  renderSquadRow();
+  renderEffBox();
+  renderGraduation();
+  renderPanelSummary();
+}
+
+document.getElementById('clearBtn').onclick = ()=>{
+  state.selected = [];
+  state.incAttr = null; state.decAttr = null;
+  state.manualThresholdStr = '';
+  document.getElementById('resultBox').style.display='none';
+  renderAll();
+};
+
+document.getElementById('calcBtn').onclick = ()=>{
+  const statusEl = document.getElementById('statusMsg');
+  const box = document.getElementById('resultBox');
+  box.style.display='none';
+
+  if(state.type==='energy'){
+    if(!state.energyPokemon){
+      statusEl.textContent = '请先选择一只能量型技能型宝可梦';
+      return;
+    }
+    const pk = POKEMON[state.energyPokemon];
+    const options = currentEnergyOptions();
+    const labels = currentLabels();
+    const persona = currentPersona();
+    const ws = windowSizeOf(state.level);
+    let hasHelper = false;
+    for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper=true; break; } }
+    const sums = sumsToFloat(windowSums(labels, ws));
+    const thresholdFloat = computeEnergyEfficiency(pk, sums, persona, state.level, options);
+
+    statusEl.textContent = '计算中，请稍候…（可能需要数秒）';
+    setTimeout(()=>{
+      try{
+        const {numer, denom} = computeProbabilityEnergy(pk, state.level, thresholdFloat, state.lockN, state.forceHelper, options);
+        const {rank, total} = getEnergyRank(state.energyPokemon, state.level, thresholdFloat, options, hasHelper);
+        const SHINY_RATE = F(8,1000);
+        let html = '';
+        html += row('阈值效率（'+pk.name+' · Lv'+state.level+'）', thresholdFloat.toFixed(3));
+        html += row('筛选条件', (state.lockN>0?('锁'+state.lockN+'金；'):'不锁金；')+(state.forceHelper?'强求金帮：开启':'强求金帮：关闭'));
+        html += row('效率值排名（'+(hasHelper?'含帮手奖励组':'不含帮手奖励组')+'）', formatIntComma(rank)+' / '+formatIntComma(total));
+        const p = fdiv(numer, denom);
+        html += row('概率（效率 ≥ 阈值）', formatProbability(p));
+        html += row('期望捕捉次数', fracReciprocalRounded(p)+' 次');
+        if(state.shiny){
+          const sp = fmul(p, SHINY_RATE);
+          html += rowShiny('闪光概率', formatProbability(sp));
+          html += rowShiny('闪光期望捕捉次数', fracReciprocalRounded(sp)+' 次');
+        }
+        box.innerHTML = html;
+        box.style.display='block';
+        statusEl.textContent = '计算完成';
+        setTimeout(()=>{ if(statusEl.textContent==='计算完成') statusEl.textContent=''; }, 3000);
+      }catch(err){
+        statusEl.textContent = '计算出错：'+err.message;
+        console.error(err);
+      }
+    }, 30);
+    return;
+  }
+
+  let threshold;
+  if(hasSelection()){
+    threshold = computeEfficiency(currentLabels(), state.type, state.level, currentPersona());
+  } else {
+    threshold = parseDecimalToFrac(state.manualThresholdStr);
+    if(!threshold){
+      statusEl.textContent = '请输入有效的效率阈值（例如 1.5 或 1.579）';
+      return;
+    }
+  }
+
+  statusEl.textContent = '计算中，请稍候…（可能需要数秒）';
+  setTimeout(()=>{
+    try{
+      const {numer, denom} = computeProbability(state.type, state.level, threshold, state.lockN, state.forceHelper);
+      const {rank, total} = getRankFiltered(state.type, state.level, threshold, state.lockN, state.forceHelper);
+
+      let html = '';
+      html += row('阈值效率', fracRoundDecimalString(threshold,3));
+      html += row('筛选条件', (state.lockN>0?('锁'+state.lockN+'金；'):'不锁金；')+(state.forceHelper?'强求金帮：开启':'强求金帮：关闭'));
+      html += row('效率值排名（当前筛选条件下）', rank+' / '+total);
+
+      const SHINY_RATE = F(8,1000); // 0.8%
+
+      if(state.type==='food'){
+        const p = fdiv(numer, denom);
+        const pAAA = fmul(p, F(1,9));
+        const pABB = fmul(p, F(2,9));
+        html += row('AAA 情况：概率', formatProbability(pAAA));
+        html += row('AAA 情况：期望捕捉次数', fracReciprocalRounded(pAAA)+' 次');
+        if(state.shiny){
+          const spAAA = fmul(pAAA, SHINY_RATE);
+          html += rowShiny('AAA 情况：闪光概率', formatProbability(spAAA));
+          html += rowShiny('AAA 情况：闪光期望捕捉次数', fracReciprocalRounded(spAAA)+' 次');
+        }
+        html += row('ABB 情况：概率', formatProbability(pABB));
+        html += row('ABB 情况：期望捕捉次数', fracReciprocalRounded(pABB)+' 次');
+        if(state.shiny){
+          const spABB = fmul(pABB, SHINY_RATE);
+          html += rowShiny('ABB 情况：闪光概率', formatProbability(spABB));
+          html += rowShiny('ABB 情况：闪光期望捕捉次数', fracReciprocalRounded(spABB)+' 次');
+        }
+      } else {
+        const p = fdiv(numer, denom);
+        html += row('概率（效率 ≥ 阈值）', formatProbability(p));
+        html += row('期望捕捉次数', fracReciprocalRounded(p)+' 次');
+        if(state.shiny){
+          const sp = fmul(p, SHINY_RATE);
+          html += rowShiny('闪光概率', formatProbability(sp));
+          html += rowShiny('闪光期望捕捉次数', fracReciprocalRounded(sp)+' 次');
+        }
+      }
+      box.innerHTML = html;
+      box.style.display='block';
+      statusEl.textContent = '计算完成';
+      setTimeout(()=>{ if(statusEl.textContent==='计算完成') statusEl.textContent=''; }, 3000);
+    }catch(err){
+      statusEl.textContent = '计算出错：'+err.message;
+      console.error(err);
+    }
+  }, 30);
+};
+function row(label,val){ return `<div class="row"><span>${label}</span><b class="val">${val}</b></div>`; }
+function rowShiny(label,val){ return `<div class="row shiny-row"><span>${label}</span><b class="val">${val}</b></div>`; }
+
+renderAll();
+</script>
+</body>
+</html>
