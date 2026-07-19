@@ -1,0 +1,9 @@
+{
+  "name": "宝可梦Sleep 效率概率计算器",
+  "short_name": "效率计算器",
+  "icons": [
+    { "src": "favicon-32x32.png", "sizes": "32x32", "type": "image/png" },
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" }
+  ],
+  "display": "standalone"
+}
