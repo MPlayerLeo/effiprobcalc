@@ -5234,7 +5234,9 @@ function buildPersonaNameMap(){
 const PERSONA_NAME_MAP = buildPersonaNameMap();
 
 function matchPersonaFromOcrText(text){
-  const t = toSimplified(text);
+  // OCR经常在两个汉字之间插入空格（比如"內斂"读成"內 斂"），不去空格会导致
+  // t.includes(name)永远匹配不上——和下面matchPokemonFromOcrText的处理保持一致
+  const t = toSimplified(text).replace(/\s/g,'');
   for(const name of Object.keys(PERSONA_NAME_MAP)){
     if(t.includes(name)) return name;
   }
@@ -5472,7 +5474,16 @@ function stripLeadingCross(srcCanvas, thForProfile){
   }
   if(s>=0) clusters.push([s,last]);
   if(clusters.length<2) return srcCanvas; // 只有一簇（或没簇），不确定×在哪，原样返回
-  // 丢掉最左簇(×号)，保留第2簇起到最后（两位数的多个数字簇都留下）
+  // 丢掉最左簇(×号)，保留第2簇起到最后（两位数的多个数字簇都留下）——
+  // 但如果×号本身就是跟紧挨着的第一位数字粘连成一簇（正是这个函数要解决的老问题：
+  // "×12"里的×和"1"糊在一起），无条件丢弃第一簇会把粘在一起的那位数字也一起扔掉，
+  // 结果"×12"被削成只剩"2"，比不处理还糟。×号的笔画明显比一个完整数字窄，
+  // 用"第一簇宽度 vs 后面数字簇的最大宽度"做个合理性检查：只有第一簇显著更窄
+  // （像单独的×号）才丢，宽度接近甚至更宽（像是×和数字粘连）就宁可整张原样返回，
+  // 交给外层多阈值投票去啃，也不要冒险切掉可能属于数字的部分
+  const widths = clusters.map(function(c){ return c[1]-c[0]+1; });
+  const maxDigitWidth = Math.max.apply(null, widths.slice(1));
+  if(widths[0] > maxDigitWidth*0.7) return srcCanvas;
   const pad=Math.round(w*0.02);
   const start=Math.max(0, clusters[1][0]-pad);
   const end=Math.min(w, clusters[clusters.length-1][1]+pad);
@@ -5632,8 +5643,9 @@ function normSkillName(s){
     .replace(/lv\.?\s*\d*/ig,'')     // 去掉"Lv.1"这类等级标注（数字可有可无——OCR有时只读出"LV"丢了数字）
     .toLowerCase()
     .replace(/[\s　（）()，,。.、·:：\-]/g,'')
-    .replace(/5$/,'s');              // 技能名末尾等级标"S"常被OCR认成数字"5"（"支援S"→"支援5"），
-                                      // 表里的技能名从不以阿拉伯数字结尾，末尾5一定是S的误读，这样替换是安全的
+    .replace(/[5$]$/,'s');           // 技能名末尾等级标"S"常被OCR认成数字"5"（"支援S"→"支援5"）或"$"
+                                      // （比如"活力全體療癒S"读成"活力全體療癒$"，字形和S接近），
+                                      // 表里的技能名从不以阿拉伯数字/美元符号结尾，末尾5或$一定是S的误读，这样替换是安全的
 }
 // 判断OCR读到的主技能是否匹配表里某条主技能：优先完全相等，其次互相包含
 // （容错表里"月光（活力填充S）""正电（食材获取S）或负电…"这种复合写法——游戏黄框里通常只显示其中一部分）
@@ -5913,8 +5925,14 @@ async function runOcrOnFile(file){
       const ab = detectStatArrowBands(img, personaCoords.sy, personaCoords.sh, W);
       if(ab && ab.incY!=null && ab.decY!=null){
         await worker.setParameters({tessedit_pageseg_mode: '7'});
+        // 两行属性名（inc行/dec行）实际间距通常只有~60px，而固定halfH=H*0.02（约47px、总高94px）
+        // 比这个间距还大，裁剪框必然会吃进相邻那一行的文字尾巴——PSM7单行模式会把两行内容强行
+        // 拼成一行，OCR经常读出乱码（比如"幫忙速度"被读成"人天tt吉度vv"这种）导致箭头法误判失败。
+        // 用incY/decY的实际间距反推安全高度：裁剪半高最多不超过"间距一半再留6px余量"，
+        // 下限16px保证还能完整框住文字本身（不会因为裁太窄把字上下切掉）。
+        const gapHalf = Math.floor(Math.abs(ab.decY - ab.incY) / 2) - 6;
+        const halfH = Math.max(16, Math.min(Math.round(H*0.02), gapHalf));
         const ocrStatName = async (yc)=>{
-          const halfH = Math.round(H*0.02);
           const c = cropPixels(0.45*W, yc-halfH, 0.40*W, halfH*2, 3);
           binarizeCanvas(c, 150);
           const r = await withTimeout(worker.recognize(c), 30000, '属性名');
