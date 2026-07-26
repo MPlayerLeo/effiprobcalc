@@ -747,6 +747,31 @@
   .grad-food-cov-note{ font-size:12.5px; color:var(--ink); text-align:center; margin:-2px 0 10px; opacity:.85; }
   .grad-food-cov-box-inline{ display:flex; align-items:center; justify-content:center; gap:8px; }
   .grad-food-cov-title-inline{ font-size:12.5px; font-weight:800; color:var(--ink); letter-spacing:.03em; flex:0 0 auto; }
+  .yield-section{ display:flex; align-items:stretch; border-radius:10px; overflow:hidden; margin-bottom:8px; background:var(--panel); }
+  .yield-section:last-child{ margin-bottom:0; }
+  .yield-section-title{ flex:0 0 52px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; letter-spacing:.03em; padding:8px 4px; text-align:center; }
+  .yield-section-fruit .yield-section-title{ background:var(--fruit-bg); color:var(--fruit-tx); }
+  .yield-section-food .yield-section-title{ background:var(--food-bg); color:var(--food-tx); }
+  .yield-section-skill .yield-section-title{ background:var(--skill-bg); color:var(--skill-tx); }
+  .yield-section-mid{ flex:1 1 50%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 12px; min-width:0; }
+  .yield-section-right{ flex:1 1 42%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:10px 12px; border-left:1px dashed var(--line); min-width:0; }
+  .yield-section-fruit .yield-section-mid, .yield-section-fruit .yield-section-right{ flex-direction:column; align-items:flex-start; }
+  .yield-section-skill .yield-section-mid{ flex-direction:row; align-items:stretch; padding:0; gap:0; }
+  .yield-section-skill-cnt{ flex:0 0 auto; display:flex; align-items:center; padding:10px 12px; min-width:0; border-right:1px dashed var(--line); }
+  .yield-section-skill-effect{ flex:1 1 auto; display:flex; flex-wrap:wrap; flex-direction:column; align-items:flex-start; gap:8px 10px; padding:10px 12px; min-width:0; }
+  .yield-section-food .grad-food-cov-rows{ align-items:flex-start; }
+  .yield-section-food .grad-food-cov-row{ justify-content:flex-start; }
+  .yield-stat{ display:inline-flex; align-items:baseline; gap:4px; font-size:12px; color:var(--ink); white-space:nowrap; }
+  .yield-stat-label{ font-size:11px; color:#8a8375; font-weight:600; }
+  .yield-stat b{ font-size:13px; font-weight:800; }
+  .yield-unit{ font-size:10px; color:#8a8375; font-weight:600; margin-left:2px; }
+  @media (max-width:520px){
+    .yield-section{ flex-wrap:wrap; }
+    .yield-section-title{ flex:1 1 100%; }
+    .yield-section-right{ border-left:none; border-top:1px dashed var(--line); }
+    .yield-section-skill .yield-section-mid{ flex-wrap:wrap; }
+    .yield-section-skill-cnt{ border-right:none; border-bottom:1px dashed var(--line); flex:1 1 100%; }
+  }
   .grad-7080-notes-block{ margin-top:10px; }
   .grad-7080-note-shared{ color:#c0392b; font-size:11px; margin-top:2px; opacity:.9; text-align:center; font-weight:700; }
   .grad-7080-note-shared:first-child{ margin-top:0; }
@@ -812,6 +837,7 @@
   .cap-pity-btn{ padding:5px 9px; border-radius:14px; border:1.5px solid var(--skill-bd); color:var(--skill-tx); background:var(--panel); font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap; display:flex; align-items:center; justify-content:center; text-align:center; }
   .cap-pity-btn.active{ background:var(--skill-bg); box-shadow:0 1px 5px rgba(47,95,160,.35); }
   .cap-skill-icon{ display:inline-block; width:15px; height:15px; vertical-align:-2px; -webkit-mask:var(--capm) center/contain no-repeat; mask:var(--capm) center/contain no-repeat; background-color:var(--accent-dk); }
+  .cap-skill-icon-red{ background-color:#c0392b; }
 
   .cap-rank-viewport{ padding:8px 8px 12px; overflow:hidden; }
   @keyframes capSlideR{ from{opacity:0; transform:translateX(80px);} to{opacity:1; transform:translateX(0);} }
@@ -1045,6 +1071,13 @@
     <div id="panelSummaryBox"></div>
   </div>
 
+  <div class="card" id="yieldCard1" style="margin-top:16px;">
+    <h2 class="collapsible-h2" id="h2-yield1"><span class="n">5</span>产能分析<svg class="collapse-arrow" id="arrow-yield1" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
+    <div class="card-body" id="body-yield1">
+    <div id="gradYieldBox"></div>
+    </div>
+  </div>
+
   </div><!-- /#page1 -->
 
   <div class="app-page" id="page2">
@@ -1053,6 +1086,13 @@
     <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定</span><span class="grad-pk-name" id="p2-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="p2-gradTypeBadge"></span><span class="level-badge" id="p2-gradLevelBadge"></span></span></h2>
     <div id="p2-gradBox"></div>
     <div id="p2-panelSummaryBox"></div>
+  </div>
+
+  <div class="card" id="p2yieldCard" style="margin-top:16px;">
+    <h2 class="collapsible-h2" id="h2-p2yield"><span class="n">2</span>产能分析<svg class="collapse-arrow collapsed-state" id="arrow-p2yield" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
+    <div class="card-body" id="body-p2yield" style="display:none;" data-collapsed="1">
+    <div id="p2-gradYieldBox"></div>
+    </div>
   </div>
 
   <div class="card" id="p2ctrlCard" style="margin-top:16px; display:none;">
@@ -1093,7 +1133,7 @@
   </div>
 
   <div class="card" id="module5Card" style="margin-top:16px;">
-    <h2 class="collapsible-h2" id="h2-mod5"><span class="n">2</span>效率阈值<svg class="collapse-arrow" id="arrow-mod5" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
+    <h2 class="collapsible-h2" id="h2-mod5"><span class="n">3</span>效率阈值<svg class="collapse-arrow" id="arrow-mod5" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
     <div class="card-body" id="body-mod5">
     <div class="group-label">同队金帮数量（仅影响下方显示的效率值，不影响概率计算所用的效率值）</div>
     <div class="btnrow" id="squadSel" style="margin-bottom:12px;"></div>
@@ -1107,7 +1147,7 @@
   </div>
 
   <div class="card" id="module7Card" style="margin-top:16px;">
-    <h2 class="collapsible-h2" id="h2-mod7"><span class="n">3</span>计算概率<svg class="collapse-arrow" id="arrow-mod7" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
+    <h2 class="collapsible-h2" id="h2-mod7"><span class="n">4</span>计算概率<svg class="collapse-arrow" id="arrow-mod7" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
     <div class="card-body" id="body-mod7">
     <div class="footer-actions">
       <button type="button" class="bigbtn" id="calcBtn">计算概率</button>
@@ -2574,9 +2614,19 @@ function capPageBaseYield(type, level){
   const x = CAP_DEX.find(d=>d.dex===effectiveYieldDex());
   if(!x) return null;
   const medal = x.stage==='徽章'; // 徽章宝可梦默认按徽章后88%基础帮忙间隔计算
+  const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+  // 保底仅对能量型/功能型（技能型）生效，食材/树果型即便勾了保底按钮也不吃保底
+  const pityEligible = (x.dtype==='能量' || x.dtype==='功能');
   if(type==='fruit' || type==='energy'){
     const ctrl = {direction: state.fruitDirection, dragon: state.dragonCount, latias: state.latiasActive, pity: state.pityOn};
-    return {kind:'flame', value: capBEEnergy(x, level, medal, ctrl)};
+    let value = capBEEnergy(x, level, medal, ctrl);
+    let specialStaminaDeduct = null;
+    if(spec && spec.kind==='energy'){ // 达克莱伊：技能额外产出能量，同时扣活力（仅展示，不参与任何合计）
+      const triggerCount = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
+      value += spec.energyPerTrigger * triggerCount;
+      specialStaminaDeduct = spec.staminaDeduct * triggerCount;
+    }
+    return {kind:'flame', value, specialStaminaDeduct};
   }
   if(type==='food'){
     if(!state.ingChoice2 || !state.ingChoice3) return null;
@@ -2586,26 +2636,58 @@ function capPageBaseYield(type, level){
     return {kind:'food', ing:ingName, value: capFoodProd(x, ingName, level, medal)};
   }
   if(type==='skill'){
-    const count = capSkillCount(x, level, medal, state.pityOn);
+    const count = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
     const byEffect = !!CAP_SKILL_BY_EFFECT[x.skillCat];
-    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null};
+    let specialIngredients = null, specialDream = null;
+    if(spec && spec.kind==='ingredients'){ // 穿山王/大嘴娃/乌鸦头头/岩殿居蟹/蝶结萌虻：技能额外固定产出食材（乌鸦头头另加梦碎）
+      specialIngredients = spec.items.map(it=>({name:it.name, amt: it.amt*count}));
+      if(spec.dream) specialDream = spec.dream*count;
+    }
+    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null, specialIngredients, specialDream};
   }
   return null;
+}
+function capSkillYieldHtml(base, e){
+  let html='';
+  if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
+  html += `<span class="cap-val cap-cnt">${capSkillIcon('skillcount')}<b>${capFmt(base.count*e,2)}</b></span>`;
+  if(base.specialIngredients){
+    base.specialIngredients.forEach(it=>{
+      const icon = ING_ICONS[it.name];
+      html += `<span class="cap-val cap-special-ing">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(it.amt*e,1)}</b></span>`;
+    });
+  }
+  if(base.specialDream!=null) html += `<span class="cap-val cap-special-dream">${capSkillIcon('dream')}<b>${capFmt(base.specialDream*e,1)}</b></span>`;
+  return html;
+}
+function capSkillCountHtml(base, e){
+  return `<span class="cap-val cap-cnt">${capSkillIcon('skillcount')}<b>${capFmt(base.count*e,2)}</b></span>`;
+}
+function capSkillEffectHtml(base, e){
+  let html='';
+  if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
+  if(base.specialIngredients){
+    base.specialIngredients.forEach(it=>{
+      const icon = ING_ICONS[it.name];
+      html += `<span class="cap-val cap-special-ing">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(it.amt*e,1)}</b></span>`;
+    });
+  }
+  if(base.specialDream!=null) html += `<span class="cap-val cap-special-dream">${capSkillIcon('dream')}<b>${capFmt(base.specialDream*e,1)}</b></span>`;
+  return html;
 }
 function capPageActualYieldHtml(base, eff){
   if(!base) return '';
   const e = ffloat(eff);
-  if(base.kind==='flame') return `<span class="cap-val">${capFlameImg()}<b>${capFmt(base.value*e,0)}</b></span>`;
+  if(base.kind==='flame'){
+    let html = `<span class="cap-val">${capFlameImg()}<b>${capFmt(base.value*e,0)}</b></span>`;
+    if(base.specialStaminaDeduct!=null) html += `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(base.specialStaminaDeduct*e,0)}</b></span>`;
+    return html;
+  }
   if(base.kind==='food'){
     const icon = ING_ICONS[base.ing];
     return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(base.value*e,1)}</b></span>`;
   }
-  if(base.kind==='skill'){
-    let html='';
-    if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
-    html += `<span class="cap-val cap-cnt">${capSkillIcon('skillcount')}<b>${capFmt(base.count*e,2)}</b></span>`;
-    return html;
-  }
+  if(base.kind==='skill') return capSkillYieldHtml(base, e);
   return '';
 }
 
@@ -3604,8 +3686,11 @@ function renderEnergySubmenu(containerId, pfx, compact){
   containerId = containerId || 'energySubmenu';
   pfx = pfx || '';
   const el = document.getElementById(containerId);
-  if(state.type !== 'energy'){ el.innerHTML=''; return; }
-  const isLatios = state.energyPokemon === 'latios';
+  const isEnergyType = state.type === 'energy';
+  const isSkillType = state.type === 'skill';
+  // 含保底按钮不再是能量型独享：技能型（能量型+功能型）都算"技能型"，都可以选是否保底
+  if(!isEnergyType && !isSkillType){ el.innerHTML=''; return; }
+  const isLatios = isEnergyType && state.energyPokemon === 'latios';
   const lockedEnergyId = (()=>{
     const r = getSelectedPokemonRecord();
     if(!r || DEX_TYPE_MAP[r[3]]!=='energy') return null;
@@ -3613,28 +3698,30 @@ function renderEnergySubmenu(containerId, pfx, compact){
   })();
 
   let html = '<div class="energy-menu">';
-  html += buildEnergyCompareHtml();
+  if(isEnergyType) html += buildEnergyCompareHtml();
   html += `<div class="energy-row-combined" style="margin-top:${compact?'6px':'12px'};">`;
   html += `<div class="energy-block pity-section"><div class="lab">技能保底</div>`;
   html += `<div class="pity-merged-row pity-merged-compact">`;
   html += `<div class="pity-merged-btn" id="${pfx}pityBtnOn">技概·含保底<b id="${pfx}pityProbVal">--</b></div>`;
   html += `<div class="pity-merged-btn" id="${pfx}pityBtnOff">技概·不含保底<b id="${pfx}noPityProbVal">--</b></div>`;
   html += `</div></div>`;
-  html += `<div class="energy-block${isLatios?' disabled-block':''} fruitdir-section"><div class="lab">队友树果</div><div class="btnrow" id="${pfx}fruitDirSel"></div></div>`;
+  if(isEnergyType) html += `<div class="energy-block${isLatios?' disabled-block':''} fruitdir-section"><div class="lab">队友树果</div><div class="btnrow" id="${pfx}fruitDirSel"></div></div>`;
   html += `</div>`;
-  if(!compact){
+  if(isEnergyType && !compact){
     html += `<div class="note${isLatios?' disabled-block':''}" style="margin-top:6px;">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
   }
-  html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">龙星群</div>`;
-  html += `<div class="btnrow" id="${pfx}pkDragonSel"></div>`;
-  if(isLatios){
-    html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">队伍中的龙宝可梦数量</div>`;
-    html += `<div class="btnrow" id="${pfx}dragonCountSel"></div>`;
+  if(isEnergyType){
+    html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">龙星群</div>`;
+    html += `<div class="btnrow" id="${pfx}pkDragonSel"></div>`;
+    if(isLatios){
+      html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">队伍中的龙宝可梦数量</div>`;
+      html += `<div class="btnrow" id="${pfx}dragonCountSel"></div>`;
+    }
+    html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">树果剧增</div>`;
+    html += `<div class="btnrow" id="${pfx}pkBoostSel"></div>`;
+    html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">能量填充</div>`;
+    html += `<div class="btnrow" id="${pfx}pkFillSel"></div>`;
   }
-  html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">树果剧增</div>`;
-  html += `<div class="btnrow" id="${pfx}pkBoostSel"></div>`;
-  html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">能量填充</div>`;
-  html += `<div class="btnrow" id="${pfx}pkFillSel"></div>`;
   html += '</div>';
   el.innerHTML = html;
 
@@ -3643,90 +3730,92 @@ function renderEnergySubmenu(containerId, pfx, compact){
   document.getElementById(pfx+'pityBtnOn').classList.toggle('selected', state.pityOn===true);
   document.getElementById(pfx+'pityBtnOff').classList.toggle('selected', state.pityOn===false);
 
-  {
-    const dirEl = document.getElementById(pfx+'fruitDirSel');
-    [['normal','队友顺果','dir-normal'],['reverse','队友逆果','dir-reverse']].forEach(([val,label,cls])=>{
-      const b = document.createElement('div');
-      b.className = 'pkbtn '+cls+(state.fruitDirection===val?' selected':'')+(isLatios?' disabled':'');
-      b.textContent = label;
-      if(!isLatios) b.onclick = ()=>{ state.fruitDirection=val; renderAll(); };
-      dirEl.appendChild(b);
-    });
-    // 让保底按钮的高度与右侧队友树果按钮一致
-    if(dirEl.children[0] && dirEl.children[0].offsetHeight > 0){
-      const h = dirEl.children[0].offsetHeight + 'px';
-      const onBtn = document.getElementById(pfx+'pityBtnOn');
-      const offBtn = document.getElementById(pfx+'pityBtnOff');
-      if(onBtn) onBtn.style.height = h;
-      if(offBtn) offBtn.style.height = h;
+  if(isEnergyType){
+    {
+      const dirEl = document.getElementById(pfx+'fruitDirSel');
+      [['normal','队友顺果','dir-normal'],['reverse','队友逆果','dir-reverse']].forEach(([val,label,cls])=>{
+        const b = document.createElement('div');
+        b.className = 'pkbtn '+cls+(state.fruitDirection===val?' selected':'')+(isLatios?' disabled':'');
+        b.textContent = label;
+        if(!isLatios) b.onclick = ()=>{ state.fruitDirection=val; renderAll(); };
+        dirEl.appendChild(b);
+      });
+      // 让保底按钮的高度与右侧队友树果按钮一致
+      if(dirEl.children[0] && dirEl.children[0].offsetHeight > 0){
+        const h = dirEl.children[0].offsetHeight + 'px';
+        const onBtn = document.getElementById(pfx+'pityBtnOn');
+        const offBtn = document.getElementById(pfx+'pityBtnOff');
+        if(onBtn) onBtn.style.height = h;
+        if(offBtn) offBtn.style.height = h;
+      }
     }
-  }
 
-  const fillEl = document.getElementById(pfx+'pkFillSel');
-  [['yinbo','音波龙'],['taiyang','太阳伊布'],['dianlong','电龙']].forEach(([id,name])=>{
-    const b = document.createElement('div');
-    const isLocked = lockedEnergyId && id!==lockedEnergyId;
-    b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'')+(isLocked?' type-locked':'');
-    b.textContent = name;
-    if(!isLocked) b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
-    fillEl.appendChild(b);
-  });
-
-  const boostEl = document.getElementById(pfx+'pkBoostSel');
-  [['miao','谜拟Q'],['xiyi','蜥蜴王'],['lieyan','烈焰猴'],['yongshi','勇士雄鹰']].forEach(([id,name])=>{
-    const b = document.createElement('div');
-    const isLocked = lockedEnergyId && id!==lockedEnergyId;
-    b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'')+(isLocked?' type-locked':'');
-    b.textContent = name;
-    if(!isLocked) b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
-    boostEl.appendChild(b);
-  });
-
-  const dragonEl = document.getElementById(pfx+'pkDragonSel');
-  const latiosBtn = document.createElement('div');
-  const latiosLocked = lockedEnergyId && lockedEnergyId!=='latios';
-  latiosBtn.className = 'pkbtn pk-latios'+(state.energyPokemon==='latios'?' selected':'')+(latiosLocked?' type-locked':'');
-  latiosBtn.textContent = '拉帝欧斯';
-  if(!latiosLocked){
-    latiosBtn.onclick = ()=>{
-      state.energyPokemon = (state.energyPokemon==='latios'? null : 'latios');
-      if(state.energyPokemon!=='latios'){ state.latiasActive=false; state.dragonCount='solo'; }
-      renderAll();
-    };
-  }
-  dragonEl.appendChild(latiosBtn);
-
-  if(isLatios){
-    const latiasBtn = document.createElement('div');
-    latiasBtn.className = 'pkbtn pk-latias'+(state.latiasActive?' selected':'');
-    latiasBtn.textContent = '拉帝亚斯';
-    latiasBtn.onclick = ()=>{
-      state.latiasActive = !state.latiasActive;
-      if(state.latiasActive && state.dragonCount==='solo') state.dragonCount='d2';
-      renderAll();
-    };
-    dragonEl.appendChild(latiasBtn);
-
-    const dcEl = document.getElementById(pfx+'dragonCountSel');
-    const options = [['solo','仅自身'], ['d2', state.latiasActive?'相依为命':'2龙'], ['d3','3龙'], ['d4','4龙'], ['d5','5龙']];
-    options.forEach(([val,label])=>{
-      const disabled = (val==='solo' && state.latiasActive);
-      let cls = 'pkbtn pk-dragoncount';
-      if(val==='d2' && state.latiasActive) cls += ' striped';
-      if(state.dragonCount===val) cls += ' selected';
-      if(disabled) cls += ' disabled';
+    const fillEl = document.getElementById(pfx+'pkFillSel');
+    [['yinbo','音波龙'],['taiyang','太阳伊布'],['dianlong','电龙']].forEach(([id,name])=>{
       const b = document.createElement('div');
-      b.className = cls;
-      b.textContent = label;
-      if(!disabled) b.onclick = ()=>{ state.dragonCount = val; renderAll(); };
-      dcEl.appendChild(b);
+      const isLocked = lockedEnergyId && id!==lockedEnergyId;
+      b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'')+(isLocked?' type-locked':'');
+      b.textContent = name;
+      if(!isLocked) b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
+      fillEl.appendChild(b);
     });
+
+    const boostEl = document.getElementById(pfx+'pkBoostSel');
+    [['miao','谜拟Q'],['xiyi','蜥蜴王'],['lieyan','烈焰猴'],['yongshi','勇士雄鹰']].forEach(([id,name])=>{
+      const b = document.createElement('div');
+      const isLocked = lockedEnergyId && id!==lockedEnergyId;
+      b.className = 'pkbtn pk-'+id+(state.energyPokemon===id?' selected':'')+(isLocked?' type-locked':'');
+      b.textContent = name;
+      if(!isLocked) b.onclick = ()=>{ state.energyPokemon = (state.energyPokemon===id? null : id); renderAll(); };
+      boostEl.appendChild(b);
+    });
+
+    const dragonEl = document.getElementById(pfx+'pkDragonSel');
+    const latiosBtn = document.createElement('div');
+    const latiosLocked = lockedEnergyId && lockedEnergyId!=='latios';
+    latiosBtn.className = 'pkbtn pk-latios'+(state.energyPokemon==='latios'?' selected':'')+(latiosLocked?' type-locked':'');
+    latiosBtn.textContent = '拉帝欧斯';
+    if(!latiosLocked){
+      latiosBtn.onclick = ()=>{
+        state.energyPokemon = (state.energyPokemon==='latios'? null : 'latios');
+        if(state.energyPokemon!=='latios'){ state.latiasActive=false; state.dragonCount='solo'; }
+        renderAll();
+      };
+    }
+    dragonEl.appendChild(latiosBtn);
+
+    if(isLatios){
+      const latiasBtn = document.createElement('div');
+      latiasBtn.className = 'pkbtn pk-latias'+(state.latiasActive?' selected':'');
+      latiasBtn.textContent = '拉帝亚斯';
+      latiasBtn.onclick = ()=>{
+        state.latiasActive = !state.latiasActive;
+        if(state.latiasActive && state.dragonCount==='solo') state.dragonCount='d2';
+        renderAll();
+      };
+      dragonEl.appendChild(latiasBtn);
+
+      const dcEl = document.getElementById(pfx+'dragonCountSel');
+      const options = [['solo','仅自身'], ['d2', state.latiasActive?'相依为命':'2龙'], ['d3','3龙'], ['d4','4龙'], ['d5','5龙']];
+      options.forEach(([val,label])=>{
+        const disabled = (val==='solo' && state.latiasActive);
+        let cls = 'pkbtn pk-dragoncount';
+        if(val==='d2' && state.latiasActive) cls += ' striped';
+        if(state.dragonCount===val) cls += ' selected';
+        if(disabled) cls += ' disabled';
+        const b = document.createElement('div');
+        b.className = cls;
+        b.textContent = label;
+        if(!disabled) b.onclick = ()=>{ state.dragonCount = val; renderAll(); };
+        dcEl.appendChild(b);
+      });
+    }
   }
 
   const noPityEl = document.getElementById(pfx+'noPityProbVal');
   const pityValEl = document.getElementById(pfx+'pityProbVal');
   const decimals = compact ? 1 : 3; // 仅压缩显示精度，后台仍用完整精度计算
-  if(state.energyPokemon){
+  if(isEnergyType && state.energyPokemon){
     const pk = POKEMON[state.energyPokemon];
     const ws = windowSizeOf(state.level);
     const sums = sumsToFloat(windowSums(currentLabels(), ws));
@@ -3736,6 +3825,21 @@ function renderEnergySubmenu(containerId, pfx, compact){
     const pityRate = expectedTriggerRatePerHelp(rawProb, pityN, true);
     noPityEl.textContent = (rawProb*100).toFixed(decimals)+'%';
     pityValEl.textContent = (pityRate*100).toFixed(decimals)+'%';
+  } else if(isSkillType && typeof CAP_DEX!=='undefined' && state.selectedDex){
+    const x = CAP_DEX.find(d=>d.dex===effectiveYieldDex());
+    if(x){
+      const ws = windowSizeOf(state.level);
+      const sums = sumsToFloat(windowSums(currentLabels(), ws));
+      const persona = currentPersona();
+      const rawProb = energySkillProb(x.skillProb, sums.s, persona.s);
+      const pityN = pityCount(x.interval);
+      const pityRate = expectedTriggerRatePerHelp(rawProb, pityN, true);
+      noPityEl.textContent = (rawProb*100).toFixed(decimals)+'%';
+      pityValEl.textContent = (pityRate*100).toFixed(decimals)+'%';
+    } else {
+      noPityEl.textContent = '--';
+      pityValEl.textContent = '--';
+    }
   } else {
     noPityEl.textContent = '--';
     pityValEl.textContent = '--';
@@ -4335,6 +4439,130 @@ function renderGraduation(pfx){
   el.querySelectorAll('.grad-grade').forEach(renderGradeText);
 }
 
+// ============ 产能分析模块：树果/食材/技能三区域纵向排列，顺序按当前类型决定 ============
+// 统一原则：依据真实帮忙间隔确定每日帮忙次数，依据真实食材概率确定每次帮忙获得树果还是食材，
+// 依据真实技能概率独立判定每次帮忙是否触发技能——三者互不影响，分别计算
+function yieldSectionOrder(type){
+  if(type==='food') return ['food','skill','fruit'];
+  if(type==='skill') return ['skill','food','fruit'];
+  return ['fruit','skill','food']; // 树果型/能量型
+}
+// 把技能特例产出的食材（已按真实倍率折算）并入食谱覆盖率行：名字对得上现有行的直接相加，对不上的新增一行
+function mergeSpecialFoodRows(rows, specialIngredients, eSkillFloat){
+  const result = rows ? rows.slice() : [];
+  specialIngredients.forEach(it=>{
+    const realAmt = it.amt * eSkillFloat;
+    const demand = FOOD_DAILY_DEMAND[it.name];
+    if(!demand) return;
+    const existing = result.find(r=>r.ingName===it.name);
+    if(existing){ existing.actual += realAmt; existing.ratio = existing.actual/demand; }
+    else result.push({letter:null, ingName:it.name, actual: realAmt, ratio: realAmt/demand});
+  });
+  return result.length ? result : null;
+}
+function yieldPct(p){ return (p*100).toFixed(3)+'%'; }
+function renderYieldAnalysis(pfx){
+  pfx = pfx || '';
+  const el = document.getElementById(pfx+'gradYieldBox');
+  if(!el) return;
+  const emptyMsg = `<span class="grad-comment" style="color:#adb2ba;font-size:14px;">请先在上方选择宝可梦与副技能</span>`;
+  if(typeof CAP_DEX==='undefined' || !state.selectedDex || !state.selected.some(v=>v!=null)){ el.innerHTML=emptyMsg; return; }
+  const x = CAP_DEX.find(d=>d.dex===effectiveYieldDex());
+  if(!x){ el.innerHTML=emptyMsg; return; }
+
+  const labels = currentLabels();
+  const persona = currentPersona();
+  const level = state.level;
+  const medal = x.stage==='徽章';
+  const pityEligible = (x.dtype==='能量' || x.dtype==='功能');
+  const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+
+  const eFruit = ffloat(computeEfficiency(labels, 'fruit', level, persona));
+  const eFood  = ffloat(computeEfficiency(labels, 'food',  level, persona));
+  const eSkill = ffloat(computeEfficiency(labels, 'skill', level, persona));
+
+  // 真实(未封顶)的帮手速度/食材获得/技能概率加成总和——与上面 eFruit/eFood/eSkill 用的是同一份
+  // windowSums，口径必须保持一致（不能借用能量型天梯那套封顶0.35的版本），否则新加的"实际帮忙间隔/
+  // 实际概率"三个数就会跟旁边"实际产量"对不上账
+  const ws = windowSizeOf(level);
+  const rawSums = windowSums(labels, ws);
+  const sums = { h: ffloat(rawSums.h), f: ffloat(rawSums.f), s: ffloat(rawSums.s), hasFruit: rawSums.hasFruit };
+
+  // ---- 树果区域：每日树果产量+每日能量。常规部分按(1-真实食材概率)折算真实树果比例；
+  // 达克莱伊技能额外产出的能量/扣除的活力是独立触发事件，不受食材概率折算 ----
+  const helpsBase = capHelpsPerDay(x.interval, level, medal);
+  const unitPerCatch = x.dtype==='能量' ? 2 : 3;
+  const realIngProb = energySkillProb(x.ingProb||0, sums.f, persona.f); // 复用同一条"基础概率×(1+加成)×性格倍率"公式
+  const ingFrac = 1 - realIngProb;
+  const realFruitCount = helpsBase * unitPerCatch * ingFrac * eFruit;
+  const realBerryEnergy = realFruitCount * capBerryPerBerry(x.attr, level);
+  let totalEnergy = realBerryEnergy;
+  let specialStaminaDeduct = null;
+  if(spec && spec.kind==='energy'){
+    const triggerCountReal = capSkillCount(x, level, medal, pityEligible?state.pityOn:false) * eSkill;
+    totalEnergy += spec.energyPerTrigger * triggerCountReal;
+    specialStaminaDeduct = spec.staminaDeduct * triggerCountReal;
+  }
+  // 实际帮忙间隔/实际每日帮忙次数：等价于 capInterval 基准间隔 × (1-真实帮手速度加成) × 性格倍率
+  const realInterval = energyRealInterval(x.interval, level, medal, sums.h, persona.h);
+  const realHelpsPerDay = 86400 / realInterval;
+  const fruitHtml = `<div class="yield-section yield-section-fruit"><div class="yield-section-title">树果</div>`
+    + `<div class="yield-section-mid">`
+    + `<span class="cap-val yield-fruit-count"><b>${capFmt(realFruitCount,1)}</b><span class="yield-unit">个/天</span></span>`
+    + `<span class="cap-val">${capFlameImg()}<b>${capFmt(Math.round(totalEnergy),0)}</b></span>`
+    + (specialStaminaDeduct!=null ? `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(specialStaminaDeduct,0)}</b></span>` : '')
+    + `</div>`
+    + `<div class="yield-section-right">`
+    + `<span class="yield-stat"><span class="yield-stat-label">帮忙间隔</span><b>${capFmt(realInterval,0)}</b><span class="yield-unit">秒</span></span>`
+    + `<span class="yield-stat"><span class="yield-stat-label">帮忙次数</span><b>${capFmt(realHelpsPerDay,2)}</b><span class="yield-unit">次/天</span></span>`
+    + `</div></div>`;
+
+  // ---- 技能区域：复用 capPageBaseYield('skill')+capSkillYieldHtml（含技能特例食材/梦碎附加产出） ----
+  const skillBase = capPageBaseYield('skill', level);
+  const rawSkillProb = energySkillProb(x.skillProb||0, sums.s, persona.s);
+  const pityN = pityCount(x.interval);
+  const skillProbWithPity = expectedTriggerRatePerHelp(rawSkillProb, pityN, true);
+  const skillProbHtml = pityEligible
+    ? `<span class="yield-stat"><span class="yield-stat-label">技能概率(不含保底)</span><b>${yieldPct(rawSkillProb)}</b></span>`
+      + `<span class="yield-stat"><span class="yield-stat-label">技能概率(含保底)</span><b>${yieldPct(skillProbWithPity)}</b></span>`
+    : `<span class="yield-stat"><span class="yield-stat-label">技能概率</span><b>${yieldPct(rawSkillProb)}</b></span>`;
+  const skillHtml = `<div class="yield-section yield-section-skill"><div class="yield-section-title">技能</div>`
+    + `<div class="yield-section-mid">`
+    + `<div class="yield-section-skill-cnt">`
+    + (skillBase ? capSkillCountHtml(skillBase, eSkill) : `<span class="grad-comment" style="color:#adb2ba;font-size:14px;">暂无数据</span>`)
+    + `</div>`
+    + `<div class="yield-section-skill-effect">`
+    + (skillBase ? capSkillEffectHtml(skillBase, eSkill) : '')
+    + `</div>`
+    + `</div>`
+    + `<div class="yield-section-right">${skillBase ? skillProbHtml : ''}</div>`
+    + `</div>`;
+
+  // ---- 食材区域：复用 computeFoodCoverageRows/foodCoverageBoxHtml，叠加技能特例食材产出 ----
+  const hasIngData = !!(x.ingA || x.ingB || x.ingC);
+  const hasSpecialIng = !!(spec && spec.kind==='ingredients');
+  let foodBody;
+  if(!hasIngData && !hasSpecialIng){
+    foodBody = `<span class="grad-comment" style="color:#adb2ba;font-size:14px;">该宝可梦无食材数据</span>`;
+  } else if(!state.ingChoice2 || !state.ingChoice3){
+    foodBody = `<span class="grad-comment" style="color:#c0392b;font-size:14px;font-weight:700;">请先选择食材类型！</span>`;
+  } else {
+    let rows = computeFoodCoverageRows(eFood, undefined);
+    if(hasSpecialIng && skillBase && skillBase.specialIngredients){
+      rows = mergeSpecialFoodRows(rows, skillBase.specialIngredients, eSkill);
+    }
+    foodBody = (rows && rows.length) ? `<div class="grad-food-cov-rows">${foodCoverageRowsHtml(rows)}</div>` : `<span class="grad-comment" style="color:#adb2ba;font-size:14px;">请完善食材选择</span>`;
+  }
+  const foodHtml = `<div class="yield-section yield-section-food"><div class="yield-section-title">食材</div>`
+    + `<div class="yield-section-mid">${foodBody}</div>`
+    + `<div class="yield-section-right"><span class="yield-stat"><span class="yield-stat-label">食材概率</span><b>${yieldPct(realIngProb)}</b></span></div>`
+    + `</div>`;
+
+  const sectionHtml = {fruit: fruitHtml, skill: skillHtml, food: foodHtml};
+  const order = yieldSectionOrder(state.type);
+  el.innerHTML = order.map(k=>sectionHtml[k]).join('');
+}
+
 const ATTR_COLORS = {
   '一般':'#6d6d63','火':'#f08030','水':'#6890f0','电':'#f8d030','草':'#78c850','冰':'#98d8d8',
   '格斗':'#c03028','毒':'#a040a0','地面':'#e0c068','飞行':'#a890f0','超能力':'#f85888','虫':'#a8b820',
@@ -4367,7 +4595,8 @@ function selectPokemon(dex){
       const eid = ENERGY_NAME_TO_ID[rec[1]];
       if(eid) state.energyPokemon = eid;
     }
-    if(mappedType!=='food'){ state.ingChoice2=null; state.ingChoice3=null; }
+    const capRowSel = (typeof CAP_DEX!=='undefined') ? CAP_DEX.find(d=>d.dex===effectiveYieldDex()) : null;
+    if(!(capRowSel && (capRowSel.ingA||capRowSel.ingB||capRowSel.ingC))){ state.ingChoice2=null; state.ingChoice3=null; }
   }
   renderAll();
   maybeOpenFinalPkPopup();
@@ -4442,12 +4671,14 @@ function renderPokemonModule(){
 
   // 食材按钮（6个，分3组）
   const ingEl = document.getElementById('pkIngRow');
-  const isFood = rec && DEX_TYPE_MAP[rec[3]]==='food';
+  // 食材数据来自CAP_DEX（POKEMON_DEX_DATA里非食材型的ingA/B/C字段本来就没填），只要CAP_DEX有数据就可选，不再限定食材型
+  const capRowForIng = (rec && typeof CAP_DEX!=='undefined' && state.selectedDex) ? CAP_DEX.find(d=>d.dex===effectiveYieldDex()) : null;
+  const isFood = capRowForIng && (capRowForIng.ingA||capRowForIng.ingB||capRowForIng.ingC);
   function ingBtnHtml(letter, extraCls){
     if(!isFood){
       return `<div class="pk-ing-btn pk-ing-disabled">×</div>`;
     }
-    const ingName = letter==='a' ? rec[8] : (letter==='b' ? rec[9] : rec[10]);
+    const ingName = letter==='a' ? capRowForIng.ingA : (letter==='b' ? capRowForIng.ingB : capRowForIng.ingC);
     const icon = ingName ? ING_ICONS[ingName] : null;
     return `<div class="pk-ing-btn ${extraCls}" data-letter="${letter}">${icon?`<img src="${icon}" title="${ingName}">`:''}</div>`;
   }
@@ -4585,10 +4816,12 @@ function renderPkDashCompact(){
   }
 
   const ingEl = document.getElementById('dash-pkIngRow');
-  const isFood = rec && DEX_TYPE_MAP[rec[3]]==='food';
+  // 食材数据来自CAP_DEX（POKEMON_DEX_DATA里非食材型的ingA/B/C字段本来就没填），只要CAP_DEX有数据就可选，不再限定食材型
+  const capRowForIng = (rec && typeof CAP_DEX!=='undefined' && state.selectedDex) ? CAP_DEX.find(d=>d.dex===effectiveYieldDex()) : null;
+  const isFood = capRowForIng && (capRowForIng.ingA||capRowForIng.ingB||capRowForIng.ingC);
   function ingBtnHtml(letter, extraCls){
     if(!isFood) return `<div class="pk-ing-btn pk-ing-disabled">×</div>`;
-    const ingName = letter==='a' ? rec[8] : (letter==='b' ? rec[9] : rec[10]);
+    const ingName = letter==='a' ? capRowForIng.ingA : (letter==='b' ? capRowForIng.ingB : capRowForIng.ingC);
     const icon = ingName ? ING_ICONS[ingName] : null;
     return `<div class="pk-ing-btn ${extraCls}" data-letter="${letter}">${icon?`<img src="${icon}" title="${ingName}">`:''}</div>`;
   }
@@ -4736,6 +4969,7 @@ function renderAll(){
   renderSquadRow();
   renderEffBox();
   renderGraduation();
+  renderYieldAnalysis();
   renderPanelSummary();
   renderSkillButtonsDash();
   renderPersonaRowsDash();
@@ -4743,6 +4977,7 @@ function renderAll(){
   renderControlsDash();
   renderControlsP2();
   renderGraduation('p2-');
+  renderYieldAnalysis('p2-');
   renderPanelSummary('p2-');
   renderControlsP3();
   renderFinalPkRow();
@@ -5817,11 +6052,13 @@ async function runOcrOnFile(file){
       if(pkRec) identifiedBySig = true;
     }
 
-    // 食材槽：只有在认出物种、且该物种是食材型时才填。用"数量优先、图标兜底"确定每个槽实际是哪种食材：
-    // 数量能唯一锁定就用数量（顺带解决了土豆/姜同色分不开的老问题）；数量撞了再用图标；都不行才纯图标。
+    // 食材槽：只有在认出物种、且该物种有食材数据时才填（不再限定"食材型"——树果/功能/能量型
+    // 一样有a/b/c三个随机食材槽，只是主技能不是食材而已，判定依据统一改成 PK_SIG_QTY 里有没有a/b/c）。
+    // 用"数量优先、图标兜底"确定每个槽实际是哪种食材：数量能唯一锁定就用数量（顺带解决了土豆/姜
+    // 同色难分的老问题）；数量撞了再用图标；都不行才纯图标。
     let slot30=null, slot60=null;
-    const pkIsFood = pkRec && DEX_TYPE_MAP[pkRec[3]]==='food';
-    if(pkIsFood){
+    const pkHasIng = pkRec && !!(PK_SIG_QTY[pkRec[0]] && PK_SIG_QTY[pkRec[0]].a);
+    if(pkHasIng){
       slot30 = await resolveSlotIngredient(pkRec[0], 30, qty30.val, ing30Canvas);
       slot60 = await resolveSlotIngredient(pkRec[0], 60, qty60.val, ing60Canvas);
     }
@@ -5846,14 +6083,15 @@ async function runOcrOnFile(file){
     } else if(identifiedBySig){
       console.log('名字没认出→用"主技能+数量+食材"兜底反查到：', pkRec[1], pkRec[0]);
     }
-    if(pkIsFood){
-      console.log('食材候选（该物种a/b/c）：', [pkRec[8], pkRec[9], pkRec[10]].filter(Boolean));
+    if(pkHasIng){
+      const sigDbg = PK_SIG_QTY[pkRec[0]];
+      console.log('食材候选（该物种a/b/c）：', [sigDbg.a&&sigDbg.a[0], sigDbg.b&&sigDbg.b[0], sigDbg.c&&sigDbg.c[0]].filter(Boolean));
       console.log('食材槽判定 30级槽：', slot30, ' 60级槽：', slot60, '（via=qty 表示靠数量确定，最可信；qty-tie/icon 次之）');
       console.log('食材裁剪区域预览（点开下面两张图看裁到的到底是不是食材图标）：');
       logCanvasPreview('30级食材裁剪区', ing30Canvas);
       logCanvasPreview('60级食材裁剪区', ing60Canvas);
     } else if(pkRec){
-      console.log('该物种不是食材型，跳过食材比对');
+      console.log('该物种无食材数据，跳过食材比对');
     } else {
       console.log('没认出物种（可能改了昵称），跳过食材比对——食材留空交给手动选择');
     }
@@ -5871,13 +6109,14 @@ async function runOcrOnFile(file){
     state.buildSource = 'ocr';
     state.gradeEasterEggShown = false;
     if(pkRec){
-      selectPokemon(pkRec[0]); // 内部会处理类型联动，非食材型会自动清空食材选择
-      if(pkIsFood){
+      selectPokemon(pkRec[0]); // 内部会处理类型联动，该物种若无食材数据会自动清空食材选择
+      if(pkHasIng){
+        const sigApply = PK_SIG_QTY[pkRec[0]];
         const letterOf = (ingName)=>{
           if(!ingName) return null;
-          if(pkRec[8]===ingName) return 'a';
-          if(pkRec[9]===ingName) return 'b';
-          if(pkRec[10]===ingName) return 'c';
+          if(sigApply.a && sigApply.a[0]===ingName) return 'a';
+          if(sigApply.b && sigApply.b[0]===ingName) return 'b';
+          if(sigApply.c && sigApply.c[0]===ingName) return 'c';
           return null;
         };
         // 只有"确定"的食材才自动填；不确定（数量也撞了、又同色难分）就留空让你手动选
@@ -6016,6 +6255,14 @@ wireCollapsibleModule(7);
   const h2 = document.getElementById('h2-ladder');
   if(h2) h2.onclick = ()=> toggleModuleCollapse('body-ladder', 'arrow-ladder');
 })();
+(()=>{
+  const h2 = document.getElementById('h2-yield1');
+  if(h2) h2.onclick = ()=> toggleModuleCollapse('body-yield1', 'arrow-yield1');
+})();
+(()=>{
+  const h2 = document.getElementById('h2-p2yield');
+  if(h2) h2.onclick = ()=> toggleModuleCollapse('body-p2yield', 'arrow-p2yield');
+})();
 
 document.getElementById('addCompareBtn').onclick = ()=>{
   if(!state.panel2Snap) state.panel2Snap = blankBuildFromPanel1();
@@ -6044,7 +6291,7 @@ document.getElementById('newbieModeBtn').onclick = ()=>{
 /* ===== 捕捉推荐页数据（由宝睡百科+矩阵自动生成，请勿手改） ===== */
 const CAP_BERRY_MATRIX = {"龙":[234,300,384,492],"钢":[222,284,362,464],"毒":[214,274,352,450],"冰":[214,274,352,450],"水":[208,266,340,436],"恶":[208,266,340,436],"草":[202,258,330,422],"岩石":[202,258,330,422],"地面":[194,248,318,408],"一般":[188,240,308,394],"格斗":[182,232,296,380],"火":[182,232,296,380],"幽灵":[174,224,286,366],"超能":[174,224,286,366],"妖精":[174,224,286,366],"电":[168,214,274,352],"飞行":[160,206,264,338],"虫":[160,206,264,338]}; // 属性 -> [50,60,70,80] 每颗树果能量
 const CAP_ING_ENERGY = {"尾巴":342,"南瓜":250,"葱":185,"蘑菇":167,"牛油果":162,"咖啡":153,"可可":151,"玉米":140,"叶子":130,"土豆":124,"油":121,"蛋":115,"番茄":110,"姜":109,"肠":103,"蜜":101,"豆":100,"奶":98,"苹果":90}; // 食材 -> 单个食材能量
-const CAP_DEX = [{"dex":"#003","name":"妙蛙花","attr":"草","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"番茄","ingBamts":[4,7],"ingC":"土豆","ingCamt":6,"ingProb":0.266,"skillProb":0.021,"interval":2800,"baby":"妙蛙种子","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#006","name":"喷火龙","attr":"火","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[2,5,7],"ingB":"姜","ingBamts":[4,7],"ingC":"叶子","ingCamt":6,"ingProb":0.224,"skillProb":0.016,"interval":2400,"baby":"小火龙","stage":"最终","islN":"13","islX":"1","islY":"3"},{"dex":"#009","name":"水箭龟","attr":"水","dtype":"食材","avail":"aaa+abb","reco":"aaa+abb","skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[2,5,7],"ingB":"可可","ingBamts":[3,5],"ingC":"肠","ingCamt":7,"ingProb":0.275,"skillProb":0.021,"interval":2800,"baby":"杰尼龟","stage":"最终","islN":"12","islX":"1","islY":"2"},{"dex":"#012","name":"巴大蝶","attr":"虫","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"番茄","ingBamts":[2,3],"ingC":"豆","ingCamt":4,"ingProb":0.197,"skillProb":0.014,"interval":2500,"baby":"绿毛虫","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#020","name":"拉达","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[2,3],"ingC":"肠","ingCamt":3,"ingProb":0.237,"skillProb":0.03,"interval":2950,"baby":"小拉达","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#024","name":"阿柏怪","attr":"毒","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"叶子","ingCamt":3,"ingProb":0.264,"skillProb":0.057,"interval":3400,"baby":"阿柏蛇","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#025","name":"皮卡丘","attr":"电","dtype":"树果","avail":"电果","reco":"电果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.207,"skillProb":0.021,"interval":2700,"baby":"皮卡丘","stage":"徽章","islN":"126","islX":"1","islY":"26"},{"dex":"#025-1","name":"皮卡丘（万圣节）","attr":"电","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.218,"skillProb":0.028,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#025-2","name":"皮卡丘（佳节）","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.131,"skillProb":0.042,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#026","name":"雷丘","attr":"电","dtype":"树果","avail":"电果","reco":"电果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.224,"skillProb":0.032,"interval":2200,"baby":"皮丘","stage":"最终","islN":"126","islX":"1","islY":"26"},{"dex":"#028","name":"穿山王","attr":"地面","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[4,6],"ingC":"土豆","ingCamt":7,"ingProb":0.108,"skillProb":0.043,"interval":2800,"baby":"穿山鼠","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#036","name":"皮可西","attr":"妖精","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,3],"ingC":"豆","ingCamt":3,"ingProb":0.168,"skillProb":0.036,"interval":2800,"baby":"皮宝宝","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#038","name":"九尾","attr":"火","dtype":"树果","avail":"火果","reco":null,"skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"土豆","ingCamt":3,"ingProb":0.164,"skillProb":0.029,"interval":2600,"baby":"六尾","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#038-1","name":"冰九尾","attr":"冰","dtype":"树果","avail":"冰果","reco":"冰果","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"土豆","ingCamt":3,"ingProb":0.232,"skillProb":0.028,"interval":2900,"baby":"冰六尾","stage":"最终","islN":"4","islX":"1","islY":"4"},{"dex":"#040","name":"胖可丁","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":"奶妈","skillEff":18,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"可可","ingCamt":2,"ingProb":0.191,"skillProb":0.04,"interval":2750,"baby":"宝宝丁","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#051","name":"三地鼠","attr":"地面","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[3,4],"ingC":"豆","ingCamt":8,"ingProb":0.19,"skillProb":0.02,"interval":2650,"baby":"地鼠","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#053","name":"猫老大","attr":"一般","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"奶","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,3],"ingC":"肠","ingCamt":null,"ingProb":0.169,"skillProb":0.044,"interval":2800,"baby":"喵喵","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#055","name":"哥达鸭","attr":"水","dtype":"能量","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[4,6],"ingC":"肠","ingCamt":5,"ingProb":0.162,"skillProb":0.125,"interval":3400,"baby":"可达鸭","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#057","name":"火爆猴","attr":"格斗","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.2,"skillProb":0.024,"interval":2800,"baby":"猴怪","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#059","name":"风速狗","attr":"火","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,5],"ingC":"奶","ingCamt":5,"ingProb":0.136,"skillProb":0.049,"interval":2500,"baby":"卡蒂狗","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#071","name":"大食花","attr":"草","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"葱","ingCamt":4,"ingProb":0.233,"skillProb":0.039,"interval":2800,"baby":"喇叭芽","stage":"最终","islN":"125","islX":null,"islY":"5"},{"dex":"#076","name":"隆隆岩","attr":"岩石","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"蘑菇","ingCamt":4,"ingProb":0.28,"skillProb":0.052,"interval":3100,"baby":"小拳石","stage":"最终","islN":"13","islX":null,"islY":"3"},{"dex":"#080","name":"呆壳兽","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"尾巴","ingBamts":[1,2],"ingC":"番茄","ingCamt":5,"ingProb":0.197,"skillProb":0.08,"interval":3800,"baby":"呆呆兽","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#083","name":"大葱鸭","attr":"飞行","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"葱","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[8,13],"ingC":"姜","ingCamt":12,"ingProb":0.16,"skillProb":0.043,"interval":3000,"baby":null,"stage":"不进化","islN":"126","islX":"1","islY":"6"},{"dex":"#085","name":"嘟嘟利","attr":"飞行","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.184,"skillProb":0.02,"interval":2300,"baby":"嘟嘟","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#094","name":"耿鬼","attr":"幽灵","dtype":"食材","avail":"abb","reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[2,5,7],"ingB":"蘑菇","ingBamts":[4,6],"ingC":"油","ingCamt":8,"ingProb":0.161,"skillProb":0.024,"interval":2200,"baby":"鬼斯","stage":"最终","islN":"136","islX":null,"islY":"3"},{"dex":"#095","name":"大岩蛇","attr":"岩石","dtype":"树果","avail":"岩果","reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,4],"ingC":"土豆","ingCamt":3,"ingProb":0.132,"skillProb":0.023,"interval":3100,"baby":"大岩蛇","stage":"徽章","islN":"3","islX":"1","islY":"3"},{"dex":"#105","name":"嘎啦嘎啦","attr":"地面","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"可可","ingCamt":null,"ingProb":0.225,"skillProb":0.045,"interval":3300,"baby":"卡拉卡拉","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#113","name":"吉利蛋","attr":"一般","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"奶妈","skillEff":18,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蜜","ingCamt":8,"ingProb":0.236,"skillProb":0.023,"interval":3069,"baby":"小福蛋","stage":"徽章","islN":"147","islX":"1","islY":"7"},{"dex":"#115","name":"袋兽","attr":"一般","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"豆","ingCamt":8,"ingProb":0.222,"skillProb":0.032,"interval":2650,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#122","name":"魔墙人偶","attr":"超能力","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"葱","ingCamt":4,"ingProb":0.216,"skillProb":0.039,"interval":2800,"baby":"魔尼尼","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#127","name":"凯罗斯","attr":"虫","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[5,8],"ingC":"肠","ingCamt":7,"ingProb":0.216,"skillProb":0.031,"interval":2400,"baby":null,"stage":"不进化","islN":"127","islX":"1","islY":"7"},{"dex":"#132","name":"百变怪","attr":"一般","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[3,5],"ingC":"尾巴","ingCamt":3,"ingProb":0.201,"skillProb":0.036,"interval":3500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#133-1","name":"伊布（佳节）","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.156,"skillProb":0.032,"interval":3100,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#133-2","name":"伊布（万圣节）","attr":"一般","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[4,6],"ingC":"肠","ingCamt":9,"ingProb":0.12,"skillProb":0.046,"interval":3200,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#134","name":"水伊布","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.212,"skillProb":0.061,"interval":3100,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#135","name":"雷伊布","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.151,"skillProb":0.039,"interval":2200,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#136","name":"火伊布","attr":"火","dtype":"功能","avail":"开锅","reco":null,"skillCat":"开锅","skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.185,"skillProb":0.052,"interval":2700,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#149","name":"快龙","attr":"龙","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[2,5,7],"ingB":"玉米","ingBamts":[4,7],"ingC":"油","ingCamt":8,"ingProb":0.264,"skillProb":0.026,"interval":2600,"baby":"迷你龙","stage":"最终","islN":"5","islX":null,"islY":"5"},{"dex":"#151","name":"梦幻","attr":"超能力","dtype":"功能","avail":"全能","reco":null,"skillCat":null,"skillEff":null,"ingA":null,"ingAamts":[],"ingB":null,"ingBamts":[],"ingC":null,"ingCamt":null,"ingProb":null,"skillProb":null,"interval":null,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#154","name":"大竺葵","attr":"草","dtype":"树果","avail":"草果","reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[3,5],"ingC":"葱","ingCamt":3,"ingProb":0.175,"skillProb":0.046,"interval":2800,"baby":"菊草叶","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#157","name":"火暴兽","attr":"火","dtype":"树果","avail":"火果","reco":"火果","skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"油","ingCamt":3,"ingProb":0.208,"skillProb":0.039,"interval":2400,"baby":"火球鼠","stage":"最终","islN":"13","islX":"1","islY":"3 & EX1"},{"dex":"#160","name":"大力鳄","attr":"水","dtype":"树果","avail":"水果","reco":"水果","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"油","ingCamt":null,"ingProb":0.257,"skillProb":0.055,"interval":2800,"baby":"小锯鳄","stage":"最终","islN":"12","islX":"1","islY":"2 & EX1"},{"dex":"#178","name":"天然鸟","attr":"超能力","dtype":"树果","avail":"超果","reco":"超果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"苹果","ingCamt":5,"ingProb":0.191,"skillProb":0.025,"interval":2500,"baby":"天然雀","stage":"最终","islN":"157","islX":"1","islY":"7"},{"dex":"#181","name":"电龙","attr":"电","dtype":"能量","avail":"电果","reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[3,4],"ingC":"蛋","ingCamt":null,"ingProb":0.13,"skillProb":0.047,"interval":2500,"baby":"咩利羊","stage":"最终","islN":"14","islX":"1","islY":null},{"dex":"#185","name":"树才怪","attr":"岩石","dtype":"能量","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":2,"ingProb":0.217,"skillProb":0.072,"interval":4000,"baby":"盆才怪","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#195","name":"沼王","attr":"水","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[6,10],"ingC":"肠","ingCamt":12,"ingProb":0.19,"skillProb":0.032,"interval":3400,"baby":"乌波","stage":"最终","islN":"12","islX":null,"islY":"2"},{"dex":"#196","name":"太阳伊布","attr":"超能力","dtype":"能量","avail":"超果","reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.164,"skillProb":0.044,"interval":2400,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#197","name":"月亮伊布","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.219,"skillProb":0.101,"interval":3200,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#199","name":"呆呆王","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"尾巴","ingBamts":[1,2],"ingC":"番茄","ingCamt":5,"ingProb":0.166,"skillProb":0.087,"interval":3400,"baby":"呆呆兽","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#202","name":"果然翁","attr":"超能力","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"油","ingCamt":3,"ingProb":0.211,"skillProb":0.082,"interval":3500,"baby":"小果然","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#208","name":"大钢蛇","attr":"钢","dtype":"树果","avail":"钢果","reco":"钢果","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,4],"ingC":"土豆","ingCamt":3,"ingProb":0.154,"skillProb":0.032,"interval":3000,"baby":"大岩蛇","stage":"最终","islN":"36","islX":"1","islY":"3"},{"dex":"#213","name":"壶壶","attr":"虫","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"油","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[2,3],"ingC":"蜜","ingCamt":4,"ingProb":0.205,"skillProb":0.059,"interval":3600,"baby":null,"stage":"不进化","islN":"123","islX":"1","islY":"2"},{"dex":"#214","name":"赫拉克罗斯","attr":"虫","dtype":"功能","avail":"暴击","reco":"暴击","skillCat":"暴击","skillEff":5,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"肠","ingCamt":4,"ingProb":0.158,"skillProb":0.047,"interval":2300,"baby":null,"stage":"不进化","islN":"127","islX":"1","islY":"2"},{"dex":"#225","name":"信使鸟","attr":"飞行","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[6,9],"ingC":"可可","ingCamt":5,"ingProb":0.188,"skillProb":0.03,"interval":2500,"baby":null,"stage":"不进化","islN":"14","islX":"1","islY":"4"},{"dex":"#229","name":"黑鲁加","attr":"恶","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"葱","ingCamt":3,"ingProb":0.203,"skillProb":0.04,"interval":3300,"baby":"戴鲁比","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#242","name":"幸福蛋","attr":"一般","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"奶妈","skillEff":18,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蜜","ingCamt":8,"ingProb":0.238,"skillProb":0.023,"interval":3100,"baby":"小福蛋","stage":"最终","islN":"147","islX":"1","islY":"7"},{"dex":"#243","name":"雷公","attr":"电","dtype":"功能","avail":"电队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"葱","ingCamt":2,"ingProb":0.192,"skillProb":0.019,"interval":2100,"baby":null,"stage":"不进化","islN":"16","islX":"1","islY":"6"},{"dex":"#244","name":"炎帝","attr":"火","dtype":"功能","avail":"火队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"番茄","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":3,"ingProb":0.187,"skillProb":0.023,"interval":2400,"baby":null,"stage":"不进化","islN":"137","islX":"1","islY":"37"},{"dex":"#245","name":"水君","attr":"水","dtype":"功能","avail":"水队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"玉米","ingCamt":2,"ingProb":0.277,"skillProb":0.026,"interval":2700,"baby":null,"stage":"不进化","islN":"125","islX":"1","islY":"25"},{"dex":"#248","name":"班基拉斯","attr":"恶","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[2,5,7],"ingB":"豆","ingBamts":[5,8],"ingC":"肠","ingCamt":8,"ingProb":0.266,"skillProb":0.052,"interval":2700,"baby":"幼基拉斯","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#254","name":"蜥蜴王","attr":"草","dtype":"能量","avail":"草果","reco":"草果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[2,3],"ingC":"葱","ingCamt":2,"ingProb":0.107,"skillProb":0.03,"interval":2300,"baby":"木守宫","stage":"最终","islN":"125","islX":"1","islY":"5 & EX1"},{"dex":"#257","name":"火焰鸡","attr":"格斗","dtype":"树果","avail":"斗果","reco":null,"skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[4,6],"ingC":"油","ingCamt":5,"ingProb":0.153,"skillProb":0.049,"interval":2600,"baby":"火稚鸡","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#260","name":"巨沼怪","attr":"地面","dtype":"树果","avail":"地果","reco":"地果","skillCat":"暴击","skillEff":10,"ingA":"玉米","ingAamts":[1,2,4],"ingB":"奶","ingBamts":[3,5],"ingC":"蘑菇","ingCamt":3,"ingProb":0.146,"skillProb":0.034,"interval":2800,"baby":"水跃鱼","stage":"最终","islN":"13","islX":"1","islY":"3"},{"dex":"#282","name":"沙奈朵","attr":"超能力","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[1,2],"ingC":"葱","ingCamt":2,"ingProb":0.144,"skillProb":0.042,"interval":2400,"baby":"拉鲁拉丝","stage":"最终","islN":"5","islX":"1","islY":"5"},{"dex":"#288","name":"过动猿","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,4],"ingC":"苹果","ingCamt":4,"ingProb":0.204,"skillProb":0.015,"interval":3200,"baby":"懒人獭","stage":"徽章","islN":null,"islX":null,"islY":null},{"dex":"#289","name":"请假王","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,4],"ingC":"苹果","ingCamt":4,"ingProb":0.339,"skillProb":0.067,"interval":3600,"baby":"懒人獭","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#302","name":"勾魂眼","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2875,"ingA":"油","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[2,3],"ingC":"可可","ingCamt":3,"ingProb":0.188,"skillProb":0.068,"interval":3600,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#303","name":"大嘴娃","attr":"钢","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"玉米","ingBamts":[4,6],"ingC":"番茄","ingCamt":8,"ingProb":0.204,"skillProb":0.038,"interval":3200,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#306","name":"波士可多拉","attr":"钢","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[2,5,7],"ingB":"咖啡","ingBamts":[3,5],"ingC":"豆","ingCamt":7,"ingProb":0.285,"skillProb":0.052,"interval":3000,"baby":"可可多拉","stage":"最终","islN":"6","islX":"1","islY":"6"},{"dex":"#311","name":"正电拍拍","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[2,3],"ingC":"奶","ingCamt":6,"ingProb":0.103,"skillProb":0.049,"interval":2400,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#312","name":"负电拍拍","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"奶","ingCamt":4,"ingProb":0.174,"skillProb":0.049,"interval":2400,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#317","name":"吞食兽","attr":"毒","dtype":"功能","avail":"梦碎","reco":"梦碎","skillCat":"梦碎","skillEff":2875,"ingA":"豆","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.21,"skillProb":0.07,"interval":3500,"baby":"溶食兽","stage":"最终","islN":"124","islX":null,"islY":"4"},{"dex":"#330","name":"沙漠蜻蜓","attr":"地面","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"牛油果","ingAamts":[2,5,7],"ingB":"叶子","ingBamts":[6,9],"ingC":"豆","ingCamt":12,"ingProb":0.172,"skillProb":0.039,"interval":2700,"baby":"大颚蚁","stage":"最终","islN":"37","islX":null,"islY":"7"},{"dex":"#334","name":"七夕青鸟","attr":"龙","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[3,4],"ingC":"苹果","ingCamt":5,"ingProb":0.258,"skillProb":0.061,"interval":3500,"baby":"青绵鸟","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#354","name":"诅咒娃娃","attr":"幽灵","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":3,"ingProb":0.179,"skillProb":0.033,"interval":2600,"baby":"怨影娃娃","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#359","name":"阿勃梭鲁","attr":"恶","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[8,12],"ingC":"蘑菇","ingCamt":7,"ingProb":0.178,"skillProb":0.038,"interval":2950,"baby":null,"stage":"不进化","islN":"14","islX":"1","islY":"4"},{"dex":"#363-1","name":"海豹球（佳节）","attr":"冰","dtype":"功能","avail":"暴击","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"油","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,4],"ingC":"姜","ingCamt":4,"ingProb":0.214,"skillProb":0.05,"interval":3300,"baby":null,"stage":"不进化","islN":"1","islX":"1","islY":null},{"dex":"#365","name":"帝牙海狮","attr":"冰","dtype":"树果","avail":"冰果","reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,4],"ingC":"姜","ingCamt":4,"ingProb":0.223,"skillProb":0.022,"interval":3000,"baby":"海豹球","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#373","name":"暴飞龙","attr":"龙","dtype":"树果","avail":"龙果","reco":"龙果","skillCat":"开锅","skillEff":null,"ingA":"土豆","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"肠","ingCamt":4,"ingProb":0.217,"skillProb":0.034,"interval":2800,"baby":"宝贝龙","stage":"最终","islN":"7","islX":null,"islY":"7"},{"dex":"#380","name":"拉帝亚斯","attr":"龙","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"南瓜","ingBamts":[1,2],"ingC":"蘑菇","ingCamt":2,"ingProb":0.114,"skillProb":0.049,"interval":2800,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#381","name":"拉帝欧斯","attr":"龙","dtype":"能量","avail":"龙果","reco":"龙果","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"奶","ingCamt":4,"ingProb":0.198,"skillProb":0.03,"interval":2800,"baby":null,"stage":"不进化","islN":"157","islX":"1","islY":"57"},{"dex":"#389","name":"土台龟","attr":"地面","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"蘑菇","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[3,5],"ingC":"姜","ingCamt":6,"ingProb":0.156,"skillProb":0.048,"interval":2900,"baby":"草苗龟","stage":"最终","islN":"135","islX":"1","islY":"5"},{"dex":"#392","name":"烈焰猴","attr":"格斗","dtype":"能量","avail":"斗果","reco":"斗果","skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"咖啡","ingCamt":3,"ingProb":0.106,"skillProb":0.033,"interval":2400,"baby":"小火焰猴","stage":"最终","islN":"137","islX":"1","islY":"37"},{"dex":"#395","name":"帝王拿波","attr":"钢","dtype":"树果","avail":"钢果","reco":"钢果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.168,"skillProb":0.038,"interval":3200,"baby":"波加曼","stage":"最终","islN":"124","islX":"1","islY":"24"},{"dex":"#405","name":"伦琴猫","attr":"电","dtype":"食材","avail":"aaa+abb","reco":"aaa+abb","skillCat":"开锅","skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"油","ingBamts":[4,7],"ingC":"咖啡","ingCamt":5,"ingProb":0.2,"skillProb":0.023,"interval":2400,"baby":"小猫怪","stage":"最终","islN":"6","islX":null,"islY":"6"},{"dex":"#426","name":"随风球","attr":"幽灵","dtype":"功能","avail":"充能","reco":null,"skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[1,2,4],"ingB":"油","ingBamts":[3,4],"ingC":"土豆","ingCamt":4,"ingProb":0.128,"skillProb":0.063,"interval":2500,"baby":"飘飘球","stage":"最终","islN":"16","islX":"1","islY":"6"},{"dex":"#430","name":"乌鸦头头","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[3,6],"ingC":"叶子","ingCamt":4,"ingProb":0.143,"skillProb":0.067,"interval":3200,"baby":"黑暗鸦","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#442","name":"花岩怪","attr":"恶","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[2,5,7],"ingB":"南瓜","ingBamts":[3,5],"ingC":"葱","ingCamt":6,"ingProb":0.198,"skillProb":0.036,"interval":3500,"baby":null,"stage":"不进化","islN":"147","islX":"1","islY":"47"},{"dex":"#448","name":"路卡利欧","attr":"格斗","dtype":"功能","avail":"梦碎","reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"油","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[2,4],"ingC":"蛋","ingCamt":4,"ingProb":0.15,"skillProb":0.051,"interval":2600,"baby":"利欧路","stage":"最终","islN":"134","islX":null,"islY":"3"},{"dex":"#454","name":"毒骷蛙","attr":"毒","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[5,8],"ingC":"肠","ingCamt":null,"ingProb":0.229,"skillProb":0.043,"interval":3400,"baby":"不良蛙","stage":"最终","islN":"12","islX":null,"islY":"2"},{"dex":"#460","name":"暴雪王","attr":"冰","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"蛋","ingBamts":[4,7],"ingC":"蘑菇","ingCamt":5,"ingProb":0.25,"skillProb":0.044,"interval":3000,"baby":"雪笠怪","stage":"最终","islN":"4","islX":"1","islY":"4"},{"dex":"#461","name":"玛狃拉","attr":"恶","dtype":"树果","avail":"恶果","reco":"恶果","skillCat":"暴击","skillEff":10,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"豆","ingCamt":4,"ingProb":0.251,"skillProb":0.018,"interval":2700,"baby":"狃拉","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#462","name":"自爆磁怪","attr":"钢","dtype":"功能","avail":"开锅","reco":"开锅","skillCat":"开锅","skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"叶子","ingCamt":null,"ingProb":0.179,"skillProb":0.062,"interval":3100,"baby":"小磁怪","stage":"最终","islN":"16","islX":"1","islY":"6 & EX1"},{"dex":"#468","name":"波克基斯","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,4],"ingC":"可可","ingCamt":3,"ingProb":0.158,"skillProb":0.053,"interval":2600,"baby":"波克比","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#470","name":"叶伊布","attr":"草","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.205,"skillProb":0.069,"interval":3000,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#471","name":"冰伊布","attr":"冰","dtype":"功能","avail":"开锅","reco":"开锅","skillCat":"开锅","skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.219,"skillProb":0.063,"interval":3200,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#475","name":"艾路雷朵","attr":"格斗","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[1,2],"ingC":"葱","ingCamt":2,"ingProb":0.147,"skillProb":0.054,"interval":2400,"baby":"拉鲁拉丝","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#488","name":"克雷色利亚","attr":"超能力","dtype":"功能","avail":"超队","reco":null,"skillCat":"奶妈","skillEff":11,"ingA":"姜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"番茄","ingCamt":4,"ingProb":0.239,"skillProb":0.041,"interval":2300,"baby":null,"stage":"不进化","islN":"145","islX":"1","islY":"5"},{"dex":"#491","name":"达克莱伊","attr":"恶","dtype":"树果","avail":"恶果","reco":"恶果","skillCat":null,"skillEff":null,"ingA":null,"ingAamts":[],"ingB":null,"ingBamts":[],"ingC":null,"ingCamt":null,"ingProb":0.192,"skillProb":0.023,"interval":2900,"baby":null,"stage":"不进化","islN":"1234567","islX":"1","islY":null},{"dex":"#518","name":"梦梦蚀","attr":"超能力","dtype":"树果","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2875,"ingA":"奶","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,3],"ingC":"咖啡","ingCamt":2,"ingProb":0.188,"skillProb":0.041,"interval":2800,"baby":"食梦梦","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#558","name":"岩殿居蟹","attr":"虫","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"牛油果","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[3,5],"ingC":"油","ingCamt":5,"ingProb":0.239,"skillProb":0.064,"interval":3200,"baby":"石居蟹","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#628","name":"勇士雄鹰","attr":"飞行","dtype":"能量","avail":"飞果","reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"咖啡","ingCamt":2,"ingProb":0.121,"skillProb":0.035,"interval":2400,"baby":"毛头小鹰","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#697","name":"怪颚龙","attr":"岩石","dtype":"树果","avail":"岩果","reco":"岩果","skillCat":"开锅","skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[3,4],"ingC":"土豆","ingCamt":3,"ingProb":0.178,"skillProb":0.029,"interval":2800,"baby":"宝宝暴龙","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#700","name":"仙子伊布","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":"奶妈","skillEff":18,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.178,"skillProb":0.04,"interval":2600,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#702","name":"咚咚鼠","attr":"电","dtype":"功能","avail":"暴击","reco":"暴击","skillCat":"暴击","skillEff":10,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"玉米","ingCamt":3,"ingProb":0.177,"skillProb":0.045,"interval":2500,"baby":null,"stage":"不进化","islN":"156","islX":"1","islY":"5"},{"dex":"#711","name":"南瓜怪人","attr":"幽灵","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[2,5,7],"ingB":"豆","ingBamts":[11,18],"ingC":"土豆","ingCamt":15,"ingProb":0.13,"skillProb":0.049,"interval":3200,"baby":"南瓜精","stage":"最终","islN":"16","islX":"1","islY":"6"},{"dex":"#715","name":"音波龙","attr":"龙","dtype":"能量","avail":"龙果","reco":"龙果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.195,"skillProb":0.048,"interval":2700,"baby":"嗡蝠","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#738","name":"锹农炮虫","attr":"虫","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[2,5,7],"ingB":"蘑菇","ingBamts":[4,7],"ingC":"蜜","ingCamt":11,"ingProb":0.194,"skillProb":0.051,"interval":2800,"baby":"强颚鸡母虫","stage":"最终","islN":"6","islX":null,"islY":"6"},{"dex":"#743","name":"蝶结萌虻","attr":"妖精","dtype":"食材","avail":"aaa+abb","reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"油","ingBamts":[4,6],"ingC":"玉米","ingCamt":5,"ingProb":0.194,"skillProb":0.025,"interval":2300,"baby":"萌虻","stage":"最终","islN":"12","islX":"1","islY":"2"},{"dex":"#760","name":"穿着熊","attr":"格斗","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[6,10],"ingC":"蛋","ingCamt":9,"ingProb":0.229,"skillProb":0.013,"interval":2800,"baby":"童偶熊","stage":"最终","islN":"5","islX":null,"islY":"5"},{"dex":"#764","name":"花疗环环","attr":"妖精","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[2,5,7],"ingB":"姜","ingBamts":[6,9],"ingC":"可可","ingCamt":7,"ingProb":0.167,"skillProb":0.035,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#777","name":"托戈德玛尔","attr":"钢","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"牛油果","ingBamts":[1,2],"ingC":"可可","ingCamt":2,"ingProb":0.169,"skillProb":0.055,"interval":2700,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#778","name":"谜拟Q","attr":"幽灵","dtype":"能量","avail":"鬼果","reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[1,2],"ingC":"蘑菇","ingCamt":2,"ingProb":0.153,"skillProb":0.035,"interval":2500,"baby":null,"stage":"不进化","islN":"16","islX":"1","islY":"6"},{"dex":"#780","name":"老翁龙","attr":"龙","dtype":"食材","avail":"aaa","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"豆","ingAamts":[2,5,7],"ingB":"牛油果","ingBamts":[3,4],"ingC":"肠","ingCamt":7,"ingProb":0.294,"skillProb":0.046,"interval":3500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#845","name":"古月鸟","attr":"飞行","dtype":"食材","avail":"aaa","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"油","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蛋","ingCamt":8,"ingProb":0.165,"skillProb":0.039,"interval":2700,"baby":null,"stage":"不进化","islN":"124","islX":"1","islY":"4"},{"dex":"#849","name":"颤弦蝾螈","attr":"毒","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[2,4],"ingC":"葱","ingCamt":2,"ingProb":0.239,"skillProb":0.064,"interval":3100,"baby":"毒电婴","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#908","name":"魔幻假面喵","attr":"恶","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"开锅","skillEff":null,"ingA":"土豆","ingAamts":[2,5,7],"ingB":"奶","ingBamts":[6,9],"ingC":"姜","ingCamt":8,"ingProb":0.19,"skillProb":0.022,"interval":2600,"baby":"新叶喵","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#911","name":"骨纹巨声鳄","attr":"幽灵","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[4,6],"ingC":"叶子","ingCamt":5,"ingProb":0.268,"skillProb":0.062,"interval":2700,"baby":"呆火鳄","stage":"最终","islN":"123","islX":"1","islY":"3"},{"dex":"#914","name":"狂欢浪舞鸭","attr":"格斗","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[2,4],"ingC":"油","ingCamt":6,"ingProb":0.232,"skillProb":0.024,"interval":2600,"baby":"润水鸭","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#923","name":"巴布土拨","attr":"电","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"可可","ingAamts":[1,2,4],"ingB":"奶","ingBamts":[3,6],"ingC":"蛋","ingCamt":5,"ingProb":0.141,"skillProb":0.039,"interval":2400,"baby":"布拨","stage":"最终","islN":"146","islX":"1","islY":"4"},{"dex":"#975","name":"浩大鲸","attr":"冰","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"土豆","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[5,9],"ingC":"南瓜","ingCamt":4,"ingProb":0.209,"skillProb":0.042,"interval":2800,"baby":"走鲸","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#980","name":"土王","attr":"毒","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[2,5,7],"ingB":"咖啡","ingBamts":[4,7],"ingC":"土豆","ingCamt":9,"ingProb":0.208,"skillProb":0.055,"interval":3500,"baby":"毒乌波","stage":"最终","islN":"13","islX":"1","islY":"3"}];
+const CAP_DEX = [{"dex":"#003","name":"妙蛙花","attr":"草","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"番茄","ingBamts":[4,7],"ingC":"土豆","ingCamt":6,"ingProb":0.266,"skillProb":0.021,"interval":2800,"baby":"妙蛙种子","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#006","name":"喷火龙","attr":"火","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[2,5,7],"ingB":"姜","ingBamts":[4,7],"ingC":"叶子","ingCamt":6,"ingProb":0.224,"skillProb":0.016,"interval":2400,"baby":"小火龙","stage":"最终","islN":"13","islX":"1","islY":"3"},{"dex":"#009","name":"水箭龟","attr":"水","dtype":"食材","avail":"aaa+abb","reco":"aaa+abb","skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[2,5,7],"ingB":"可可","ingBamts":[3,5],"ingC":"肠","ingCamt":7,"ingProb":0.275,"skillProb":0.021,"interval":2800,"baby":"杰尼龟","stage":"最终","islN":"12","islX":"1","islY":"2"},{"dex":"#012","name":"巴大蝶","attr":"虫","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"番茄","ingBamts":[2,3],"ingC":"豆","ingCamt":4,"ingProb":0.197,"skillProb":0.014,"interval":2500,"baby":"绿毛虫","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#020","name":"拉达","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[2,3],"ingC":"肠","ingCamt":3,"ingProb":0.237,"skillProb":0.03,"interval":2950,"baby":"小拉达","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#024","name":"阿柏怪","attr":"毒","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"叶子","ingCamt":3,"ingProb":0.264,"skillProb":0.057,"interval":3400,"baby":"阿柏蛇","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#025","name":"皮卡丘","attr":"电","dtype":"树果","avail":"电果","reco":"电果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.207,"skillProb":0.021,"interval":2700,"baby":"皮卡丘","stage":"徽章","islN":"126","islX":"1","islY":"26"},{"dex":"#025-1","name":"皮卡丘（万圣节）","attr":"电","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.218,"skillProb":0.028,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#025-2","name":"皮卡丘（佳节）","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.131,"skillProb":0.042,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#026","name":"雷丘","attr":"电","dtype":"树果","avail":"电果","reco":"电果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,3],"ingC":"蛋","ingCamt":3,"ingProb":0.224,"skillProb":0.032,"interval":2200,"baby":"皮丘","stage":"最终","islN":"126","islX":"1","islY":"26"},{"dex":"#028","name":"穿山王","attr":"地面","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[4,6],"ingC":"土豆","ingCamt":7,"ingProb":0.108,"skillProb":0.043,"interval":2800,"baby":"穿山鼠","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#036","name":"皮可西","attr":"妖精","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,3],"ingC":"豆","ingCamt":3,"ingProb":0.168,"skillProb":0.036,"interval":2800,"baby":"皮宝宝","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#038","name":"九尾","attr":"火","dtype":"树果","avail":"火果","reco":null,"skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"土豆","ingCamt":3,"ingProb":0.164,"skillProb":0.029,"interval":2600,"baby":"六尾","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#038-1","name":"冰九尾","attr":"冰","dtype":"树果","avail":"冰果","reco":"冰果","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"土豆","ingCamt":3,"ingProb":0.232,"skillProb":0.028,"interval":2900,"baby":"冰六尾","stage":"最终","islN":"4","islX":"1","islY":"4"},{"dex":"#040","name":"胖可丁","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":"奶妈","skillEff":18,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"可可","ingCamt":2,"ingProb":0.191,"skillProb":0.04,"interval":2750,"baby":"宝宝丁","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#051","name":"三地鼠","attr":"地面","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[3,4],"ingC":"豆","ingCamt":8,"ingProb":0.19,"skillProb":0.02,"interval":2650,"baby":"地鼠","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#053","name":"猫老大","attr":"一般","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"奶","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,3],"ingC":"肠","ingCamt":null,"ingProb":0.169,"skillProb":0.044,"interval":2800,"baby":"喵喵","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#055","name":"哥达鸭","attr":"水","dtype":"能量","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[4,6],"ingC":"肠","ingCamt":5,"ingProb":0.162,"skillProb":0.125,"interval":3400,"baby":"可达鸭","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#057","name":"火爆猴","attr":"格斗","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.2,"skillProb":0.024,"interval":2800,"baby":"猴怪","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#059","name":"风速狗","attr":"火","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,5],"ingC":"奶","ingCamt":5,"ingProb":0.136,"skillProb":0.049,"interval":2500,"baby":"卡蒂狗","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#071","name":"大食花","attr":"草","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"葱","ingCamt":4,"ingProb":0.233,"skillProb":0.039,"interval":2800,"baby":"喇叭芽","stage":"最终","islN":"125","islX":null,"islY":"5"},{"dex":"#076","name":"隆隆岩","attr":"岩石","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"蘑菇","ingCamt":4,"ingProb":0.28,"skillProb":0.052,"interval":3100,"baby":"小拳石","stage":"最终","islN":"13","islX":null,"islY":"3"},{"dex":"#080","name":"呆壳兽","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"尾巴","ingBamts":[1,2],"ingC":"番茄","ingCamt":5,"ingProb":0.197,"skillProb":0.08,"interval":3800,"baby":"呆呆兽","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#083","name":"大葱鸭","attr":"飞行","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"葱","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[8,13],"ingC":"姜","ingCamt":12,"ingProb":0.16,"skillProb":0.043,"interval":3000,"baby":null,"stage":"不进化","islN":"126","islX":"1","islY":"6"},{"dex":"#085","name":"嘟嘟利","attr":"飞行","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.184,"skillProb":0.02,"interval":2300,"baby":"嘟嘟","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#094","name":"耿鬼","attr":"幽灵","dtype":"食材","avail":"abb","reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[2,5,7],"ingB":"蘑菇","ingBamts":[4,6],"ingC":"油","ingCamt":8,"ingProb":0.161,"skillProb":0.024,"interval":2200,"baby":"鬼斯","stage":"最终","islN":"136","islX":null,"islY":"3"},{"dex":"#095","name":"大岩蛇","attr":"岩石","dtype":"树果","avail":"岩果","reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,4],"ingC":"土豆","ingCamt":3,"ingProb":0.132,"skillProb":0.023,"interval":3100,"baby":"大岩蛇","stage":"徽章","islN":"3","islX":"1","islY":"3"},{"dex":"#105","name":"嘎啦嘎啦","attr":"地面","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"可可","ingCamt":null,"ingProb":0.225,"skillProb":0.045,"interval":3300,"baby":"卡拉卡拉","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#113","name":"吉利蛋","attr":"一般","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"奶妈","skillEff":18,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蜜","ingCamt":8,"ingProb":0.236,"skillProb":0.023,"interval":3300,"baby":"小福蛋","stage":"徽章","islN":"147","islX":"1","islY":"7"},{"dex":"#115","name":"袋兽","attr":"一般","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"豆","ingCamt":8,"ingProb":0.222,"skillProb":0.032,"interval":2650,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#122","name":"魔墙人偶","attr":"超能力","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,6],"ingC":"葱","ingCamt":4,"ingProb":0.216,"skillProb":0.039,"interval":2800,"baby":"魔尼尼","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#127","name":"凯罗斯","attr":"虫","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[5,8],"ingC":"肠","ingCamt":7,"ingProb":0.216,"skillProb":0.031,"interval":2400,"baby":null,"stage":"不进化","islN":"127","islX":"1","islY":"7"},{"dex":"#132","name":"百变怪","attr":"一般","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[3,5],"ingC":"尾巴","ingCamt":3,"ingProb":0.201,"skillProb":0.036,"interval":3500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#133-1","name":"伊布（佳节）","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.156,"skillProb":0.032,"interval":3100,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#133-2","name":"伊布（万圣节）","attr":"一般","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[4,6],"ingC":"肠","ingCamt":9,"ingProb":0.12,"skillProb":0.046,"interval":3200,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#134","name":"水伊布","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.212,"skillProb":0.061,"interval":3100,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#135","name":"雷伊布","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.151,"skillProb":0.039,"interval":2200,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#136","name":"火伊布","attr":"火","dtype":"功能","avail":"开锅","reco":null,"skillCat":"开锅","skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.185,"skillProb":0.052,"interval":2700,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#149","name":"快龙","attr":"龙","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[2,5,7],"ingB":"玉米","ingBamts":[4,7],"ingC":"油","ingCamt":8,"ingProb":0.264,"skillProb":0.026,"interval":2600,"baby":"迷你龙","stage":"最终","islN":"5","islX":null,"islY":"5"},{"dex":"#151","name":"梦幻","attr":"超能力","dtype":"功能","avail":"全能","reco":null,"skillCat":null,"skillEff":null,"ingA":null,"ingAamts":[],"ingB":null,"ingBamts":[],"ingC":null,"ingCamt":null,"ingProb":null,"skillProb":null,"interval":null,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#154","name":"大竺葵","attr":"草","dtype":"树果","avail":"草果","reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[3,5],"ingC":"葱","ingCamt":3,"ingProb":0.175,"skillProb":0.046,"interval":2800,"baby":"菊草叶","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#157","name":"火暴兽","attr":"火","dtype":"树果","avail":"火果","reco":"火果","skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"油","ingCamt":3,"ingProb":0.208,"skillProb":0.039,"interval":2400,"baby":"火球鼠","stage":"最终","islN":"13","islX":"1","islY":"3 & EX1"},{"dex":"#160","name":"大力鳄","attr":"水","dtype":"树果","avail":"水果","reco":"水果","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"油","ingCamt":null,"ingProb":0.257,"skillProb":0.055,"interval":2800,"baby":"小锯鳄","stage":"最终","islN":"12","islX":"1","islY":"2 & EX1"},{"dex":"#178","name":"天然鸟","attr":"超能力","dtype":"树果","avail":"超果","reco":"超果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"苹果","ingCamt":5,"ingProb":0.191,"skillProb":0.025,"interval":2500,"baby":"天然雀","stage":"最终","islN":"157","islX":"1","islY":"7"},{"dex":"#181","name":"电龙","attr":"电","dtype":"能量","avail":"电果","reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[3,4],"ingC":"蛋","ingCamt":null,"ingProb":0.13,"skillProb":0.047,"interval":2500,"baby":"咩利羊","stage":"最终","islN":"14","islX":"1","islY":null},{"dex":"#185","name":"树才怪","attr":"岩石","dtype":"能量","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":2,"ingProb":0.217,"skillProb":0.072,"interval":4000,"baby":"盆才怪","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#195","name":"沼王","attr":"水","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[6,10],"ingC":"肠","ingCamt":12,"ingProb":0.19,"skillProb":0.032,"interval":3400,"baby":"乌波","stage":"最终","islN":"12","islX":null,"islY":"2"},{"dex":"#196","name":"太阳伊布","attr":"超能力","dtype":"能量","avail":"超果","reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.164,"skillProb":0.044,"interval":2400,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#197","name":"月亮伊布","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.219,"skillProb":0.101,"interval":3200,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#199","name":"呆呆王","attr":"水","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[1,2,4],"ingB":"尾巴","ingBamts":[1,2],"ingC":"番茄","ingCamt":5,"ingProb":0.166,"skillProb":0.087,"interval":3400,"baby":"呆呆兽","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#202","name":"果然翁","attr":"超能力","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"油","ingCamt":3,"ingProb":0.211,"skillProb":0.082,"interval":3500,"baby":"小果然","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#208","name":"大钢蛇","attr":"钢","dtype":"树果","avail":"钢果","reco":"钢果","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[2,4],"ingC":"土豆","ingCamt":3,"ingProb":0.154,"skillProb":0.032,"interval":3000,"baby":"大岩蛇","stage":"最终","islN":"36","islX":"1","islY":"3"},{"dex":"#213","name":"壶壶","attr":"虫","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"油","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[2,3],"ingC":"蜜","ingCamt":4,"ingProb":0.205,"skillProb":0.059,"interval":3600,"baby":null,"stage":"不进化","islN":"123","islX":"1","islY":"2"},{"dex":"#214","name":"赫拉克罗斯","attr":"虫","dtype":"功能","avail":"暴击","reco":"暴击","skillCat":"暴击","skillEff":5,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"肠","ingCamt":4,"ingProb":0.158,"skillProb":0.047,"interval":2300,"baby":null,"stage":"不进化","islN":"127","islX":"1","islY":"2"},{"dex":"#225","name":"信使鸟","attr":"飞行","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[6,9],"ingC":"可可","ingCamt":5,"ingProb":0.188,"skillProb":0.03,"interval":2500,"baby":null,"stage":"不进化","islN":"14","islX":"1","islY":"4"},{"dex":"#229","name":"黑鲁加","attr":"恶","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"葱","ingCamt":3,"ingProb":0.203,"skillProb":0.04,"interval":3300,"baby":"戴鲁比","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#242","name":"幸福蛋","attr":"一般","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"奶妈","skillEff":18,"ingA":"蛋","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蜜","ingCamt":8,"ingProb":0.238,"skillProb":0.023,"interval":3100,"baby":"小福蛋","stage":"最终","islN":"147","islX":"1","islY":"7"},{"dex":"#243","name":"雷公","attr":"电","dtype":"功能","avail":"电队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"葱","ingCamt":2,"ingProb":0.192,"skillProb":0.019,"interval":2100,"baby":null,"stage":"不进化","islN":"16","islX":"1","islY":"6"},{"dex":"#244","name":"炎帝","attr":"火","dtype":"功能","avail":"火队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"番茄","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":3,"ingProb":0.187,"skillProb":0.023,"interval":2400,"baby":null,"stage":"不进化","islN":"137","islX":"1","islY":"37"},{"dex":"#245","name":"水君","attr":"水","dtype":"功能","avail":"水队","reco":null,"skillCat":"帮手加速","skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"油","ingBamts":[2,3],"ingC":"玉米","ingCamt":2,"ingProb":0.277,"skillProb":0.026,"interval":2700,"baby":null,"stage":"不进化","islN":"125","islX":"1","islY":"25"},{"dex":"#248","name":"班基拉斯","attr":"恶","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"姜","ingAamts":[2,5,7],"ingB":"豆","ingBamts":[5,8],"ingC":"肠","ingCamt":8,"ingProb":0.266,"skillProb":0.052,"interval":2700,"baby":"幼基拉斯","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#254","name":"蜥蜴王","attr":"草","dtype":"能量","avail":"草果","reco":"草果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[2,3],"ingC":"葱","ingCamt":2,"ingProb":0.107,"skillProb":0.03,"interval":2300,"baby":"木守宫","stage":"最终","islN":"125","islX":"1","islY":"5 & EX1"},{"dex":"#257","name":"火焰鸡","attr":"格斗","dtype":"树果","avail":"斗果","reco":null,"skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[4,6],"ingC":"油","ingCamt":5,"ingProb":0.153,"skillProb":0.049,"interval":2600,"baby":"火稚鸡","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#260","name":"巨沼怪","attr":"地面","dtype":"树果","avail":"地果","reco":"地果","skillCat":"暴击","skillEff":10,"ingA":"玉米","ingAamts":[1,2,4],"ingB":"奶","ingBamts":[3,5],"ingC":"蘑菇","ingCamt":3,"ingProb":0.146,"skillProb":0.034,"interval":2800,"baby":"水跃鱼","stage":"最终","islN":"13","islX":"1","islY":"3"},{"dex":"#282","name":"沙奈朵","attr":"超能力","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[1,2],"ingC":"葱","ingCamt":2,"ingProb":0.144,"skillProb":0.042,"interval":2400,"baby":"拉鲁拉丝","stage":"最终","islN":"5","islX":"1","islY":"5"},{"dex":"#288","name":"过动猿","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,4],"ingC":"苹果","ingCamt":4,"ingProb":0.204,"skillProb":0.015,"interval":3200,"baby":"懒人獭","stage":"徽章","islN":null,"islX":null,"islY":null},{"dex":"#289","name":"请假王","attr":"一般","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,4],"ingC":"苹果","ingCamt":4,"ingProb":0.339,"skillProb":0.067,"interval":3600,"baby":"懒人獭","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#302","name":"勾魂眼","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2875,"ingA":"油","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[2,3],"ingC":"可可","ingCamt":3,"ingProb":0.188,"skillProb":0.068,"interval":3600,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#303","name":"大嘴娃","attr":"钢","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"玉米","ingBamts":[4,6],"ingC":"番茄","ingCamt":8,"ingProb":0.204,"skillProb":0.038,"interval":3200,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#306","name":"波士可多拉","attr":"钢","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[2,5,7],"ingB":"咖啡","ingBamts":[3,5],"ingC":"豆","ingCamt":7,"ingProb":0.285,"skillProb":0.052,"interval":3000,"baby":"可可多拉","stage":"最终","islN":"6","islX":"1","islY":"6"},{"dex":"#311","name":"正电拍拍","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[2,3],"ingC":"奶","ingCamt":6,"ingProb":0.103,"skillProb":0.049,"interval":2400,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#312","name":"负电拍拍","attr":"电","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"奶","ingCamt":4,"ingProb":0.174,"skillProb":0.049,"interval":2400,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#317","name":"吞食兽","attr":"毒","dtype":"功能","avail":"梦碎","reco":"梦碎","skillCat":"梦碎","skillEff":2875,"ingA":"豆","ingAamts":[1,2,4],"ingB":"蘑菇","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.21,"skillProb":0.07,"interval":3500,"baby":"溶食兽","stage":"最终","islN":"124","islX":null,"islY":"4"},{"dex":"#330","name":"沙漠蜻蜓","attr":"地面","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"牛油果","ingAamts":[2,5,7],"ingB":"叶子","ingBamts":[6,9],"ingC":"豆","ingCamt":12,"ingProb":0.172,"skillProb":0.039,"interval":2700,"baby":"大颚蚁","stage":"最终","islN":"37","islX":null,"islY":"7"},{"dex":"#334","name":"七夕青鸟","attr":"龙","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[3,4],"ingC":"苹果","ingCamt":5,"ingProb":0.258,"skillProb":0.061,"interval":3500,"baby":"青绵鸟","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#354","name":"诅咒娃娃","attr":"幽灵","dtype":"树果","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,4],"ingC":"蘑菇","ingCamt":3,"ingProb":0.179,"skillProb":0.033,"interval":2600,"baby":"怨影娃娃","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#359","name":"阿勃梭鲁","attr":"恶","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[2,5,7],"ingB":"苹果","ingBamts":[8,12],"ingC":"蘑菇","ingCamt":7,"ingProb":0.178,"skillProb":0.038,"interval":2950,"baby":null,"stage":"不进化","islN":"14","islX":"1","islY":"4"},{"dex":"#363-1","name":"海豹球（佳节）","attr":"冰","dtype":"功能","avail":"暴击","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"油","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,4],"ingC":"姜","ingCamt":4,"ingProb":0.214,"skillProb":0.05,"interval":3300,"baby":null,"stage":"不进化","islN":"1","islX":"1","islY":null},{"dex":"#365","name":"帝牙海狮","attr":"冰","dtype":"树果","avail":"冰果","reco":null,"skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"肠","ingBamts":[3,4],"ingC":"姜","ingCamt":4,"ingProb":0.223,"skillProb":0.022,"interval":3000,"baby":"海豹球","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#373","name":"暴飞龙","attr":"龙","dtype":"树果","avail":"龙果","reco":"龙果","skillCat":"开锅","skillEff":null,"ingA":"土豆","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"肠","ingCamt":4,"ingProb":0.217,"skillProb":0.034,"interval":2800,"baby":"宝贝龙","stage":"最终","islN":"7","islX":null,"islY":"7"},{"dex":"#380","name":"拉帝亚斯","attr":"龙","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"南瓜","ingBamts":[1,2],"ingC":"蘑菇","ingCamt":2,"ingProb":0.114,"skillProb":0.049,"interval":2800,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#381","name":"拉帝欧斯","attr":"龙","dtype":"能量","avail":"龙果","reco":"龙果","skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"奶","ingCamt":4,"ingProb":0.198,"skillProb":0.03,"interval":2800,"baby":null,"stage":"不进化","islN":"157","islX":"1","islY":"57"},{"dex":"#389","name":"土台龟","attr":"地面","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"蘑菇","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[3,5],"ingC":"姜","ingCamt":6,"ingProb":0.156,"skillProb":0.048,"interval":2900,"baby":"草苗龟","stage":"最终","islN":"135","islX":"1","islY":"5"},{"dex":"#392","name":"烈焰猴","attr":"格斗","dtype":"能量","avail":"斗果","reco":"斗果","skillCat":null,"skillEff":null,"ingA":"叶子","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[3,4],"ingC":"咖啡","ingCamt":3,"ingProb":0.106,"skillProb":0.033,"interval":2400,"baby":"小火焰猴","stage":"最终","islN":"137","islX":"1","islY":"37"},{"dex":"#395","name":"帝王拿波","attr":"钢","dtype":"树果","avail":"钢果","reco":"钢果","skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[1,2],"ingC":"蜜","ingCamt":4,"ingProb":0.168,"skillProb":0.038,"interval":3200,"baby":"波加曼","stage":"最终","islN":"124","islX":"1","islY":"24"},{"dex":"#405","name":"伦琴猫","attr":"电","dtype":"食材","avail":"aaa+abb","reco":"aaa+abb","skillCat":"开锅","skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"油","ingBamts":[4,7],"ingC":"咖啡","ingCamt":5,"ingProb":0.2,"skillProb":0.023,"interval":2400,"baby":"小猫怪","stage":"最终","islN":"6","islX":null,"islY":"6"},{"dex":"#426","name":"随风球","attr":"幽灵","dtype":"功能","avail":"充能","reco":null,"skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[1,2,4],"ingB":"油","ingBamts":[3,4],"ingC":"土豆","ingCamt":4,"ingProb":0.128,"skillProb":0.063,"interval":2500,"baby":"飘飘球","stage":"最终","islN":"16","islX":"1","islY":"6"},{"dex":"#430","name":"乌鸦头头","attr":"恶","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[1,2,4],"ingB":"豆","ingBamts":[3,6],"ingC":"叶子","ingCamt":4,"ingProb":0.143,"skillProb":0.067,"interval":3200,"baby":"黑暗鸦","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#442","name":"花岩怪","attr":"恶","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"蘑菇","ingAamts":[2,5,7],"ingB":"南瓜","ingBamts":[3,5],"ingC":"葱","ingCamt":6,"ingProb":0.198,"skillProb":0.036,"interval":3500,"baby":null,"stage":"不进化","islN":"147","islX":"1","islY":"47"},{"dex":"#448","name":"路卡利欧","attr":"格斗","dtype":"功能","avail":"梦碎","reco":null,"skillCat":"梦碎","skillEff":2500,"ingA":"油","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[2,4],"ingC":"蛋","ingCamt":4,"ingProb":0.15,"skillProb":0.051,"interval":2600,"baby":"利欧路","stage":"最终","islN":"134","islX":null,"islY":"3"},{"dex":"#454","name":"毒骷蛙","attr":"毒","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"油","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[5,8],"ingC":"肠","ingCamt":null,"ingProb":0.229,"skillProb":0.043,"interval":3400,"baby":"不良蛙","stage":"最终","islN":"12","islX":null,"islY":"2"},{"dex":"#460","name":"暴雪王","attr":"冰","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"番茄","ingAamts":[2,5,7],"ingB":"蛋","ingBamts":[4,7],"ingC":"蘑菇","ingCamt":5,"ingProb":0.25,"skillProb":0.044,"interval":3000,"baby":"雪笠怪","stage":"最终","islN":"4","islX":"1","islY":"4"},{"dex":"#461","name":"玛狃拉","attr":"恶","dtype":"树果","avail":"恶果","reco":"恶果","skillCat":"暴击","skillEff":10,"ingA":"肠","ingAamts":[1,2,4],"ingB":"蛋","ingBamts":[2,3],"ingC":"豆","ingCamt":4,"ingProb":0.251,"skillProb":0.018,"interval":2700,"baby":"狃拉","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#462","name":"自爆磁怪","attr":"钢","dtype":"功能","avail":"开锅","reco":"开锅","skillCat":"开锅","skillEff":null,"ingA":"油","ingAamts":[1,2,4],"ingB":"叶子","ingBamts":[2,3],"ingC":"叶子","ingCamt":null,"ingProb":0.179,"skillProb":0.062,"interval":3100,"baby":"小磁怪","stage":"最终","islN":"16","islX":"1","islY":"6 & EX1"},{"dex":"#468","name":"波克基斯","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"蛋","ingAamts":[1,2,4],"ingB":"姜","ingBamts":[2,4],"ingC":"可可","ingCamt":3,"ingProb":0.158,"skillProb":0.053,"interval":2600,"baby":"波克比","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#470","name":"叶伊布","attr":"草","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.205,"skillProb":0.069,"interval":3000,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#471","name":"冰伊布","attr":"冰","dtype":"功能","avail":"开锅","reco":"开锅","skillCat":"开锅","skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.219,"skillProb":0.063,"interval":3200,"baby":"伊布","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#475","name":"艾路雷朵","attr":"格斗","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[1,2],"ingC":"葱","ingCamt":2,"ingProb":0.147,"skillProb":0.054,"interval":2400,"baby":"拉鲁拉丝","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#488","name":"克雷色利亚","attr":"超能力","dtype":"功能","avail":"超队","reco":null,"skillCat":"奶妈","skillEff":11,"ingA":"姜","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[2,3],"ingC":"番茄","ingCamt":4,"ingProb":0.239,"skillProb":0.041,"interval":2300,"baby":null,"stage":"不进化","islN":"145","islX":"1","islY":"5"},{"dex":"#491","name":"达克莱伊","attr":"恶","dtype":"树果","avail":"恶果","reco":"恶果","skillCat":null,"skillEff":null,"ingA":null,"ingAamts":[],"ingB":null,"ingBamts":[],"ingC":null,"ingCamt":null,"ingProb":0.192,"skillProb":0.023,"interval":2900,"baby":null,"stage":"不进化","islN":"1234567","islX":"1","islY":null},{"dex":"#518","name":"梦梦蚀","attr":"超能力","dtype":"树果","avail":null,"reco":null,"skillCat":"梦碎","skillEff":2875,"ingA":"奶","ingAamts":[1,2,4],"ingB":"蜜","ingBamts":[2,3],"ingC":"咖啡","ingCamt":2,"ingProb":0.188,"skillProb":0.041,"interval":2800,"baby":"食梦梦","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#558","name":"岩殿居蟹","attr":"虫","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"牛油果","ingAamts":[1,2,4],"ingB":"土豆","ingBamts":[3,5],"ingC":"油","ingCamt":5,"ingProb":0.239,"skillProb":0.064,"interval":3200,"baby":"石居蟹","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#628","name":"勇士雄鹰","attr":"飞行","dtype":"能量","avail":"飞果","reco":null,"skillCat":null,"skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"玉米","ingBamts":[2,3],"ingC":"咖啡","ingCamt":2,"ingProb":0.121,"skillProb":0.035,"interval":2400,"baby":"毛头小鹰","stage":"最终","islN":"127","islX":"1","islY":null},{"dex":"#697","name":"怪颚龙","attr":"岩石","dtype":"树果","avail":"岩果","reco":"岩果","skillCat":"开锅","skillEff":null,"ingA":"肠","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[3,4],"ingC":"土豆","ingCamt":3,"ingProb":0.178,"skillProb":0.029,"interval":2800,"baby":"宝宝暴龙","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#700","name":"仙子伊布","attr":"妖精","dtype":"功能","avail":null,"reco":null,"skillCat":"奶妈","skillEff":18,"ingA":"奶","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.178,"skillProb":0.04,"interval":2600,"baby":"伊布","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#702","name":"咚咚鼠","attr":"电","dtype":"功能","avail":"暴击","reco":"暴击","skillCat":"暴击","skillEff":10,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"可可","ingBamts":[1,2],"ingC":"玉米","ingCamt":3,"ingProb":0.177,"skillProb":0.045,"interval":2500,"baby":null,"stage":"不进化","islN":"156","islX":"1","islY":"5"},{"dex":"#711","name":"南瓜怪人","attr":"幽灵","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"南瓜","ingAamts":[2,5,7],"ingB":"豆","ingBamts":[11,18],"ingC":"土豆","ingCamt":15,"ingProb":0.13,"skillProb":0.049,"interval":3200,"baby":"南瓜精","stage":"最终","islN":"16","islX":"1","islY":"6"},{"dex":"#715","name":"音波龙","attr":"龙","dtype":"能量","avail":"龙果","reco":"龙果","skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"葱","ingBamts":[1,2],"ingC":"肠","ingCamt":3,"ingProb":0.195,"skillProb":0.048,"interval":2700,"baby":"嗡蝠","stage":"最终","islN":"137","islX":"1","islY":"7"},{"dex":"#738","name":"锹农炮虫","attr":"虫","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"咖啡","ingAamts":[2,5,7],"ingB":"蘑菇","ingBamts":[4,7],"ingC":"蜜","ingCamt":11,"ingProb":0.194,"skillProb":0.051,"interval":2800,"baby":"强颚鸡母虫","stage":"最终","islN":"6","islX":null,"islY":"6"},{"dex":"#743","name":"蝶结萌虻","attr":"妖精","dtype":"食材","avail":"aaa+abb","reco":null,"skillCat":null,"skillEff":null,"ingA":"蜜","ingAamts":[2,5,7],"ingB":"油","ingBamts":[4,6],"ingC":"玉米","ingCamt":5,"ingProb":0.194,"skillProb":0.025,"interval":2300,"baby":"萌虻","stage":"最终","islN":"12","islX":"1","islY":"2"},{"dex":"#760","name":"穿着熊","attr":"格斗","dtype":"食材","avail":"aaa+abb","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[6,10],"ingC":"蛋","ingCamt":9,"ingProb":0.229,"skillProb":0.013,"interval":2800,"baby":"童偶熊","stage":"最终","islN":"5","islX":null,"islY":"5"},{"dex":"#764","name":"花疗环环","attr":"妖精","dtype":"食材","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"玉米","ingAamts":[2,5,7],"ingB":"姜","ingBamts":[6,9],"ingC":"可可","ingCamt":7,"ingProb":0.167,"skillProb":0.035,"interval":2500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#777","name":"托戈德玛尔","attr":"钢","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"牛油果","ingBamts":[1,2],"ingC":"可可","ingCamt":2,"ingProb":0.169,"skillProb":0.055,"interval":2700,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#778","name":"谜拟Q","attr":"幽灵","dtype":"能量","avail":"鬼果","reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[1,2,4],"ingB":"咖啡","ingBamts":[1,2],"ingC":"蘑菇","ingCamt":2,"ingProb":0.153,"skillProb":0.035,"interval":2500,"baby":null,"stage":"不进化","islN":"16","islX":"1","islY":"6"},{"dex":"#780","name":"老翁龙","attr":"龙","dtype":"食材","avail":"aaa","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"豆","ingAamts":[2,5,7],"ingB":"牛油果","ingBamts":[3,4],"ingC":"肠","ingCamt":7,"ingProb":0.294,"skillProb":0.046,"interval":3500,"baby":null,"stage":"不进化","islN":null,"islX":null,"islY":null},{"dex":"#845","name":"古月鸟","attr":"飞行","dtype":"食材","avail":"aaa","reco":null,"skillCat":"暴击","skillEff":10,"ingA":"油","ingAamts":[2,5,7],"ingB":"土豆","ingBamts":[4,7],"ingC":"蛋","ingCamt":8,"ingProb":0.165,"skillProb":0.039,"interval":2700,"baby":null,"stage":"不进化","islN":"124","islX":"1","islY":"4"},{"dex":"#849","name":"颤弦蝾螈","attr":"毒","dtype":"功能","avail":null,"reco":null,"skillCat":null,"skillEff":null,"ingA":"奶","ingAamts":[1,2,4],"ingB":"苹果","ingBamts":[2,4],"ingC":"葱","ingCamt":2,"ingProb":0.239,"skillProb":0.064,"interval":3100,"baby":"毒电婴","stage":"最终","islN":null,"islX":null,"islY":null},{"dex":"#908","name":"魔幻假面喵","attr":"恶","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":"开锅","skillEff":null,"ingA":"土豆","ingAamts":[2,5,7],"ingB":"奶","ingBamts":[6,9],"ingC":"姜","ingCamt":8,"ingProb":0.19,"skillProb":0.022,"interval":2600,"baby":"新叶喵","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#911","name":"骨纹巨声鳄","attr":"幽灵","dtype":"食材","avail":"aaa","reco":null,"skillCat":null,"skillEff":null,"ingA":"苹果","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[4,6],"ingC":"叶子","ingCamt":5,"ingProb":0.268,"skillProb":0.062,"interval":2700,"baby":"呆火鳄","stage":"最终","islN":"123","islX":"1","islY":"3"},{"dex":"#914","name":"狂欢浪舞鸭","attr":"格斗","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"豆","ingAamts":[2,5,7],"ingB":"葱","ingBamts":[2,4],"ingC":"油","ingCamt":6,"ingProb":0.232,"skillProb":0.024,"interval":2600,"baby":"润水鸭","stage":"最终","islN":"15","islX":"1","islY":"5"},{"dex":"#923","name":"巴布土拨","attr":"电","dtype":"功能","avail":"奶妈","reco":"奶妈","skillCat":"奶妈","skillEff":18,"ingA":"可可","ingAamts":[1,2,4],"ingB":"奶","ingBamts":[3,6],"ingC":"蛋","ingCamt":5,"ingProb":0.141,"skillProb":0.039,"interval":2400,"baby":"布拨","stage":"最终","islN":"146","islX":"1","islY":"4"},{"dex":"#975","name":"浩大鲸","attr":"冰","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"土豆","ingAamts":[2,5,7],"ingB":"肠","ingBamts":[5,9],"ingC":"南瓜","ingCamt":4,"ingProb":0.209,"skillProb":0.042,"interval":2800,"baby":"走鲸","stage":"最终","islN":"14","islX":"1","islY":"4"},{"dex":"#980","name":"土王","attr":"毒","dtype":"食材","avail":"aaa","reco":"aaa","skillCat":null,"skillEff":null,"ingA":"可可","ingAamts":[2,5,7],"ingB":"咖啡","ingBamts":[4,7],"ingC":"土豆","ingCamt":9,"ingProb":0.208,"skillProb":0.055,"interval":3500,"baby":"毒乌波","stage":"最终","islN":"13","islX":"1","islY":"3"}];
 /* ===== 技能/奖章图标（白色图标用作 CSS mask 染色；奖章为彩色PNG） ===== */
 const CAP_ICONS = {
   nanny: 'data:image/webp;base64,UklGRmQFAABXRUJQVlA4WAoAAAAQAAAARwAARwAAQUxQSAwFAAABoIZt29lIezodrG3btm3bGKxtDNa2Zm3N2rbtHdtcT5VOm/tH3rxJOx//RcQE0P+Em8LDNykpN1+xnZwBzigYB+V2cgI4wdcBfxV7Ms1x4Djf3Uzg7CL1A/xcpM6Z5/kvqRkw/5I+53vXgVtRMHQKAqAwgO8u2fIlUhVEK4nmi5jPWV/BKl+fZBhX+W7ladVD+gh41EPaio//DB/kediHgEPEfUYFrOH6YUi3AjqDXtkJ4ARfBzXARUSvkEpqKqP5anRQ8Abf5BIRbgPqsOeu/Dt1XiJZLg4hcueB80q4O6jDHQV/ORvbZti4MaO/I2nEmPGD1IGqKomQt2QyQRRFAKIoGuynvjrN27drnYyYFu06NLGbd6R+NAJIdTV+1LdBHELsJ2JPObJhNALU+4eu0To5OTo42IdGq9U6aNRyKtne1b1f29oFtHbgUqFdty5t6hZyVCPnoAs/wTS8mV3dRnV9vpohFWMP9MyipO7uNHAKrwe62CCHx0cRnPEbqvD1+QiFiWvyMYoM930Y+e1nStC1NZ2yMUrs/gGFz9rytI+BYstaF6LSsx+kQT7y3NCcRHn2Q/nXenJFH0DF9D6aEU+N4E/za64ZAzXP5mA5elqBz/dNfMLFrmvSoDxkRu/7CnS3QwDjOC2jUiTwsm7lSwDEDy9MjFM1TpmgZvr+mrcZusf+koPl2gQC78oz5gF/xhP5ALhdo9R+AUBEg80i1LV4tksBYNxQouErAGOIvMwwzmJcAdKnkssBAD5EfZIAy3RXK9QWei0BENGGyBfAGqJlZlgvMIIBMWjZlu8AthK5/QSedjRA/eSWn4Ck3uTgByBx9dpoAP4MHQAIZgCI9Z72SYQw8gwApG9qO8GfI2RS+40CAHHrZEB8MWFlCgAIZgD4xTBKZI1GEXjZLwOAyduZtC2CZGJbacl5iQXA73ZfAdFgAm+6jPXjdn8Wc8kuAIirRUS59sjszkVEVSMBWBdvBO+7HSFyaTB6kquMoBPN435JEmoTUe79MntzE1F1CaImw6ozy3ShLVYkMV4gYy9VDGWkLPMIjva0SoS12R2c20fIxHZxdsi+QpQYlqa+G7XxB+N9wSwXID5h7AE+V6AuH/7oUp4OJTpz7pAogXBgiFcY5MO8hu3TQZpx8vYu0ox7lab7/bQZNYyBxZfR2QDzgbxUatz0tnmIWoUsuwMbiw98P9Qnyt9ppmshKn5BRHJ7Rp6zgHi0ioaIKH+fT5j42lZ464VnnfMSETnWuwJgVy4GdfwFwH9u42oNXf1MgNszW4mv5gC/jwxrUK354ggAcfWJ7bQkAwCi/cNFAJhwXGR9T9Wb9LIGy5/kPyzrZU8AEML94wBAP4XkC+4WwLtkJivEdYjnigULmfO9N87o5/OHYV67TSKbvioHB+VdGs1zp5eFcYP4tUTFEhm68S95QmZlJW5Nl1OJcvE9AkRJUHY+ImppkFgfuf6Qiz7YihTnHbDvWQpg9L88t9xgkyR9oKLNVsmvntV8rgebgYTHvt1zkG2zh0vEu9kVVImH9FE2smNvCUzziEgjl+s8pIZRZM9FQiVI9iDOPNsyGBdz2BWNECRIXVdWpul5AdLgmmTfzksYEN6u7lenRlO3XSFgJvcie8+5wioBhOTgwMgfFjDjBjnYHeWcnMbgf9tOS5nQqcV5k4LkjWUpk+bpcyyZI3B9k6yUaTXZqg1ce/Hp64d+nl1KO9P/y1ZQOCAyAAAAEAQAnQEqSABIAD6RSKFMpaQjIiFIALASCWkAAAnxo0aNGjRo0aNGfgAA/vhNAAAAAAA=',
@@ -6080,6 +6327,17 @@ const CAP_SKILL_SUBS = ['奶妈','梦碎','暴击','帮手加速','开锅'];
 const CAP_SKILL_ICON = {'奶妈':'nanny','梦碎':'dream','暴击':'crit','帮手加速':'helper','开锅':'pot'};
 const CAP_SKILL_FULL = {'奶妈':'活力全体疗愈','梦碎':'梦之碎片获取','暴击':'料理成功','帮手加速':'帮手加速','开锅':'料理强化'};
 const CAP_SKILL_BY_EFFECT = {'奶妈':true,'梦碎':true,'暴击':true,'帮手加速':false,'开锅':false};
+// 6只特例宝可梦的主技能单次触发产出（每种独立各得，非平分；数据来自宝睡百科.xlsx J列）
+// kind:'ingredients' 技能额外产出食材（items数组，可选dream=梦碎数量）；kind:'energy' 技能产生能量并扣除活力（达克莱伊专属）
+const CAP_SKILL_SPECIAL_OUTPUT = {
+  "#028": { kind:'ingredients', items:[{name:'玉米',amt:6},{name:'土豆',amt:6},{name:'南瓜',amt:6}] }, // 穿山王
+  "#303": { kind:'ingredients', items:[{name:'土豆',amt:5.2506},{name:'油',amt:5.2506},{name:'番茄',amt:5.2506},{name:'玉米',amt:5.2506}] }, // 大嘴娃
+  "#430": { kind:'ingredients', items:[{name:'蘑菇',amt:3.87},{name:'肠',amt:3.87},{name:'豆',amt:3.87},{name:'咖啡',amt:3.87}], dream:1008 }, // 乌鸦头头
+  "#491": { kind:'energy', energyPerTrigger:18515, staminaDeduct:12 }, // 达克莱伊
+  "#558": { kind:'ingredients', items:[{name:'牛油果',amt:6},{name:'土豆',amt:6},{name:'油',amt:6}] }, // 岩殿居蟹
+  "#743": { kind:'ingredients', items:[{name:'蜜',amt:6},{name:'油',amt:6},{name:'玉米',amt:6}] }, // 蝶结萌虻
+};
+const CAP_FOOD_RECLASSIFY = new Set(["#558","#028"]); // 岩殿居蟹/穿山王主技能产食材，并入捕捉推荐食材tab排名（蝶结萌虻dtype本身已是食材，无需加入）
 const CAP_ATTRS = ['一般','火','水','电','草','冰','格斗','毒','地面','飞行','超能力','虫','岩石','幽灵','龙','恶','钢','妖精']
   .sort((a,b)=> capBerryPerBerry(b,50) - capBerryPerBerry(a,50));
 function capBerryAttrKey(attr){ return attr==='超能力' ? '超能' : attr; }
@@ -6179,7 +6437,7 @@ function computeFoodCoverageRows(effFrac, levelOverride){
   const pattern = currentIngredientPattern();
   if(!pattern) return null;
   const x = CAP_DEX.find(d=>d.dex===effectiveYieldDex());
-  if(!x || x.dtype!=='食材') return null;
+  if(!x) return null;
   const medal = x.stage==='徽章';
   const level = levelOverride || state.level;
   const n = level===50 ? 2 : 3;
@@ -6260,10 +6518,30 @@ function capBuildBerryEnergy(){
   recs.sort((a,b)=> b.value-a.value); return recs;
 }
 function capBuildFood(ingName){
-  let pool = CAP_DEX.filter(x=> x.dtype==='食材' && (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName));
+  // 岩殿居蟹/穿山王(dtype功能)主技能产食材，按食材型排名并入池子；蝶结萌虻/大嘴娃本身已是食材dtype，
+  // 但技能额外产出的食材也要叠加进value（大嘴娃的"土豆"不属于自身a/b/c，靠技能特例产出这个OR分支单独入池）
+  let pool = CAP_DEX.filter(x=> (x.dtype==='食材' || CAP_FOOD_RECLASSIFY.has(x.dex)) &&
+    (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName ||
+     (CAP_SKILL_SPECIAL_OUTPUT[x.dex] && CAP_SKILL_SPECIAL_OUTPUT[x.dex].kind==='ingredients' && CAP_SKILL_SPECIAL_OUTPUT[x.dex].items.some(it=>it.name===ingName))));
   const recs=[];
-  pool.forEach(x=>{ recs.push({x,medal:false,value:capFoodProd(x,ingName,capState.level,false),reco:capFoodReco(x,ingName)});
-    if(x.stage==='徽章') recs.push({x,medal:true,value:capFoodProd(x,ingName,capState.level,true),reco:capFoodReco(x,ingName)}); });
+  pool.forEach(x=>{
+    const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+    const mk=(medal)=>{
+      let value = (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName) ? capFoodProd(x,ingName,capState.level,medal) : 0;
+      if(spec && spec.kind==='ingredients'){
+        const match = spec.items.find(it=>it.name===ingName);
+        if(match){
+          // 页4继续用无面板加成基础值；保底仅对能量/功能dtype生效
+          const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? capState.ctrl.pity : false;
+          const helps = capHelpsPerDay(x.interval, capState.level, medal);
+          const rate = capSkillRate(x.skillProb, x.interval, capState.level, medal, pityFlag);
+          value += helps * rate * match.amt;
+        }
+      }
+      return {x, medal, value, reco:capFoodReco(x,ingName)};
+    };
+    recs.push(mk(false)); if(x.stage==='徽章') recs.push(mk(true));
+  });
   recs.sort((a,b)=> b.value-a.value); return recs;
 }
 function capBuildSkill(sub){
