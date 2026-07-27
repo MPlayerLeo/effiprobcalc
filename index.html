@@ -1785,7 +1785,7 @@
               <div class="pk-dropdown" id="dash-pkDropdown"></div>
             </div>
             <div class="pk-overlay-controls" id="dash-pkOverlayControls">
-              <div class="pk-search-wrap box-nick-wrap" id="dash-boxNickWrap" style="display:none;">
+              <div class="pk-search-wrap box-nick-wrap" id="dash-boxNickWrap">
                 <input type="text" id="dash-boxNickInput" class="pk-search-input-underline box-nick-input" maxlength="6" placeholder="昵称" autocomplete="off">
               </div>
               <button type="button" class="pk-clear-btn pk-clear-btn-sm" id="dashPkClearBtn">清除</button>
@@ -4204,6 +4204,9 @@ const state = {
   pkSearchText: '',
   ingChoice2: null,
   ingChoice3: null,
+  // 非盒子编辑态下的修改面板浮窗（正常编辑/手动新建/排名对比）没有现成的盒子条目可以挂昵称，
+  // 这里先记在 state 上，点「加入盒子」时直接拿来用
+  pendingNickname: '',
   compareCount: 1,
   dashTarget: 1,
   panel2Snap: null,
@@ -5706,7 +5709,9 @@ function renderPkDashCompact(){
   const recBoxSm = document.getElementById('dash-pkRecommendBox');
   const boxEntryLive = (typeof dashboardBoxEditContext!=='undefined' && dashboardBoxEditContext) ? boxGetEntry(dashboardBoxEditContext.entryId) : null;
 
-  // 左边那个大输入框固定是"宝可梦种族"（两种模式一致），右上角那个小的是昵称，只有盒子编辑态才出现
+  // 左边那个大输入框固定是"宝可梦种族"（所有场景一致），右上角那个小的是昵称——
+  // 所有修改面板浮窗都显示；盒子编辑态绑定条目本身，其余场景（正常编辑/手动新建/排名对比）
+  // 暂存在 state.pendingNickname 上，点「加入盒子」时直接带过去
   const nickWrap = document.getElementById('dash-boxNickWrap');
   const nickInput = document.getElementById('dash-boxNickInput');
 
@@ -5714,9 +5719,9 @@ function renderPkDashCompact(){
     searchInput.value = rec ? rec[1] : (boxEntryLive ? '' : state.pkSearchText);
     fitSearchInputFont(searchInput, 14);
   }
-  if(nickWrap) nickWrap.style.display = boxEntryLive ? '' : 'none';
-  if(boxEntryLive && nickInput && document.activeElement !== nickInput){
-    nickInput.value = boxEntryLive.nickname || boxEntryLive.name;
+  if(nickWrap) nickWrap.style.display = '';
+  if(nickInput && document.activeElement !== nickInput){
+    nickInput.value = boxEntryLive ? (boxEntryLive.nickname || boxEntryLive.name) : state.pendingNickname;
     fitSearchInputFont(nickInput, 11.5);
   }
   // 推荐程度胶囊挪到了等级那一行，两种模式都显示
@@ -5948,19 +5953,25 @@ document.getElementById('dash-pkSearchInput').addEventListener('input', (e)=>{
   fitSearchInputFont(e.target, 14);
   renderPkDropdown();
 });
-// 盒子编辑态专用的昵称输入框：只改昵称，失焦即写回条目
+// 昵称输入框：盒子编辑态改完立刻写回条目；其余场景（正常编辑/手动新建/排名对比）
+// 没有条目可写，先记在 state.pendingNickname 上，点「加入盒子」时带过去
 document.getElementById('dash-boxNickInput').addEventListener('input', (e)=>{
   fitSearchInputFont(e.target, 11.5);
+  if(!dashboardBoxEditContext) state.pendingNickname = e.target.value;
 });
 document.getElementById('dash-boxNickInput').addEventListener('blur', (e)=>{
-  if(!dashboardBoxEditContext) return;
-  const entry = boxGetEntry(dashboardBoxEditContext.entryId);
-  if(entry){
-    entry.nickname = boxTrimNickname(e.target.value) || entry.name;
-    saveBoxData();
-    e.target.value = entry.nickname;
-    renderBoxPage();
+  if(dashboardBoxEditContext){
+    const entry = boxGetEntry(dashboardBoxEditContext.entryId);
+    if(entry){
+      entry.nickname = boxTrimNickname(e.target.value) || entry.name;
+      saveBoxData();
+      e.target.value = entry.nickname;
+      renderBoxPage();
+    }
+    return;
   }
+  state.pendingNickname = boxTrimNickname(e.target.value);
+  e.target.value = state.pendingNickname;
 });
 // 详情页头像下方的种族名输入框：同样是就地搜索/切换物种，改完立刻写回盒子条目
 document.getElementById('boxdet-speciesInput').addEventListener('input', (e)=>{
@@ -8407,6 +8418,7 @@ function openDashboardForNewEntry(){
   state.incAttr = null; state.decAttr = null;
   state.ingChoice2 = null; state.ingChoice3 = null;
   state.shiny = false;
+  state.pendingNickname = '';
   renderAll();
   openDashboard();
 }
@@ -8461,9 +8473,11 @@ document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
 document.getElementById('dashCreateAddBtn').onclick = ()=>{
   if(!state.selectedDex){ alert('请先选择宝可梦。'); return; }
   const rec = getSelectedPokemonRecord();
-  openBoxNicknamePrompt(rec?rec[1]:'', (nickname)=>{
+  // 面板里已经有昵称框可以先打好字，这里直接带过去当默认名，省得再打一遍
+  openBoxNicknamePrompt(state.pendingNickname || (rec?rec[1]:''), (nickname)=>{
     const res = boxAddEntry(nickname);
     if(res.ok){
+      state.pendingNickname = '';
       closeDashboard(); // 会顺带把 state 还原成打开新建面板之前的样子
       renderBoxPage();
     } else if(res.reason==='full'){
@@ -9344,9 +9358,11 @@ document.getElementById('boxDeleteWarnOverlay').addEventListener('click', (e)=>{
 document.getElementById('dashAddBoxBtn').onclick = ()=>{
   if(!state.selectedDex) return;
   const rec = getSelectedPokemonRecord();
-  openBoxNicknamePrompt(rec?rec[1]:'', (nickname)=>{
+  // 面板里已经有昵称框可以先打好字，这里直接带过去当默认名，省得再打一遍
+  openBoxNicknamePrompt(state.pendingNickname || (rec?rec[1]:''), (nickname)=>{
     const res = boxAddEntry(nickname);
     if(res.ok){
+      state.pendingNickname = '';
       renderBoxPage();
       closeDashboard(); // 跟"确认所选"一样，存完就收起面板
     } else if(res.reason==='full'){
