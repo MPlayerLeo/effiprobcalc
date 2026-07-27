@@ -8957,9 +8957,10 @@ function openBoxInfoBubble(id, itemEl){
     }
     if(!onRight && left - GAP - BTN - EDGE < 0) left = EDGE + BTN + GAP;
     if(onRight && left < EDGE) left = EDGE;
-    let top = r.top - bh - 12;
-    if(top < EDGE) top = r.bottom + 12;
-    if(top + bh + EDGE > window.innerHeight) top = Math.max(EDGE, window.innerHeight - bh - EDGE);
+    // 气泡默认往下弹，别把上方的筛选/排序区挡住；下方放不下才翻到上面
+    let top = r.bottom + 12;
+    if(top + bh + EDGE > window.innerHeight) top = r.top - bh - 12;
+    if(top < EDGE) top = Math.max(EDGE, window.innerHeight - bh - EDGE);
     bubbleEl.style.left = left+'px';
     bubbleEl.style.top = top+'px';
     if(actionsEl){
