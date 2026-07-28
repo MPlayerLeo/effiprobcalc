@@ -883,7 +883,7 @@
   }
   .rank-calc-box{
     background:var(--panel); border-radius:14px; padding:22px 32px; box-shadow:0 10px 40px rgba(0,0,0,.35);
-    font-size:15px; font-weight:800; color:var(--accent-dk); letter-spacing:.04em;
+    font-size:15px; font-weight:800; color:var(--accent-dk); letter-spacing:.04em; min-width:220px;
   }
   .dashboard-panel-flex{
     display:flex; flex-direction:column; overflow:hidden; padding:0;
@@ -1826,7 +1826,13 @@
 </div>
 
 <div class="rank-calc-overlay" id="rankCalcOverlay">
-  <div class="rank-calc-box">排名计算中...</div>
+  <div class="rank-calc-box box-upload-progress-panel">
+    <div class="box-upload-progress-title">排名计算中...</div>
+    <div class="box-upload-progress-track" id="rankCalcProgressTrack">
+      <div class="box-upload-progress-fill" id="rankCalcProgressFill"></div>
+      <img class="box-upload-progress-mascot" id="rankCalcProgressMascot">
+    </div>
+  </div>
 </div>
 
 <div class="dashboard-overlay" id="controlsDashboardOverlay">
@@ -2483,24 +2489,15 @@ function saveBoxData(){
   catch(e){ console.warn('宝可梦盒保存失败（可能是存储空间已满）', e); }
 }
 function genBoxId(){ return 'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
-/* 昵称统一走这两个函数：
-   - 手打的只截长度（用户想打什么符号是他的自由）
-   - OCR 读回来的还要过一遍乱码判定：截图里昵称位置常常被描边/图标糊掉，
-     Tesseract 会吐出一串谁也认不出的符号，那种宁可留空也别当昵称存进去 */
+/* 昵称统一走这个函数截长度（用户手打的想打什么符号是他的自由）。
+   OCR 识别失败（没认出物种）的宝可梦不再尝试从 OCR 原始文字里抢救昵称——
+   物种都认不出，说明这张截图这一块本来就不可靠，硬凑出来的字符串十有八九是乱码，
+   宁可留空交给用户自己手动填，也不要把乱码当昵称存进去 */
 const BOX_NICK_MAX = 12; // 上限是 12 个字符（按 Unicode 码位数，而不是 UTF-16 code unit 数——
 // 极少数生僻字/emoji 是代理对占两个 code unit，直接 .slice(0,12) 会数错、甚至切断一个字）
 function boxTakeChars(str, n){ return Array.from(str).slice(0, n).join(''); }
 function boxTrimNickname(raw){
   return boxTakeChars((raw==null?'':String(raw)).trim(), BOX_NICK_MAX);
-}
-function boxCleanOcrNickname(raw){
-  const s = (raw==null?'':String(raw)).replace(/\s+/g,'');
-  if(!s) return '';
-  // 汉字/假名/字母/数字/常见分隔符之外的一律算噪声
-  const good = s.replace(/[^一-鿿㐀-䶿぀-ヿA-Za-z0-9·・\-]/g, '');
-  if(!good) return '';
-  if(good.length < s.length * 0.6) return ''; // 噪声超过四成，整串当没读到
-  return boxTakeChars(good, BOX_NICK_MAX);
 }
 function boxGetEntry(id){ return boxData.find(e=>e.id===id) || null; }
 function boxSnapshotFromState(){
@@ -2906,7 +2903,10 @@ const PK_BTN_TEXT_COLOR = {
 
 function pityCount(baseIntervalSeconds){ return Math.ceil((40*3600) / baseIntervalSeconds); }
 function expectedTriggerRatePerHelp(prob, pityN, usePity){
-  if(!usePity) return prob;
+  // pityN 由 40*3600/interval 算来；某些宝可梦（如梦幻）在数据表里 interval 是 null，
+  // 除法结果是 Infinity，下面这个循环会从1一直加到Infinity——不是"很慢"，是真的死循环卡死整个页面。
+  // 遇到非有限值或非正数直接退化成"不吃保底"，不进循环
+  if(!usePity || !isFinite(pityN) || pityN<1) return prob;
   let ET = 0, q = 1-prob, qk = 1;
   for(let k=1; k<=pityN-1; k++){ ET += k*prob*qk; qk *= q; }
   ET += pityN*qk;
@@ -3986,54 +3986,55 @@ function ladderArrKey(mode, type, level, squadN){
   if(type==='energy') return ['energy', mode, state.energyPokemon, level, squadN||'', JSON.stringify(currentEnergyOptions())].join('|');
   return [type, mode, level, squadN||''].join('|');
 }
-function buildLadderArr(mode, type, level, squadN){
-  ensureSeqs();
-  const ws = windowSizeOf(level);
-  const map = new Map();
-  for(const seq of SEQS){
-    const hasGold = windowHasGold(seq.labels, ws);
-    if(mode==='nonGold' && hasGold) continue;
-    if(mode==='gold' && !hasGold) continue;
-    for(const persona of PERSONA_CASES){
-      let eff;
-      if(mode==='fusion') eff = computeFusionEfficiency(seq.labels, type, level, persona);
-      else if(mode==='fusionRaw') eff = computeRawFusionEfficiency(seq.labels, type, level, persona);
-      else if(mode==='squad') eff = computeDisplayEfficiency(seq.labels, type, level, persona, squadN);
-      else eff = computeEfficiencyFromSums(windowSums(seq.labels, ws), type, persona);
-      const k = eff.n+'/'+eff.d;
-      if(!map.has(k)) map.set(k, {eff, labels:seq.labels, persona});
+// 分片计算天梯全量数组：SEQS 有 7 万多条，同步跑完一次要 300~700ms，纯阻塞主线程会让"排名计算中..."
+// 浮窗连自己都来不及画出来就卡住不动（见 ensureLadderRendered 里的说明）。这里把大循环切成约16片，
+// 每片算完用 setTimeout(0) 让出一次主线程，顺便把已完成比例回调出去，喂给乌波进度条。
+function computeLadderArrAsync(mode, type, level, squadN, onProgress){
+  return new Promise(function(resolve){
+    ensureSeqs();
+    const ws = windowSizeOf(level);
+    const isEnergy = type==='energy';
+    const pk = isEnergy ? POKEMON[state.energyPokemon] : null;
+    const options = isEnergy ? currentEnergyOptions() : null;
+    const map = new Map();
+    const total = SEQS.length;
+    const CHUNK = Math.max(1000, Math.ceil(total/16));
+    let i = 0;
+    function step(){
+      const end = Math.min(i+CHUNK, total);
+      for(; i<end; i++){
+        const seq = SEQS[i];
+        const hasGold = windowHasGold(seq.labels, ws);
+        if(mode==='nonGold' && hasGold) continue;
+        if(mode==='gold' && !hasGold) continue;
+        for(const persona of PERSONA_CASES){
+          let eff;
+          if(isEnergy){
+            if(mode==='fusion') eff = computeEnergyFusionEfficiency(pk, seq.labels, persona, level, options);
+            else if(mode==='fusionRaw') eff = computeEnergyRawFusionEfficiency(pk, seq.labels, persona, level, options);
+            else if(mode==='squad') eff = computeEnergyDisplayEfficiency(pk, seq.labels, persona, level, squadN, options);
+            else { const sums = sumsToFloat(windowSums(seq.labels, ws)); eff = computeEnergyEfficiency(pk, sums, persona, level, options); }
+          } else {
+            if(mode==='fusion') eff = computeFusionEfficiency(seq.labels, type, level, persona);
+            else if(mode==='fusionRaw') eff = computeRawFusionEfficiency(seq.labels, type, level, persona);
+            else if(mode==='squad') eff = computeDisplayEfficiency(seq.labels, type, level, persona, squadN);
+            else eff = computeEfficiencyFromSums(windowSums(seq.labels, ws), type, persona);
+          }
+          const k = isEnergy ? eff.toPrecision(12) : (eff.n+'/'+eff.d);
+          if(!map.has(k)) map.set(k, {eff, labels:seq.labels, persona});
+        }
+      }
+      if(onProgress) onProgress(total ? Math.round(i/total*100) : 100);
+      if(i<total){ setTimeout(step, 0); }
+      else{
+        const arr = [...map.values()];
+        if(isEnergy) arr.sort((a,b)=> b.eff-a.eff);
+        else arr.sort((a,b)=>{ const c=fcmp(a.eff,b.eff); return c>0?-1:(c<0?1:0); });
+        resolve(arr);
+      }
     }
-  }
-  const arr = [...map.values()];
-  arr.sort((a,b)=>{ const c=fcmp(a.eff,b.eff); return c>0?-1:(c<0?1:0); });
-  return arr;
-}
-function buildLadderEnergyArr(mode, level, squadN){
-  ensureSeqs();
-  const ws = windowSizeOf(level);
-  const pk = POKEMON[state.energyPokemon];
-  const options = currentEnergyOptions();
-  const map = new Map();
-  for(const seq of SEQS){
-    const hasGold = windowHasGold(seq.labels, ws);
-    if(mode==='nonGold' && hasGold) continue;
-    if(mode==='gold' && !hasGold) continue;
-    for(const persona of PERSONA_CASES){
-      let eff;
-      if(mode==='fusion') eff = computeEnergyFusionEfficiency(pk, seq.labels, persona, level, options);
-      else if(mode==='fusionRaw') eff = computeEnergyRawFusionEfficiency(pk, seq.labels, persona, level, options);
-      else if(mode==='squad') eff = computeEnergyDisplayEfficiency(pk, seq.labels, persona, level, squadN, options);
-      else { const sums = sumsToFloat(windowSums(seq.labels, ws)); eff = computeEnergyEfficiency(pk, sums, persona, level, options); }
-      const k = eff.toPrecision(12);
-      if(!map.has(k)) map.set(k, {eff, labels:seq.labels, persona});
-    }
-  }
-  const arr = [...map.values()];
-  arr.sort((a,b)=> b.eff-a.eff);
-  return arr;
-}
-function computeLadderArr(mode, type, level, squadN){
-  return type==='energy' ? buildLadderEnergyArr(mode, level, squadN) : buildLadderArr(mode, type, level, squadN);
+    setTimeout(step, 20); // 延后启动第一片：给浏览器一次重绘机会，让浮窗先画出来再开始算，不然浮窗和第一片计算挤在同一帧里，浮窗等于白显示
+  });
 }
 function ladderCmp(type){ return type==='energy' ? ((a,b)=> a>b?1:(a<b?-1:0)) : fcmp; }
 function ladderFindInsertRank(arr, eff, type){
@@ -4133,7 +4134,7 @@ function renderLadderResult(arr, mode, type, level, squadN, build){
   if(isRed) listRows.splice(insertRank-1, 0, ladderRowHtml(`${insertRank}`, cur, type, level, topEffNum, {highlight:true, red:true}, mode, squadN));
   el.innerHTML = pinHtml + `<div class="ladder-list">${listRows.join('')}</div>`;
 }
-function ensureLadderRendered(){
+async function ensureLadderRendered(){
   const el = document.getElementById('ladderBody');
   if(!el) return;
   if(!state.ladderMode){ el.innerHTML = `<div class="pk-disp-empty">请选择上方天梯类型，查看该条件下全部可能面板的排名</div>`; return; }
@@ -4147,13 +4148,19 @@ function ensureLadderRendered(){
   // 计算期间不清空 el（旧内容/占位文案原样留着，靠 #ladderBody 的 min-height 撑住高度），
   // 避免"清空→算完再填回"这一下把文档高度先收窄再撑开，导致页面跟着滚动跳动
   const overlay = document.getElementById('rankCalcOverlay');
-  if(overlay) overlay.style.display = 'flex';
-  setTimeout(()=>{
-    const arr = computeLadderArr(mode, type, level, squadN);
-    ladderArrCache[key] = arr;
-    renderLadderResult(arr, mode, type, level, squadN, build);
-    if(overlay) overlay.style.display = 'none';
-  }, 20);
+  const fill = document.getElementById('rankCalcProgressFill');
+  const mascot = document.getElementById('rankCalcProgressMascot');
+  // 有些入口（切页/改等级/关闭修改面板）在调用这里之前就已经自己把浮窗打开了，那种情况下浮窗的
+  // 打开/关闭交给外层收尾，这里只管进度条本身；只有"没人开过"时才由这里自己负责开关
+  const openedHere = !!(overlay && overlay.style.display !== 'flex');
+  if(fill && mascot){ boxPickWooperFor(fill, mascot); boxSetProgressBar(fill, mascot, 0); }
+  if(openedHere) overlay.style.display = 'flex';
+  const arr = await computeLadderArrAsync(mode, type, level, squadN, function(pct){
+    if(fill && mascot) boxSetProgressBar(fill, mascot, pct);
+  });
+  ladderArrCache[key] = arr;
+  renderLadderResult(arr, mode, type, level, squadN, build);
+  if(openedHere) overlay.style.display = 'none';
 }
 function renderLadderCard(){
   // 修改面板浮窗打开期间不同步重算天梯（会卡顿）；关闭浮窗时统一重算一次，逻辑同 renderRankModule
@@ -4161,7 +4168,7 @@ function renderLadderCard(){
   const page3 = document.getElementById('page3');
   if(!page3 || !page3.classList.contains('active-page')) return;
   renderLadderButtons();
-  ensureLadderRendered();
+  return ensureLadderRendered(); // 返回 Promise：部分调用方（切页/改等级等）需要等真正算完才收起"排名计算中"浮窗
 }
 
 /* ============ 排名对比页：添加/去除对比 ============ */
@@ -4744,9 +4751,9 @@ function setLevelWithRankOverlay(lv){
   if(page3 && page3.classList.contains('active-page')){
     const overlay = document.getElementById('rankCalcOverlay');
     overlay.style.display = 'flex';
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       state.level = lv;
-      renderAll();
+      await renderAll(); // 等真正算完（乌波进度条走到头）再收起浮窗，不然浮窗会在算完之前就被提前关掉
       overlay.style.display = 'none';
     }, 20);
   } else {
@@ -5378,6 +5385,9 @@ function renderYieldAnalysis(pfx){
   if(typeof CAP_DEX==='undefined' || !state.selectedDex || !state.selected.some(v=>v!=null)){ el.innerHTML=emptyMsg; return; }
   const x = CAP_DEX.find(d=>d.dex===effectiveYieldDex());
   if(!x){ el.innerHTML=emptyMsg; return; }
+  // 梦幻这类宝可梦数据表里 interval 是 null（帮忙间隔本身没有数据），产量相关的一切换算
+  // （帮忙次数/技能概率含保底等）都依赖这个值，算不出来就不硬算，只提示、不出数字
+  if(x.interval==null){ el.innerHTML = `<span class="grad-comment" style="color:#adb2ba;font-size:14px;">${x.name}无法计算产量</span>`; return; }
 
   const labels = currentLabels();
   const persona = currentPersona();
@@ -5492,6 +5502,9 @@ function fitSearchInputFont(inputEl, baseFontPx){
 }
 function selectPokemon(dex){
   state.selectedDex = dex;
+  // 梦幻数据表里没有帮忙间隔（interval为null），产量没法算，选中时提示一下，
+  // 避免用户对着"产能分析"区域空白/写着无法计算而一头雾水
+  if(dex==='#151') alert('梦幻无法计算');
   const rec = getSelectedPokemonRecord();
   let mappedType = null;
   if(rec){
@@ -5912,7 +5925,7 @@ function renderAll(){
   renderDashPanelTargetSel();
   renderPkDispWindow();
   renderRankModule();
-  renderLadderCard();
+  const ladderPromise = renderLadderCard(); // 部分调用方需要 await 它才能正确收起"排名计算中"浮窗
   updateCompareButtonsUI();
   updateNewbieBtnUI();
   // 详情页复用了同一份全局 state，所有会触发 renderAll 的控件（含保底、锁金、强求金帮等）
@@ -5931,6 +5944,7 @@ function renderAll(){
     if(sc) sc.scrollTop = keepTop;
   }
   if(typeof updatePanelFabFace==='function') updatePanelFabFace();
+  return ladderPromise;
 }
 
 function clearPanelSelection(){
@@ -8066,7 +8080,7 @@ function switchPage(pageId){
     // 从面板选择进入排名对比页时排名计算较重，先弹"排名计算中"再算，避免白屏卡顿
     // 但如果还没有输入任何面板（未选择宝可梦），没有数据可算，直接渲染即可，不需要弹窗
     const overlay=document.getElementById('rankCalcOverlay');
-    if(overlay && state.selectedDex){ overlay.style.display='flex'; setTimeout(()=>{ renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); overlay.style.display='none'; maybeOpenFinalPkPopup(); },20); }
+    if(overlay && state.selectedDex){ overlay.style.display='flex'; setTimeout(async ()=>{ renderPkDispWindow(); renderRankModule(); await renderLadderCard(); renderFinalPkRow(); overlay.style.display='none'; maybeOpenFinalPkPopup(); },20); }
     else { renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); maybeOpenFinalPkPopup(); }
   }
   if(pageId==='page4'){ renderCapturePage(); }
@@ -8462,10 +8476,10 @@ function closeDashboard(){
   if(page3 && page3.classList.contains('active-page')){
     const overlay = document.getElementById('rankCalcOverlay');
     overlay.style.display = 'flex';
-    setTimeout(()=>{
+    setTimeout(async ()=>{
       renderPkDispWindow();
       renderRankModule();
-      renderLadderCard();
+      await renderLadderCard();
       overlay.style.display = 'none';
     }, 20);
   } else {
@@ -8668,6 +8682,11 @@ let dashboardBoxEditContext = null; // {entryId}
 
 function boxEffectiveFinalDex(dex){
   if(dex==null) return null; // 种类还没识别出来（OCR失败/手动清空）时 dex 是 null，这里不能再往下 split
+  // 先按完整 dex（带地区变种后缀）查一次——POKEMON_FINAL_DEX_MAP 里像"#194-1"(毒乌波→土王)、
+  // "#037-1"(冰六尾→冰九尾) 这种地区变种进化链，键本身就带后缀，如果一上来就 split 掉后缀
+  // 会直接查到"#194"(乌波→沼王)这条完全不相关的普通形态进化链，食材数据就串了。
+  // 只有完整 dex 查不到（比如"#025-1"这种没有独立进化链的节日/服装变体）才退回去掉后缀的基础编号
+  if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[dex]) return POKEMON_FINAL_DEX_MAP[dex][0];
   const baseDex = dex.split('-')[0];
   if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[baseDex]) return POKEMON_FINAL_DEX_MAP[baseDex][0];
   return baseDex;
@@ -9137,6 +9156,9 @@ function boxDetailRevertEntries(){
 function boxDetailLoadEntry(entryId){
   const e = boxGetEntry(entryId);
   if(!e) return false;
+  // 点进详情页看过一次就算用户确认过，不管改没改、存没存，红色报错标记都不该再显示——
+  // 在存快照之前摘掉，这样即使之后"关闭=放弃改动"回滚，也不会把红标又滚回来
+  if(e.flagged){ e.flagged = false; saveBoxData(); }
   boxDetailEntryId = entryId;
   boxDetailSnapshotEntry(entryId);
   ensureDashTargetIsPanel1();
@@ -9186,22 +9208,38 @@ function openBoxDetail(entryId){
   boxDetailLoadEntry(entryId);
 }
 function closeBoxDetail(){
-  // 关闭 = 放弃改动：把这次浏览过、且没按过保存的宝可梦全部还原成进来时的样子
-  boxDetailRevertEntries();
-  const m7 = document.getElementById('module7Card');
-  document.getElementById('boxdet-lockforce-row').style.display = 'none';
-  if(boxDetailM7OrigParent) boxDetailM7OrigParent.insertBefore(m7, boxDetailM7OrigNext);
-  document.getElementById('boxDetailOverlay').classList.remove('open');
-  const bcfBack = document.getElementById('boxCreateFab');
-  if(bcfBack && boxOverlayOpen) bcfBack.style.display = 'flex';
-  if(!boxDetailCommitted && boxDetailPrevStateSnapshot){
-    Object.assign(state, boxDetailPrevStateSnapshot);
+  const panel = document.getElementById('boxDetailPanel');
+  // 退出动画：面板continua着右滑手势的方向往右滑出去+淡出，再做实际的收尾工作——
+  // 不管是按按钮关闭还是边缘右滑关闭，退出观感统一；等动画播完再挪DOM/清状态，
+  // 不然模块7卡片被中途拽走会让还在播放的动画画面跳一下
+  const finish = ()=>{
+    // 这次浏览过、但没按过保存/关闭确认（现在关闭本身就等于保存，见 boxDetailSaveAndClose）的宝可梦
+    // 理论上不会再有"待回滚"的差异；这行调用保留是为了兜底极少数没走 boxDetailSaveAndClose 的关闭路径
+    boxDetailRevertEntries();
+    const m7 = document.getElementById('module7Card');
+    document.getElementById('boxdet-lockforce-row').style.display = 'none';
+    if(boxDetailM7OrigParent) boxDetailM7OrigParent.insertBefore(m7, boxDetailM7OrigNext);
+    document.getElementById('boxDetailOverlay').classList.remove('open');
+    if(panel){ panel.style.transition=''; panel.style.transform=''; panel.style.opacity=''; }
+    const bcfBack = document.getElementById('boxCreateFab');
+    if(bcfBack && boxOverlayOpen) bcfBack.style.display = 'flex';
+    if(!boxDetailCommitted && boxDetailPrevStateSnapshot){
+      Object.assign(state, boxDetailPrevStateSnapshot);
+    }
+    boxDetailEntryId = null;
+    boxDetailPrevStateSnapshot = null;
+    updateFabVisibility(); // 详情页关掉了，「修改面板」小圆浮窗放回来
+    renderAll();
+    renderBoxPage();
+  };
+  if(panel){
+    panel.style.transition = 'transform .22s ease-in, opacity .22s ease-in';
+    panel.style.transform = 'translateX(40%)';
+    panel.style.opacity = '0';
+    setTimeout(finish, 220);
+  } else {
+    finish();
   }
-  boxDetailEntryId = null;
-  boxDetailPrevStateSnapshot = null;
-  updateFabVisibility(); // 详情页关掉了，「修改面板」小圆浮窗放回来
-  renderAll();
-  renderBoxPage();
 }
 /* boxDetailCommitted 的含义＝"这只宝可梦已经输出到各页面的面板上了，关闭时不要把面板还原回去"。
    只有「输出」按钮该置位：打开详情页本身、保存、删除都不该顺手把面板换成这一只。 */
@@ -9231,7 +9269,9 @@ document.getElementById('boxDetailOutputBtn').onclick = ()=>{
   btn.textContent = '✓ 输出完成';
   setTimeout(()=>{ btn.textContent='输出'; }, 1400);
 };
-document.getElementById('boxDetailSaveBtn').onclick = ()=>{
+// 保存/关闭现在是同一个动作：都写回当前改动再退出，不再有"关闭=放弃改动"这条路径
+// （用户明确要求关闭键不要回溯数据，两个按钮保留只是为了兼顾"保存"和"关闭"两种用语习惯）
+function boxDetailSaveAndClose(){
   if(!boxDetailEntryId) return;
   boxUpdateEntryFromState(boxDetailEntryId);
   boxDetailCommitSnapshot(boxDetailEntryId); // 保存过的把底本刷新掉，紧接着的关闭不该把它退回去
@@ -9239,8 +9279,9 @@ document.getElementById('boxDetailSaveBtn').onclick = ()=>{
   // 立刻退出详情页，反馈交给不遮罩的轻提示
   closeBoxDetail();
   showBoxToast('✓ 已保存');
-};
-document.getElementById('boxDetailCloseBtn').onclick = ()=> closeBoxDetail();
+}
+document.getElementById('boxDetailSaveBtn').onclick = boxDetailSaveAndClose;
+document.getElementById('boxDetailCloseBtn').onclick = boxDetailSaveAndClose;
 /* 详情页里换一只：左滑看下一只、右滑看上一只，顺序跟盒子网格（含当前筛选）一致。
    切换动画=当前这页往滑动方向淡出、下一页从反方向滑进来 */
 let boxDetailSliding = false;
@@ -9272,21 +9313,33 @@ function boxDetailSwitchBy(step){
   }, 170);
 }
 (function(){
-  const panel = document.getElementById('boxDetailPanel');
-  let sx=0, sy=0, tracking=false, fromLeftQuarter=false;
-  panel.addEventListener('touchstart', (e)=>{
-    if(e.touches.length!==1) return;
+  // 边缘右滑返回：起手判定改用"离物理屏幕左边缘多近"（EDGE_ZONE），不再按面板自身宽度的1/4算——
+  // 面板本身可能没有紧贴屏幕真实边缘（居中限宽/内边距），按面板宽度算会导致贴着屏幕最左边起手反而
+  // 不触发。监听挂在 document 上（覆盖整个屏幕高度，不受面板自身内边距/垂直范围限制），只在详情页
+  // 打开时才处理，这样物理屏幕最左侧那一整条边缘、从上到下任意高度起手都能识别成"返回"手势。
+  const EDGE_ZONE = 24;
+  let sx=0, sy=0, tracking=false, fromLeftEdge=false;
+  document.addEventListener('touchstart', (e)=>{
+    const overlay = document.getElementById('boxDetailOverlay');
+    if(!overlay || !overlay.classList.contains('open') || e.touches.length!==1){ tracking=false; return; }
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
-    // 只有从页面左侧 1/4 起手的右滑才算"返回"，其余位置的左右滑用来翻上/下一只
-    const r = panel.getBoundingClientRect();
-    fromLeftQuarter = (sx - r.left) < r.width*0.25;
+    fromLeftEdge = sx <= EDGE_ZONE;
   }, {passive:true});
-  panel.addEventListener('touchend', (e)=>{
+  document.addEventListener('touchend', (e)=>{
     if(!tracking) return; tracking=false;
+    const overlay = document.getElementById('boxDetailOverlay');
+    if(!overlay || !overlay.classList.contains('open')) return;
     const t = e.changedTouches[0];
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(Math.abs(dy) >= 60 || Math.abs(dx) <= 70) return; // 竖着滑或幅度不够，都不当成手势
-    if(dx > 0 && fromLeftQuarter){ closeBoxDetail(); return; }
+    // 退出时默认保留改动（跟按"关闭"按钮一样，不再是"放弃改动"），所以这里调用的是
+    // boxDetailSaveAndClose 而不是原始的 closeBoxDetail
+    if(dx > 0 && fromLeftEdge){ boxDetailSaveAndClose(); return; }
+    // 翻上/下一只仍然要求起手落在面板本身范围内，边缘手势区之外的普通滑动才走这条
+    const panel = document.getElementById('boxDetailPanel');
+    if(!panel) return;
+    const r = panel.getBoundingClientRect();
+    if(sx < r.left || sx > r.right) return;
     boxDetailSwitchBy(dx < 0 ? 1 : -1);
   }, {passive:true});
 })();
@@ -9854,8 +9907,9 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     })();
     const isProblem = !speciesMatched || skillCount<5 || !personaOk || foodUnclear;
     const snap = boxSnapshotFromState();
-    // 认出物种的直接用种族名；没认出来的只能拿 OCR 原始文字当昵称，先过一遍乱码判定，糊掉的就留空
-    const nickname = speciesMatched ? snap.name : boxCleanOcrNickname(res.nameRawText||'');
+    // 认出物种的直接用种族名；没认出来的说明名字这块本来就没读准，不再拿 OCR 原始文字凑昵称，
+    // 直接留空，交给用户在盒子里手动填——总比存一串乱码强
+    const nickname = speciesMatched ? snap.name : '';
     if(isProblem){
       problems.push({snap, nickname, speciesMatched});
     } else {
