@@ -553,7 +553,26 @@
   .box-toolbar-fs-col{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
   .box-toolbar-fs-line{ display:flex; gap:6px; align-items:center; }
   .box-toolbar-cap{ flex:0 0 28px; display:flex; align-items:center; font-size:11px; font-weight:800; color:var(--accent-dk); }
+  /* 筛选标题+盒子计数器叠在一起，占跟"排序"同一条左侧窄列，正好落在"排序"两个字正上方；
+     栅格筛选按钮有两行，纵向空间比单独一个"筛选"宽裕，但计数器还要塞两行数字+一条短横线，
+     所以三者都用偏紧的字号/行高压缩着摆。align-self:flex-start 让这一列跟筛选栅格一样贴着
+     所在行的顶边起排，不受父级 .box-toolbar-fs-line 的 align-items:center 影响（那个是给
+     筛选栅格跟"排序"那一行用的，会把这一列也居中，偏离筛选栅格第一行的位置） */
+  .box-toolbar-cap-stack{
+    flex:0 0 28px; align-self:flex-start; display:flex; flex-direction:column; align-items:center;
+  }
+  /* height 跟筛选栅格第一行按钮的实测高度一致（30px），配合 flex 居中，让"筛选"两个字的
+     垂直中心正好卡在第一行筛选按钮的垂直中心上 */
+  .box-toolbar-cap-label{
+    height:30px; display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:800; color:var(--accent-dk); line-height:1.1;
+  }
   .box-fs-divider{ border-top:1px solid var(--line); margin:8px 0; }
+  .box-count-widget{
+    margin-top:5px; display:flex; flex-direction:column; align-items:center;
+    font-size:9.5px; font-weight:800; color:var(--ink); line-height:1.05;
+  }
+  .box-count-dash{ color:#adb2ba; font-weight:700; line-height:.9; }
   .box-filter-grid{ flex:1 1 auto; min-width:0; display:grid; grid-template-columns:repeat(6, minmax(0,1fr)); gap:6px; }
   .box-filter-btn{
     border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:8px;
@@ -885,6 +904,7 @@
     background:var(--panel); border-radius:14px; padding:22px 32px; box-shadow:0 10px 40px rgba(0,0,0,.35);
     font-size:15px; font-weight:800; color:var(--accent-dk); letter-spacing:.04em; min-width:220px;
   }
+  .rank-calc-mascot{ display:block; margin:14px auto 0; height:48px; width:auto; image-rendering:pixelated; }
   .dashboard-panel-flex{
     display:flex; flex-direction:column; overflow:hidden; padding:0;
   }
@@ -1648,7 +1668,10 @@
       <div class="box-toolbar-fs-row">
         <div class="box-toolbar-fs-col">
           <div class="box-toolbar-fs-line">
-            <span class="box-toolbar-cap">筛选</span>
+            <div class="box-toolbar-cap-stack">
+              <span class="box-toolbar-cap-label">筛选</span>
+              <div class="box-count-widget" id="boxCountWidget"></div>
+            </div>
             <div class="box-filter-grid" id="boxFilterRow"></div>
           </div>
           <div class="box-fs-divider"></div>
@@ -1827,11 +1850,8 @@
 
 <div class="rank-calc-overlay" id="rankCalcOverlay">
   <div class="rank-calc-box box-upload-progress-panel">
-    <div class="box-upload-progress-title">排名计算中...</div>
-    <div class="box-upload-progress-track" id="rankCalcProgressTrack">
-      <div class="box-upload-progress-fill" id="rankCalcProgressFill"></div>
-      <img class="box-upload-progress-mascot" id="rankCalcProgressMascot">
-    </div>
+    <div class="box-upload-progress-title" id="rankCalcText">排名计算中...</div>
+    <img class="rank-calc-mascot" id="rankCalcMascot">
   </div>
 </div>
 
@@ -4148,16 +4168,18 @@ async function ensureLadderRendered(){
   // 计算期间不清空 el（旧内容/占位文案原样留着，靠 #ladderBody 的 min-height 撑住高度），
   // 避免"清空→算完再填回"这一下把文档高度先收窄再撑开，导致页面跟着滚动跳动
   const overlay = document.getElementById('rankCalcOverlay');
-  const fill = document.getElementById('rankCalcProgressFill');
-  const mascot = document.getElementById('rankCalcProgressMascot');
+  const text = document.getElementById('rankCalcText');
+  const mascot = document.getElementById('rankCalcMascot');
   // 有些入口（切页/改等级/关闭修改面板）在调用这里之前就已经自己把浮窗打开了，那种情况下浮窗的
-  // 打开/关闭交给外层收尾，这里只管进度条本身；只有"没人开过"时才由这里自己负责开关
+  // 打开/关闭交给外层收尾，这里只管随机抽一只乌波；只有"没人开过"时才由这里自己负责开关
   const openedHere = !!(overlay && overlay.style.display !== 'flex');
-  if(fill && mascot){ boxPickWooperFor(fill, mascot); boxSetProgressBar(fill, mascot, 0); }
+  if(mascot){
+    const m = boxRandomWooper();
+    mascot.src = m.src;
+    if(text) text.style.color = m.color;
+  }
   if(openedHere) overlay.style.display = 'flex';
-  const arr = await computeLadderArrAsync(mode, type, level, squadN, function(pct){
-    if(fill && mascot) boxSetProgressBar(fill, mascot, pct);
-  });
+  const arr = await computeLadderArrAsync(mode, type, level, squadN);
   ladderArrCache[key] = arr;
   renderLadderResult(arr, mode, type, level, squadN, build);
   if(openedHere) overlay.style.display = 'none';
@@ -4966,6 +4988,15 @@ function getGradOverrideInfo(){
       const sums = windowSums(labels, 2);
       const workEff = computeEfficiencyFromSums(sums, 'food', persona);
       if(fcmp(workEff, F(163,100)) < 0){
+        // 效率没到打工门槛时，再看a食材当前（按用户实际选中的等级）的食谱覆盖率是否达标——
+        // 跟"食材和解经食谱覆盖率转化为毕业"同一个思路、用的也是同一套食谱覆盖率算法：
+        // 效率不够也能靠食谱覆盖率转成够格，而不是直接判废
+        const fcEffForA = computeEfficiency(labels, 'food', state.level, persona);
+        const coverageRows = computeFoodCoverageRows(fcEffForA);
+        const aRow = coverageRows && coverageRows.find(r=>r.letter==='a');
+        if(aRow && aRow.ratio >= 1.2){
+          return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散', conversionNote:'效率不足以打工，由食谱覆盖率转化为可打工'};
+        }
         return {kind:'forceGrade', heading:'aax报废', gradeName:'不合格', comment:'人为刀俎 我为鱼肉'};
       }
       return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散'};
@@ -4991,7 +5022,10 @@ function renderForcedGradeBox(el, borderClass, overrideInfo){
     const fcEff = computeEfficiency(fcLabels, state.type, state.level, fcPersona);
     foodCoverageHtml = foodCoverageBoxHtml(computeFoodCoverageRows(fcEff));
   }
-  el.innerHTML = `${foodCoverageHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
+  // aax效率不够、但由a食材覆盖率转成"aax打工"时附带说明这次是怎么转的，跟毕业判定里
+  // "食材和解经食谱覆盖率转化为毕业"的备注是同一个展示套路
+  const conversionNoteHtml = overrideInfo.conversionNote ? `<div class="grad-food-cov-note">${overrideInfo.conversionNote}</div>` : '';
+  el.innerHTML = `${foodCoverageHtml}${conversionNoteHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
       <div class="grad-primary">
         ${headingHtml}
         <div class="grad-grade" data-text="${overrideInfo.gradeName}" style="color:${color}; font-size:36px;"></div>
@@ -5248,7 +5282,9 @@ function renderGraduation(pfx){
       const usesLevel60Rule = state.level===50;
       const decisionRows = usesLevel60Rule ? computeFoodCoverageRowsAtLevel60() : foodCoverageRows;
       if(decisionRows){
-        const maxRatio = Math.max(...decisionRows.map(r=>r.ratio));
+        // 尾巴这类没有食谱覆盖率概念的食材，ratio 是 null，不能拿来参与"是否达标转正"的判断
+        const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
+        const maxRatio = validRatios.length ? Math.max(...validRatios) : -Infinity;
         if(maxRatio >= 1.2){
           const upgraded = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===2);
           if(upgraded){
@@ -7514,10 +7550,12 @@ function computeFoodCoverageRows(effFrac, levelOverride){
     const ingName = letter==='a' ? x.ingA : (letter==='b' ? x.ingB : x.ingC);
     if(!ingName) return;
     const demand = FOOD_DAILY_DEMAND[ingName];
-    if(!demand) return;
     const amtSum = capPatternIngredientAmount(x, letter, n);
     const actual = helps * (x.ingProb||0) * (amtSum / n) * e;
-    rows.push({letter, ingName, actual, ratio: actual / demand});
+    // 尾巴（百变怪专属食材）不在 FOOD_DAILY_DEMAND 里，没有"每日食谱需求量"这个概念、算不出
+    // 覆盖率，但产量本身照样要展示——demand 缺失时 ratio 留 null，交给展示层判断是否显示百分比，
+    // 不能像之前那样直接 return 把整行（连同产量数字）都吞掉
+    rows.push({letter, ingName, actual, ratio: demand ? (actual / demand) : null});
   });
   return rows.length ? rows : null;
 }
@@ -7540,9 +7578,9 @@ function foodCoverageColor(ratio){
 function foodCoverageRowsHtml(rows){
   return rows.map(r=>{
     const icon = ING_ICONS[r.ingName];
-    const color = foodCoverageColor(r.ratio);
-    const pct = Math.round(r.ratio * 100);
-    return `<div class="grad-food-cov-row"><span class="gfc-val">${r.actual.toFixed(1)}</span>${icon?`<img class="gfc-icon" src="${icon}">`:''}<span class="gfc-pct" style="color:${color};">${pct}%</span></div>`;
+    // 尾巴这类没有每日需求量的食材，ratio 是 null：覆盖率百分比留空，产量数字照常显示
+    const pctHtml = r.ratio==null ? '' : `<span class="gfc-pct" style="color:${foodCoverageColor(r.ratio)};">${Math.round(r.ratio*100)}%</span>`;
+    return `<div class="grad-food-cov-row"><span class="gfc-val">${r.actual.toFixed(1)}</span>${icon?`<img class="gfc-icon" src="${icon}">`:''}${pctHtml}</div>`;
   }).join('');
 }
 function foodCoverageBoxHtml(rows, title){
@@ -8848,6 +8886,16 @@ function boxGridItemPointerEnter(e, id, itemEl){
 }
 window.addEventListener('pointerup', ()=>{ boxDragActive = false; boxDragSelectMode = null; });
 
+// 无筛选时只显示盒子总数；有筛选时从上到下显示"当前筛出的个数－短横线－盒子总数"，
+// 让用户一眼看出筛选前后差了多少，不用去数网格里的格子
+// 不筛选时 filteredCount 本来就等于 total，样式不用跟着分两套——一直显示"当前个数－盒子总数"，
+// 不筛选时两个数字自然相等，界面不会因为切换筛选/不筛选而跳来跳去
+function renderBoxCountWidget(filteredCount){
+  const el = document.getElementById('boxCountWidget');
+  if(!el) return;
+  const total = boxData.length;
+  el.innerHTML = `<span>${filteredCount}</span><span class="box-count-dash">－</span><span>${total}</span>`;
+}
 function renderBoxPage(){
   renderBoxFilterRow();
   renderBoxSortRow();
@@ -8855,6 +8903,7 @@ function renderBoxPage(){
   const empty = document.getElementById('boxGridEmpty');
   if(!grid) return;
   const entries = boxFilteredEntries();
+  renderBoxCountWidget(entries.length);
   grid.innerHTML = '';
   empty.style.display = entries.length ? 'none' : 'block';
   entries.forEach(entry=>{
@@ -9060,6 +9109,14 @@ function renderBoxDetailHeader(entry){
   }
   const nickInput = document.getElementById('boxdet-nicknameInput');
   if(document.activeElement !== nickInput) nickInput.value = entry.nickname || entry.name;
+  // 昵称改成逐字实时写回（不再等失焦）：左右滑切换用的是同一个输入框 DOM 节点，
+  // 切换时并不会主动失焦，光靠 onblur 存的话，正在打字时直接滑走会导致这次改动彻底丢失
+  // ——更糟的是下一只加载时因为这个框还聚焦着不会被刷新成新条目的昵称，
+  // 之后一失焦就会把没打完的字错误地写进下一只头上。逐字实时写回后这个空子就不存在了。
+  nickInput.oninput = ()=>{
+    const live = boxGetEntry(entry.id);
+    if(live){ live.nickname = nickInput.value; saveBoxData(); }
+  };
   nickInput.onblur = ()=>{
     const live = boxGetEntry(entry.id);
     if(live){ live.nickname = nickInput.value.trim() || live.name; saveBoxData(); nickInput.value = live.nickname; renderBoxPage(); }
@@ -9292,6 +9349,10 @@ function boxDetailSwitchBy(step){
   if(idx < 0) return;
   const next = list[idx+step];
   if(!next) return; // 到头了就不动
+  // 切换前主动失焦：昵称/种族这两个输入框在换只时不会自动失焦（还是同一个DOM节点），
+  // 不主动失焦的话，正在编辑时切走会导致 boxDetailLoadEntry 因为"框还聚焦着"而不刷新
+  // 显示值，后面再失焦就会把这只没打完/上一只遗留的文字错着写进新条目
+  if(document.activeElement && document.activeElement.blur) document.activeElement.blur();
   boxDetailSliding = true;
   const panel = document.getElementById('boxDetailPanel');
   const out = step>0 ? -1 : 1; // 看下一只时当前页向左退出
