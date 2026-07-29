@@ -39,6 +39,22 @@
   }
   h1{ font-size:22px; letter-spacing:.02em; margin:0; font-weight:800; }
   .site-tagline{ font-size:12.5px; color:#7a7568; font-weight:600; letter-spacing:.02em; margin-left:6px; margin-top:4px; margin-bottom:10px; display:flex; align-items:center; }
+  /* 标题行右侧空白区域的4只吉祥物：容器高度=h1顶到"宝可梦睡眠..."这行下沿（不含该行自己的margin-bottom，
+     margin会穿透collapse到容器外部，容器本身border/padding box的高度天然就停在这行内容的下沿），
+     absolute+bottom:0正好卡在这条线上，不需要额外量高度硬编码 */
+  .site-header-row{ position:relative; }
+  .site-mascot-cluster{ position:absolute; right:4px; bottom:0; width:137px; height:40px; pointer-events:none; }
+  /* will-change:transform 让合成层从一开始就常驻，避免gif动画帧切换/重开src时因为临时提升
+     合成层触发一次性重新栅格化导致的动画中途变糊（跟第十八节18.14走鲸png变糊是同一个坑） */
+  .site-mascot{ position:absolute; bottom:0; image-rendering:pixelated; will-change:transform; }
+  /* 沼王镜像+土王紧贴居中后各自向对方挪4px（共8px重合，2px→3px→4px逐轮加码），土王z-index更高盖在
+     沼王上方；毒乌波贴在土王右侧、随土王同步挪动保持14px重合不变；普通乌波贴在沼王左侧，
+     除了跟着沼王同步挪动外，另外单独多向右挪了4px以加大和沼王的重合度（16px，原12px+4px）——
+     具体像素offset是按下方4张图各自缩放后的宽度手工反推的（宽34/46/54/33），改素材尺寸要重算 */
+  .site-mascot-wooper{ left:6px; width:34px; height:26px; z-index:2; transform:scaleX(-1); }
+  .site-mascot-quagsire{ left:24px; width:46px; height:40px; z-index:1; transform:scaleX(-1); }
+  .site-mascot-clodsire{ left:62px; width:54px; height:40px; z-index:2; }
+  .site-mascot-paldea{ left:102px; width:33px; height:26px; z-index:2; }
   .credit-btn{ margin-left:5px; font-size:11px; font-weight:700; color:#8a6d3b; background:#f4ecd8; border:1px solid #e0d2ae; border-radius:6px; padding:1px 8px; line-height:1.5; cursor:pointer; }
   .credit-btn:hover{ background:#efe2c0; }
   .credit-line{ font-size:11.5px; color:#9a9484; letter-spacing:.02em; margin-left:6px; margin-top:6px; margin-bottom:6px; }
@@ -773,8 +789,10 @@
   .box-upload-progress-title{ font-size:14px; font-weight:800; margin-bottom:18px; }
   .box-upload-progress-track{ position:relative; height:10px; background:var(--line); border-radius:5px; margin:20px 10px 10px; }
   .box-upload-progress-fill{ position:absolute; left:0; top:0; height:100%; width:0%; background:var(--accent); border-radius:5px; transition:width .2s; }
-  /* height:auto 让 gif 保持自身宽高比，不会被压扁；transition 跟 fill 一致，走位才同步 */
-  .box-upload-progress-mascot{ position:absolute; top:50%; height:34px; width:auto; left:0%; transform:translate(-50%,-60%) scaleX(-1); image-rendering:pixelated; transition:left .2s; }
+  /* height:auto 让 gif 保持自身宽高比，不会被压扁；transition 跟 fill 一致，走位才同步；
+     will-change:transform 常驻合成层——这里本来就带着固定 transform（镜像）+ left 位移动画，
+     跟第十八节18.14走鲸png变糊是同一类坑，没提前声明的话每次弹窗重新打开都会在提层瞬间糊一下 */
+  .box-upload-progress-mascot{ position:absolute; top:50%; height:34px; width:auto; left:0%; transform:translate(-50%,-60%) scaleX(-1); image-rendering:pixelated; transition:left .2s; will-change:transform; }
 
   /* ============ 轻提示（不遮罩，用户一动就消失）============ */
   /* pointer-events:none 是关键：它压在最上层，但点击会穿透过去，不挡任何操作 */
@@ -1341,8 +1359,16 @@
 </head>
 <body>
 <div class="wrap">
-  <h1>土王智商高 · 宝睡图鉴</h1>
-  <div class="site-tagline"><span>宝可梦睡眠捕捉筛选对比攻略站</span><button type="button" class="credit-btn" id="creditBtn">鸣谢</button></div>
+  <div class="site-header-row">
+    <h1>土王智商高 · 宝睡图鉴</h1>
+    <div class="site-tagline"><span>宝可梦睡眠捕捉筛选对比攻略站</span><button type="button" class="credit-btn" id="creditBtn">鸣谢</button></div>
+    <div class="site-mascot-cluster" id="siteMascotCluster">
+      <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
+      <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
+      <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
+      <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
+    </div>
+  </div>
 
   <div class="cap-ctrl-overlay" id="creditModal">
     <div class="cap-ctrl-box">
@@ -4157,6 +4183,19 @@ function renderLadderResult(arr, mode, type, level, squadN, build){
 async function ensureLadderRendered(){
   const el = document.getElementById('ladderBody');
   if(!el) return;
+  // 乌波随机图+文字变色必须放在这个函数最前面、所有"提前 return"分支之前——外层调用方
+  // （切页/改等级/关闭修改面板）是无条件先把浮窗显示出来再调这个函数的，但这个函数内部
+  // 有好几处提前 return（还没选天梯类型/还没选宝可梦/能量型还没选具体种类，以及下面缓存命中），
+  // 之前只把乌波代码挪到了缓存判断之前，没注意到前面这三处 return 一样会把它跳过——
+  // "还没选天梯类型"是切到页3时最常见的初始状态，之前几乎每次都会从这里被跳过，这才是乌波
+  // 一直失效的真正原因
+  const text = document.getElementById('rankCalcText');
+  const mascot = document.getElementById('rankCalcMascot');
+  if(mascot){
+    const m = boxRandomWooper();
+    mascot.src = m.src;
+    if(text) text.style.color = m.color;
+  }
   if(!state.ladderMode){ el.innerHTML = `<div class="pk-disp-empty">请选择上方天梯类型，查看该条件下全部可能面板的排名</div>`; return; }
   const build = getPanelBuild(1);
   if(!panelHasSelection(build)){ el.innerHTML = `<div class="pk-disp-empty">请先在上方选择宝可梦并输入副技能</div>`; return; }
@@ -4168,16 +4207,9 @@ async function ensureLadderRendered(){
   // 计算期间不清空 el（旧内容/占位文案原样留着，靠 #ladderBody 的 min-height 撑住高度），
   // 避免"清空→算完再填回"这一下把文档高度先收窄再撑开，导致页面跟着滚动跳动
   const overlay = document.getElementById('rankCalcOverlay');
-  const text = document.getElementById('rankCalcText');
-  const mascot = document.getElementById('rankCalcMascot');
   // 有些入口（切页/改等级/关闭修改面板）在调用这里之前就已经自己把浮窗打开了，那种情况下浮窗的
-  // 打开/关闭交给外层收尾，这里只管随机抽一只乌波；只有"没人开过"时才由这里自己负责开关
+  // 打开/关闭交给外层收尾
   const openedHere = !!(overlay && overlay.style.display !== 'flex');
-  if(mascot){
-    const m = boxRandomWooper();
-    mascot.src = m.src;
-    if(text) text.style.color = m.color;
-  }
   if(openedHere) overlay.style.display = 'flex';
   const arr = await computeLadderArrAsync(mode, type, level, squadN);
   ladderArrCache[key] = arr;
@@ -7285,6 +7317,42 @@ document.getElementById('creditBtn').onclick = ()=>{ document.getElementById('cr
 document.getElementById('creditModalClose').onclick = ()=>{ document.getElementById('creditModal').style.display='none'; };
 document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='creditModal') document.getElementById('creditModal').style.display='none'; };
 
+/* ============ 标题行右侧4只吉祥物：随机起播+6秒内必播一次+独立10%闪光 ============ */
+(function initSiteMascots(){
+  const root = document.getElementById('siteMascotCluster');
+  if(!root) return;
+  const imgs = [...root.querySelectorAll('img[data-mascot-file]')];
+  const timers = new Map(); // img -> {tid, iid}
+  function stopImg(img){
+    const t = timers.get(img);
+    if(t){ clearTimeout(t.tid); clearInterval(t.iid); timers.delete(img); }
+  }
+  function startImg(img){
+    stopImg(img);
+    const file = img.getAttribute('data-mascot-file');
+    const shiny = Math.random() < 0.1; // 每张独立判定，互不影响
+    const replay = ()=>{ img.src = 'box_assets/'+(shiny?'shiny':'normal')+'/'+file+'.gif?t='+Date.now(); };
+    replay(); // 这一次"看到"就先播一次（普通<img>GIF没法跳到中间帧，只能靠重置src回第0帧重播）
+    // 随机延后0~6s再重开一次，把4只的起播时刻错开；此后固定每6秒重开一次，
+    // 保证哪怕原始gif一轮时长超过6秒（毒乌波7.2s/土王9.1s），任意6秒窗口内也至少重播一次
+    const tid = setTimeout(()=>{
+      replay();
+      const iid = setInterval(replay, 6000);
+      timers.set(img, {tid:null, iid});
+    }, Math.random()*6000);
+    timers.set(img, {tid, iid:null});
+  }
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(entry=>{
+      // 可见时：4张各自独立重新掷一次10%闪光骰子并重开播放计时；不可见时暂停计时器，
+      // 下次可见（刷新页面/滚回标题）再重新掷一次，等效于"不可见时闪光状态视为待刷新"
+      if(entry.isIntersecting) imgs.forEach(startImg);
+      else imgs.forEach(stopImg);
+    });
+  }, {threshold:0});
+  io.observe(root);
+})();
+
 function collapseModule4IfExpanded(){
   const body = document.getElementById('body-mod4');
   if(body && body.dataset.collapsed !== '1'){
@@ -8817,14 +8885,18 @@ function boxSetGridItemPlaying(itemEl, id, playing){
     const canvas = itemEl.querySelector('.box-grid-canvas');
     const img = itemEl.querySelector('.box-grid-img');
     if(!canvas || !img) return;
+    // 切换用 visibility 而不是 display：display:none 会把元素整个逐出渲染树，
+    // will-change:transform 预提的合成层跟着被拆掉，下次点开再变回display:''时
+    // 等于重新走一遍"首次提层"流程，糊一下的坑照样躲不掉；visibility只是不绘制，
+    // 元素依然留在渲染树里，合成层能一直保留，翻来覆去点开/收起都不会再糊
     if(playing){
       img.src = boxAssetPath(entry.dex, entry.shiny);
-      img.style.display = '';
-      canvas.style.display = 'none';
+      img.style.visibility = '';
+      canvas.style.visibility = 'hidden';
     } else {
-      img.style.display = 'none';
+      img.style.visibility = 'hidden';
       img.removeAttribute('src');
-      canvas.style.display = '';
+      canvas.style.visibility = '';
     }
   } else if(asset.kind==='png'){
     const img = itemEl.querySelector('.box-grid-img');
@@ -8933,7 +9005,7 @@ function renderBoxPage(){
       canvas.className = 'box-grid-canvas';
       const img = document.createElement('img');
       img.className = 'box-grid-img';
-      img.style.display = 'none';
+      img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
       imgWrap.appendChild(canvas);
       imgWrap.appendChild(img);
       boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny));
