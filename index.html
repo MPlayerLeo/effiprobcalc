@@ -2003,6 +2003,25 @@
 </div>
 
 <script>
+/* ============ 吉祥物GIF预缓存：土王/沼王/两种乌波共8张(普通+闪光)，网页一加载就
+   提前fetch成blob存起来，后面标题栏吉祥物切帧/切闪光时直接用本地blob URL（配合#片段
+   强制<img>重新解码播放），不用每次都发一次网络请求，从而消除手机端划走再划回来时
+   能看见的"顿卡"（原因是原来每次重播都用?t=时间戳的方式重新从网络拉取，移动网络下
+   这一次拉取+解码的延迟就是那个顿卡） ============ */
+const MASCOT_GIF_FILES = ['wooper','wooper-paldea','quagsire','clodsire'];
+const mascotBlobCache = new Map(); // 'box_assets/xxx/yyy.gif' -> blob: URL
+(function preloadMascotGifs(){
+  MASCOT_GIF_FILES.forEach(file=>{
+    ['normal','shiny'].forEach(variant=>{
+      const path = `box_assets/${variant}/${file}.gif`;
+      fetch(path).then(r=>r.blob()).then(blob=>{
+        mascotBlobCache.set(path, URL.createObjectURL(blob));
+      }).catch(()=>{}); // 预取失败（比如本地file://打开时fetch受限）就静默忽略，
+                         // 用到的地方会自动退回原来的网络路径，不影响功能只是没有防顿卡效果
+    });
+  });
+})();
+
 /* ============ 精确分数 (BigInt) ============ */
 function gcdBig(a,b){ a=a<0n?-a:a; b=b<0n?-b:b; while(b){ [a,b]=[b, a% b]; } return a||1n; }
 function F(n,d=1n){ n=BigInt(n); d=BigInt(d); if(d<0n){n=-n; d=-d;} const g=gcdBig(n,d)||1n; return {n:n/g, d:d/g}; }
@@ -7323,31 +7342,48 @@ document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='credit
   if(!root) return;
   const imgs = [...root.querySelectorAll('img[data-mascot-file]')];
   const timers = new Map(); // img -> {tid, iid}
-  function stopImg(img){
+  const neverShown = new Set(imgs); // 还没显示过第一帧的图（用来保证首次可见时立刻有画面）
+  function clearTimers(img){
     const t = timers.get(img);
     if(t){ clearTimeout(t.tid); clearInterval(t.iid); timers.delete(img); }
   }
-  function startImg(img){
-    stopImg(img);
+  function applyRandomFrame(img){
     const file = img.getAttribute('data-mascot-file');
     const shiny = Math.random() < 0.1; // 每张独立判定，互不影响
-    const replay = ()=>{ img.src = 'box_assets/'+(shiny?'shiny':'normal')+'/'+file+'.gif?t='+Date.now(); };
-    replay(); // 这一次"看到"就先播一次（普通<img>GIF没法跳到中间帧，只能靠重置src回第0帧重播）
+    const path = 'box_assets/'+(shiny?'shiny':'normal')+'/'+file+'.gif';
+    const cached = mascotBlobCache.get(path);
+    // 有预缓存的blob就用它+#片段强制重新播放（零网络请求，瞬间生效）；
+    // 缓存还没就绪就退回原来的?t=时间戳网络路径兜底
+    img.src = cached ? (cached+'#'+Date.now()) : (path+'?t='+Date.now());
+  }
+  function onHidden(img){
+    clearTimers(img);
+    // 划走/不可见的这一刻就先把"下次要看到的画面"（含新一轮10%闪光判定）换好并解码完，
+    // 而不是等真正划回来可见的那一瞬间才切src触发解码——这样划回来看到的就已经是现成的
+    // 画面，不会再有切换时的顿卡
+    applyRandomFrame(img);
+  }
+  function onVisible(img){
+    clearTimers(img);
+    if(neverShown.has(img)){
+      // 首次显示（页面刚加载/第一次滚到标题）没有"划走时预备好的画面"可用，这里必须立刻播一次，
+      // 否则会空白到第一次随机延迟结束
+      applyRandomFrame(img);
+      neverShown.delete(img);
+    }
     // 随机延后0~6s再重开一次，把4只的起播时刻错开；此后固定每6秒重开一次，
     // 保证哪怕原始gif一轮时长超过6秒（毒乌波7.2s/土王9.1s），任意6秒窗口内也至少重播一次
     const tid = setTimeout(()=>{
-      replay();
-      const iid = setInterval(replay, 6000);
+      applyRandomFrame(img);
+      const iid = setInterval(()=>applyRandomFrame(img), 6000);
       timers.set(img, {tid:null, iid});
     }, Math.random()*6000);
     timers.set(img, {tid, iid:null});
   }
   const io = new IntersectionObserver((entries)=>{
     entries.forEach(entry=>{
-      // 可见时：4张各自独立重新掷一次10%闪光骰子并重开播放计时；不可见时暂停计时器，
-      // 下次可见（刷新页面/滚回标题）再重新掷一次，等效于"不可见时闪光状态视为待刷新"
-      if(entry.isIntersecting) imgs.forEach(startImg);
-      else imgs.forEach(stopImg);
+      if(entry.isIntersecting) imgs.forEach(onVisible);
+      else imgs.forEach(onHidden);
     });
   }, {threshold:0});
   io.observe(root);
