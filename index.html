@@ -5743,6 +5743,17 @@ function renderPkDropdownGeneric(inputId, dropdownId){
         el.onclick = ()=>{
           state.pkSearchText = '';
           selectPokemon(dex);
+          // 盒子详情页的种族选择：点下拉项这一刻就是"选择完成"，立刻写回盒子条目，
+          // 不等失焦——失焦晚于滑动切换/关闭时会来不及触发，导致改动丢失
+          if(dropdownId==='boxdet-speciesDropdown' && typeof boxDetailEntryId!=='undefined' && boxDetailEntryId){
+            const live = boxGetEntry(boxDetailEntryId);
+            const rec = getSelectedPokemonRecord();
+            if(live && rec){
+              live.dex = rec[0]; live.name = rec[1];
+              live.ingChoice2 = state.ingChoice2; live.ingChoice3 = state.ingChoice3;
+              saveBoxData(); renderBoxPage();
+            }
+          }
         };
       }
     });
@@ -6034,10 +6045,14 @@ document.getElementById('boxdet-speciesInput').addEventListener('input', (e)=>{
   renderPkDropdownGeneric('boxdet-speciesInput', 'boxdet-speciesDropdown');
 });
 document.getElementById('boxdet-speciesInput').addEventListener('blur', ()=>{
+  // 失焦这一刻立刻定住是哪一只：下拉项的 click 要等 blur 处理完才触发，真要靠输入框
+  // 失焦兜底提交时，一旦 setTimeout 里才读全局 boxDetailEntryId，可能已经被切换动画
+  // 换成下一只，写就写错了目标
+  const entryId = boxDetailEntryId;
   setTimeout(()=>{
     document.getElementById('boxdet-speciesDropdown').classList.remove('open');
     state.pkSearchText = '';
-    const live = boxDetailEntryId ? boxGetEntry(boxDetailEntryId) : null;
+    const live = entryId ? boxGetEntry(entryId) : null;
     if(live){
       const rec = getSelectedPokemonRecord();
       if(rec && (live.dex!==rec[0])){
@@ -6045,7 +6060,7 @@ document.getElementById('boxdet-speciesInput').addEventListener('blur', ()=>{
         live.ingChoice2 = state.ingChoice2; live.ingChoice3 = state.ingChoice3;
         saveBoxData(); renderBoxPage();
       }
-      renderBoxDetailHeader(live);
+      if(boxDetailEntryId===entryId) renderBoxDetailHeader(live);
     }
   }, 150);
 });
@@ -9182,42 +9197,14 @@ function renderBoxDetailHeader(entry){
     }; });
   }
 }
-/* 详情页里的闪光/等级/食材/昵称都是改完立刻写回盒子的，所以"关闭"必须能把这只宝可梦
-   还原成进入详情页之前的样子（＝放弃改动），否则关闭和保存就没区别了。
-   进详情页、以及左右滑动切到的每一只，都在这里存一份原始数据；保存过的会把底本刷新成保存后的状态。*/
-let boxDetailEntrySnapshots = new Map();
-function boxDetailSnapshotEntry(id){
-  if(boxDetailEntrySnapshots.has(id)) return;   // 同一只只存第一次（进来时那份）
-  const e = boxGetEntry(id);
-  if(e) boxDetailEntrySnapshots.set(id, JSON.parse(JSON.stringify(e)));
-}
-function boxDetailCommitSnapshot(id){          // 保存后把底本换成新数据，之后再关闭就不会回退
-  const e = boxGetEntry(id);
-  if(e) boxDetailEntrySnapshots.set(id, JSON.parse(JSON.stringify(e)));
-}
-function boxDetailRevertEntries(){
-  let changed = false;
-  boxDetailEntrySnapshots.forEach((snap, id)=>{
-    const i = boxData.findIndex(e=>e.id===id);
-    if(i<0) return;                              // 已被删除的就别复活了
-    if(JSON.stringify(boxData[i]) === JSON.stringify(snap)) return;
-    boxData[i] = snap;
-    changed = true;
-  });
-  boxDetailEntrySnapshots.clear();
-  if(changed) saveBoxData();
-  return changed;
-}
 // 把某只宝可梦装进详情页（换数据 + 重画），不碰浮层开关、不碰进入详情页前的状态快照。
 // openBoxDetail 首次打开和左右滑动切换都走它
 function boxDetailLoadEntry(entryId){
   const e = boxGetEntry(entryId);
   if(!e) return false;
-  // 点进详情页看过一次就算用户确认过，不管改没改、存没存，红色报错标记都不该再显示——
-  // 在存快照之前摘掉，这样即使之后"关闭=放弃改动"回滚，也不会把红标又滚回来
+  // 点进详情页看过一次就算用户确认过，不管改没改、存没存，红色报错标记都不该再显示
   if(e.flagged){ e.flagged = false; saveBoxData(); }
   boxDetailEntryId = entryId;
-  boxDetailSnapshotEntry(entryId);
   ensureDashTargetIsPanel1();
   selectPokemon(e.dex);
   state.shiny = !!e.shiny;
@@ -9243,7 +9230,6 @@ function openBoxDetail(entryId){
   if(!e) return;
   boxDetailEntryId = entryId;
   boxDetailCommitted = false;
-  boxDetailEntrySnapshots.clear(); // 新的一次浏览，重新记录底本
   ensureDashTargetIsPanel1();
   boxDetailPrevStateSnapshot = JSON.parse(JSON.stringify(state));
 
@@ -9270,9 +9256,6 @@ function closeBoxDetail(){
   // 不管是按按钮关闭还是边缘右滑关闭，退出观感统一；等动画播完再挪DOM/清状态，
   // 不然模块7卡片被中途拽走会让还在播放的动画画面跳一下
   const finish = ()=>{
-    // 这次浏览过、但没按过保存/关闭确认（现在关闭本身就等于保存，见 boxDetailSaveAndClose）的宝可梦
-    // 理论上不会再有"待回滚"的差异；这行调用保留是为了兜底极少数没走 boxDetailSaveAndClose 的关闭路径
-    boxDetailRevertEntries();
     const m7 = document.getElementById('module7Card');
     document.getElementById('boxdet-lockforce-row').style.display = 'none';
     if(boxDetailM7OrigParent) boxDetailM7OrigParent.insertBefore(m7, boxDetailM7OrigNext);
@@ -9310,9 +9293,7 @@ document.getElementById('boxDetailEditBtn').onclick = ()=>{
   const id = boxDetailEntryId;
   openDashboardForBoxEntry(id);
   dashboardCloseCallback = ()=>{
-    // 修改面板关闭＝这次改动已经确认，自动当保存一次处理（刷新底本），
-    // 但不关详情窗口——用户还要接着看这只的详情
-    boxDetailCommitSnapshot(id);
+    // 修改面板关闭＝这次改动已经确认，但不关详情窗口——用户还要接着看这只的详情
     if(boxDetailEntryId === id) boxDetailLoadEntry(id);
     renderBoxPage();
   };
@@ -9331,7 +9312,6 @@ document.getElementById('boxDetailOutputBtn').onclick = ()=>{
 function boxDetailSaveAndClose(){
   if(!boxDetailEntryId) return;
   boxUpdateEntryFromState(boxDetailEntryId);
-  boxDetailCommitSnapshot(boxDetailEntryId); // 保存过的把底本刷新掉，紧接着的关闭不该把它退回去
   // 注意不要置 boxDetailCommitted：保存是写回盒子，不等于把这只输出到各页面的面板上
   // 立刻退出详情页，反馈交给不遮罩的轻提示
   closeBoxDetail();
