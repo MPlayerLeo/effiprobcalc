@@ -5483,11 +5483,10 @@ function renderYieldAnalysis(pfx){
   const pityEligible = (x.dtype==='能量' || x.dtype==='功能');
   const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
 
-  const eFruit = ffloat(computeEfficiency(labels, 'fruit', level, persona));
   const eFood  = ffloat(computeEfficiency(labels, 'food',  level, persona));
   const eSkill = ffloat(computeEfficiency(labels, 'skill', level, persona));
 
-  // 真实(未封顶)的帮手速度/食材获得/技能概率加成总和——与上面 eFruit/eFood/eSkill 用的是同一份
+  // 真实(未封顶)的帮手速度/食材获得/技能概率加成总和——与上面 eFood/eSkill 用的是同一份
   // windowSums，口径必须保持一致（不能借用能量型天梯那套封顶0.35的版本），否则新加的"实际帮忙间隔/
   // 实际概率"三个数就会跟旁边"实际产量"对不上账
   const ws = windowSizeOf(level);
@@ -5496,11 +5495,18 @@ function renderYieldAnalysis(pfx){
 
   // ---- 树果区域：每日树果产量+每日能量。常规部分按(1-真实食材概率)折算真实树果比例；
   // 达克莱伊技能额外产出的能量/扣除的活力是独立触发事件，不受食材概率折算 ----
-  const helpsBase = capHelpsPerDay(x.interval, level, medal);
-  const unitPerCatch = x.dtype==='能量' ? 2 : 3;
+  // 实际帮忙间隔/实际每日帮忙次数：等价于 capInterval 基准间隔 × (1-真实帮手速度加成) × 性格倍率
+  const realInterval = energyRealInterval(x.interval, level, medal, sums.h, persona.h);
+  const realHelpsPerDay = 86400 / realInterval;
+  // 树果型每次产出树果基础是2颗，其余三种类型(食材/功能/能量)基础只有1颗；若当前副技能选了
+  // "树果数量S"(真实的sums.hasFruit，不是假设一定选了)，各自再+1(树果型3颗/其余2颗)——
+  // 之前这里不看x.dtype、也不看有没有真选树果S，一律按3颗算（还借用了树果型专属的1.5倍效率
+  // 系数二次叠加），导致食材型/功能型/能量型、以及没选树果S的树果型宝可梦树果产量都严重偏高
+  const berryBase = x.dtype==='树果' ? 2 : 1;
+  const unitPerCatch = berryBase + (sums.hasFruit ? 1 : 0);
   const realIngProb = energySkillProb(x.ingProb||0, sums.f, persona.f); // 复用同一条"基础概率×(1+加成)×性格倍率"公式
   const ingFrac = 1 - realIngProb;
-  const realFruitCount = helpsBase * unitPerCatch * ingFrac * eFruit;
+  const realFruitCount = realHelpsPerDay * unitPerCatch * ingFrac;
   const realBerryEnergy = realFruitCount * capBerryPerBerry(x.attr, level);
   let totalEnergy = realBerryEnergy;
   let specialStaminaDeduct = null;
@@ -5509,9 +5515,6 @@ function renderYieldAnalysis(pfx){
     totalEnergy += spec.energyPerTrigger * triggerCountReal;
     specialStaminaDeduct = spec.staminaDeduct * triggerCountReal;
   }
-  // 实际帮忙间隔/实际每日帮忙次数：等价于 capInterval 基准间隔 × (1-真实帮手速度加成) × 性格倍率
-  const realInterval = energyRealInterval(x.interval, level, medal, sums.h, persona.h);
-  const realHelpsPerDay = 86400 / realInterval;
   const fruitHtml = `<div class="yield-section yield-section-fruit"><div class="yield-section-title">树果</div>`
     + `<div class="yield-section-mid">`
     + `<span class="cap-val yield-fruit-count"><b>${capFmt(realFruitCount,1)}</b><span class="yield-unit">个/天</span></span>`
@@ -7343,13 +7346,20 @@ document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='credit
   const imgs = [...root.querySelectorAll('img[data-mascot-file]')];
   const timers = new Map(); // img -> {tid, iid}
   const neverShown = new Set(imgs); // 还没显示过第一帧的图（用来保证首次可见时立刻有画面）
+  const shinyState = new Map(); // img -> 当前这一轮"可见期"用的闪光/普通状态，可见期间保持不变
   function clearTimers(img){
     const t = timers.get(img);
     if(t){ clearTimeout(t.tid); clearInterval(t.iid); timers.delete(img); }
   }
-  function applyRandomFrame(img){
+  function rollShiny(img){
+    // 只在"划走"或"从没显示过"时掷一次骰子，可见期间绝不重新掷——
+    // 否则就会出现用户正盯着看时闪光/普通突然切换的问题
+    shinyState.set(img, Math.random() < 0.1); // 每张独立判定，互不影响
+  }
+  function replayFrame(img){
+    // 只重播当前已经定好的闪光/普通状态，不掷骰子
     const file = img.getAttribute('data-mascot-file');
-    const shiny = Math.random() < 0.1; // 每张独立判定，互不影响
+    const shiny = shinyState.get(img);
     const path = 'box_assets/'+(shiny?'shiny':'normal')+'/'+file+'.gif';
     const cached = mascotBlobCache.get(path);
     // 有预缓存的blob就用它+#片段强制重新播放（零网络请求，瞬间生效）；
@@ -7358,24 +7368,28 @@ document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='credit
   }
   function onHidden(img){
     clearTimers(img);
-    // 划走/不可见的这一刻就先把"下次要看到的画面"（含新一轮10%闪光判定）换好并解码完，
-    // 而不是等真正划回来可见的那一瞬间才切src触发解码——这样划回来看到的就已经是现成的
-    // 画面，不会再有切换时的顿卡
-    applyRandomFrame(img);
+    // 划走/不可见的这一刻才重新掷一次闪光骰子，并把"下次要看到的画面"换好解码完，
+    // 而不是等真正划回来可见的那一瞬间才切——这样划回来看到的就已经是现成的画面，
+    // 不会再有切换时的顿卡；同时因为掷骰子只发生在这里（看不见的时候），
+    // 可见期间就绝不会出现闪光/普通突然切换的情况
+    rollShiny(img);
+    replayFrame(img);
   }
   function onVisible(img){
     clearTimers(img);
     if(neverShown.has(img)){
-      // 首次显示（页面刚加载/第一次滚到标题）没有"划走时预备好的画面"可用，这里必须立刻播一次，
+      // 首次显示（页面刚加载/第一次滚到标题）没有"划走时预备好的画面"可用，这里必须先掷一次骰子并立刻播一次，
       // 否则会空白到第一次随机延迟结束
-      applyRandomFrame(img);
+      rollShiny(img);
+      replayFrame(img);
       neverShown.delete(img);
     }
     // 随机延后0~6s再重开一次，把4只的起播时刻错开；此后固定每6秒重开一次，
-    // 保证哪怕原始gif一轮时长超过6秒（毒乌波7.2s/土王9.1s），任意6秒窗口内也至少重播一次
+    // 保证哪怕原始gif一轮时长超过6秒（毒乌波7.2s/土王9.1s），任意6秒窗口内也至少重播一次；
+    // 这里全程只调用replayFrame（重播当前状态），不调用rollShiny，保证可见期间闪光/普通状态不变
     const tid = setTimeout(()=>{
-      applyRandomFrame(img);
-      const iid = setInterval(()=>applyRandomFrame(img), 6000);
+      replayFrame(img);
+      const iid = setInterval(()=>replayFrame(img), 6000);
       timers.set(img, {tid:null, iid});
     }, Math.random()*6000);
     timers.set(img, {tid, iid:null});
@@ -8247,6 +8261,69 @@ document.querySelectorAll('.tab-item').forEach(t=>{
 });
 window.addEventListener('load', ()=> setTimeout(positionTabIndicator, 60));
 window.addEventListener('resize', positionTabIndicator);
+
+/* ============ 四个主页面左右滑动切换（直接平移，不淡化）============
+   顺序按页签栏视觉顺序、跳过宝可梦盒：毕业判定→捕捉推荐→效率概率→排名对比，
+   捕捉推荐和效率概率因此变成直接相邻（宝可梦盒本身是浮层不参与） */
+const PAGE_SWIPE_ORDER = ['page1','page4','page2','page3'];
+let pageSwiping = false;
+function pageSwipeBlocked(){
+  // 宝可梦盒（含详情页/信息气泡/筛选器）、修改面板、鸣谢/参数设置等浮窗打开时都不应该
+  // 顺带把底下的主页面滑走，这里挨个查一遍常见的浮层
+  if(boxOverlayOpen || dashboardOpen) return true;
+  const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
+  if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay'];
+  if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
+  return false;
+}
+function pageSwitchBySwipe(step){
+  if(pageSwiping || pageSwipeBlocked()) return;
+  const activeEl = document.querySelector('.app-page.active-page');
+  if(!activeEl) return;
+  const idx = PAGE_SWIPE_ORDER.indexOf(activeEl.id);
+  if(idx < 0) return;
+  const nextIdx = idx + step;
+  if(nextIdx < 0 || nextIdx >= PAGE_SWIPE_ORDER.length) return; // 已经是第一页/最后一页，不动
+  const nextId = PAGE_SWIPE_ORDER[nextIdx];
+  pageSwiping = true;
+  const out = step>0 ? -1 : 1; // 左滑看下一页时，当前页向左退出
+  document.documentElement.style.overflowX = 'hidden'; // 平移期间暂时禁横向滚动条，切完再恢复
+  activeEl.style.transition = 'transform .2s ease-in';
+  activeEl.style.transform = 'translateX('+(out*100)+'%)';
+  setTimeout(()=>{
+    switchPage(nextId); // 这一步会把 activeEl 切成 display:none、nextId 切成 display:block
+    activeEl.style.transition = ''; activeEl.style.transform = '';
+    const nextEl = document.getElementById(nextId);
+    nextEl.style.transition = 'none';
+    nextEl.style.transform = 'translateX('+(-out*100)+'%)';
+    void nextEl.offsetWidth; // 强制回流，否则下面这次赋值会跟上面合并、动画不播
+    nextEl.style.transition = 'transform .28s cubic-bezier(.2,.85,.3,1)';
+    nextEl.style.transform = 'translateX(0)';
+    setTimeout(()=>{
+      nextEl.style.transition = ''; nextEl.style.transform = '';
+      document.documentElement.style.overflowX = '';
+      pageSwiping = false;
+    }, 300);
+  }, 200);
+}
+(function(){
+  let sx=0, sy=0, tracking=false;
+  document.addEventListener('touchstart', (e)=>{
+    if(e.touches.length!==1 || pageSwiping || pageSwipeBlocked()){ tracking=false; return; }
+    // 起手在横向滚动的小组件（如捕捉推荐页的岛屿选择条）里就不当成翻页手势，让它正常横滚
+    if(e.target.closest && e.target.closest('.cap-cscroll')){ tracking=false; return; }
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
+  }, {passive:true});
+  document.addEventListener('touchend', (e)=>{
+    if(!tracking) return; tracking=false;
+    if(pageSwiping || pageSwipeBlocked()) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dy) >= 60 || Math.abs(dx) <= 70) return; // 竖着滑或幅度不够，都不当成翻页手势
+    pageSwitchBySwipe(dx < 0 ? 1 : -1);
+  }, {passive:true});
+})();
 
 /* ============ 宝可梦盒：顶层气泡开关 ============ */
 let boxOverlayOpen = false;
@@ -9428,7 +9505,7 @@ function boxDetailSaveAndClose(){
 document.getElementById('boxDetailSaveBtn').onclick = boxDetailSaveAndClose;
 document.getElementById('boxDetailCloseBtn').onclick = boxDetailSaveAndClose;
 /* 详情页里换一只：左滑看下一只、右滑看上一只，顺序跟盒子网格（含当前筛选）一致。
-   切换动画=当前这页往滑动方向淡出、下一页从反方向滑进来 */
+   切换动画=直接平移（当前这页整页滑出屏幕，下一页从反方向整页滑入），不做淡化 */
 let boxDetailSliding = false;
 function boxDetailSwitchBy(step){
   if(boxDetailSliding || !boxDetailEntryId) return;
@@ -9444,19 +9521,17 @@ function boxDetailSwitchBy(step){
   boxDetailSliding = true;
   const panel = document.getElementById('boxDetailPanel');
   const out = step>0 ? -1 : 1; // 看下一只时当前页向左退出
-  panel.style.transition = 'transform .16s ease-in, opacity .16s ease-in';
-  panel.style.transform = 'translateX('+(out*32)+'%)';
-  panel.style.opacity = '0';
+  panel.style.transition = 'transform .16s ease-in';
+  panel.style.transform = 'translateX('+(out*100)+'%)';
   setTimeout(()=>{
     boxDetailLoadEntry(next.id);
     panel.style.transition = 'none';
-    panel.style.transform = 'translateX('+(-out*32)+'%)';
+    panel.style.transform = 'translateX('+(-out*100)+'%)';
     void panel.offsetWidth; // 强制回流，否则下面这次赋值会跟上面合并、动画不播
-    panel.style.transition = 'transform .24s cubic-bezier(.2,.85,.3,1), opacity .24s ease-out';
+    panel.style.transition = 'transform .24s cubic-bezier(.2,.85,.3,1)';
     panel.style.transform = 'translateX(0)';
-    panel.style.opacity = '1';
     setTimeout(()=>{
-      panel.style.transition=''; panel.style.transform=''; panel.style.opacity='';
+      panel.style.transition=''; panel.style.transform='';
       boxDetailSliding = false;
     }, 260);
   }, 170);
