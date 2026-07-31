@@ -241,6 +241,8 @@
   .pkbtn.selected{outline:3px solid var(--accent-dk); outline-offset:1px;}
   .pkbtn.disabled{ background:#e2e2e2 !important; border-color:#aaa !important; color:#999 !important; cursor:not-allowed; }
   .disabled-block{ opacity:.5; }
+  /* 彻底不可选的整块（如拉帝欧斯下的"队友树果"）直接不占位，而不是变半透明留着 */
+  .hidden-block{ display:none !important; }
   .pkbtn.pk-taiyang{background:#e3d3f5; border-color:#8a4fb0; color:#4a1f66;}
   .pkbtn.pk-taiyang.selected{background:#b98fe0;}
   .pkbtn.pk-dianlong{background:#faf0a0; border-color:#b8a220; color:#4a3f00;}
@@ -289,6 +291,10 @@
     box-shadow:0 0 0 2px rgba(169,126,18,.25);
   }
   .level-lock-row{ display:flex; gap:28px; flex-wrap:nowrap; align-items:flex-start; }
+  /* 控制参数浮窗的第一行：左等级右露营券。露营券按钮比锁金按钮宽，28px 的间距在窄屏会顶出去，
+     所以这一行单独收紧间距、并允许在实在放不下时换行（nowrap 会直接溢出，比换行更糟） */
+  .dash-level-camp-row{ gap:12px; flex-wrap:wrap; }
+  .dash-level-camp-row > .level-lock-sub{ flex:0 0 auto; }
   .level-lock-sub{ min-width:0; }
 
   .squadbtn{border:1.5px solid var(--gold-bd); background:#fff7e0; color:var(--gold-tx); padding:6px 14px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
@@ -1034,6 +1040,10 @@
     font-size:11px; font-weight:800; color:var(--accent-dk); text-align:center; cursor:text;
   }
   .pk-portrait img{ width:100%; height:100%; object-fit:cover; }
+  /* 百变怪伪装图（那 10 张）单独放大到 180%：头像框和图片的客观尺寸都不变，只是把内容放大，
+     多出来的部分由头像框自身的 overflow:hidden 裁掉，中心位置不动。
+     百变怪【本体】头像不参与放大——这是确认过的口径。 */
+  .pk-portrait img.ditto-disguise-zoom{ transform:translateX(2px) scale(1.8); transform-origin:center center; }
   .pk-portrait.pk-portrait-shiny{
     border:3px solid transparent;
     background-image: linear-gradient(#f4effa,#f4effa), linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
@@ -1101,7 +1111,8 @@
      跟等级按钮那一行等高（胶囊自身的固定 22px 高要在下面显式解除，否则拉不开） */
   /* 行间距和 .btnrow 内部的按钮间距一致（8px），且等级按钮组不占多余空间，
      这样闪光按钮就是紧跟在 80 级后面的"第五颗按钮"，而不是被推到最右边 */
-  .dash-shiny-level-row{ display:flex; align-items:stretch; gap:8px; margin:8px 0; }
+  /* 下边距 8px：睡饱饱行上下都要跟副技能按钮的行距（.dash-btnrow 的 margin-bottom:8px）一致 */
+  .dash-shiny-level-row{ display:flex; align-items:stretch; gap:8px; margin:8px 0 8px; }
   .dash-shiny-level-row .pk-shiny-capsule{ flex:0 0 68px; width:68px; padding:3px 8px; display:flex; align-items:center; justify-content:center; }
   .dash-shiny-level-row .btnrow{ flex:0 1 auto; }
   .dash-shiny-level-row .segbtn{ padding:3px 12px; }
@@ -1261,7 +1272,26 @@
   .cap-empty{ text-align:center; color:#9a927f; padding:40px 10px; font-size:14px; }
 
   .cap-row{ display:flex; align-items:center; gap:8px; padding:8px 2px; border-bottom:1px solid var(--line); }
-  .cap-rank{ width:22px; text-align:center; font-weight:900; font-size:16px; color:var(--accent-dk); flex:0 0 auto; }
+  /* 排名列：圆底数字 + 下方睡眠类型小字。宽度从 22 放到 30，圆底才装得下两位数排名 */
+  .cap-rank{ width:30px; flex:0 0 auto; display:flex; flex-direction:column; align-items:center; gap:2px; }
+  .cap-rank-num{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:14px; color:#fff; line-height:1; }
+  .cap-sleep-lab{ font-size:8.5px; font-weight:800; line-height:1; white-space:nowrap; }
+  /* 三种睡眠类型的配色 */
+  .cap-sleep-deep  .cap-rank-num{ background:#1d3f8f; }   /* 深深入眠 = 深蓝 */
+  .cap-sleep-light .cap-rank-num{ background:#b5891f; }   /* 浅浅入梦 = 土黄 */
+  .cap-sleep-calm  .cap-rank-num{ background:#3fa9e0; }   /* 安然入睡 = 天蓝 */
+  .cap-sleep-deep  .cap-sleep-lab{ color:#1d3f8f; }
+  .cap-sleep-light .cap-sleep-lab{ color:#b5891f; }
+  .cap-sleep-calm  .cap-sleep-lab{ color:#3fa9e0; }
+  /* 皮卡丘/雷丘：圆底左右对半开，小字「深/安」按字分色、斜杠留黑 */
+  .cap-sleep-split .cap-rank-num{ background:linear-gradient(90deg,#1d3f8f 0 50%,#3fa9e0 50% 100%); }
+  .cap-sleep-split .cap-sleep-lab{ color:var(--ink); }
+  .cap-sleep-split .cap-sleep-lab .s-deep{ color:#1d3f8f; }
+  .cap-sleep-split .cap-sleep-lab .s-calm{ color:#3fa9e0; }
+  /* 兜底：万一将来加了新属性、映射不上，保持中性灰而不是无底色，方便一眼看出漏了 */
+  .cap-sleep-none .cap-rank-num{ background:#a9a294; }
+  .cap-sleep-none .cap-sleep-lab{ color:transparent; }
   .cap-avatars{ display:flex; align-items:flex-start; gap:3px; flex:0 0 auto; }
   .cap-av{ position:relative; border-radius:12px; border:2px solid var(--accent); background:#f4effa; display:flex; align-items:center; justify-content:center; }
   .cap-av-main{ width:44px; height:44px; }
@@ -1378,7 +1408,13 @@
 .carry-opts-note{ flex:1 1 100%; font-size:10.5px; color:#8b8b93; margin-top:-4px; }
 .segbtn.carry-disabled{ opacity:.38; cursor:default; pointer-events:none; }
 .carrymode-btn{ flex:1 1 0; text-align:center; }
-.dash-satiety-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:6px 0 2px; }
+/* 上下都紧贴 3px：上邻等级行、下邻副技能按钮组。
+   上边距写 0、由等级行的 margin-bottom:3px 决定（父容器是普通块级流，相邻外边距会折叠取大值，
+   两边都写 3 反而还是 3，但写 0 更不容易被将来改动带偏） */
+.dash-satiety-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:0 0 8px; }
+/* 按钮高度对齐上方的等级按钮：等级按钮是 padding:3px 12px（h=25.2），
+   睡饱饱按钮沿用 .segbtn 默认的 6px 上下内边距会高出 6px，这里显式压平 */
+.dash-satiety-row .segbtn{ padding-top:3px; padding-bottom:3px; }
 .dash-satiety-lab{ flex:0 0 auto; font-size:12px; font-weight:800; color:var(--accent-dk); }
 /* 紧跟在2000按钮后面的"+n"：作为 btnrow 里排在最后的一个 flex 项，不再另起一行 */
 .satiety-bonus-note{ flex:0 0 auto; align-self:center; font-size:12px; font-weight:800; color:var(--accent-dk); margin-left:2px; }
@@ -2005,10 +2041,15 @@
   <div class="dashboard-panel dashboard-panel-flex" id="controlsDashboardPanel">
     <div class="dash-header dash-header-flex">控制参数<span class="dash-close" id="controlsDashCloseBtn">✕</span></div>
     <div class="dash-scroll-area">
-      <div class="level-lock-row">
+      <div class="level-lock-row dash-level-camp-row">
         <div class="level-lock-sub">
           <div class="dash-group-label">宝可梦等级 / 效率等级</div>
           <div class="btnrow" id="dash-levelSel"></div>
+        </div>
+        <!-- 露营券是个单按钮开关，原来自己占浮窗底部一整行太浪费；挪到等级按钮右边的空位 -->
+        <div class="level-lock-sub">
+          <div class="dash-group-label">露营券</div>
+          <div class="btnrow" id="dash-campingSel"></div>
         </div>
       </div>
       <div class="dash-group-label">宝可梦类型</div>
@@ -2025,8 +2066,6 @@
         <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
         <div class="sleep-axis" id="dash-sleepAxis"></div>
       </div>
-      <div class="dash-group-label">露营券</div>
-      <div class="btnrow" id="dash-campingSel"></div>
     </div>
     <div class="dash-sticky-footer">
       <button type="button" class="confirmbtn-big" id="controlsConfirmBtn">确认所选</button>
@@ -4250,6 +4289,8 @@ const state = {
   ingChoice3: null,
   // 百变怪本体/百变怪伪装目标宝可梦头像的随机覆盖结果，selectPokemon 里按当前选中的种族重新抽一次
   pkPortraitOverride: null,
+  // 这张 override 是给哪只抽的。没有它就分不清"当前选中的这只抽到的图"和"上一只留下的图"
+  pkPortraitDex: null,
   // v3.16 持有上限：'unlimited'(默认，与旧版完全一致) / 'limited' / 'always'；不持久化，每次重开回到无限持有
   carryMode: 'unlimited',
   // 副技能持有档位组合（如 ['s','l']）；null = 跟随当前副技能面板的默认值
@@ -4365,12 +4406,15 @@ function getSelectedPokemonRecord(){
 function renderPortraitInto(portraitEl, rec, qFontPx){
   const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
   // 百变怪本体/百变怪伪装目标宝可梦：选中时抽好的头像覆盖（只对当前选中的这只生效，且随闪光/非闪光分别取值）
-  const override = (rec && rec[0]===state.selectedDex) ? state.pkPortraitOverride : null;
+  // 必须比对 pkPortraitDex：rec[0]===state.selectedDex 恒真，挡不住上一只遗留下来的图
+  const override = (rec && rec[0]===state.selectedDex && state.pkPortraitDex===state.selectedDex)
+    ? state.pkPortraitOverride : null;
   const overrideB64 = override ? (state.shiny ? override.shiny : override.normal) : null;
   const rawB64 = overrideB64 || (pair ? (state.shiny ? pair[1] : pair[0]) : null);
   const src = rawB64 ? 'data:image/webp;base64,'+rawB64 : null;
   if(src){
-    portraitEl.innerHTML = `<img src="${src}" alt="${rec[1]}">`;
+    const zoomCls = isDittoDisguiseB64(rawB64) ? ' class="ditto-disguise-zoom"' : '';
+    portraitEl.innerHTML = `<img${zoomCls} src="${src}" alt="${rec[1]}">`;
   } else if(rec){
     // 兜底：没找到对应图片时退回显示图鉴编号
     portraitEl.innerHTML = `<span style="font-size:${qFontPx}px; font-weight:800; color:var(--accent-dk);">${rec[0]}</span>`;
@@ -4646,10 +4690,11 @@ function renderEnergySubmenu(containerId, pfx, compact){
   html += `<div class="pity-merged-btn" id="${pfx}pityBtnOn">技概·含保底<b id="${pfx}pityProbVal">--</b></div>`;
   html += `<div class="pity-merged-btn" id="${pfx}pityBtnOff">技概·不含保底<b id="${pfx}noPityProbVal">--</b></div>`;
   html += `</div></div>`;
-  if(isEnergyType) html += `<div class="energy-block${isLatios?' disabled-block':''} fruitdir-section"><div class="lab">队友树果</div><div class="btnrow" id="${pfx}fruitDirSel"></div></div>`;
+  // 拉帝欧斯的技能不吃队友树果方向，这两个按钮点了也没用 → 整块隐藏（原来是半透明留着占位）
+  if(isEnergyType) html += `<div class="energy-block${isLatios?' hidden-block':''} fruitdir-section"><div class="lab">队友树果</div><div class="btnrow" id="${pfx}fruitDirSel"></div></div>`;
   html += `</div>`;
   if(isEnergyType && !compact){
-    html += `<div class="note${isLatios?' disabled-block':''}" style="margin-top:6px;">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
+    html += `<div class="note${isLatios?' hidden-block':''}" style="margin-top:6px;">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
   }
   if(isEnergyType){
     html += `<div class="group-label" style="margin-top:${compact?'6px':'12px'};">龙星群</div>`;
@@ -4739,7 +4784,9 @@ function renderEnergySubmenu(containerId, pfx, compact){
       const dcEl = document.getElementById(pfx+'dragonCountSel');
       const options = [['solo','仅自身'], ['d2', state.latiasActive?'相依为命':'2龙'], ['d3','3龙'], ['d4','4龙'], ['d5','5龙']];
       options.forEach(([val,label])=>{
-        const disabled = (val==='solo' && state.latiasActive);
+        // 带着拉帝亚斯就至少是两只龙，"仅自身"不可能成立 → 不渲染（原来是灰着留在那儿）
+        if(val==='solo' && state.latiasActive) return;
+        const disabled = false;
         let cls = 'pkbtn pk-dragoncount';
         if(val==='d2' && state.latiasActive) cls += ' striped';
         if(state.dragonCount===val) cls += ' selected';
@@ -4751,6 +4798,27 @@ function renderEnergySubmenu(containerId, pfx, compact){
         dcEl.appendChild(b);
       });
     }
+  }
+
+  // ---- 收尾：把"点不动"的按钮直接从 DOM 摘掉 ----
+  // 选定的宝可梦本身就是能量型时，能量宝可梦这一项已经被物种锁死了：
+  // 别的选不了（原来渲染成灰色 type-locked），当前这颗点了只会把自己取消掉、也不构成有效选择。
+  // 所以整排"选宝可梦"的按钮都不显示。
+  // 例外：拉帝亚斯不是在选宝可梦，而是"队伍里还有没有拉帝亚斯"这个队伍配置，必须留着。
+  if(isEnergyType && lockedEnergyId){
+    ['pkFillSel','pkBoostSel','pkDragonSel'].forEach(function(rowId){
+      const row = document.getElementById(pfx+rowId);
+      if(!row) return;
+      Array.prototype.slice.call(row.children).forEach(function(btn){
+        if(!btn.classList.contains('pk-latias')) row.removeChild(btn);
+      });
+      // 按钮被摘光的排，连同上面那行小标题一起隐藏，免得留一个空标题
+      if(!row.children.length){
+        row.style.display = 'none';
+        const lab = row.previousElementSibling;
+        if(lab && lab.classList.contains('group-label')) lab.style.display = 'none';
+      }
+    });
   }
 
   const noPityEl = document.getElementById(pfx+'noPityProbVal');
@@ -4813,11 +4881,23 @@ function renderControlsGeneric(pfx, compact){
   [['fruit','树果型'],['food','食材型'],['skill', compact?'功能型':'功能型技能型'],['energy', compact?'能量型':'能量型技能型']].forEach(([id,name])=>{
     const b = document.createElement('div');
     const isLocked = lockedType && id!==lockedType;
+    // 物种锁死时整块都会隐藏，这里就不必再画成灰色 type-locked 了；保留 class 只为万一有别的地方复用
     b.className = 'typebtn '+(id==='energy'?'energy':id)+(state.type===id?' selected':'')+(isLocked?' type-locked':'');
     b.textContent = name;
     if(!isLocked) b.onclick = ()=>{ if(state.type===id) return; state.type=id; if(TYPE_LEVEL_DEFAULT[id]) state.level=TYPE_LEVEL_DEFAULT[id]; renderAll(); };
     typeEl.appendChild(b);
   });
+  // 选定宝可梦后类型就由物种决定了，四个按钮一个都点不动（类型另有胶囊/徽标在展示），
+  // 所以整块"宝可梦类型"（小标题 + 按钮排）一起隐藏。注意必须两个方向都显式设置：
+  // 取消选择宝可梦后要能恢复显示。
+  {
+    const hideType = !!lockedType;
+    typeEl.style.display = hideType ? 'none' : '';
+    const lab = typeEl.previousElementSibling;
+    if(lab && (lab.classList.contains('lab') || lab.classList.contains('dash-group-label'))){
+      lab.style.display = hideType ? 'none' : '';
+    }
+  }
   renderEnergySubmenu(pfx+'energySubmenu', pfx, compact);
 
   const lvEl = document.getElementById(pfx+'levelSel'); lvEl.innerHTML='';
@@ -5118,7 +5198,10 @@ function updateBoxMedalFab(){
   const fab = document.getElementById('boxMedalFab');
   if(!fab) return;
   const open = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
-  fab.style.display = open ? 'flex' : 'none';
+  // 详情页打开时也要收起：这颗浮窗 z-index(1200) 高于详情页浮层(1150)，不收就直接压在详情页上。
+  // panelFab / boxCreateFab 在详情页同样是主动收起的，这里跟它们保持一致。
+  const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
+  fab.style.display = (open && !inDetail) ? 'flex' : 'none';
   fab.classList.toggle('on', !!userPrefs.boxMedalOn);
 }
 function toggleBoxMedalFab(){
@@ -6185,6 +6268,15 @@ const DITTO_DISGUISE_IMAGES = {
 };
 // 每次选择百变怪本体：头像从"原本的百变怪头像"和这10张图里随机挑一张（闪光/普通各自独立抽一次，候选图池共用）
 // 每次选择这10张图对应的那只宝可梦（xx）：非闪光时头像有10%概率换成对应的"百变怪-xx"图；闪光时不触发，照常用闪光头像
+// 判定某张 base64 是不是那 10 张伪装图之一（用于决定要不要放大 180%）。
+// 注意百变怪本体抽头像时，候选池里也混着这 10 张——抽中伪装图同样按伪装图放大，
+// 抽中它自己原本那张则不放大。
+let _dittoDisguiseSet = null;
+function isDittoDisguiseB64(b64){
+  if(!b64) return false;
+  if(!_dittoDisguiseSet) _dittoDisguiseSet = new Set(Object.values(DITTO_DISGUISE_IMAGES));
+  return _dittoDisguiseSet.has(b64);
+}
 function rollPkPortraitOverride(rec){
   if(!rec) return null;
   if(rec[1]==='百变怪'){
@@ -6204,6 +6296,16 @@ function rollPkPortraitOverride(rec){
   }
   return null;
 }
+// 头像改成"每次打开重抽"之后，条目里存的那张图就没用了。它是一整张 base64（十几 KB），
+// 留在 localStorage 里纯占地方（盒子上限 300 条），这里一次性清掉。
+(function dropStoredBoxPortraits(){
+  if(typeof boxData === 'undefined' || !Array.isArray(boxData)) return;
+  let changed = false;
+  boxData.forEach(function(e){
+    if(e && e.portrait !== undefined){ delete e.portrait; changed = true; }
+  });
+  if(changed && typeof saveBoxData === 'function') saveBoxData();
+})();
 function selectPokemon(dex){
   state.selectedDex = dex;
   // 梦幻数据表里没有帮忙间隔（interval为null），产量没法算，选中时提示一下，
@@ -6213,6 +6315,7 @@ function selectPokemon(dex){
   // 每次选择都重新抽一次头像（百变怪本体/百变怪伪装目标宝可梦），不能在渲染时抽——
   // 渲染每次改动都会重跑，抽到的头像会跟着乱跳
   state.pkPortraitOverride = rollPkPortraitOverride(rec);
+  state.pkPortraitDex = dex;
   let mappedType = null;
   if(rec){
     mappedType = DEX_TYPE_MAP[rec[3]];
@@ -6809,6 +6912,202 @@ function loadTesseract(){
   return tesseractLoadPromise;
 }
 
+/* ---- PP-OCR（Paddle.js 跑 PP-OCR mobile 的 det+rec 模型）----
+   跟 Tesseract 并联读食材数量 ×N。两个引擎的失败模式正好错开：实测 44 个配对槽位里
+   Tesseract 读错 5 个但从不读空，PP-OCR 一个没读错但读空 3 个（它在这个字体下认不准数字"1"，
+   会把"×1"读成孤零零一个"X"）。所以不是二选一，而是两个都读、再用"该物种可能出现的数量"仲裁。
+   加载失败时静默降级回纯 Tesseract（旧行为），绝不阻塞识别流程。 */
+const PADDLE_CDN_GROUPS = [
+  ['https://cdn.jsdelivr.net/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
+   'https://cdn.jsdelivr.net/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
+   'https://cdn.jsdelivr.net/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
+  // ↓ 备用镜像。原来这里写的是 unpkg，但它对 scoped 包这条路径直接 404（实测 size=55 的错误页），
+  //   留着只会白白多等一轮超时。换成实测能通的两个 jsdelivr 镜像。
+  ['https://fastly.jsdelivr.net/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
+   'https://fastly.jsdelivr.net/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
+   'https://fastly.jsdelivr.net/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
+  ['https://cdn.jsdmirror.com/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
+   'https://cdn.jsdmirror.com/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
+   'https://cdn.jsdmirror.com/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
+];
+/* ---- PP-OCR 加载加固 ---- 见下方注释，修的是「永远停在加载中」那个问题 */
+// Paddle 的模型放在百度 bcebos 上，init() 用普通 fetch 去拉。实测浏览器 HTTP 缓存一旦
+// 存了这两个 URL 的坏条目（上次加载被中断、或被 no-cors 请求写进过一条 opaque 响应），
+// 此后普通 fetch 一律 "Failed to fetch"，而带 cache:'reload' 的请求照样 200。
+// 这个补丁只在 init() 期间生效：模型请求失败就强制回源重试一次；reload 会把新鲜响应
+// 写回缓存，坏条目被冲掉，之后普通 fetch 也恢复正常。
+function withPaddleFetchPatch(fn){
+  const orig = window.fetch;
+  window.__paddleProgressAt = Date.now();
+  window.fetch = function(input, init){
+    const url = (typeof input === 'string') ? input : ((input && input.url) || '');
+    if(!/bcebos\.com/.test(url)) return orig.apply(this, arguments);
+    window.__paddleProgressAt = Date.now();          // 请求发出算一次进展
+    const tick = function(x){ window.__paddleProgressAt = Date.now(); return x; };
+    return orig.call(window, input, init).then(tick, function(e){ tick(); throw e; }).then(function(r){
+      if(!r.ok) throw new Error('HTTP ' + r.status);
+      return r;
+    }).catch(function(e){
+      console.log('PP-OCR 模型请求失败（' + e.message + '），强制回源重试：' + url.split('/').slice(-2).join('/'));
+      const opt = {}; for(const k in (init||{})) opt[k] = init[k];
+      opt.cache = 'reload';
+      return orig.call(window, input, opt);
+    });
+  };
+  const restore = function(){ window.fetch = orig; };
+  return Promise.resolve().then(fn).then(
+    function(v){ restore(); return v; },
+    function(e){ restore(); throw e; }
+  );
+}
+// init() 卡死时不能干等，但也不能用「总时长」当判据——模型不小（det+rec 两份 + 3 个权重分片），
+// 慢网上正常下个两三分钟很常见，一刀切超时会把慢网用户误杀、还害他们重下一整份。
+// 真正的判据是「还动不动」：卡死 = 一段时间内一个模型字节都没动（Paddle 吞掉 fetch 错误后正是这样），
+// 慢 = 字节一直在动。所以这里只在「连续 idleMs 毫秒没有任何模型请求进展」时才判死，总时长不设上限。
+// 进度时间戳由 withPaddleFetchPatch 在每次模型请求发出/结束时打点。
+function paddleWatchdog(p, idleMs, what){
+  let timer = null;
+  const stop = function(){ if(timer){ clearInterval(timer); timer = null; } };
+  return Promise.race([
+    Promise.resolve(p).then(function(v){ stop(); return v; }, function(e){ stop(); throw e; }),
+    new Promise(function(_, rej){
+      timer = setInterval(function(){
+        const idle = Date.now() - (window.__paddleProgressAt || 0);
+        if(idle > idleMs){
+          stop();
+          rej(new Error(what + '卡住了（连续 ' + Math.round(idle/1000) + ' 秒没有任何模型数据进出）'));
+        }
+      }, 3000);
+    })
+  ]);
+}
+
+let paddleLoadPromise = null, paddleFailed = false;
+function loadPaddleOcr(){
+  if(paddleFailed) return Promise.resolve(null); // 失败过就别再重试，免得每张图都白等一轮超时
+  if(paddleLoadPromise) return paddleLoadPromise;
+  paddleLoadPromise = (async ()=>{
+    for(const group of PADDLE_CDN_GROUPS){
+      try{
+        for(const u of group) await loadScriptOnce(u, 30000); // 顺序必须 core → webgl后端 → ocr
+        const g = (window.paddlejs && window.paddlejs.ocr) || null;
+        if(!g || typeof g.init !== 'function') throw new Error('全局 paddlejs.ocr 不存在');
+        // 这一步会去下模型，首次约 10~20 秒。
+        // 必须同时套 fetch 补丁和超时：Paddle 自己在模型请求失败时会把错吞掉、Promise 永不 settle，
+        // 裸 await 的话整个识别流程就永远卡在这里（用户侧表现为"PP-OCR 一直加载不出来"）。
+        await withPaddleFetchPatch(function(){ return paddleWatchdog(g.init(), 45000, 'PP-OCR 模型加载'); });
+        console.log('PP-OCR 就绪（与 Tesseract 并联读食材数量）');
+        return g;
+      }catch(err){
+        console.log('PP-OCR 这组来源失败，继续尝试下一组：', err.message);
+      }
+    }
+    paddleFailed = true;
+    // 实测确认的一种常见根因：file:// 直接双击打开时 fetch 带 Origin: null，模型真正存放的
+    // paddlejs.bj.bcebos.com 对任何 http/https 来源都会动态回显允许跨域，唯独对 null 不返回
+    // 跨域头——直接拒绝。这是浏览器安全策略的硬限制，绕不过去；食材数量识别会自动降级为
+    // 纯 Tesseract（不影响使用），只是少了 PP-OCR 这一路交叉校验。
+    if(location.protocol === 'file:'){
+      console.log('PP-OCR 加载不出来，很可能是因为本文件是用 file:// 直接打开的（双击打开就是这样）——'+
+        'PP-OCR 的模型放在百度对象存储上，这类跨域请求下它只拒绝 file:// 页面，这不是网络问题也绕不开。'+
+        '如果想让 PP-OCR 生效：把这个文件放到本地服务器后面打开（例如同目录下执行 python -m http.server 8000，'+
+        '再用 http://localhost:8000/ 对应地址访问），而不是双击。不处理也没关系，数量识别仍会用 Tesseract 正常工作。');
+    }
+    console.log('PP-OCR 全部来源失败，食材数量降级为纯 Tesseract（不影响其它识别）');
+    return null;
+  })();
+  return paddleLoadPromise;
+}
+// ⚠️ Paddle.js 的 recognize() 只认 <img> 元素：直接传 canvas 会静默返回 {text:[],points:[]}，
+// 不报错也不抛异常。实测同一张合成图，传 canvas 得到 []，转成 img 才读出内容。
+function canvasToImageEl(canvas){
+  return new Promise((resolve, reject)=>{
+    const im = new Image();
+    im.onload = ()=> resolve(im);
+    im.onerror = ()=> reject(new Error('canvas 转 img 失败'));
+    im.src = canvas.toDataURL('image/png');
+  });
+}
+// 从 PP-OCR 返回的若干文字片段里挑出 ×N 的 N。
+// 必须先剔掉含"秒"和"LV"的片段：检测框放宽后会把旁边的"帮忙间隔 N秒"和"LV.30"标签一起框进来，
+// 直接抓数字会抓到间隔秒数（实测"咚咚鼠"就是把".5秒"的 5 当成了数量，正确答案是 1）。
+function pickQtyDigit(texts){
+  const frags = (texts||[]).filter(Boolean).map(String);
+  const clean = frags.filter(t => !/秒|分|LV|Lv|lv/.test(t));
+  for(const pool of [clean, frags]){
+    for(const t of pool){
+      const m = t.match(/[x×✕╳X*]\s*(\d{1,3})/);
+      if(m) return parseInt(m[1], 10);
+    }
+  }
+  for(const t of clean){                       // 退一步：只在干净片段里取裸数字，绝不从含"秒"的片段取
+    const d = t.replace(/[^0-9]/g, '').replace(/^0+/, '');
+    if(d) return parseInt(d, 10);
+  }
+  return null;
+}
+// 两个引擎的结果合成一个"候选数量列表"（按可信度排序），交给下游用物种数据仲裁。
+// 分歧时把 PP-OCR 排前面：实测它 0 读错、Tesseract 5 读错，但两个都保留，
+// 因为最终裁判是"这个数字在该物种这个槽位上到底可不可能出现"，比任何先验都准。
+function arbitrateQty(tessVal, padVal){
+  if(tessVal == null && padVal == null) return [];
+  if(tessVal == null) return [padVal];
+  if(padVal == null) return [tessVal];
+  if(tessVal === padVal) return [tessVal];
+  return [padVal, tessVal];
+}
+// 把"数量"参数统一成数组：兼容老的单个数字写法和新的候选列表
+function qtyCandList(q){
+  if(q == null) return [];
+  return Array.isArray(q) ? q.filter(v => v != null) : [q];
+}
+// 按需补救：只有当 Tesseract 读出来的数字跟"这个物种这个槽位可能出现的数量"对不上（或压根没读到）
+// 时，才去问一次 PP-OCR。实测 Tesseract 的错误读数【全部】落在合法集合之外，所以这个信号
+// 能覆盖已观测到的全部错误，而正确的那 89% 完全不用惊动 PP-OCR。
+// 掉位修复：两位数徽章（×11、×18 这类）偶尔会被两个引擎同时少读一位。
+// 判定条件很严：读出的值必须【不在合法集合里】（即已经确定是错的），并且合法集合里【有且只有一个】
+// 值能通过"去掉首位或末位"解释成它。有第二个解释就不修——比如合法集合 [7,18,15] 读到 1，
+// 18 和 15 都说得通，这时保持原样交给用户手改，比赌一个更好。
+function repairDroppedDigit(readVal, legalQtys){
+  if(readVal == null) return null;
+  const s = String(readVal);
+  const hits = legalQtys.filter(function(q){
+    const t = String(q);
+    return t.length > s.length && (t.indexOf(s) === 0 || t.slice(-s.length) === s);
+  });
+  return hits.length === 1 ? hits[0] : null;
+}
+async function ensureQtyForSpecies(qtyRes, id, slot){
+  if(!qtyRes || typeof qtyRes.refine !== 'function') return qtyRes;
+  const opts = slotOptionsForId(id, slot);
+  if(!opts.length) return qtyRes;                 // 该槽本来就没有数量数据（表里是 null），问了也没用
+  const legal = opts.map(function(o){ return o.qty; });
+  const consistent = function(){
+    const cands = qtyCandList(qtyRes.vals);
+    return cands.length && cands.some(function(q){ return legal.indexOf(q) >= 0; });
+  };
+  if(consistent()) return qtyRes;                 // 读数讲得通 → 省掉 PP-OCR 这一趟
+  if(!qtyRes.refined){
+    console.log('数量与物种对不上（' + slot + '级槽读到 ' + JSON.stringify(qtyCandList(qtyRes.vals))
+                + '，该槽只可能是 ' + JSON.stringify(legal) + '）→ 调用 PP-OCR 补救');
+    await qtyRes.refine();
+    if(consistent()) return qtyRes;
+  }
+  // PP-OCR 也没救回来 → 最后试一次掉位修复
+  const after = qtyCandList(qtyRes.vals);
+  for(let i=0;i<after.length;i++){
+    const fixed = repairDroppedDigit(after[i], legal);
+    if(fixed != null){
+      console.log('数量掉位修复：' + after[i] + ' → ' + fixed
+                  + '（该槽合法值 ' + JSON.stringify(legal) + '，只有这一个解释得通）');
+      qtyRes.vals = [fixed].concat(after);
+      qtyRes.val = fixed;
+      break;
+    }
+  }
+  return qtyRes;
+}
+
 // 关键词匹配：把OCR读出来的一行文字对应到具体的副技能id。
 // 游戏截图常见繁体/台湾用语（機率/上限）和我们数据库的简体/大陆用语（概率/上升）不完全一致，
 // 所以用"包含关键词"而不是"完全相等"来匹配，容错性更好。
@@ -6992,21 +7291,120 @@ function levenshtein(a, b){
   return dp[m][n];
 }
 // 精确子串匹配失败时的兜底：这款游戏字体不太规整，Tesseract经常把名字里的某一个字读错
-// （"新葉喵"读成"新葉噶"），但整体框架是对的。这里滑动窗口跟每个宝可梦名字比编辑距离，
-// 允许≤1个字符的误差（名字太短的话误差要求更严格，否则太容易随便命中一个不相关的名字）
+// （"新葉喵"读成"新葉噶"），但整体框架是对的。
+//
+// ⚠️ 这里必须拿【完整的汉字段】去比，绝对不能在整段文字里滑动窗口。
+// 滑窗的问题：名字区那一行读出来是"12:41 訪信 sp 4,977 Lv.60O 大嘴咬咬"这种一大坨，
+// 里面既有状态栏、SP、等级，也有玩家自己起的昵称。只要昵称里任意一个 3~4 字的片段跟某个
+// 物种名编辑距离≤1，就会被"自信地"认成那个物种——实测真实案例：玩家把喷火龙的昵称改成
+// "大嘴咬咬"，滑窗切出"大嘴咬"，与物种"大嘴娃"距离恰好为 1，于是喷火龙被认成了大嘴娃，
+// 而且因为名字路径命中了，连"主技能+数量+食材"的兜底反查都不会再跑。
+// 改成整段比对后："大嘴咬咬" vs "大嘴娃" 距离是 2，正确拒绝，交给兜底反查去认。
+// 而真正的误读（"新葉噶" vs "新葉喵"）整段距离仍然是 1，照样能救回来。
 function fuzzyMatchPokemonFromOcrText(t){
+  // 按连续汉字切段（不含假名/字母/数字），每一段当作一个独立的"候选名字字段"
+  const runs = String(t).match(/[一-鿿]+/g) || [];
   let best = null, bestDist = Infinity, bestLen = 0;
   POKEMON_DEX_DATA.forEach(rec=>{
     const name = rec[1];
     if(name.length < 3) return; // 太短的名字模糊匹配容易误命中，只精确匹配
     const maxDist = name.length >= 4 ? 1 : (name.length===3 ? 1 : 0);
-    for(let i=0; i+name.length<=t.length; i++){
-      const window = t.substr(i, name.length);
-      const dist = levenshtein(window, name);
+    runs.forEach(run=>{
+      // 长度差本身就超过容错上限的直接跳过（昵称通常比物种名长，这一条能挡掉绝大多数误命中）
+      if(Math.abs(run.length - name.length) > maxDist) return;
+      const dist = levenshtein(run, name);
       if(dist<=maxDist && (dist<bestDist || (dist===bestDist && name.length>bestLen))){
         best = rec; bestDist = dist; bestLen = name.length;
       }
-    }
+    });
+  });
+  return best;
+}
+
+/* ---- 用版面结构精确切出"名字字段" ----
+   宝可梦卡片里这三样的相对位置是固定的（跟分辨率无关，游戏 UI 按屏宽等比缩放）：
+     SP + 数字        ——上面一行
+     Lv. + 数字       ——下面一行，与 SP 左对齐
+     名字（昵称/种族名）——与 Lv 同一行，紧挨在它右边
+   所以只要拿 SP 框当锚点、往下找到 Lv 框、再取同一行右侧的文字，就能干净地把名字字段切出来，
+   不用写死任何像素坐标。这比"把顶部一整条 OCR 成一大坨再去里面找名字"可靠得多——那一坨里
+   混着状态栏时间、信号、电量、SP 数字、等级数字，正是各种误命中的温床。
+   注意必须用 PP-OCR：它返回每段文字的框坐标（points），Tesseract 的中文分词在这块不够稳。 */
+async function extractNameFieldByLayout(img, W, H){
+  const ocr = await loadPaddleOcr();
+  if(!ocr) return null;
+  const bandH = Math.max(1, Math.round(H * 0.16));
+  const c = document.createElement('canvas');
+  c.width = W; c.height = bandH;
+  c.getContext('2d').drawImage(img, 0, 0, W, bandH, 0, 0, W, bandH);
+  const el = await canvasToImageEl(c);
+  const res = await ocr.recognize(el);
+  const texts = (res && Array.isArray(res.text)) ? res.text : [];
+  const pts = (res && Array.isArray(res.points)) ? res.points : [];
+  if(!texts.length) return null;
+  const boxes = texts.map(function(t, i){
+    const p = pts[i] || [];
+    if(!p.length) return null;
+    const xs = p.map(function(q){ return q[0]; }), ys = p.map(function(q){ return q[1]; });
+    return { t: String(t||''), x0: Math.min.apply(null, xs), yc: ys.reduce(function(a,b){ return a+b; },0)/ys.length };
+  }).filter(Boolean);
+  // SP 框：形如 "sp4,759" / "osp4,977" / ")SP4,448"（OCR 会在前面粘上图标残影，所以不锚定开头）
+  // 主模式："sp4,759" —— SP 和数字在同一个框里。
+  // 备用模式：光秃秃的 "sp" 框 —— PP-OCR 有时会把它跟数字拆成两个框（实测快龙那张切成了
+  // "sp" + "p7.158"），只认连写模式的话会找不到锚点、整条链白白放弃。
+  const sp = boxes.filter(function(b){
+      return /s\s*p\s*[\d][\d,.\s]{2,}/i.test(b.t)
+          || /^[^0-9a-z]{0,2}s\s*p[^0-9a-z]{0,2}$/i.test(b.t);
+    }).sort(function(a,b){ return a.yc - b.yc; })[0];
+  if(!sp) return null;
+  // Lv 框：在 SP 下方一点、且与 SP 左边界接近（同一列）。
+  // 加这两条约束是为了避开食材槽上方的"🔒Lv.30 / Lv.60"解锁标签——那两个也长得像 Lv.NN，
+  // 但它们在画面右侧、而且纵向位置跟 SP 对不上（实测小拳石那张就同时存在这三个 Lv 框）。
+  const lv = boxes.filter(function(b){
+      return b.yc > sp.yc && (b.yc - sp.yc) < H*0.05
+          && Math.abs(b.x0 - sp.x0) < W*0.12
+          && /l\s*[vy]\s*\.?\s*\d{1,3}/i.test(b.t);
+    }).sort(function(a,b){ return a.yc - b.yc; })[0];
+  if(!lv) return null;
+  // 同一行、在 Lv 右侧的文字段拼起来就是名字。
+  // 行容差要收紧：食材数量徽章"×5/×7"跟名字只差约 0.011H，容差放宽一点就会把它们卷进来。
+  // 再加一条"不能太靠右"，把右半屏的食材图标/徽章挡在外面。
+  const rowTol = Math.max(6, H*0.006);
+  const parts = boxes.filter(function(b){
+      return Math.abs(b.yc - lv.yc) < rowTol && b.x0 > lv.x0 && b.x0 < W*0.55;
+    }).sort(function(a,b){ return a.x0 - b.x0; });
+  if(!parts.length) return null;
+  const raw = parts.map(function(b){ return b.t; }).join('').trim();
+  if(!raw) return null;
+  return { raw: raw, clean: cleanNameField(raw) };
+}
+// 名字字段清洗：去掉标点、装饰符和结尾的徽章字符。
+// 游戏会在名字后面跟一个"❼"这样的圆圈数字徽章，OCR 常把它读成 の/@/数字，得从尾巴上摘掉；
+// 中间的数字要留着（实测真有玩家把昵称起成"食材薄荷1號"）。
+function cleanNameField(s){
+  return String(s||'')
+    .replace(/[。、，,．.·・:：;；!！?？~～\-—_=+*#@()（）\[\]【】<>《》"'`|\\\/]/g, '')
+    .replace(/[のㄱ㊐◯○●]/g, '')
+    .replace(/[\u2460-\u24ff\u2776-\u2793]/g, '')   // ❼➆⑦ 这类圈码：游戏在名字后面挂的等级徽章
+    .replace(/[0-9０-９]+$/, '')
+    .trim();
+}
+// 严格的整字段物种匹配：只跟【完整的名字字段】比，不做任何滑窗。
+// 字段本身就是干净的一个名字，所以完全相等优先；只留 1 个字的容错给 OCR 误读
+// （"新葉噶"→"新叶喵"这种），长度差超过容错上限的直接否掉。
+function matchPokemonFromNameField(field){
+  const t = toSimplified(String(field||'')).replace(/\s/g, '');
+  if(!t) return null;
+  for(let i=0;i<POKEMON_DEX_DATA.length;i++){
+    if(POKEMON_DEX_DATA[i][1] === t) return POKEMON_DEX_DATA[i];
+  }
+  let best = null, bestDist = Infinity;
+  POKEMON_DEX_DATA.forEach(function(rec){
+    const name = rec[1];
+    if(name.length < 3) return;               // 两个字的名字不做模糊，太容易撞
+    if(Math.abs(name.length - t.length) > 1) return;
+    const d = levenshtein(t, name);
+    if(d <= 1 && d < bestDist){ best = rec; bestDist = d; }
   });
   return best;
 }
@@ -7084,7 +7482,7 @@ function isGoldPixel(r,g,b){
   // ×N徽章和🔒Lv.NN标签共有的金棕色边框（实测两者颜色接近，靠形状/位置而不是颜色区分它们）
   return r>185 && g>105 && g<220 && b<165 && (r-b)>45 && (r-g)>6;
 }
-// 栈式泛洪填充找连通块（8邻域），复用跟 foregroundHistFromCanvas 一样的写法风格。
+// 栈式泛洪填充找连通块（8邻域），跟 ingForegroundMask 里剔背景用的是同一套写法。
 // 在小尺寸工作画布上做（调用方负责缩放），避免在原图全尺寸上跑导致卡顿
 function findGoldBlobs(canvas){
   const w = canvas.width, h = canvas.height;
@@ -7265,79 +7663,121 @@ function findGreenBandRows(img){
 //        剔除掉；牛奶瓶身内部的白被图标深色轮廓围住、灌不进去，会被正确保留下来当作特征。
 //   2) 相似暖色难分（土豆/姜都是米黄）：靠"限定候选"解决——名字一旦认出物种，食材只可能是
 //      该物种的 a/b/c 三种，把"19选1"缩成"3选1"，实测牛奶/土豆都能稳定分对。
-// 颜色分箱：0=白 1=黑 2=灰，3..8=红/黄/绿/青/蓝/品红 六个色相箱
-function ingBinOf(r,g,b){
-  const mx=Math.max(r,g,b), mn=Math.min(r,g,b), sat=mx-mn;
-  if(mx>225 && sat<28) return 0;
-  if(mx<55) return 1;
-  if(sat<28) return 2;
-  let h; if(mx===r)h=((g-b)/sat)%6; else if(mx===g)h=(b-r)/sat+2; else h=(r-g)/sat+4;
-  h*=60; if(h<0)h+=360;
-  return 3 + (Math.floor(h/60)%6);
-}
-function histFromImageData(data, skipTransparent){
-  const H = new Array(9).fill(0); let n=0;
-  for(let i=0;i<data.length;i+=4){
-    if(skipTransparent && data[i+3]<30) continue;
-    H[ingBinOf(data[i],data[i+1],data[i+2])]++; n++;
-  }
-  return H.map(v=>v/(n||1));
-}
-// 对截图裁剪框做泛洪抠背景后再统计直方图
-function foregroundHistFromCanvas(canvas){
-  const w=canvas.width, h=canvas.height;
+// 颜色特征：HSV 12色相 × 3饱和度 = 36 格直方图。
+// 原来是 9 格（白/黑/灰 + 6 个色相箱），拿 74 张真实截图 / 148 个食材槽做过 A/B：
+//   · 9 格直方图   ——「19选1」准确率 48.6%；更要命的是它的"确信"判定不可靠：自称确信 83 次
+//     里错了 29 次（准确率仅 65.1%），而且把阈值从 0.5 一路收紧到 0.3 也只能到 78.5%，无解。
+//     identifyBySignature 里的 iconContradicts 恰恰只在"确信"时才否决候选物种，
+//     等于说这层校验有三分之一的概率在误杀正确结果。
+//   · HSV 36 格    ——「19选1」准确率 56.8%，阈值 0.6 时确信 68 次、准确率 100%。  ← 采用
+//   · 网格签名(形状+颜色) ——「19选1」61.5% 更高，但确信覆盖率太低（阈值 0.7 才 43 次），
+//     综合不如 HSV；而"只用形状"反而掉到 33.1%，说明这里缺的是颜色精度、不是轮廓信息。
+// 「3选1」口径（名字已认出物种、只在该物种 a/b/c 里选）新旧算法都是 148/148 全对，不受影响——
+// 也就是说本次改动的收益全部落在"物种没认出来、需要靠图标反查"的兜底链路上。
+const ING_HUE_BINS = 12, ING_SAT_BINS = 3;
+
+// 前景掩码：把两种来源统一成同一种前景标记，后面的直方图统计才有可比性。
+//   · 参考图标（ING_ICONS）是透明底 —— 直接用 alpha 通道判前景；
+//   · 截图裁剪框是不透明的 —— 沿用原来的思路：从四条边往里泛洪填充，把"和边缘同色的浅色卡片
+//     背景"连通区域剔除掉。牛奶瓶身内部的白被图标深色轮廓围住、灌不进去，会被正确保留成特征。
+function ingForegroundMask(canvas){
+  const w = canvas.width, h = canvas.height;
   const d = canvas.getContext('2d').getImageData(0,0,w,h).data;
-  const bg = new Uint8Array(w*h), st=[];
-  const isLight = (idx)=>{ const i=idx*4; return Math.min(d[i],d[i+1],d[i+2])>205; };
-  for(let x=0;x<w;x++){ [0,h-1].forEach(y=>{ const idx=y*w+x; if(isLight(idx)&&!bg[idx]){bg[idx]=1;st.push(idx);} }); }
-  for(let y=0;y<h;y++){ [0,w-1].forEach(x=>{ const idx=y*w+x; if(isLight(idx)&&!bg[idx]){bg[idx]=1;st.push(idx);} }); }
-  while(st.length){
-    const idx=st.pop(), x=idx%w, y=(idx/w)|0;
-    const nb=[[1,0],[-1,0],[0,1],[0,-1]];
-    for(const [dx,dy] of nb){ const nx=x+dx, ny=y+dy; if(nx<0||ny<0||nx>=w||ny>=h) continue; const nidx=ny*w+nx; if(!bg[nidx]&&isLight(nidx)){bg[nidx]=1;st.push(nidx);} }
+  const fg = new Uint8Array(w*h);
+  let hasAlpha = false;
+  for(let i=0;i<w*h;i++){ if(d[i*4+3] < 250){ hasAlpha = true; break; } }
+  if(hasAlpha){
+    for(let i=0;i<w*h;i++) fg[i] = d[i*4+3] > 60 ? 1 : 0;
+    return {fg, d, w, h};
   }
-  const H=new Array(9).fill(0); let n=0;
-  for(let idx=0; idx<w*h; idx++){ if(bg[idx]) continue; const i=idx*4; H[ingBinOf(d[i],d[i+1],d[i+2])]++; n++; }
-  return H.map(v=>v/(n||1));
+  const bg = new Uint8Array(w*h), st = [];
+  const isLight = idx => { const i = idx*4; return Math.min(d[i],d[i+1],d[i+2]) > 205; };
+  for(let x=0;x<w;x++) [0,h-1].forEach(y=>{ const i=y*w+x; if(isLight(i)&&!bg[i]){ bg[i]=1; st.push(i); } });
+  for(let y=0;y<h;y++) [0,w-1].forEach(x=>{ const i=y*w+x; if(isLight(i)&&!bg[i]){ bg[i]=1; st.push(i); } });
+  while(st.length){
+    const idx = st.pop(), x = idx%w, y = (idx/w)|0;
+    const nb = [[1,0],[-1,0],[0,1],[0,-1]];
+    for(const [dx,dy] of nb){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||ny<0||nx>=w||ny>=h) continue;
+      const ni = ny*w+nx;
+      if(!bg[ni] && isLight(ni)){ bg[ni]=1; st.push(ni); }
+    }
+  }
+  for(let i=0;i<w*h;i++) fg[i] = bg[i] ? 0 : 1;
+  return {fg, d, w, h};
 }
-function histDistance(a,b){ let s=0; for(let i=0;i<a.length;i++){ const d=a[i]-(b[i]||0); s+=d*d; } return s; }
+// HSV 直方图：只统计前景像素，按 色相×饱和度 分箱后归一化。
+// 用 HSV 而不是 RGB 分箱，是因为截图经过缩放/压缩后整体亮度会漂（代码里"葱被判成玉米"那个老问题
+// 就是色调漂移造成的），而色相对亮度变化远没那么敏感。
+function ingHsvHist(canvas){
+  const m = ingForegroundMask(canvas);
+  if(!m) return null;
+  const {fg, d, w, h} = m;
+  const H = new Float64Array(ING_HUE_BINS * ING_SAT_BINS);
+  let n = 0;
+  for(let i=0;i<w*h;i++){
+    if(!fg[i]) continue;
+    const p = i*4, r = d[p]/255, g = d[p+1]/255, b = d[p+2]/255;
+    const mx = Math.max(r,g,b), mn = Math.min(r,g,b), df = mx - mn;
+    let hue = 0;
+    if(df > 1e-6){
+      if(mx===r) hue = ((g-b)/df) % 6;
+      else if(mx===g) hue = (b-r)/df + 2;
+      else hue = (r-g)/df + 4;
+    }
+    hue = (hue*60 + 360) % 360;
+    const sat = mx ? df/mx : 0;
+    const hb = Math.min(ING_HUE_BINS-1, (hue/360*ING_HUE_BINS)|0);
+    const sb = Math.min(ING_SAT_BINS-1, (sat*ING_SAT_BINS)|0);
+    H[hb*ING_SAT_BINS + sb]++; n++;
+  }
+  if(!n) return null;
+  for(let i=0;i<H.length;i++) H[i] /= n;
+  return H;
+}
+function ingHistDistance(a,b){
+  if(!a || !b) return Infinity;
+  let s = 0;
+  for(let i=0;i<a.length;i++){ const d = a[i] - b[i]; s += d*d; }
+  return s;
+}
 let ingredientHistCache = null;
 function getIngredientHistograms(){
   if(ingredientHistCache) return Promise.resolve(ingredientHistCache);
   const names = Object.keys(ING_ICONS);
-  const promises = names.map(name=> new Promise((resolve)=>{
+  const promises = names.map(name => new Promise(resolve => {
     const img = new Image();
-    img.onload = ()=>{
-      const c = document.createElement('canvas'); c.width=60; c.height=60;
-      c.getContext('2d').drawImage(img, 0, 0, 60, 60);
-      const data = c.getContext('2d').getImageData(0,0,60,60).data;
-      resolve({name, hist: histFromImageData(data, true)}); // 参考图是透明底，跳过透明像素即可
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+      c.getContext('2d').drawImage(img, 0, 0, 64, 64); // 新建的画布本身透明，参考图的 alpha 会保留
+      resolve({name, hist: ingHsvHist(c)});
     };
-    img.onerror = ()=> resolve(null);
+    img.onerror = () => resolve(null);
     img.src = ING_ICONS[name];
   }));
-  return Promise.all(promises).then(list=>{ ingredientHistCache = list.filter(Boolean); return ingredientHistCache; });
+  return Promise.all(promises).then(list => {
+    ingredientHistCache = list.filter(x => x && x.hist);
+    return ingredientHistCache;
+  });
 }
-// candidateNames：限定只在这几种食材里比（传该物种的a/b/c）。不传就退回全部19种（准确率低很多）
+// candidateNames：限定只在这几种食材里比（传该物种的 a/b/c）。不传就退回全部19种（准确率低很多，
+// 只有 identifyBySignature 的 iconContradicts 反向校验会这么用）
 async function matchIngredientIcon(canvas, candidateNames){
   const all = await getIngredientHistograms();
   const pool = (candidateNames && candidateNames.length)
-    ? all.filter(x=> candidateNames.includes(x.name)) : all;
+    ? all.filter(x => candidateNames.includes(x.name)) : all;
   if(!pool.length) return {name:null, dist:Infinity, ranking:[], confident:false};
-  const target = foregroundHistFromCanvas(canvas);
-  const ranking = pool.map(({name,hist})=>({name, dist: Math.round(histDistance(target,hist)*10000)}))
-                      .sort((a,b)=>a.dist-b.dist);
-  // 置信度判断：最优候选必须明显甩开第二名才算数。像土豆vs姜这种都是米黄色、直方图几乎一样
-  // （实测距离能并列相等），此时谁排第一纯看数组顺序，是瞎猜——这种就判为"不确定"，
-  // 宁可把食材槽留空让用户自己选，也不要给一个看似确定其实是掷硬币的错误结果。
-  // 阈值原本是0.7，后来实测出一个更麻烦的情况：葱 vs 玉米，参考图标（干净的单张图）跟它在
-  // 实际截图里的渲染（小尺寸+JPEG压缩）色调有点偏差，导致比例算出0.61——按0.7的标准会判
-  // "确信"，但确信的是错的（葱被判成了玉米）。0.7这道坎防得住"real ambiguous"（真的分不出，
-  // 比如土豆/姜那种几乎同色），但防不住"看似确信实则跑偏"这种。收紧到0.5，让更多这类情况
-  // 落回"不确定"，多留几个空给用户手动选，好过给一个自信满满的错误答案
+  const target = ingHsvHist(canvas);
+  if(!target) return {name:null, dist:Infinity, ranking:[], confident:false};
+  const ranking = pool.map(({name,hist}) => ({name, dist: Math.round(ingHistDistance(target,hist)*10000)}))
+                      .sort((a,b) => a.dist - b.dist);
+  // 置信度：最优候选必须明显甩开第二名才算数。阈值 0.6 是扫出来的工作点——
+  // 在 148 个真实样本上，0.6 时确信 68 次且全部正确；放宽到 0.7 立刻掉到 86.1%，
+  // 收紧到 0.5 只剩 66 次（准确率同样 100%，但白白少认 2 个）。
   const first = ranking[0], second = ranking[1];
   let confident = true;
-  if(second){ const denom = second.dist || 1; confident = (first.dist/denom) < 0.5; }
+  if(second){ const denom = second.dist || 1; confident = (first.dist/denom) < 0.6; }
   return {name: first.name, dist: first.dist, ranking, confident};
 }
 
@@ -7435,9 +7875,12 @@ async function identifyBySignature(mainSkillText, leftQty, rightQty, ing30Canvas
   //    改靠技能+食材图标+"食材构成不同就判没认出"来定，既救回被截断食材的图、又不至于乱猜。
   //    但"跳过"这件事本身是个信号：某个读到的数字跟所有候选都对不上，说明这一路的证据是矛盾的，
   //    下面第 2.5 步会据此收紧判定，不再一路硬撑到底。
+  // 数量现在是候选列表（两引擎并联的结果）：只要有任一候选对得上就算这个物种没被排除。
+  // 这天然就是仲裁——错误的那个候选通常对不上任何物种，不会把正确物种筛掉。
+  const leftC = qtyCandList(leftQty), rightC = qtyCandList(rightQty);
   let qtyUsed = 0, qtyConflict = 0;
-  if(leftQty!=null){  const f = ids.filter(function(id){ return slotQtysForId(id,30).indexOf(leftQty)>=0; }); if(f.length){ ids = f; qtyUsed++; } else qtyConflict++; }
-  if(rightQty!=null){ const f = ids.filter(function(id){ return slotQtysForId(id,60).indexOf(rightQty)>=0; }); if(f.length){ ids = f; qtyUsed++; } else qtyConflict++; }
+  if(leftC.length){  const f = ids.filter(function(id){ const qs = slotQtysForId(id,30); return leftC.some(function(q){ return qs.indexOf(q)>=0; }); }); if(f.length){ ids = f; qtyUsed++; } else qtyConflict++; }
+  if(rightC.length){ const f = ids.filter(function(id){ const qs = slotQtysForId(id,60); return rightC.some(function(q){ return qs.indexOf(q)>=0; }); }); if(f.length){ ids = f; qtyUsed++; } else qtyConflict++; }
   if(!ids.length) return null;
   // 2.5) 信号冲突就判"没认出"，不硬撑
   // (a) 读到了数字、但没有一个数字对得上任何候选：数字这条线整体是错的（或候选池本来就不含正确答案），
@@ -7471,15 +7914,15 @@ async function identifyBySignature(mainSkillText, leftQty, rightQty, ing30Canvas
   };
   if(ids.length>1 && distinctIngOf(ids).size>1){
     const uniq = function(arr){ return Array.from(new Set(arr)); };
-    const leftPool = uniq([].concat.apply([], ids.map(function(id){ return slotOptionsForId(id,30).filter(function(o){ return leftQty==null||o.qty===leftQty; }).map(function(o){ return o.ing; }); })));
-    const rightPool = uniq([].concat.apply([], ids.map(function(id){ return slotOptionsForId(id,60).filter(function(o){ return rightQty==null||o.qty===rightQty; }).map(function(o){ return o.ing; }); })));
+    const leftPool = uniq([].concat.apply([], ids.map(function(id){ return slotOptionsForId(id,30).filter(function(o){ return !leftC.length||leftC.indexOf(o.qty)>=0; }).map(function(o){ return o.ing; }); })));
+    const rightPool = uniq([].concat.apply([], ids.map(function(id){ return slotOptionsForId(id,60).filter(function(o){ return !rightC.length||rightC.indexOf(o.qty)>=0; }).map(function(o){ return o.ing; }); })));
     if(ing30Canvas && leftPool.length>1){
       const m = await matchIngredientIcon(ing30Canvas, leftPool);
-      if(m && m.confident){ const f = ids.filter(function(id){ return slotOptionsForId(id,30).some(function(o){ return (leftQty==null||o.qty===leftQty)&&o.ing===m.name; }); }); if(f.length) ids=f; }
+      if(m && m.confident){ const f = ids.filter(function(id){ return slotOptionsForId(id,30).some(function(o){ return (!leftC.length||leftC.indexOf(o.qty)>=0)&&o.ing===m.name; }); }); if(f.length) ids=f; }
     }
     if(ing60Canvas && rightPool.length>1){
       const m = await matchIngredientIcon(ing60Canvas, rightPool);
-      if(m && m.confident){ const f = ids.filter(function(id){ return slotOptionsForId(id,60).some(function(o){ return (rightQty==null||o.qty===rightQty)&&o.ing===m.name; }); }); if(f.length) ids=f; }
+      if(m && m.confident){ const f = ids.filter(function(id){ return slotOptionsForId(id,60).some(function(o){ return (!rightC.length||rightC.indexOf(o.qty)>=0)&&o.ing===m.name; }); }); if(f.length) ids=f; }
     }
   }
   // 4) 收尾：剩下的候选如果数据仍然"真不一样"（食材构成不同），说明主技能+数量+图标这三层
@@ -7505,15 +7948,20 @@ async function identifyBySignature(mainSkillText, leftQty, rightQty, ing30Canvas
 // 这样连主路径(名字已识别)里"土豆/姜同色分不开"的老问题也顺带解决了——数字能把它们分开。
 async function resolveSlotIngredient(id, slot, qty, iconCanvas){
   const opts = slotOptionsForId(id, slot);
-  if(qty!=null){
-    const hit = opts.filter(function(o){ return o.qty===qty; });
-    if(hit.length===1) return {ing:hit[0].ing, confident:true, via:'qty'};
+  // qty 现在是"候选数量列表"（Tesseract 与 PP-OCR 并联的结果，可能有 1~2 个）。
+  // 这里就是仲裁点：物种已知 → 该槽位可能出现的数量是确定的，逐个候选去试，
+  // 第一个能对上的就是正确答案。两个引擎分歧时几乎总有且只有一个落在合法集合里。
+  const cands = qtyCandList(qty);
+  for(let ci=0; ci<cands.length; ci++){
+    const q = cands[ci];
+    const hit = opts.filter(function(o){ return o.qty===q; });
+    if(hit.length===1) return {ing:hit[0].ing, confident:true, via: ci===0 ? 'qty' : 'qty(仲裁)'};
     if(hit.length>1){
       const m = await matchIngredientIcon(iconCanvas, hit.map(function(h){ return h.ing; }));
       if(m && m.confident) return {ing:m.name, confident:true, via:'qty+icon'};
       return {ing:null, confident:false, via:'qty-tie'}; // 同数量又同色，留空让手动选
     }
-    // hit.length===0：数量跟该物种对不上（可能OCR把数字读错），退回图标兜底
+    // hit.length===0：这个候选跟该物种对不上，试下一个候选；都对不上就退回图标兜底
   }
   const sig = PK_SIG_QTY[id];
   const cand = [sig&&sig.a&&sig.a[0], sig&&sig.b&&sig.b[0], sig&&sig.c&&sig.c[0]].filter(Boolean);
@@ -7782,10 +8230,49 @@ async function runOcrOnFile(file, silent){
         ({ votes, lastCanvas } = await voteOn(false));
       }
       const entries = Object.entries(votes).sort((a,b)=> b[1]-a[1]);
-      if(!entries.length) return { val: null, raw: '', canvas: lastCanvas, votes };
-      return { val: parseInt(entries[0][0],10), raw: entries[0][0], canvas: lastCanvas, votes };
+      const tessVal = entries.length ? parseInt(entries[0][0],10) : null;
+      // PP-OCR 不在这里跑，而是包成 refine()，等物种确定后按需补救（见 ensureQtyForSpecies）。
+      // 原因：并联每张图要多花约 4.5 秒，盒子批量上传 50 张就是多等 4 分钟；而实测 Tesseract
+      // 读错时读数【一定】不在该物种的合法数量集合里，所以完全可以等发现对不上了再问 PP-OCR，
+      // 约 11% 的槽位会触发，平均每张图只多花约 0.5 秒。
+      const out = {
+        val: tessVal, vals: tessVal==null ? [] : [tessVal],
+        tessVal, padVal: undefined,          // undefined = 还没问过 PP-OCR（区别于问过但读空的 null）
+        raw: entries.length ? entries[0][0] : '', canvas: lastCanvas, votes, refined: false,
+      };
+      out.refine = async function(){
+        if(out.refined) return out;          // 幂等：同一个槽最多只问一次 PP-OCR
+        out.refined = true;
+        try{
+          const ocr = await loadPaddleOcr();
+          if(ocr){
+            // 给 PP-OCR 一块比徽章大一圈的区域，让它自己的检测器去找文字框（那是它的强项，
+            // 不依赖我们这边金色连通域定位得多准）
+            const wide = {
+              x: Math.max(0, reg.x - reg.w*1.25), y: Math.max(0, reg.y - reg.h*2.5),
+              w: Math.min(1, reg.w*3.5),          h: Math.min(1, reg.h*6),
+            };
+            const wc = cropPixels(wide.x*W, wide.y*H, wide.w*W, wide.h*H, 3);
+            const el = await canvasToImageEl(wc);
+            const res = await withTimeout(ocr.recognize(el), 30000, label + '(PP-OCR)');
+            out.padVal = pickQtyDigit(res && Array.isArray(res.text) ? res.text : []);
+          } else {
+            out.padVal = null;
+          }
+        }catch(err){
+          out.padVal = null;
+          console.log('PP-OCR 读' + label + '失败，本槽保持纯 Tesseract 结果：', err.message);
+        }
+        out.vals = arbitrateQty(out.tessVal, out.padVal);
+        out.val = out.vals.length ? out.vals[0] : null;
+        console.log('数量补救 ' + label + '：Tesseract=' + out.tessVal + ' PP-OCR=' + out.padVal
+                    + ' → 候选 ' + JSON.stringify(out.vals));
+        return out;
+      };
+      return out;
     }
     await worker.setParameters({tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7'});
+    statusEl.textContent = '正在识别食材数量…';
     const qty30 = await ocrQtyBadge(q30Region, '食材数量30');
     const qty60 = await ocrQtyBadge(q60Region, '食材数量60');
     await worker.setParameters({tessedit_char_whitelist: '', tessedit_pageseg_mode: '3'});
@@ -7817,7 +8304,27 @@ async function runOcrOnFile(file, silent){
       personaName = matchPersonaFromOcrText(personaRes.data.text || '');
       if(personaName){ const at=PERSONA_NAME_MAP[personaName]; if(at){ personaInc=at.inc; personaDec=at.dec; } }
     }
+    // 先走便宜的老路：Tesseract 读整条顶部区域 + 严格的整汉字段匹配。
+    // 未改昵称的宝可梦这一步通常就能认出来，一次 PP-OCR 都不用花。
     let pkRec = matchPokemonFromOcrText(nameRes.data.text || '');
+    // 没认出来才动用 PP-OCR 做版面切分。这种情况下本来就要走"主技能+数量"兜底反查（也要用
+    // PP-OCR），所以这一次调用不算额外开销；而且它顺带把昵称干净地取出来，之前是直接留空的。
+    let nameField = null;
+    if(!pkRec){
+      try{
+        statusEl.textContent = '名字没直接认出，正在按版面精确定位名字…';
+        nameField = await extractNameFieldByLayout(img, W, H);
+        if(nameField && nameField.clean){
+          const byField = matchPokemonFromNameField(nameField.clean);
+          if(byField){
+            pkRec = byField;
+            console.log('版面定位名字字段命中物种：「' + nameField.raw + '」→ ' + byField[1] + ' ' + byField[0]);
+          } else {
+            console.log('版面定位到名字字段「' + nameField.raw + '」，但它不是任何物种名 → 判定为玩家自起的昵称');
+          }
+        }
+      }catch(err){ console.log('版面定位名字失败，忽略：', err.message); }
+    }
 
     // 名字区域没读到（比如改了昵称/被涂抹）→ 用"主技能+两槽数量+食材图标"签名反查：
     // 要求主技能精确或子串匹配、并且两槽数量都对得上，双重验证，误判概率低。
@@ -7826,7 +8333,14 @@ async function runOcrOnFile(file, silent){
     // 已彻底去掉——签名也认不出时宁可判定"没认出"、弹示意图让用户手动选，也不要塞一个错答案。
     let identifiedBySig = false;
     if(!pkRec){
-      pkRec = await identifyBySignature(mainSkillText, qty30.val, qty60.val, ing30Canvas, ing60Canvas);
+      statusEl.textContent = '名字没认出，正在用主技能+食材反查（首次要下载 PP-OCR 模型，约 10~20 秒）…';
+      // 反查完全依赖数量，这里没有"物种"可以拿来验算，所以无条件补一次。
+      // ⚠️ 必须串行，不要图快改成 Promise.all：Paddle.js 用的是单个 WebGL 上下文，两次推理并发会
+      // 互相抢占，实测 16 张样本从「13对/1未认出/平均10.8秒」劣化到「11对/3未认出/平均19.0秒」
+      // ——既更慢又更不准。
+      await qty30.refine();
+      await qty60.refine();
+      pkRec = await identifyBySignature(mainSkillText, qty30.vals, qty60.vals, ing30Canvas, ing60Canvas);
       if(pkRec) identifiedBySig = true;
     }
 
@@ -7837,8 +8351,10 @@ async function runOcrOnFile(file, silent){
     let slot30=null, slot60=null;
     const pkHasIng = pkRec && !!(PK_SIG_QTY[pkRec[0]] && PK_SIG_QTY[pkRec[0]].a);
     if(pkHasIng){
-      slot30 = await resolveSlotIngredient(pkRec[0], 30, qty30.val, ing30Canvas);
-      slot60 = await resolveSlotIngredient(pkRec[0], 60, qty60.val, ing60Canvas);
+      await ensureQtyForSpecies(qty30, pkRec[0], 30);
+      await ensureQtyForSpecies(qty60, pkRec[0], 60);
+      slot30 = await resolveSlotIngredient(pkRec[0], 30, qty30.vals, ing30Canvas);
+      slot60 = await resolveSlotIngredient(pkRec[0], 60, qty60.vals, ing60Canvas);
     }
 
     // 调试信息：打印每个区域实际识别出来的原始文字和裁剪坐标，方便对着截图核对
@@ -7855,7 +8371,11 @@ async function runOcrOnFile(file, silent){
     console.log('性格区域原始文字：', JSON.stringify(personaRes.data.text));
     console.log('主技能区域原始文字：', JSON.stringify(mainSkillText));
     console.log('食材区域定位：30级槽=', badgeLoc.badge30?'动态定位成功':'退回固定坐标兜底', ' 60级槽=', badgeLoc.badge60?'动态定位成功':'退回固定坐标兜底');
-    console.log('食材数量 ×N：30级槽=', qty30.val, '票数分布=', qty30.votes, ' 60级槽=', qty60.val, '票数分布=', qty60.votes);
+    const padDesc = q => q.refined ? String(q.padVal) : '未调用(Tesseract读数与物种相符)';
+    console.log('食材数量 ×N：'
+      + '30级槽 → Tesseract=' + qty30.tessVal + ' PP-OCR=' + padDesc(qty30) + ' 候选=' + JSON.stringify(qty30.vals)
+      + ' ｜ 60级槽 → Tesseract=' + qty60.tessVal + ' PP-OCR=' + padDesc(qty60) + ' 候选=' + JSON.stringify(qty60.vals),
+      '\n  Tesseract 票数分布：30级槽=', qty30.votes, ' 60级槽=', qty60.votes);
     if(!pkRec){
       console.log('名字没认出→已尝试"主技能+数量+食材"兜底反查，结果：仍未认出');
     } else if(identifiedBySig){
@@ -7921,7 +8441,16 @@ async function runOcrOnFile(file, silent){
       closeOcrReview();
       openDashboard();
     }
-    return {ok:true, pkRec, nameRawText:(nameRes&&nameRes.data&&nameRes.data.text)||'', personaName, personaInc, personaDec, skillMatches};
+    // nickname：只有"版面精确切出来、且确认它不是物种名"时才算真昵称。
+    // 整段 OCR 文字里硬凑昵称的老做法依然禁止（那必然是乱码），这里给出的是干净字段。
+    // 只有"版面精确切出来、确认不是物种名、且至少 2 个字"才当昵称。
+    // 1 个字的结果基本都是 PP-OCR 把文字框切碎了（实测耿鬼那张 4 字昵称只切出"天"），
+    // 与其存个残缺的，不如按原规则留空。
+    const nickClean = (nameField && nameField.clean) ? nameField.clean : '';
+    const nickname = (nickClean.length >= 2 && !matchPokemonFromNameField(nickClean))
+      ? boxTrimNickname(nickClean) : '';
+    return {ok:true, pkRec, nickname, nameField: nameField ? nameField.raw : '',
+            nameRawText:(nameRes&&nameRes.data&&nameRes.data.text)||'', personaName, personaInc, personaDec, skillMatches};
   }catch(err){
     statusEl.textContent = '识别出错：'+err.message+'（可以直接关闭重试，或换一张更清晰的截图）';
     console.error(err);
@@ -8446,6 +8975,43 @@ function capRecoLinesHtml(text){
 }
 
 /* ================= 排名行 ================= */
+/* ---- 睡眠类型：按【幼体】的属性判定，不进化则按自身 ---- */
+const SLEEP_ATTR_MAP = (function(){
+  const m = {};
+  // 「地面」用户确认归深深；数据里超能系写作「超能力」，两种写法都收
+  ['水','岩石','钢','飞行','格斗','冰','地面'].forEach(function(a){ m[a] = 'deep'; });
+  ['草','幽灵','虫','龙','毒','恶'].forEach(function(a){ m[a] = 'light'; });
+  ['火','电','妖精','一般','超能','超能力'].forEach(function(a){ m[a] = 'calm'; });
+  return m;
+})();
+// 属性推不出来的个别宝可梦，按名字直接指定（key 是幼体名/不进化时的自身名）
+const SLEEP_NAME_SPECIAL = {
+  '地鼠':'calm', '呆呆兽':'calm',
+  '猴怪':'light', '信使鸟':'light',
+  '毒电婴':'deep', '皮宝宝':'deep', '宝宝丁':'deep', '波克比':'deep',
+  '皮丘':'deep', '小福蛋':'deep', '小果然':'deep', '魔尼尼':'deep'
+};
+const SLEEP_LABELS = { deep:'深深', light:'浅浅', calm:'安然' };
+// 皮卡丘/雷丘在游戏里两种睡姿都会出，单独标成「深/安」
+const SLEEP_SPLIT_NAMES = { '皮卡丘':1, '雷丘':1 };
+function sleepAttrOfName(name){
+  if(!name) return null;
+  const rec = POKEMON_DEX_DATA.find(function(r){ return r[1] === name; });
+  if(rec) return rec[2];
+  const cx = (typeof CAP_DEX !== 'undefined') ? CAP_DEX.find(function(c){ return c.name === name; }) : null;
+  return cx ? cx.attr : null;
+}
+// 返回 {cls, labHtml}：cls 挂在 .cap-rank 上决定配色，labHtml 是圆底下面那行小字
+function capSleepTypeOf(x){
+  if(SLEEP_SPLIT_NAMES[x.name]){
+    return { cls:'cap-sleep-split',
+             labHtml:'<span class="s-deep">深</span>/<span class="s-calm">安</span>' };
+  }
+  const key = (x.baby && x.baby !== x.name) ? x.baby : x.name;   // 幼体优先，不进化就是自身
+  let t = SLEEP_NAME_SPECIAL[key] || SLEEP_ATTR_MAP[sleepAttrOfName(key)] || null;
+  if(!t) return { cls:'cap-sleep-none', labHtml:'—' };
+  return { cls:'cap-sleep-' + t, labHtml:SLEEP_LABELS[t] };
+}
 function capRowHtml(rec, rank, maxVal, line2Html){
   const x = rec.x;
   const showBaby = x.baby && x.baby!==x.name;
@@ -8457,8 +9023,9 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   const medalBadge = rec.medal ? `<img class="cap-medal" src="${CAP_ICONS.medal}" alt="睡饱饱奖章">` : '';
   const babySlot = showBaby ? `<div class="cap-av cap-av-baby">${capB64Img(x.baby)}</div>` : `<div class="cap-av-baby cap-av-none">不进化</div>`;
   const nameHtml = showBaby ? `${x.name}<span class="cap-dash"> - </span><span class="cap-baby-name">${x.baby}</span>` : x.name;
+  const sleepInfo = capSleepTypeOf(x);
   return `<div class="cap-row">
-    <div class="cap-rank">${rank}</div>
+    <div class="cap-rank ${sleepInfo.cls}"><div class="cap-rank-num">${rank}</div><div class="cap-sleep-lab">${sleepInfo.labHtml}</div></div>
     <div class="cap-avatars">
       <div class="cap-av cap-av-main">${capB64Img(x.name)}${medalBadge}</div>
       <div class="cap-av-baby-col">
@@ -8838,8 +9405,9 @@ function renderCaptureCtrlPop(){
       <div class="note">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
     const dcOpts = [['solo','仅自身'],['d2', c.latias?'相依为命':'2龙'],['d3','3龙'],['d4','4龙'],['d5','5龙']];
     html += `<div class="lab" style="margin-top:12px;">龙队（拉帝欧斯专用）</div><div class="btnrow" id="capDragonRow">`;
-    dcOpts.forEach(([v,lab])=>{ const disabled=(v==='solo'&&c.latias); let cls='pkbtn pk-dragoncount'; if(v==='d2'&&c.latias) cls+=' striped'; if(c.dragon===v) cls+=' selected'; if(disabled) cls+=' disabled';
-      html += `<div class="${cls}" data-dc="${v}"${disabled?' data-disabled="1"':''}>${lab}</div>`; });
+    dcOpts.forEach(([v,lab])=>{ if(v==='solo'&&c.latias) return; // 同上：带拉帝亚斯就不可能"仅自身"
+      let cls='pkbtn pk-dragoncount'; if(v==='d2'&&c.latias) cls+=' striped'; if(c.dragon===v) cls+=' selected';
+      html += `<div class="${cls}" data-dc="${v}">${lab}</div>`; });
     html += `<div class="pkbtn pk-latias${c.latias?' selected':''}" id="capLatiasBtn">拉帝亚斯</div></div>`;
   }
   html += `<div class="lab" style="margin-top:12px;">技能保底</div><div class="btnrow" id="capPityRow">
@@ -8925,6 +9493,9 @@ function pageSwitchBySwipe(step){
   // 同时反向平移；两页在 .wrap 里都是普通文档流的 block 子元素，单靠 transform 没法让它们叠在一起，
   // 这里借 getBoundingClientRect + position:fixed 把两者临时钉在同一个视口位置上
   const rect = activeEl.getBoundingClientRect();
+  // 见下方 transform：位移按视口宽度 + 一段透明间隔算，不用百分比
+  const SWIPE_GAP = 28;
+  const travel = window.innerWidth + SWIPE_GAP;
   document.documentElement.style.overflowX = 'hidden'; // 平移期间暂时禁横向滚动条，切完再恢复
   [activeEl, nextEl].forEach(el=>{
     el.style.position = 'fixed';
@@ -8936,11 +9507,11 @@ function pageSwitchBySwipe(step){
   activeEl.style.transition = 'none';
   activeEl.style.transform = 'translateX(0)';
   nextEl.style.transition = 'none';
-  nextEl.style.transform = 'translateX('+(-out*100)+'%)';
+  nextEl.style.transform = 'translateX('+(-out*travel)+'px)';
   void nextEl.offsetWidth; // 强制回流，确保上面这两个起始位置先生效，下面的过渡才播得出来
   activeEl.style.transition = `transform ${dur}ms cubic-bezier(.2,.85,.3,1)`;
   nextEl.style.transition = `transform ${dur}ms cubic-bezier(.2,.85,.3,1)`;
-  activeEl.style.transform = 'translateX('+(out*100)+'%)';
+  activeEl.style.transform = 'translateX('+(out*travel)+'px)';
   nextEl.style.transform = 'translateX(0)';
   setTimeout(()=>{
     switchPage(nextId); // 收尾：正式切换 active-page/底部选中态等（也会把 activeEl 的 class 切回不含 active-page）
@@ -9042,6 +9613,9 @@ function closeBoxOverlay(){
   closeBoxInfoBubble();
   closeBoxFilterPop();
   boxOverlayOpen = false;
+  // 必须在这里主动同步：盒子关闭时不会再走 renderBoxPage，而 updateBoxMedalFab 的另一个调用点
+  // 正是 renderBoxCountWidget（只在盒子渲染时跑）。少了这一句，浮窗就会一直留在屏幕左下角。
+  updateBoxMedalFab();
   const overlay = document.getElementById('boxOverlay');
   const bubble = document.getElementById('boxBubbleWrap');
   positionBoxOverlayOrigin(bubble);
@@ -9857,7 +10431,13 @@ function boxIngredientRowsHtml(entry){
 }
 function boxInfoBubbleHtml(entry){
   const portraitPair = POKEMON_PORTRAITS[entry.name];
-  const portraitSrc = portraitPair ? 'data:image/webp;base64,'+(entry.shiny?portraitPair[1]:portraitPair[0]) : null;
+  // 每次打开气泡都重新抽一次伪装，跟详情页/修改面板的行为一致（那两处经 selectPokemon 也是每次重抽）
+  const dexRec = POKEMON_DEX_DATA.find(function(r){ return r[0] === entry.dex; });
+  const ov = rollPkPortraitOverride(dexRec);
+  const ovB64 = ov ? (entry.shiny ? ov.shiny : ov.normal) : null;
+  const rawB64 = ovB64 || (portraitPair ? (entry.shiny?portraitPair[1]:portraitPair[0]) : null);
+  const portraitSrc = rawB64 ? 'data:image/webp;base64,'+rawB64 : null;
+  const portraitCls = isDittoDisguiseB64(rawB64) ? ' class="ditto-disguise-zoom"' : '';
   const chip = (idx)=>{
     const id = entry.selected[idx];
     if(!id) return '<div class="ps-skill empty">—</div>';
@@ -9872,7 +10452,7 @@ function boxInfoBubbleHtml(entry){
   '</div>';
   return ''+
     '<div class="box-bub-top">'+
-      '<div class="pk-portrait pk-portrait-sm'+(entry.shiny?' pk-portrait-shiny':'')+'">'+(portraitSrc?('<img src="'+portraitSrc+'">'):'<span class="pk-portrait-q">?</span>')+'</div>'+
+      '<div class="pk-portrait pk-portrait-sm'+(entry.shiny?' pk-portrait-shiny':'')+'">'+(portraitSrc?('<img'+portraitCls+' src="'+portraitSrc+'">'):'<span class="pk-portrait-q">?</span>')+'</div>'+
       boxIngredientRowsHtml(entry)+
     '</div>'+
     '<div class="box-bub-name">'+(entry.nickname||entry.name)+'</div>'+
@@ -9922,10 +10502,15 @@ function openBoxInfoBubble(id, itemEl){
     }
     if(!onRight && left - GAP - BTN - EDGE < 0) left = EDGE + BTN + GAP;
     if(onRight && left < EDGE) left = EDGE;
-    // 气泡默认往下弹，别把上方的筛选/排序区挡住；下方放不下才翻到上面
-    let top = r.bottom + 12;
-    if(top + bh + EDGE > window.innerHeight) top = r.top - bh - 12;
-    if(top < EDGE) top = Math.max(EDGE, window.innerHeight - bh - EDGE);
+    // 格子中心落在屏幕下半部分 → 气泡弹在上方（否则气泡会被挤在屏幕底部、还容易被手指挡住）；
+    // 上半部分才往下弹。首选方向放不下时翻到另一侧，两侧都放不下再夹回屏幕内。
+    const itemCenterY = r.top + r.height/2;
+    const preferAbove = itemCenterY > window.innerHeight/2;
+    let top = preferAbove ? (r.top - bh - 12) : (r.bottom + 12);
+    if(preferAbove && top < EDGE) top = r.bottom + 12;
+    if(!preferAbove && top + bh + EDGE > window.innerHeight) top = r.top - bh - 12;
+    if(top < EDGE) top = EDGE;
+    if(top + bh + EDGE > window.innerHeight) top = Math.max(EDGE, window.innerHeight - bh - EDGE);
     bubbleEl.style.left = left+'px';
     bubbleEl.style.top = top+'px';
     if(actionsEl){
@@ -9936,11 +10521,33 @@ function openBoxInfoBubble(id, itemEl){
     }
     bubbleEl.style.visibility = 'visible';
   }
+  boxBubbleBindAutoClose();
   wireBoxInfoBubbleActions(entry);
 }
 function closeBoxInfoBubble(){
+  boxBubbleUnbindAutoClose();
   document.getElementById('boxInfoBubbleOverlay').classList.remove('open');
   boxStopActiveBubblePlay();
+}
+// 气泡是按"打开那一刻格子的位置"算出来的固定坐标，页面一滚就会跟格子脱节，所以滚动直接关掉它。
+// 必须用【捕获阶段】监听：盒子网格是在自己的内层容器里滚的，scroll 事件不冒泡到 window。
+let _boxBubbleAutoCloseOff = null;
+function boxBubbleUnbindAutoClose(){
+  if(_boxBubbleAutoCloseOff){ _boxBubbleAutoCloseOff(); _boxBubbleAutoCloseOff = null; }
+}
+function boxBubbleBindAutoClose(){
+  boxBubbleUnbindAutoClose();
+  const on = function(){ closeBoxInfoBubble(); };
+  // 延一帧再挂：打开气泡这一下本身可能触发一次滚动（比如格子被滚进可视区），立刻挂会自己把自己关掉
+  const t = setTimeout(function(){
+    document.addEventListener('scroll', on, {capture:true, passive:true});
+    window.addEventListener('resize', on, {passive:true});
+  }, 0);
+  _boxBubbleAutoCloseOff = function(){
+    clearTimeout(t);
+    document.removeEventListener('scroll', on, {capture:true});
+    window.removeEventListener('resize', on);
+  };
 }
 document.getElementById('boxInfoBubble').addEventListener('click', (e)=>{
   if(e.target.closest('.box-bub-act-btn')) return;
@@ -10124,6 +10731,7 @@ function openBoxDetail(entryId){
   // 「修改面板」小圆浮窗也一并收起，改面板走底栏那颗蓝色按钮
   const bcf = document.getElementById('boxCreateFab'); if(bcf) bcf.style.display = 'none';
   const pfb = document.getElementById('panelFab'); if(pfb) pfb.style.display = 'none';
+  updateBoxMedalFab(); // 「奖章」浮窗同样收起（关详情页时 finish() 末尾的 renderBoxPage 会把它放回来）
 
   boxDetailLoadEntry(entryId);
 }
@@ -10219,6 +10827,9 @@ function boxDetailSwitchBy(step){
   // 再把真实节点原地换成"下一只"的内容并摆到另一侧，两者同时反向平移，
   // 才会是前一个推走一半、后一个已经进来一半的连续效果，而不是先整个移走再整个移入
   const rect = panel.getBoundingClientRect();
+  // 同 pageSwitchBySwipe：百分比是相对面板自身宽度的，面板居中留白时移不干净会留边
+  const DETAIL_SWIPE_GAP = 28;
+  const travel = window.innerWidth + DETAIL_SWIPE_GAP;
   const clone = panel.cloneNode(true);
   clone.removeAttribute('id');
   clone.querySelectorAll('[id]').forEach(n=> n.removeAttribute('id'));
@@ -10233,13 +10844,13 @@ function boxDetailSwitchBy(step){
 
   Object.assign(panel.style, {
     position:'fixed', top:rect.top+'px', left:rect.left+'px', width:rect.width+'px', height:rect.height+'px',
-    margin:'0', transition:'none', transform:'translateX('+(-out*100)+'%)'
+    margin:'0', transition:'none', transform:'translateX('+(-out*travel)+'px)'
   });
   void panel.offsetWidth; // 强制回流，确保上面这两个起始位置先生效，下面的过渡才播得出来
 
   clone.style.transition = `transform ${dur}ms cubic-bezier(.2,.85,.3,1)`;
   panel.style.transition = `transform ${dur}ms cubic-bezier(.2,.85,.3,1)`;
-  clone.style.transform = 'translateX('+(out*100)+'%)';
+  clone.style.transform = 'translateX('+(out*travel)+'px)';
   panel.style.transform = 'translateX(0)';
 
   setTimeout(()=>{
@@ -10254,10 +10865,22 @@ function boxDetailSwitchBy(step){
   // 不触发。监听挂在 document 上（覆盖整个屏幕高度，不受面板自身内边距/垂直范围限制），只在详情页
   // 打开时才处理，这样物理屏幕最左侧那一整条边缘、从上到下任意高度起手都能识别成"返回"手势。
   const EDGE_ZONE = 24;
+  // 详情页之上还压着别的浮窗时，一律不接管滑动手势。
+  // 尤其是「修改」浮窗：它内部的编辑上下文指着打开时那一只，滑动却会把底下的详情页翻到下一只，
+  // 于是浮窗一保存就把上一只的数据写到下一只身上（实测踩到过）。
+  function boxDetailSwipeBlocked(){
+    if(typeof dashboardOpen!=='undefined' && dashboardOpen) return true;
+    const classIds = ['boxFilterPopupOverlay','boxInfoBubbleOverlay'];
+    if(classIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
+    const dispIds = ['boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','finalPkOverlay','creditModal'];
+    if(dispIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
+    return false;
+  }
   let sx=0, sy=0, tracking=false, fromLeftEdge=false;
   document.addEventListener('touchstart', (e)=>{
     const overlay = document.getElementById('boxDetailOverlay');
     if(!overlay || !overlay.classList.contains('open') || e.touches.length!==1){ tracking=false; return; }
+    if(boxDetailSwipeBlocked()){ tracking=false; return; }
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
     fromLeftEdge = sx <= EDGE_ZONE;
   }, {passive:true});
@@ -10265,6 +10888,7 @@ function boxDetailSwitchBy(step){
     if(!tracking) return; tracking=false;
     const overlay = document.getElementById('boxDetailOverlay');
     if(!overlay || !overlay.classList.contains('open')) return;
+    if(boxDetailSwipeBlocked()) return;   // 起手之后才弹出浮窗的情况也要拦住
     const t = e.changedTouches[0];
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(Math.abs(dy) >= 60 || Math.abs(dx) <= 70) return; // 竖着滑或幅度不够，都不当成手势
@@ -10859,9 +11483,11 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     })();
     const isProblem = !speciesMatched || skillCount<5 || !personaOk || foodUnclear;
     const snap = boxSnapshotFromState();
-    // 认出物种的直接用种族名；没认出来的说明名字这块本来就没读准，不再拿 OCR 原始文字凑昵称，
-    // 直接留空，交给用户在盒子里手动填——总比存一串乱码强
-    const nickname = speciesMatched ? snap.name : '';
+    // 认出物种 → 仍用种族名。版面切出来的昵称在这些字体下只是【近似值】
+    // （实测"葳蕤生光"切成"藏生光"），拿它覆盖种族名这个可靠默认值是负收益。
+    // 没认出物种 → 原本这里是存空字符串，此时给出近似昵称反而是净收益：
+    // 用户本来就得手动补物种，会顺带看到并修正它。
+    const nickname = speciesMatched ? snap.name : (res.nickname || '');
     if(isProblem){
       problems.push({snap, nickname, speciesMatched});
     } else {
