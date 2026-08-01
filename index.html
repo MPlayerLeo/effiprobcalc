@@ -1285,7 +1285,7 @@
   .cap-sleep-light .cap-sleep-lab{ color:#b5891f; }
   .cap-sleep-calm  .cap-sleep-lab{ color:#3fa9e0; }
   /* 皮卡丘/雷丘：圆底左右对半开，小字「深/安」按字分色、斜杠留黑 */
-  .cap-sleep-split .cap-rank-num{ background:linear-gradient(90deg,#1d3f8f 0 50%,#3fa9e0 50% 100%); }
+  .cap-sleep-split .cap-rank-num{ background:linear-gradient(90deg,#3fa9e0 0 50%,#1d3f8f 50% 100%); }
   .cap-sleep-split .cap-sleep-lab{ color:var(--ink); }
   .cap-sleep-split .cap-sleep-lab .s-deep{ color:#1d3f8f; }
   .cap-sleep-split .cap-sleep-lab .s-calm{ color:#3fa9e0; }
@@ -2544,6 +2544,7 @@ function boxApplyEntryToState(id){
   state.decAttr = e.decAttr;
   state.ingChoice2 = e.ingChoice2;
   state.ingChoice3 = e.ingChoice3;
+  state.satiety = e.satiety || 0;
   renderAll();
   return true;
 }
@@ -5166,15 +5167,15 @@ function boxEntrySatiety(entry){
 function satietyMedalSrc(tier){
   return (tier && SATIETY_MEDAL_IMAGES[String(tier)]) ? SATIETY_MEDAL_IMAGES[String(tier)] : null;
 }
-// 详情页头像右上角：比例对齐已有的徽章图标（框直径 50%），徽章宝可梦那个角已被徽章占了，不再叠奖章
-function applyBoxDetailSatietyMedal(portraitEl, entry){
+// 头像右上角挂奖章图：比例对齐已有的徽章图标（框直径 50%），徽章宝可梦那个角已被徽章占了，不再叠奖章
+// x 是 capFindDex 查出的行（决定是否强制/取消显示），tier 是要显示的睡饱饱档位
+function renderSatietyMedalOnPortrait(portraitEl, x, tier){
   if(!portraitEl) return;
   const old = portraitEl.querySelector('.pk-satiety-medal');
   if(old) old.remove();
   portraitEl.classList.remove('pk-has-satiety-medal');
-  const x = entry && entry.dex ? capFindDex(boxEffectiveFinalDex(entry.dex)) : null;
   if(satietyForcedFor(x)) return;                 // 徽章宝可梦：布局不动，只显示原有徽章
-  const src = satietyMedalSrc(boxEntrySatiety(entry));
+  const src = satietyMedalSrc(tier);
   if(!src) return;                                // 0 档没有奖章图，不显示
   portraitEl.classList.add('pk-has-satiety-medal');
   const img = document.createElement('img');
@@ -5191,6 +5192,21 @@ function applyBoxDetailSatietyMedal(portraitEl, entry){
     Object.assign(img.style, {width:'50%', height:'50%', top:'2px', right:'2px', transform:'translate(50%,-50%)'});
   }
   portraitEl.appendChild(img);
+}
+function applyBoxDetailSatietyMedal(portraitEl, entry){
+  const x = entry && entry.dex ? capFindDex(boxEffectiveFinalDex(entry.dex)) : null;
+  renderSatietyMedalOnPortrait(portraitEl, x, boxEntrySatiety(entry));
+}
+// 页1宝可梦选择模块头像右上角：跟盒子详情页同一套渲染逻辑，取的是当前编辑面板自己的睡饱饱档位
+function applyPkPortraitSatietyMedal(portraitEl){
+  if(!portraitEl) return;
+  if(!state.selectedDex){                          // 没选中宝可梦时不显示（否则会露出上一只留下的档位）
+    portraitEl.querySelector('.pk-satiety-medal')?.remove();
+    portraitEl.classList.remove('pk-has-satiety-medal');
+    return;
+  }
+  const x = capFindDex(effectiveYieldDex());
+  renderSatietyMedalOnPortrait(portraitEl, x, currentSatietyTier(x));
 }
 
 /* ---- 盒子左下角"奖章"开关浮窗：只在盒子浮层里出现，状态持久化 ---- */
@@ -6349,6 +6365,7 @@ function renderPokemonModule(){
   // 头像框
   const portraitEl = document.getElementById('pkPortrait');
   renderPortraitInto(portraitEl, rec, 16);
+  applyPkPortraitSatietyMedal(portraitEl);
 
   // 搜索框：选中后显示宝可梦名字
   const searchInput = document.getElementById('pkSearchInput');
@@ -6912,159 +6929,15 @@ function loadTesseract(){
   return tesseractLoadPromise;
 }
 
-/* ---- PP-OCR（Paddle.js 跑 PP-OCR mobile 的 det+rec 模型）----
-   跟 Tesseract 并联读食材数量 ×N。两个引擎的失败模式正好错开：实测 44 个配对槽位里
-   Tesseract 读错 5 个但从不读空，PP-OCR 一个没读错但读空 3 个（它在这个字体下认不准数字"1"，
-   会把"×1"读成孤零零一个"X"）。所以不是二选一，而是两个都读、再用"该物种可能出现的数量"仲裁。
-   加载失败时静默降级回纯 Tesseract（旧行为），绝不阻塞识别流程。 */
-const PADDLE_CDN_GROUPS = [
-  ['https://cdn.jsdelivr.net/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
-   'https://cdn.jsdelivr.net/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
-   'https://cdn.jsdelivr.net/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
-  // ↓ 备用镜像。原来这里写的是 unpkg，但它对 scoped 包这条路径直接 404（实测 size=55 的错误页），
-  //   留着只会白白多等一轮超时。换成实测能通的两个 jsdelivr 镜像。
-  ['https://fastly.jsdelivr.net/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
-   'https://fastly.jsdelivr.net/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
-   'https://fastly.jsdelivr.net/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
-  ['https://cdn.jsdmirror.com/npm/@paddlejs/paddlejs-core@2.2.0/lib/index.min.js',
-   'https://cdn.jsdmirror.com/npm/@paddlejs/paddlejs-backend-webgl@1.2.9/lib/index.min.js',
-   'https://cdn.jsdmirror.com/npm/@paddlejs-models/ocr@1.2.4/lib/index.min.js'],
-];
-/* ---- PP-OCR 加载加固 ---- 见下方注释，修的是「永远停在加载中」那个问题 */
-// Paddle 的模型放在百度 bcebos 上，init() 用普通 fetch 去拉。实测浏览器 HTTP 缓存一旦
-// 存了这两个 URL 的坏条目（上次加载被中断、或被 no-cors 请求写进过一条 opaque 响应），
-// 此后普通 fetch 一律 "Failed to fetch"，而带 cache:'reload' 的请求照样 200。
-// 这个补丁只在 init() 期间生效：模型请求失败就强制回源重试一次；reload 会把新鲜响应
-// 写回缓存，坏条目被冲掉，之后普通 fetch 也恢复正常。
-function withPaddleFetchPatch(fn){
-  const orig = window.fetch;
-  window.__paddleProgressAt = Date.now();
-  window.fetch = function(input, init){
-    const url = (typeof input === 'string') ? input : ((input && input.url) || '');
-    if(!/bcebos\.com/.test(url)) return orig.apply(this, arguments);
-    window.__paddleProgressAt = Date.now();          // 请求发出算一次进展
-    const tick = function(x){ window.__paddleProgressAt = Date.now(); return x; };
-    return orig.call(window, input, init).then(tick, function(e){ tick(); throw e; }).then(function(r){
-      if(!r.ok) throw new Error('HTTP ' + r.status);
-      return r;
-    }).catch(function(e){
-      console.log('PP-OCR 模型请求失败（' + e.message + '），强制回源重试：' + url.split('/').slice(-2).join('/'));
-      const opt = {}; for(const k in (init||{})) opt[k] = init[k];
-      opt.cache = 'reload';
-      return orig.call(window, input, opt);
-    });
-  };
-  const restore = function(){ window.fetch = orig; };
-  return Promise.resolve().then(fn).then(
-    function(v){ restore(); return v; },
-    function(e){ restore(); throw e; }
-  );
-}
-// init() 卡死时不能干等，但也不能用「总时长」当判据——模型不小（det+rec 两份 + 3 个权重分片），
-// 慢网上正常下个两三分钟很常见，一刀切超时会把慢网用户误杀、还害他们重下一整份。
-// 真正的判据是「还动不动」：卡死 = 一段时间内一个模型字节都没动（Paddle 吞掉 fetch 错误后正是这样），
-// 慢 = 字节一直在动。所以这里只在「连续 idleMs 毫秒没有任何模型请求进展」时才判死，总时长不设上限。
-// 进度时间戳由 withPaddleFetchPatch 在每次模型请求发出/结束时打点。
-function paddleWatchdog(p, idleMs, what){
-  let timer = null;
-  const stop = function(){ if(timer){ clearInterval(timer); timer = null; } };
-  return Promise.race([
-    Promise.resolve(p).then(function(v){ stop(); return v; }, function(e){ stop(); throw e; }),
-    new Promise(function(_, rej){
-      timer = setInterval(function(){
-        const idle = Date.now() - (window.__paddleProgressAt || 0);
-        if(idle > idleMs){
-          stop();
-          rej(new Error(what + '卡住了（连续 ' + Math.round(idle/1000) + ' 秒没有任何模型数据进出）'));
-        }
-      }, 3000);
-    })
-  ]);
-}
-
-let paddleLoadPromise = null, paddleFailed = false;
-function loadPaddleOcr(){
-  if(paddleFailed) return Promise.resolve(null); // 失败过就别再重试，免得每张图都白等一轮超时
-  if(paddleLoadPromise) return paddleLoadPromise;
-  paddleLoadPromise = (async ()=>{
-    for(const group of PADDLE_CDN_GROUPS){
-      try{
-        for(const u of group) await loadScriptOnce(u, 30000); // 顺序必须 core → webgl后端 → ocr
-        const g = (window.paddlejs && window.paddlejs.ocr) || null;
-        if(!g || typeof g.init !== 'function') throw new Error('全局 paddlejs.ocr 不存在');
-        // 这一步会去下模型，首次约 10~20 秒。
-        // 必须同时套 fetch 补丁和超时：Paddle 自己在模型请求失败时会把错吞掉、Promise 永不 settle，
-        // 裸 await 的话整个识别流程就永远卡在这里（用户侧表现为"PP-OCR 一直加载不出来"）。
-        await withPaddleFetchPatch(function(){ return paddleWatchdog(g.init(), 45000, 'PP-OCR 模型加载'); });
-        console.log('PP-OCR 就绪（与 Tesseract 并联读食材数量）');
-        return g;
-      }catch(err){
-        console.log('PP-OCR 这组来源失败，继续尝试下一组：', err.message);
-      }
-    }
-    paddleFailed = true;
-    // 实测确认的一种常见根因：file:// 直接双击打开时 fetch 带 Origin: null，模型真正存放的
-    // paddlejs.bj.bcebos.com 对任何 http/https 来源都会动态回显允许跨域，唯独对 null 不返回
-    // 跨域头——直接拒绝。这是浏览器安全策略的硬限制，绕不过去；食材数量识别会自动降级为
-    // 纯 Tesseract（不影响使用），只是少了 PP-OCR 这一路交叉校验。
-    if(location.protocol === 'file:'){
-      console.log('PP-OCR 加载不出来，很可能是因为本文件是用 file:// 直接打开的（双击打开就是这样）——'+
-        'PP-OCR 的模型放在百度对象存储上，这类跨域请求下它只拒绝 file:// 页面，这不是网络问题也绕不开。'+
-        '如果想让 PP-OCR 生效：把这个文件放到本地服务器后面打开（例如同目录下执行 python -m http.server 8000，'+
-        '再用 http://localhost:8000/ 对应地址访问），而不是双击。不处理也没关系，数量识别仍会用 Tesseract 正常工作。');
-    }
-    console.log('PP-OCR 全部来源失败，食材数量降级为纯 Tesseract（不影响其它识别）');
-    return null;
-  })();
-  return paddleLoadPromise;
-}
-// ⚠️ Paddle.js 的 recognize() 只认 <img> 元素：直接传 canvas 会静默返回 {text:[],points:[]}，
-// 不报错也不抛异常。实测同一张合成图，传 canvas 得到 []，转成 img 才读出内容。
-function canvasToImageEl(canvas){
-  return new Promise((resolve, reject)=>{
-    const im = new Image();
-    im.onload = ()=> resolve(im);
-    im.onerror = ()=> reject(new Error('canvas 转 img 失败'));
-    im.src = canvas.toDataURL('image/png');
-  });
-}
-// 从 PP-OCR 返回的若干文字片段里挑出 ×N 的 N。
-// 必须先剔掉含"秒"和"LV"的片段：检测框放宽后会把旁边的"帮忙间隔 N秒"和"LV.30"标签一起框进来，
-// 直接抓数字会抓到间隔秒数（实测"咚咚鼠"就是把".5秒"的 5 当成了数量，正确答案是 1）。
-function pickQtyDigit(texts){
-  const frags = (texts||[]).filter(Boolean).map(String);
-  const clean = frags.filter(t => !/秒|分|LV|Lv|lv/.test(t));
-  for(const pool of [clean, frags]){
-    for(const t of pool){
-      const m = t.match(/[x×✕╳X*]\s*(\d{1,3})/);
-      if(m) return parseInt(m[1], 10);
-    }
-  }
-  for(const t of clean){                       // 退一步：只在干净片段里取裸数字，绝不从含"秒"的片段取
-    const d = t.replace(/[^0-9]/g, '').replace(/^0+/, '');
-    if(d) return parseInt(d, 10);
-  }
-  return null;
-}
-// 两个引擎的结果合成一个"候选数量列表"（按可信度排序），交给下游用物种数据仲裁。
-// 分歧时把 PP-OCR 排前面：实测它 0 读错、Tesseract 5 读错，但两个都保留，
-// 因为最终裁判是"这个数字在该物种这个槽位上到底可不可能出现"，比任何先验都准。
-function arbitrateQty(tessVal, padVal){
-  if(tessVal == null && padVal == null) return [];
-  if(tessVal == null) return [padVal];
-  if(padVal == null) return [tessVal];
-  if(tessVal === padVal) return [tessVal];
-  return [padVal, tessVal];
-}
-// 把"数量"参数统一成数组：兼容老的单个数字写法和新的候选列表
+// PP-OCR（Paddle.js 并联引擎）已整体移除：手机上加载/推理会导致明显卡顿和发热，
+// 数量识别改回纯 Tesseract 单引擎（下面 ocrQtyBadge 的多阈值投票 + repairDroppedDigit 掉位修复
+// 都是跟引擎无关的独立优化，继续保留）。
+// 把"数量"参数统一成数组：兼容老的单个数字写法和候选列表
 function qtyCandList(q){
   if(q == null) return [];
   return Array.isArray(q) ? q.filter(v => v != null) : [q];
 }
-// 按需补救：只有当 Tesseract 读出来的数字跟"这个物种这个槽位可能出现的数量"对不上（或压根没读到）
-// 时，才去问一次 PP-OCR。实测 Tesseract 的错误读数【全部】落在合法集合之外，所以这个信号
-// 能覆盖已观测到的全部错误，而正确的那 89% 完全不用惊动 PP-OCR。
-// 掉位修复：两位数徽章（×11、×18 这类）偶尔会被两个引擎同时少读一位。
+// 掉位修复：两位数徽章（×11、×18 这类）Tesseract 偶尔会少读一位。
 // 判定条件很严：读出的值必须【不在合法集合里】（即已经确定是错的），并且合法集合里【有且只有一个】
 // 值能通过"去掉首位或末位"解释成它。有第二个解释就不修——比如合法集合 [7,18,15] 读到 1，
 // 18 和 15 都说得通，这时保持原样交给用户手改，比赌一个更好。
@@ -7077,30 +6950,21 @@ function repairDroppedDigit(readVal, legalQtys){
   });
   return hits.length === 1 ? hits[0] : null;
 }
-async function ensureQtyForSpecies(qtyRes, id, slot){
-  if(!qtyRes || typeof qtyRes.refine !== 'function') return qtyRes;
+// 数量跟物种对不上时，最后试一次掉位修复（纯 Tesseract 读数，不再有第二引擎可问）。
+function ensureQtyForSpecies(qtyRes, id, slot){
+  if(!qtyRes) return qtyRes;
   const opts = slotOptionsForId(id, slot);
   if(!opts.length) return qtyRes;                 // 该槽本来就没有数量数据（表里是 null），问了也没用
   const legal = opts.map(function(o){ return o.qty; });
-  const consistent = function(){
-    const cands = qtyCandList(qtyRes.vals);
-    return cands.length && cands.some(function(q){ return legal.indexOf(q) >= 0; });
-  };
-  if(consistent()) return qtyRes;                 // 读数讲得通 → 省掉 PP-OCR 这一趟
-  if(!qtyRes.refined){
-    console.log('数量与物种对不上（' + slot + '级槽读到 ' + JSON.stringify(qtyCandList(qtyRes.vals))
-                + '，该槽只可能是 ' + JSON.stringify(legal) + '）→ 调用 PP-OCR 补救');
-    await qtyRes.refine();
-    if(consistent()) return qtyRes;
-  }
-  // PP-OCR 也没救回来 → 最后试一次掉位修复
-  const after = qtyCandList(qtyRes.vals);
-  for(let i=0;i<after.length;i++){
-    const fixed = repairDroppedDigit(after[i], legal);
+  const cands = qtyCandList(qtyRes.vals);
+  const consistent = cands.length && cands.some(function(q){ return legal.indexOf(q) >= 0; });
+  if(consistent) return qtyRes;                   // 读数讲得通，不用修
+  for(let i=0;i<cands.length;i++){
+    const fixed = repairDroppedDigit(cands[i], legal);
     if(fixed != null){
-      console.log('数量掉位修复：' + after[i] + ' → ' + fixed
+      console.log('数量掉位修复：' + cands[i] + ' → ' + fixed
                   + '（该槽合法值 ' + JSON.stringify(legal) + '，只有这一个解释得通）');
-      qtyRes.vals = [fixed].concat(after);
+      qtyRes.vals = [fixed].concat(cands);
       qtyRes.val = fixed;
       break;
     }
@@ -7321,93 +7185,9 @@ function fuzzyMatchPokemonFromOcrText(t){
   return best;
 }
 
-/* ---- 用版面结构精确切出"名字字段" ----
-   宝可梦卡片里这三样的相对位置是固定的（跟分辨率无关，游戏 UI 按屏宽等比缩放）：
-     SP + 数字        ——上面一行
-     Lv. + 数字       ——下面一行，与 SP 左对齐
-     名字（昵称/种族名）——与 Lv 同一行，紧挨在它右边
-   所以只要拿 SP 框当锚点、往下找到 Lv 框、再取同一行右侧的文字，就能干净地把名字字段切出来，
-   不用写死任何像素坐标。这比"把顶部一整条 OCR 成一大坨再去里面找名字"可靠得多——那一坨里
-   混着状态栏时间、信号、电量、SP 数字、等级数字，正是各种误命中的温床。
-   注意必须用 PP-OCR：它返回每段文字的框坐标（points），Tesseract 的中文分词在这块不够稳。 */
-async function extractNameFieldByLayout(img, W, H){
-  const ocr = await loadPaddleOcr();
-  if(!ocr) return null;
-  const bandH = Math.max(1, Math.round(H * 0.16));
-  const c = document.createElement('canvas');
-  c.width = W; c.height = bandH;
-  c.getContext('2d').drawImage(img, 0, 0, W, bandH, 0, 0, W, bandH);
-  const el = await canvasToImageEl(c);
-  const res = await ocr.recognize(el);
-  const texts = (res && Array.isArray(res.text)) ? res.text : [];
-  const pts = (res && Array.isArray(res.points)) ? res.points : [];
-  if(!texts.length) return null;
-  const boxes = texts.map(function(t, i){
-    const p = pts[i] || [];
-    if(!p.length) return null;
-    const xs = p.map(function(q){ return q[0]; }), ys = p.map(function(q){ return q[1]; });
-    return { t: String(t||''), x0: Math.min.apply(null, xs), yc: ys.reduce(function(a,b){ return a+b; },0)/ys.length };
-  }).filter(Boolean);
-  // SP 框：形如 "sp4,759" / "osp4,977" / ")SP4,448"（OCR 会在前面粘上图标残影，所以不锚定开头）
-  // 主模式："sp4,759" —— SP 和数字在同一个框里。
-  // 备用模式：光秃秃的 "sp" 框 —— PP-OCR 有时会把它跟数字拆成两个框（实测快龙那张切成了
-  // "sp" + "p7.158"），只认连写模式的话会找不到锚点、整条链白白放弃。
-  const sp = boxes.filter(function(b){
-      return /s\s*p\s*[\d][\d,.\s]{2,}/i.test(b.t)
-          || /^[^0-9a-z]{0,2}s\s*p[^0-9a-z]{0,2}$/i.test(b.t);
-    }).sort(function(a,b){ return a.yc - b.yc; })[0];
-  if(!sp) return null;
-  // Lv 框：在 SP 下方一点、且与 SP 左边界接近（同一列）。
-  // 加这两条约束是为了避开食材槽上方的"🔒Lv.30 / Lv.60"解锁标签——那两个也长得像 Lv.NN，
-  // 但它们在画面右侧、而且纵向位置跟 SP 对不上（实测小拳石那张就同时存在这三个 Lv 框）。
-  const lv = boxes.filter(function(b){
-      return b.yc > sp.yc && (b.yc - sp.yc) < H*0.05
-          && Math.abs(b.x0 - sp.x0) < W*0.12
-          && /l\s*[vy]\s*\.?\s*\d{1,3}/i.test(b.t);
-    }).sort(function(a,b){ return a.yc - b.yc; })[0];
-  if(!lv) return null;
-  // 同一行、在 Lv 右侧的文字段拼起来就是名字。
-  // 行容差要收紧：食材数量徽章"×5/×7"跟名字只差约 0.011H，容差放宽一点就会把它们卷进来。
-  // 再加一条"不能太靠右"，把右半屏的食材图标/徽章挡在外面。
-  const rowTol = Math.max(6, H*0.006);
-  const parts = boxes.filter(function(b){
-      return Math.abs(b.yc - lv.yc) < rowTol && b.x0 > lv.x0 && b.x0 < W*0.55;
-    }).sort(function(a,b){ return a.x0 - b.x0; });
-  if(!parts.length) return null;
-  const raw = parts.map(function(b){ return b.t; }).join('').trim();
-  if(!raw) return null;
-  return { raw: raw, clean: cleanNameField(raw) };
-}
-// 名字字段清洗：去掉标点、装饰符和结尾的徽章字符。
-// 游戏会在名字后面跟一个"❼"这样的圆圈数字徽章，OCR 常把它读成 の/@/数字，得从尾巴上摘掉；
-// 中间的数字要留着（实测真有玩家把昵称起成"食材薄荷1號"）。
-function cleanNameField(s){
-  return String(s||'')
-    .replace(/[。、，,．.·・:：;；!！?？~～\-—_=+*#@()（）\[\]【】<>《》"'`|\\\/]/g, '')
-    .replace(/[のㄱ㊐◯○●]/g, '')
-    .replace(/[\u2460-\u24ff\u2776-\u2793]/g, '')   // ❼➆⑦ 这类圈码：游戏在名字后面挂的等级徽章
-    .replace(/[0-9０-９]+$/, '')
-    .trim();
-}
-// 严格的整字段物种匹配：只跟【完整的名字字段】比，不做任何滑窗。
-// 字段本身就是干净的一个名字，所以完全相等优先；只留 1 个字的容错给 OCR 误读
-// （"新葉噶"→"新叶喵"这种），长度差超过容错上限的直接否掉。
-function matchPokemonFromNameField(field){
-  const t = toSimplified(String(field||'')).replace(/\s/g, '');
-  if(!t) return null;
-  for(let i=0;i<POKEMON_DEX_DATA.length;i++){
-    if(POKEMON_DEX_DATA[i][1] === t) return POKEMON_DEX_DATA[i];
-  }
-  let best = null, bestDist = Infinity;
-  POKEMON_DEX_DATA.forEach(function(rec){
-    const name = rec[1];
-    if(name.length < 3) return;               // 两个字的名字不做模糊，太容易撞
-    if(Math.abs(name.length - t.length) > 1) return;
-    const d = levenshtein(t, name);
-    if(d <= 1 && d < bestDist){ best = rec; bestDist = d; }
-  });
-  return best;
-}
+// 版面定位名字字段（extractNameFieldByLayout/cleanNameField/matchPokemonFromNameField）
+// 连同 PP-OCR 一起整体移除：它依赖 PP-OCR 返回的文字框坐标（points），Tesseract 没有这个能力。
+// 名字认不出时不再尝试切精确昵称字段，退回签名反查；昵称留空交给用户手动填。
 
 let ocrDetected = { dex:null, personaName:null, skills:[null,null,null,null,null] };
 
@@ -7948,9 +7728,8 @@ async function identifyBySignature(mainSkillText, leftQty, rightQty, ing30Canvas
 // 这样连主路径(名字已识别)里"土豆/姜同色分不开"的老问题也顺带解决了——数字能把它们分开。
 async function resolveSlotIngredient(id, slot, qty, iconCanvas){
   const opts = slotOptionsForId(id, slot);
-  // qty 现在是"候选数量列表"（Tesseract 与 PP-OCR 并联的结果，可能有 1~2 个）。
-  // 这里就是仲裁点：物种已知 → 该槽位可能出现的数量是确定的，逐个候选去试，
-  // 第一个能对上的就是正确答案。两个引擎分歧时几乎总有且只有一个落在合法集合里。
+  // qty 是候选数量列表（现在总是最多 1 个 Tesseract 读数，掉位修复命中时会补一个候选进来）。
+  // 物种已知 → 该槽位可能出现的数量是确定的，逐个候选去试，第一个能对上的就是正确答案。
   const cands = qtyCandList(qty);
   for(let ci=0; ci<cands.length; ci++){
     const q = cands[ci];
@@ -8231,45 +8010,10 @@ async function runOcrOnFile(file, silent){
       }
       const entries = Object.entries(votes).sort((a,b)=> b[1]-a[1]);
       const tessVal = entries.length ? parseInt(entries[0][0],10) : null;
-      // PP-OCR 不在这里跑，而是包成 refine()，等物种确定后按需补救（见 ensureQtyForSpecies）。
-      // 原因：并联每张图要多花约 4.5 秒，盒子批量上传 50 张就是多等 4 分钟；而实测 Tesseract
-      // 读错时读数【一定】不在该物种的合法数量集合里，所以完全可以等发现对不上了再问 PP-OCR，
-      // 约 11% 的槽位会触发，平均每张图只多花约 0.5 秒。
-      const out = {
+      return {
         val: tessVal, vals: tessVal==null ? [] : [tessVal],
-        tessVal, padVal: undefined,          // undefined = 还没问过 PP-OCR（区别于问过但读空的 null）
-        raw: entries.length ? entries[0][0] : '', canvas: lastCanvas, votes, refined: false,
+        tessVal, raw: entries.length ? entries[0][0] : '', canvas: lastCanvas, votes,
       };
-      out.refine = async function(){
-        if(out.refined) return out;          // 幂等：同一个槽最多只问一次 PP-OCR
-        out.refined = true;
-        try{
-          const ocr = await loadPaddleOcr();
-          if(ocr){
-            // 给 PP-OCR 一块比徽章大一圈的区域，让它自己的检测器去找文字框（那是它的强项，
-            // 不依赖我们这边金色连通域定位得多准）
-            const wide = {
-              x: Math.max(0, reg.x - reg.w*1.25), y: Math.max(0, reg.y - reg.h*2.5),
-              w: Math.min(1, reg.w*3.5),          h: Math.min(1, reg.h*6),
-            };
-            const wc = cropPixels(wide.x*W, wide.y*H, wide.w*W, wide.h*H, 3);
-            const el = await canvasToImageEl(wc);
-            const res = await withTimeout(ocr.recognize(el), 30000, label + '(PP-OCR)');
-            out.padVal = pickQtyDigit(res && Array.isArray(res.text) ? res.text : []);
-          } else {
-            out.padVal = null;
-          }
-        }catch(err){
-          out.padVal = null;
-          console.log('PP-OCR 读' + label + '失败，本槽保持纯 Tesseract 结果：', err.message);
-        }
-        out.vals = arbitrateQty(out.tessVal, out.padVal);
-        out.val = out.vals.length ? out.vals[0] : null;
-        console.log('数量补救 ' + label + '：Tesseract=' + out.tessVal + ' PP-OCR=' + out.padVal
-                    + ' → 候选 ' + JSON.stringify(out.vals));
-        return out;
-      };
-      return out;
     }
     await worker.setParameters({tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7'});
     statusEl.textContent = '正在识别食材数量…';
@@ -8304,42 +8048,19 @@ async function runOcrOnFile(file, silent){
       personaName = matchPersonaFromOcrText(personaRes.data.text || '');
       if(personaName){ const at=PERSONA_NAME_MAP[personaName]; if(at){ personaInc=at.inc; personaDec=at.dec; } }
     }
-    // 先走便宜的老路：Tesseract 读整条顶部区域 + 严格的整汉字段匹配。
-    // 未改昵称的宝可梦这一步通常就能认出来，一次 PP-OCR 都不用花。
+    // Tesseract 读整条顶部区域 + 严格的整汉字段匹配。
     let pkRec = matchPokemonFromOcrText(nameRes.data.text || '');
-    // 没认出来才动用 PP-OCR 做版面切分。这种情况下本来就要走"主技能+数量"兜底反查（也要用
-    // PP-OCR），所以这一次调用不算额外开销；而且它顺带把昵称干净地取出来，之前是直接留空的。
-    let nameField = null;
-    if(!pkRec){
-      try{
-        statusEl.textContent = '名字没直接认出，正在按版面精确定位名字…';
-        nameField = await extractNameFieldByLayout(img, W, H);
-        if(nameField && nameField.clean){
-          const byField = matchPokemonFromNameField(nameField.clean);
-          if(byField){
-            pkRec = byField;
-            console.log('版面定位名字字段命中物种：「' + nameField.raw + '」→ ' + byField[1] + ' ' + byField[0]);
-          } else {
-            console.log('版面定位到名字字段「' + nameField.raw + '」，但它不是任何物种名 → 判定为玩家自起的昵称');
-          }
-        }
-      }catch(err){ console.log('版面定位名字失败，忽略：', err.message); }
-    }
+    // 名字没读到（比如改了昵称/被涂抹）——不再有版面精确定位这条路（依赖 PP-OCR 的文字框坐标，
+    // 已随 PP-OCR 一起移除），昵称直接留空交给用户手动填。
 
-    // 名字区域没读到（比如改了昵称/被涂抹）→ 用"主技能+两槽数量+食材图标"签名反查：
+    // 名字区域没读到 → 用"主技能+两槽数量+食材图标"签名反查：
     // 要求主技能精确或子串匹配、并且两槽数量都对得上，双重验证，误判概率低。
     // 这里【只】保留签名反查这一条兜底。以前还有一条"从副技能文字里扫宝可梦名字子串"的兜底，
     // 实测它会在一大坨半调子乱码里撞上完全不相关的名字（真实案例：小火焰猴被认成"皮宝宝"），
     // 已彻底去掉——签名也认不出时宁可判定"没认出"、弹示意图让用户手动选，也不要塞一个错答案。
     let identifiedBySig = false;
     if(!pkRec){
-      statusEl.textContent = '名字没认出，正在用主技能+食材反查（首次要下载 PP-OCR 模型，约 10~20 秒）…';
-      // 反查完全依赖数量，这里没有"物种"可以拿来验算，所以无条件补一次。
-      // ⚠️ 必须串行，不要图快改成 Promise.all：Paddle.js 用的是单个 WebGL 上下文，两次推理并发会
-      // 互相抢占，实测 16 张样本从「13对/1未认出/平均10.8秒」劣化到「11对/3未认出/平均19.0秒」
-      // ——既更慢又更不准。
-      await qty30.refine();
-      await qty60.refine();
+      statusEl.textContent = '名字没认出，正在用主技能+食材反查…';
       pkRec = await identifyBySignature(mainSkillText, qty30.vals, qty60.vals, ing30Canvas, ing60Canvas);
       if(pkRec) identifiedBySig = true;
     }
@@ -8371,10 +8092,9 @@ async function runOcrOnFile(file, silent){
     console.log('性格区域原始文字：', JSON.stringify(personaRes.data.text));
     console.log('主技能区域原始文字：', JSON.stringify(mainSkillText));
     console.log('食材区域定位：30级槽=', badgeLoc.badge30?'动态定位成功':'退回固定坐标兜底', ' 60级槽=', badgeLoc.badge60?'动态定位成功':'退回固定坐标兜底');
-    const padDesc = q => q.refined ? String(q.padVal) : '未调用(Tesseract读数与物种相符)';
     console.log('食材数量 ×N：'
-      + '30级槽 → Tesseract=' + qty30.tessVal + ' PP-OCR=' + padDesc(qty30) + ' 候选=' + JSON.stringify(qty30.vals)
-      + ' ｜ 60级槽 → Tesseract=' + qty60.tessVal + ' PP-OCR=' + padDesc(qty60) + ' 候选=' + JSON.stringify(qty60.vals),
+      + '30级槽 → Tesseract=' + qty30.tessVal + ' 候选=' + JSON.stringify(qty30.vals)
+      + ' ｜ 60级槽 → Tesseract=' + qty60.tessVal + ' 候选=' + JSON.stringify(qty60.vals),
       '\n  Tesseract 票数分布：30级槽=', qty30.votes, ' 60级槽=', qty60.votes);
     if(!pkRec){
       console.log('名字没认出→已尝试"主技能+数量+食材"兜底反查，结果：仍未认出');
@@ -8441,15 +8161,9 @@ async function runOcrOnFile(file, silent){
       closeOcrReview();
       openDashboard();
     }
-    // nickname：只有"版面精确切出来、且确认它不是物种名"时才算真昵称。
-    // 整段 OCR 文字里硬凑昵称的老做法依然禁止（那必然是乱码），这里给出的是干净字段。
-    // 只有"版面精确切出来、确认不是物种名、且至少 2 个字"才当昵称。
-    // 1 个字的结果基本都是 PP-OCR 把文字框切碎了（实测耿鬼那张 4 字昵称只切出"天"），
-    // 与其存个残缺的，不如按原规则留空。
-    const nickClean = (nameField && nameField.clean) ? nameField.clean : '';
-    const nickname = (nickClean.length >= 2 && !matchPokemonFromNameField(nickClean))
-      ? boxTrimNickname(nickClean) : '';
-    return {ok:true, pkRec, nickname, nameField: nameField ? nameField.raw : '',
+    // 昵称没有可靠的识别路径（整段 OCR 文字里硬凑昵称必然是乱码），一律留空交给用户手动填。
+    const nickname = '';
+    return {ok:true, pkRec, nickname, nameField: '',
             nameRawText:(nameRes&&nameRes.data&&nameRes.data.text)||'', personaName, personaInc, personaDec, skillMatches};
   }catch(err){
     statusEl.textContent = '识别出错：'+err.message+'（可以直接关闭重试，或换一张更清晰的截图）';
@@ -9005,7 +8719,7 @@ function sleepAttrOfName(name){
 function capSleepTypeOf(x){
   if(SLEEP_SPLIT_NAMES[x.name]){
     return { cls:'cap-sleep-split',
-             labHtml:'<span class="s-deep">深</span>/<span class="s-calm">安</span>' };
+             labHtml:'<span class="s-calm">安</span>/<span class="s-deep">深</span>' };
   }
   const key = (x.baby && x.baby !== x.name) ? x.baby : x.name;   // 幼体优先，不进化就是自身
   let t = SLEEP_NAME_SPECIAL[key] || SLEEP_ATTR_MAP[sleepAttrOfName(key)] || null;
@@ -10580,6 +10294,7 @@ function openDashboardForBoxEntry(entryId){
   state.decAttr = e.decAttr;
   state.ingChoice2 = e.ingChoice2;
   state.ingChoice3 = e.ingChoice3;
+  state.satiety = e.satiety || 0;
   renderAll();
   openDashboard();
 }
@@ -10698,6 +10413,7 @@ function boxDetailLoadEntry(entryId){
   state.decAttr = e.decAttr;
   state.ingChoice2 = e.ingChoice2;
   state.ingChoice3 = e.ingChoice3;
+  state.satiety = e.satiety || 0;
   renderBoxDetailHeader(e);
   renderGraduation('boxdet-');
   renderYieldAnalysis('boxdet-');
