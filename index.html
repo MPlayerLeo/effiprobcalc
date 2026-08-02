@@ -625,7 +625,8 @@
   }
   .box-sort-btn.box-sort-active{ border-color:var(--accent); background:var(--accent); color:#fff; }
 
-  .box-grid-scroll{ flex:1 1 auto; overflow-y:auto; padding:12px 10px 20px; }
+  /* overscroll-behavior:contain —— 网格滚到头之后继续拖，不要把滚动"传染"给下层页面 */
+  .box-grid-scroll{ flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; padding:12px 10px 20px; }
   .box-grid{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px 6px; }
   .box-grid-empty{ text-align:center; color:#8a8375; font-size:13px; padding:60px 20px; line-height:1.6; }
   /* 拉到底时额外留出的空白区（约2排格子高，具体高度由 JS 按实际格子渲染高度算出）：
@@ -9230,9 +9231,11 @@ function capApplyChartTransform(rotwrap){
   // 但内部布局宽度变宽了，于是同一屏能排下更多柱子——这才是"向右扩展"的来源
   rotwrap.style.width = (100/zoom)+'%';
   rotwrap.style.transform = `scale(${zoom})`;
-  // transform 不影响布局高度，缩小后下方会空出一截，把外层高度同步压回去
+  // transform 不影响布局高度，缩小后下方会空出一截，把外层高度同步压回去。
+  // 原样(zoom=1)时必须清空而不是写死像素值——写死了之后图表内容变高（头像堆叠层数变了）
+  // 外层也不会跟着长，底下的内容就会被压住。
   const outer = rotwrap.parentElement;
-  if(outer) outer.style.height = (rotwrap.offsetHeight * zoom) + 'px';
+  if(outer) outer.style.height = (zoom === 1) ? '' : (rotwrap.offsetHeight * zoom) + 'px';
 }
 function capAttachPinchZoom(scrollEl, rotwrap){
   if(!scrollEl || !rotwrap) return;
@@ -9714,24 +9717,30 @@ function positionBoxOverlayOrigin(bubble){
   bubble.style.transformOrigin = `${originX}px ${originY}px`;
 }
 /* ---- v3.17 盒子打开期间锁住下层页面 ----
-   光有遮罩挡点击还不够：iOS Safari 上 body{overflow:hidden} 拦不住触摸滑动，
-   必须把 body 改成 position:fixed 并把当前滚动位置顶上去，关闭时再滚回原处，
-   否则关掉盒子会发现页面已经跳到顶部了。 */
-let pageScrollLockY = 0, pageScrollLocked = false;
+   踩过的坑：一开始用 body{position:fixed}，后来试 overflow:hidden，两者都会把页面变成
+   「不可滚动」。手机浏览器一检测到不可滚动，就把之前滑走时收起的地址栏又弹回来，
+   视口瞬间矮一百多 px，钉在 bottom:0 的底部切换栏跟着被顶上去，页底露出一条空白。
+
+   所以这里反过来做：页面**照旧保持可滚动**（浏览器就不会去动工具栏），
+   只是把滚到下层页面的滚动事件拦掉。盒子自己内部的滚动区照常放行。 */
+let pageScrollLocked = false;
+function blockOuterScroll(e){
+  // 盒子气泡（含详情页气泡，两者都带 .box-bubble-wrap）内部要能正常滚动，放行
+  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap')) return;
+  e.preventDefault();
+}
 function lockPageScroll(){
   if(pageScrollLocked) return;
   pageScrollLocked = true;
-  pageScrollLockY = window.scrollY || document.documentElement.scrollTop || 0;
-  const s = document.body.style;
-  s.position = 'fixed'; s.top = (-pageScrollLockY)+'px';
-  s.left = '0'; s.right = '0'; s.width = '100%';
+  // 必须 passive:false，否则 preventDefault 无效
+  window.addEventListener('touchmove', blockOuterScroll, {passive:false});
+  window.addEventListener('wheel',     blockOuterScroll, {passive:false});
 }
 function unlockPageScroll(){
   if(!pageScrollLocked) return;
   pageScrollLocked = false;
-  const s = document.body.style;
-  s.position = ''; s.top = ''; s.left = ''; s.right = ''; s.width = '';
-  window.scrollTo(0, pageScrollLockY);
+  window.removeEventListener('touchmove', blockOuterScroll, {passive:false});
+  window.removeEventListener('wheel',     blockOuterScroll, {passive:false});
 }
 
 function openBoxOverlay(){
