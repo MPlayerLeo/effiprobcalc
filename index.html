@@ -531,6 +531,14 @@
   /* ============ 宝可梦盒：顶层气泡浮窗框架 ============ */
   /* 纯浮窗定位：上下都以屏幕为准，不再跟站点标题挂钩；左右由 JS 对齐 .wrap（body 左右内边距有媒体查询，
      写死会对不齐）。下缘离页面切换栏留出足够空间放那条小尾巴 */
+  /* v3.17 盒子遮罩：盒子浮窗盖不住的那圈区域，之前是能穿透点到、也能滑动下层页面的。
+     z-index 1040 卡在页面内容(≤1000)和盒子浮层(1050)之间，但低于底部切换栏(1100)——
+     切换栏必须留着能点，否则盒子就关不掉了。touch-action:none 挡住手机上的滑动。 */
+  .box-backdrop{
+    display:none; position:fixed; inset:0; z-index:1040;
+    background:rgba(0,0,0,.28); touch-action:none;
+  }
+  .box-backdrop.open{ display:block; }
   .box-overlay{
     display:none; position:fixed; left:0; right:0;
     top:calc(20px + env(safe-area-inset-top, 0px)); bottom:104px;
@@ -1348,7 +1356,11 @@
 
   /* 食材总览纵向柱状图 */
   .cap-chart-outer{ position:relative; }
-  .cap-chart-rotwrap{ transition:transform .35s ease; touch-action:pan-x; }
+  /* transform-origin 靠左：默认的 center 会让缩小时两边一起往中间收，左边空出一条，
+     而且可视柱子数量一点没变（内容和视口同比缩小）。改成 left top 之后配合下面 JS 把
+     宽度放大成 1/zoom，缩小才真正等于"往右多露出几根柱子" */
+  .cap-chart-rotwrap{ transition:transform .35s ease, width .35s ease; touch-action:pan-x;
+    transform-origin:left top; }
   .cap-chart-rotwrap.cap-chart-nozoomtrans{ transition:none; }
   .cap-cchart{ position:relative; padding:10px 6px 0 0; display:flex; align-items:flex-start; }
   .cap-caxis{ position:relative; flex:0 0 40px; width:40px; }
@@ -1452,8 +1464,10 @@
    父级放开 overflow（沿用项目里 .cap-av 已有的同款做法） */
 .pk-portrait.pk-has-satiety-medal{ overflow:visible; }
 .pk-portrait.pk-has-satiety-medal img{ border-radius:12px; }
-/* ---- v3.16 盒子左下角"奖章"开关小圆浮窗（沿用修改面板/控制参数那两个 FAB 的观感）---- */
-.box-medal-fab{ position:fixed; left:14px; bottom:96px; width:46px; height:46px; border-radius:50%;
+/* ---- v3.16 盒子左下角"奖章"开关小圆浮窗（沿用修改面板/控制参数那两个 FAB 的观感）----
+   v3.17：尺寸/边距/高度全部对齐右下角那两个 .panel-fab（48px、离边 24px、bottom 100/158），
+   左右两侧四颗浮窗因此上下齐平、左右对称 */
+.box-medal-fab{ position:fixed; left:24px; bottom:100px; width:48px; height:48px; border-radius:50%;
   display:none; align-items:center; justify-content:center; z-index:1200; cursor:pointer;
   background:#fff; border:2px solid var(--accent); color:var(--accent-dk);
   font-size:12px; font-weight:900; box-shadow:0 2px 8px rgba(0,0,0,.22); user-select:none; }
@@ -1472,8 +1486,9 @@
 .box-auth-register{ background:#3a7fd5; }
 .box-auth-login{ background:#3f9a52; }
 
-/* 登录后的"账号设置"小圆浮窗：沿用奖章浮窗那一套，位置摞在它上方 */
-.box-account-fab{ bottom:150px; flex-direction:column; line-height:1.15; font-size:11.5px; }
+/* 登录后的"账号设置"小圆浮窗：沿用奖章浮窗那一套，位置摞在它上方，
+   bottom 与右侧「修改面板」那颗(158px)齐平 */
+.box-account-fab{ bottom:158px; flex-direction:column; line-height:1.15; font-size:11.5px; }
 
 /* 注册/登录浮窗：层级要比奖章/账号浮窗(1200)高，不然那两颗会压在弹窗上面 */
 .auth-overlay{ z-index:1300; }
@@ -1884,6 +1899,7 @@
   </div>
 </div>
 
+<div class="box-backdrop" id="boxBackdrop"></div>
 <div class="box-overlay" id="boxOverlay">
   <div class="box-bubble-wrap" id="boxBubbleWrap">
   <div class="box-bubble-tail" id="boxBubbleTail"></div>
@@ -9195,10 +9211,28 @@ function capComputeChartH(container){
   const avail = window.innerHeight - rect.top - 90; // 适应手机上下可视高度，预留标签空间
   return Math.max(160, Math.min(460, Math.round(avail)));
 }
+/* 能缩到多小：缩到"全部柱子刚好都露出来"就够了，再小只是徒增留白。
+   内容总宽 = 左侧刻度轴(40) + 柱数×(柱宽+间距)，视口宽取外层容器实际宽度。 */
+function capChartMinZoom(rotwrap){
+  if(!rotwrap) return 0.6;
+  const cols = rotwrap.querySelectorAll('.cap-ccol').length;
+  const outer = rotwrap.parentElement;
+  const viewW = outer ? outer.getBoundingClientRect().width : 0;
+  if(!cols || viewW <= 0) return 0.6;
+  const needW = 40 + cols*(CAP_BAR_W + CAP_COL_GAP) + 8;
+  // 本来就全放得下时不允许再缩（min=1）；放不下才按比例给出下限，并留 0.35 的兜底
+  return Math.max(0.35, Math.min(1, viewW / needW));
+}
 function capApplyChartTransform(rotwrap){
   if(!rotwrap) return;
   const zoom = capState.chartZoom||1;
+  // 宽度先按 1/zoom 放大，再被 scale(zoom) 缩回去：视觉宽度始终正好等于容器宽度，
+  // 但内部布局宽度变宽了，于是同一屏能排下更多柱子——这才是"向右扩展"的来源
+  rotwrap.style.width = (100/zoom)+'%';
   rotwrap.style.transform = `scale(${zoom})`;
+  // transform 不影响布局高度，缩小后下方会空出一截，把外层高度同步压回去
+  const outer = rotwrap.parentElement;
+  if(outer) outer.style.height = (rotwrap.offsetHeight * zoom) + 'px';
 }
 function capAttachPinchZoom(scrollEl, rotwrap){
   if(!scrollEl || !rotwrap) return;
@@ -9218,7 +9252,7 @@ function capAttachPinchZoom(scrollEl, rotwrap){
       const d = dist(e.touches[0], e.touches[1]);
       if(startDist>0){
         let z = startZoom * (d/startDist);
-        z = Math.max(0.6, Math.min(2.5, z));
+        z = Math.max(capChartMinZoom(rotwrap), Math.min(2.5, z));
         capState.chartZoom = z;
         capApplyChartTransform(rotwrap);
       }
@@ -9346,6 +9380,8 @@ function capRenderFoodChart(container){
     };
   });
   const rotwrapEl = document.getElementById('capChartRotwrap');
+  // 上次留下的缩放值可能比这次的下限还小（柱子数量变了），先夹回合法区间再套用
+  capState.chartZoom = Math.max(capChartMinZoom(rotwrapEl), Math.min(2.5, capState.chartZoom||1));
   capApplyChartTransform(rotwrapEl);
   capAttachPinchZoom(document.getElementById('capChartScroll'), rotwrapEl);
 }
@@ -9677,9 +9713,33 @@ function positionBoxOverlayOrigin(bubble){
   const originY = fr.top + fr.height/2 - pr.top;
   bubble.style.transformOrigin = `${originX}px ${originY}px`;
 }
+/* ---- v3.17 盒子打开期间锁住下层页面 ----
+   光有遮罩挡点击还不够：iOS Safari 上 body{overflow:hidden} 拦不住触摸滑动，
+   必须把 body 改成 position:fixed 并把当前滚动位置顶上去，关闭时再滚回原处，
+   否则关掉盒子会发现页面已经跳到顶部了。 */
+let pageScrollLockY = 0, pageScrollLocked = false;
+function lockPageScroll(){
+  if(pageScrollLocked) return;
+  pageScrollLocked = true;
+  pageScrollLockY = window.scrollY || document.documentElement.scrollTop || 0;
+  const s = document.body.style;
+  s.position = 'fixed'; s.top = (-pageScrollLockY)+'px';
+  s.left = '0'; s.right = '0'; s.width = '100%';
+}
+function unlockPageScroll(){
+  if(!pageScrollLocked) return;
+  pageScrollLocked = false;
+  const s = document.body.style;
+  s.position = ''; s.top = ''; s.left = ''; s.right = ''; s.width = '';
+  window.scrollTo(0, pageScrollLockY);
+}
+
 function openBoxOverlay(){
   if(boxOverlayOpen) return;
   boxOverlayOpen = true;
+  const backdrop = document.getElementById('boxBackdrop');
+  if(backdrop) backdrop.classList.add('open');
+  lockPageScroll();
   const overlay = document.getElementById('boxOverlay');
   const bubble = document.getElementById('boxBubbleWrap');
   applyBoxOverlayBounds();
@@ -9706,6 +9766,9 @@ function closeBoxOverlay(){
   closeBoxInfoBubble();
   closeBoxFilterPop();
   boxOverlayOpen = false;
+  const backdrop = document.getElementById('boxBackdrop');
+  if(backdrop) backdrop.classList.remove('open');
+  unlockPageScroll();
   // 必须在这里主动同步：盒子关闭时不会再走 renderBoxPage，而 updateBoxMedalFab 的另一个调用点
   // 正是 renderBoxCountWidget（只在盒子渲染时跑）。少了这一句，浮窗就会一直留在屏幕左下角。
   updateBoxMedalFab();
@@ -9725,6 +9788,10 @@ function closeBoxOverlay(){
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active', t.dataset.page===activePageId));
   positionTabIndicator();
   if(activePageId!=='page4'){ updateFabVisibility(); updateControlsFabVisibility(); }
+  // 捕捉推荐页(page4)本来就不该有这两颗浮窗，但 openBoxOverlay 是直接 display='flex' 强开的，
+  // 上面那句又跳过了 page4，于是关掉盒子后「修改面板」就残留在页面上。这里补一次收起，
+  // 跟 switchPage 里 showFabs=false 的分支保持一致。
+  else { ['panelFab','controlsFab'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; }); }
   // 排名对比页：盒子内切换/浏览宝可梦期间排名重算是延后的（见 renderRankModule 顶部的 boxOverlayOpen 判断），
   // 退出盒子时统一在这里补算一次；做法与 closeDashboard 收尾一致，先弹"排名计算中"再算，避免白屏卡顿感
   const page3 = document.getElementById('page3');
