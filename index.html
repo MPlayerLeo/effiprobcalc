@@ -5352,7 +5352,7 @@ function toggleBoxMedalFab(){
 
 // 后端地址。留空字符串 = 请求同源的 /api/...（Worker 挂在自己域名的 /api/* 路由上时用这种）；
 // Worker 部署在 workers.dev 上就填完整地址，例如 'https://effiprobcalc-auth.xxx.workers.dev'
-const AUTH_API_BASE = 'https://effiprobcalc-auth.zuckerfrei-pomelk.workers.dev';
+const AUTH_API_BASE = 'https://api.iqdooh.top';
 const AUTH_TOKEN_KEY = 'effiprobcalc_auth_v1';
 // 用 var 而不是 let：saveBoxData/saveUserPrefs 里的 scheduleCloudPush 有可能在这一段执行到之前
 // 就被顶层初始化代码调用，var 至少能拿到 undefined 而不是踩进 TDZ 直接抛 ReferenceError
