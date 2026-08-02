@@ -1458,6 +1458,60 @@
   background:#fff; border:2px solid var(--accent); color:var(--accent-dk);
   font-size:12px; font-weight:900; box-shadow:0 2px 8px rgba(0,0,0,.22); user-select:none; }
 .box-medal-fab.on{ background:var(--accent); color:#fff; }
+
+/* ============ v3.17 账号系统 ============ */
+/* 盒子大浮窗底部常驻吸底的注册/登录条：它是 .box-bubble-panel 这个 flex 列的最后一个子项，
+   flex:0 0 auto 让它不参与滚动区的伸缩，自然就"钉"在气泡底边上 */
+.box-auth-bar{
+  flex:0 0 auto; display:flex; gap:8px; padding:8px 10px;
+  background:var(--panel); border-top:1px solid var(--line);
+}
+.box-auth-btn{ flex:1 1 0; border:none; border-radius:9px; padding:10px 4px;
+  font-size:13px; font-weight:800; color:#fff; cursor:pointer; }
+.box-auth-btn:hover{ filter:brightness(1.08); }
+.box-auth-register{ background:#3a7fd5; }
+.box-auth-login{ background:#3f9a52; }
+
+/* 登录后的"账号设置"小圆浮窗：沿用奖章浮窗那一套，位置摞在它上方 */
+.box-account-fab{ bottom:150px; flex-direction:column; line-height:1.15; font-size:11.5px; }
+
+/* 注册/登录浮窗：层级要比奖章/账号浮窗(1200)高，不然那两颗会压在弹窗上面 */
+.auth-overlay{ z-index:1300; }
+.auth-box{ width:min(360px,100%); padding:14px 20px 20px; }
+.auth-head{ display:flex; justify-content:flex-end; margin-bottom:2px; }
+/* 标题栏那组吉祥物原样搬过来：外层留出放大后的高度，内层保持 137×40 的原始坐标系，
+   四只的 left/width/height 全部沿用 .site-mascot-* 不动，只整体放大 1.5 倍 */
+.auth-mascot-outer{ height:60px; display:flex; align-items:flex-end; justify-content:center; }
+.auth-mascot-cluster{ position:relative; width:137px; height:40px; pointer-events:none;
+  transform:scale(1.5); transform-origin:center bottom; }
+.auth-brand-title{ text-align:center; font-size:26px; font-weight:900; letter-spacing:.04em;
+  color:var(--accent-dk); margin:14px 0 4px; }
+.auth-brand-sub{ text-align:center; font-size:12px; color:#9a9484; margin-bottom:16px; }
+.auth-fields{ display:flex; flex-direction:column; gap:10px; }
+.auth-fields input{
+  width:100%; box-sizing:border-box; padding:11px 12px; font-size:14px;
+  border:1px solid var(--line); border-radius:9px; background:var(--paper); color:var(--ink);
+}
+.auth-fields input:focus{ outline:none; border-color:var(--accent); }
+.auth-msg{ min-height:18px; margin:9px 2px 0; font-size:12.5px; line-height:1.4; color:#c1443a; }
+.auth-msg.ok{ color:#3f9a52; }
+.auth-submit{
+  width:100%; margin-top:6px; border:none; border-radius:10px; padding:12px 4px;
+  font-size:14.5px; font-weight:800; color:#fff; cursor:pointer; background:var(--accent);
+}
+.auth-submit:disabled{ opacity:.55; cursor:default; }
+.auth-switch{ margin-top:12px; text-align:center; font-size:12.5px; color:#8a8375; }
+.auth-switch b{ color:var(--accent); cursor:pointer; }
+
+/* 账号设置浮窗里的两颗按钮 */
+.account-info{ font-size:13px; color:var(--ink); line-height:1.7; margin-bottom:14px;
+  padding:10px 12px; background:var(--paper); border:1px solid var(--line); border-radius:9px; }
+.account-info span{ color:#8a8375; }
+.account-btns{ display:flex; flex-direction:column; gap:9px; }
+.account-btn{ border:none; border-radius:10px; padding:12px 4px; font-size:14px; font-weight:800;
+  color:#fff; cursor:pointer; }
+.account-btn-blue{ background:#3a7fd5; }
+.account-btn-red{ background:#c1443a; }
 </style>
 
 </head>
@@ -1867,6 +1921,10 @@
       <button type="button" class="box-batch-cancel-btn" id="boxBatchCancelBtn">取消</button>
       <button type="button" class="box-batch-delete-btn" id="boxBatchDeleteConfirmBtn">删除</button>
     </div>
+    <div class="box-auth-bar" id="boxAuthBar">
+      <button type="button" class="box-auth-btn box-auth-register" id="boxAuthRegisterBtn">注册</button>
+      <button type="button" class="box-auth-btn box-auth-login" id="boxAuthLoginBtn">登录</button>
+    </div>
   </div>
   </div>
   <input type="file" id="boxImportFileInput" accept="application/json,.json" style="display:none;">
@@ -2150,6 +2208,59 @@
 </div>
 
 <div class="box-medal-fab" id="boxMedalFab">奖章</div>
+<div class="box-medal-fab box-account-fab" id="boxAccountFab"><span>账号</span><span>设置</span></div>
+
+<div class="cap-ctrl-overlay auth-overlay" id="authModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="auth-head"><span class="cap-ctrl-close" id="authModalClose">✕</span></div>
+    <div class="auth-mascot-outer">
+      <div class="auth-mascot-cluster" id="authMascotCluster">
+        <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
+        <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
+        <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
+        <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
+      </div>
+    </div>
+    <div class="auth-brand-title">土王智商高</div>
+    <div class="auth-brand-sub" id="authBrandSub">注册一个账号，盒子和设置就能跟着你换设备</div>
+    <div class="auth-fields" id="authFieldsRegister">
+      <input type="email" id="authRegEmail" placeholder="邮箱" autocomplete="email">
+      <input type="text" id="authRegName" placeholder="用户名（2~16 个字）" autocomplete="username">
+      <input type="password" id="authRegPwd" placeholder="密码（至少 6 位）" autocomplete="new-password">
+      <input type="password" id="authRegPwd2" placeholder="确认密码" autocomplete="new-password">
+    </div>
+    <div class="auth-fields" id="authFieldsLogin" style="display:none;">
+      <input type="text" id="authLoginAcc" placeholder="邮箱或用户名" autocomplete="username">
+      <input type="password" id="authLoginPwd" placeholder="密码" autocomplete="current-password">
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+    <button type="button" class="auth-submit" id="authSubmitBtn">注册</button>
+    <div class="auth-switch" id="authSwitchLine"></div>
+  </div>
+</div>
+
+<div class="cap-ctrl-overlay auth-overlay" id="accountModal">
+  <div class="cap-ctrl-box">
+    <div class="cap-ctrl-head">账号设置<span class="cap-ctrl-close" id="accountModalClose">✕</span></div>
+    <div class="account-info" id="accountInfoLine"></div>
+    <div class="account-btns">
+      <button type="button" class="account-btn account-btn-blue" id="accountChangePwdBtn">修改密码</button>
+      <button type="button" class="account-btn account-btn-red" id="accountLogoutBtn">退出登录</button>
+    </div>
+  </div>
+</div>
+
+<div class="cap-ctrl-overlay auth-overlay" id="pwdModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="cap-ctrl-head">修改密码<span class="cap-ctrl-close" id="pwdModalClose">✕</span></div>
+    <div class="auth-fields">
+      <input type="password" id="pwdNew1" placeholder="新密码（至少 6 位）" autocomplete="new-password">
+      <input type="password" id="pwdNew2" placeholder="确认新密码" autocomplete="new-password">
+    </div>
+    <div class="auth-msg" id="pwdMsg"></div>
+    <button type="button" class="auth-submit" id="pwdSubmitBtn">确认修改</button>
+  </div>
+</div>
 <div class="dashboard-overlay" id="finalPkOverlay">
   <div class="dashboard-panel" id="finalPkPanel">
     <div class="dash-header">选择最终宝可梦<span class="dash-close" id="finalPkCloseBtn">✕</span></div>
@@ -2460,7 +2571,7 @@ function computeDisplayEfficiency(labels, type, level, persona, squadN){
 const POKEMON_DEX_DATA = [["#001","妙蛙种子","草","食材",null,null,"aaa","aaa","蜜","番茄","土豆"],["#002","妙蛙草","草","食材",null,null,"aaa","aaa","蜜","番茄","土豆"],["#003","妙蛙花","草","食材",null,null,"aaa","aaa","蜜","番茄","土豆"],["#004","小火龙","火","食材",null,null,"aaa","aaa","肠","姜","叶子"],["#005","火恐龙","火","食材",null,null,"aaa","aaa","肠","姜","叶子"],["#006","喷火龙","火","食材",null,null,"aaa","aaa","肠","姜","叶子"],["#007","杰尼龟","水","食材",null,null,"aaa+abb","aaa+abb","奶","可可","肠"],["#008","卡咪龟","水","食材",null,null,"aaa+abb","aaa+abb","奶","可可","肠"],["#009","水箭龟","水","食材",null,null,"aaa+abb","aaa+abb","奶","可可","肠"],["#010","绿毛虫","虫","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#011","铁甲蛹","虫","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#012","巴大蝶","虫","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#019","小拉达","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#020","拉达","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#023","阿柏蛇","毒","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#024","阿柏怪","毒","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#025","皮卡丘","电","树果",null,null,"电果","电果",null,null,null],["#025-1","皮卡丘（万圣节）","电","树果","电果","电果推荐 皮卡丘",null,null,null,null,null],["#025-2","皮卡丘（佳节）","电","功能","梦碎","梦碎推荐 溶食兽",null,null,null,null,null],["#026","雷丘","电","树果",null,null,"电果","电果",null,null,null],["#027","穿山鼠","地面","功能","弱","精选驳杂 难堪大用",null,null,null,null,null],["#028","穿山王","地面","功能","弱","精选驳杂 难堪大用",null,null,null,null,null],["#035","皮皮","妖精","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#036","皮可西","妖精","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#037","六尾","火","树果",null,null,"火果",null,null,null,null],["#037-1","冰六尾","冰","树果",null,null,"冰果","冰果",null,null,null],["#038","九尾","火","树果",null,null,"火果",null,null,null,null],["#038-1","冰九尾","冰","树果",null,null,"冰果","冰果",null,null,null],["#039","胖丁","妖精","功能","奶妈","奶妈推荐 拉鲁拉丝 草苗龟",null,null,null,null,null],["#040","胖可丁","妖精","功能","奶妈","奶妈推荐 拉鲁拉丝 草苗龟",null,null,null,null,null],["#050","地鼠","地面","食材","食材","番茄推荐 喇叭芽 小猫怪",null,null,"番茄","葱","豆"],["#051","三地鼠","地面","食材","食材","番茄推荐 喇叭芽 小猫怪",null,null,"番茄","葱","豆"],["#052","喵喵","一般","功能","梦碎","梦碎推荐 溶食兽",null,null,null,null,null],["#053","猫老大","一般","功能","梦碎","梦碎推荐 溶食兽",null,null,null,null,null],["#054","可达鸭","水","能量","水果","水果推荐 小锯鳄",null,null,null,null,null],["#055","哥达鸭","水","能量","水果","水果推荐 小锯鳄",null,null,null,null,null],["#056","猴怪","格斗","树果","斗果","斗果推荐 小火焰猴",null,null,null,null,null],["#057","火爆猴","格斗","树果","斗果","斗果推荐 小火焰猴",null,null,null,null,null],["#058","卡蒂狗","火","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#059","风速狗","火","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#069","喇叭芽","草","食材",null,null,"aaa","aaa","番茄","土豆","葱"],["#070","口呆花","草","食材",null,null,"aaa","aaa","番茄","土豆","葱"],["#071","大食花","草","食材",null,null,"aaa","aaa","番茄","土豆","葱"],["#074","小拳石","岩石","食材",null,null,"aaa","aaa","豆","土豆","蘑菇"],["#075","隆隆石","岩石","食材",null,null,"aaa","aaa","豆","土豆","蘑菇"],["#076","隆隆岩","岩石","食材",null,null,"aaa","aaa","豆","土豆","蘑菇"],["#079","呆呆兽","水","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#080","呆壳兽","水","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#081","小磁怪","钢","功能",null,null,"开锅","开锅",null,null,null],["#082","三合一磁怪","钢","功能",null,null,"开锅","开锅",null,null,null],["#083","大葱鸭","飞行","食材",null,null,"aaa","aaa","葱","肠","姜"],["#084","嘟嘟","飞行","树果","飞果","飞果推荐 毛头小鹰",null,null,null,null,null],["#085","嘟嘟利","飞行","树果","飞果","飞果推荐 毛头小鹰",null,null,null,null,null],["#092","鬼斯","幽灵","食材",null,null,"abb",null,"叶子","蘑菇","油"],["#093","鬼斯通","幽灵","食材",null,null,"abb",null,"叶子","蘑菇","油"],["#094","耿鬼","幽灵","食材",null,null,"abb",null,"叶子","蘑菇","油"],["#095","大岩蛇","岩石","树果",null,null,"岩果",null,null,null,null],["#104","卡拉卡拉","地面","树果","地果","地果推荐 水跃鱼",null,null,null,null,null],["#105","嘎啦嘎啦","地面","树果","地果","地果推荐 水跃鱼",null,null,null,null,null],["#113","吉利蛋","一般","食材",null,null,"aaa","aaa","蛋","土豆","蜜"],["#115","袋兽","一般","食材","食材","姜推荐 幼基拉斯",null,null,"姜","土豆","豆"],["#122","魔墙人偶","超能力","食材","食材","番茄推荐 喇叭芽 小猫怪",null,null,"番茄","土豆","葱"],["#127","凯罗斯","虫","食材",null,null,"aaa",null,"蜜","苹果","肠"],["#132","百变怪","一般","食材","食材","油推荐 小猫怪 不良蛙",null,null,"油","葱","尾巴"],["#133","伊布","一般","功能",null,null,"开锅、奶妈",null,null,null,null],["#133-1","伊布（佳节）","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#133-2","伊布（万圣节）","一般","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#134","水伊布","水","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#135","雷伊布","电","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#136","火伊布","火","功能",null,null,"开锅",null,null,null,null],["#147","迷你龙","龙","食材",null,null,"aaa+abb","aaa","叶子","玉米","油"],["#148","哈克龙","龙","食材",null,null,"aaa+abb","aaa","叶子","玉米","油"],["#149","快龙","龙","食材",null,null,"aaa+abb","aaa","叶子","玉米","油"],["#151","梦幻","超能力","功能",null,null,"全能",null,null,null,null],["#152","菊草叶","草","树果",null,null,"草果",null,null,null,null],["#153","月桂叶","草","树果",null,null,"草果",null,null,null,null],["#154","大竺葵","草","树果",null,null,"草果",null,null,null,null],["#155","火球鼠","火","树果",null,null,"火果","火果",null,null,null],["#156","火岩鼠","火","树果",null,null,"火果","火果",null,null,null],["#157","火暴兽","火","树果",null,null,"火果","火果",null,null,null],["#158","小锯鳄","水","树果",null,null,"水果","水果",null,null,null],["#159","蓝鳄","水","树果",null,null,"水果","水果",null,null,null],["#160","大力鳄","水","树果",null,null,"水果","水果",null,null,null],["#172","皮丘","电","树果",null,null,"电果","电果",null,null,null],["#173","皮宝宝","妖精","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#174","宝宝丁","妖精","功能","奶妈","奶妈推荐 拉鲁拉丝 草苗龟",null,null,null,null,null],["#175","波克比","妖精","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#176","波克基古","妖精","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#177","天然雀","超能力","树果",null,null,"超果","超果",null,null,null],["#178","天然鸟","超能力","树果",null,null,"超果","超果",null,null,null],["#179","咩利羊","电","能量",null,null,"电果",null,null,null,null],["#180","茸茸羊","电","能量",null,null,"电果",null,null,null,null],["#181","电龙","电","能量",null,null,"电果",null,null,null,null],["#185","树才怪","岩石","能量","弱","数值不足 可悲可叹",null,null,null,null,null],["#194","乌波","水","食材",null,null,"aaa","aaa","蘑菇","土豆","肠"],["#194-1","毒乌波","毒","食材",null,null,"aaa","aaa","可可","咖啡","土豆"],["#195","沼王","水","食材",null,null,"aaa","aaa","蘑菇","土豆","肠"],["#196","太阳伊布","超能力","能量",null,null,"超果",null,null,null,null],["#197","月亮伊布","恶","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#198","黑暗鸦","恶","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#199","呆呆王","水","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#202","果然翁","超能力","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#208","大钢蛇","钢","树果",null,null,"钢果","钢果",null,null,null],["#213","壶壶","虫","功能",null,null,"奶妈","奶妈",null,null,null],["#214","赫拉克罗斯","虫","功能",null,null,"暴击","暴击",null,null,null],["#215","狃拉","恶","树果",null,null,"恶果","恶果",null,null,null],["#225","信使鸟","飞行","食材",null,null,"aaa",null,"蛋","苹果","可可"],["#228","戴鲁比","恶","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#229","黑鲁加","恶","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#242","幸福蛋","一般","食材",null,null,"aaa","aaa","蛋","土豆","蜜"],["#243","雷公","电","功能",null,null,"电队",null,null,null,null],["#244","炎帝","火","功能",null,null,"火队",null,null,null,null],["#245","水君","水","功能",null,null,"水队",null,null,null,null],["#246","幼基拉斯","岩石","食材",null,null,"aaa+abb","aaa","姜","豆","肠"],["#247","沙基拉斯","岩石","食材",null,null,"aaa+abb","aaa","姜","豆","肠"],["#248","班基拉斯","恶","食材",null,null,"aaa+abb","aaa","姜","豆","肠"],["#252","木守宫","草","能量",null,null,"草果","草果",null,null,null],["#253","森林蜥蜴","草","能量",null,null,"草果","草果",null,null,null],["#254","蜥蜴王","草","能量",null,null,"草果","草果",null,null,null],["#255","火稚鸡","火","树果",null,null,"斗果",null,null,null,null],["#256","力壮鸡","格斗","树果",null,null,"斗果",null,null,null,null],["#257","火焰鸡","格斗","树果",null,null,"斗果",null,null,null,null],["#258","水跃鱼","水","树果",null,null,"地果","地果",null,null,null],["#259","沼跃鱼","地面","树果",null,null,"地果","地果",null,null,null],["#260","巨沼怪","地面","树果",null,null,"地果","地果",null,null,null],["#280","拉鲁拉丝","超能力","功能",null,null,"奶妈","奶妈",null,null,null],["#281","奇鲁莉安","超能力","功能",null,null,"奶妈","奶妈",null,null,null],["#282","沙奈朵","超能力","功能",null,null,"奶妈","奶妈",null,null,null],["#287","懒人獭","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#288","过动猿","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#289","请假王","一般","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#302","勾魂眼","恶","功能","梦碎","梦碎推荐 溶食兽",null,null,null,null,null],["#303","大嘴娃","钢","食材","食材","油推荐 小猫怪 不良蛙",null,null,"油","玉米","番茄"],["#304","可可多拉","钢","食材",null,null,"aaa","aaa","肠","咖啡","豆"],["#305","可多拉","钢","食材",null,null,"aaa","aaa","肠","咖啡","豆"],["#306","波士可多拉","钢","食材",null,null,"aaa","aaa","肠","咖啡","豆"],["#311","正电拍拍","电","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#312","负电拍拍","电","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#316","溶食兽","毒","功能",null,null,"梦碎","梦碎",null,null,null],["#317","吞食兽","毒","功能",null,null,"梦碎","梦碎",null,null,null],["#328","大颚蚁","地面","食材",null,null,"aaa","aaa","牛油果","叶子","豆"],["#329","超音波幼虫","地面","食材",null,null,"aaa","aaa","牛油果","叶子","豆"],["#330","沙漠蜻蜓","地面","食材",null,null,"aaa","aaa","牛油果","叶子","豆"],["#333","青绵鸟","一般","树果","龙果","龙果推荐 嗡蝠 宝贝龙",null,null,null,null,null],["#334","七夕青鸟","龙","树果","龙果","龙果推荐 嗡蝠 宝贝龙",null,null,null,null,null],["#353","怨影娃娃","幽灵","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#354","诅咒娃娃","幽灵","树果","弱","数值不足 可悲可叹",null,null,null,null,null],["#359","阿勃梭鲁","恶","食材",null,null,"aaa","aaa","可可","苹果","蘑菇"],["#360","小果然","超能力","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#363","海豹球","冰","树果",null,null,"冰果",null,null,null,null],["#363-1","海豹球（佳节）","冰","功能",null,null,"暴击",null,null,null,null],["#364","海魔狮","冰","树果",null,null,"冰果",null,null,null,null],["#365","帝牙海狮","冰","树果",null,null,"冰果",null,null,null,null],["#371","宝贝龙","龙","树果",null,null,"龙果","龙果",null,null,null],["#372","甲壳龙","龙","树果",null,null,"龙果","龙果",null,null,null],["#373","暴飞龙","龙","树果",null,null,"龙果","龙果",null,null,null],["#380","拉帝亚斯","龙","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#381","拉帝欧斯","龙","能量",null,null,"龙果","龙果",null,null,null],["#387","草苗龟","草","功能",null,null,"奶妈","奶妈",null,null,null],["#388","树林龟","草","功能",null,null,"奶妈","奶妈",null,null,null],["#389","土台龟","地面","功能",null,null,"奶妈","奶妈",null,null,null],["#390","小火焰猴","火","能量",null,null,"斗果","斗果",null,null,null],["#391","猛火猴","格斗","能量",null,null,"斗果","斗果",null,null,null],["#392","烈焰猴","格斗","能量",null,null,"斗果","斗果",null,null,null],["#393","波加曼","水","树果",null,null,"钢果",null,null,null,null],["#394","波皇子","水","树果",null,null,"钢果","钢果",null,null,null],["#395","帝王拿波","钢","树果",null,null,"钢果","钢果",null,null,null],["#403","小猫怪","电","食材",null,null,"aaa+abb","aaa+abb","番茄","油","咖啡"],["#404","勒克猫","电","食材",null,null,"aaa+abb","aaa+abb","番茄","油","咖啡"],["#405","伦琴猫","电","食材",null,null,"aaa+abb","aaa+abb","番茄","油","咖啡"],["#425","飘飘球","幽灵","功能",null,null,"充能",null,null,null,null],["#426","随风球","幽灵","功能",null,null,"充能",null,null,null,null],["#430","乌鸦头头","恶","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#438","盆才怪","岩石","能量","弱","数值不足 可悲可叹",null,null,null,null,null],["#439","魔尼尼","超能力","食材","食材","番茄推荐 喇叭芽 小猫怪",null,null,"番茄","土豆","葱"],["#440","小福蛋","一般","食材",null,null,"aaa","aaa","蛋","土豆","蜜"],["#442","花岩怪","恶","食材",null,null,"aaa","aaa","蘑菇","南瓜","葱"],["#447","利欧路","格斗","功能",null,null,"梦碎",null,null,null,null],["#448","路卡利欧","格斗","功能",null,null,"梦碎",null,null,null,null],["#453","不良蛙","毒","食材",null,null,"aaa","aaa","油","肠","肠"],["#454","毒骷蛙","毒","食材",null,null,"aaa","aaa","油","肠","肠"],["#459","雪笠怪","冰","食材",null,null,"aaa",null,"番茄","蛋","蘑菇"],["#460","暴雪王","冰","食材",null,null,"aaa",null,"番茄","蛋","蘑菇"],["#461","玛狃拉","恶","树果",null,null,"恶果","恶果",null,null,null],["#462","自爆磁怪","钢","功能",null,null,"开锅","开锅",null,null,null],["#468","波克基斯","妖精","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#470","叶伊布","草","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#471","冰伊布","冰","功能",null,null,"开锅","开锅",null,null,null],["#475","艾路雷朵","格斗","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#488","克雷色利亚","超能力","功能",null,null,"超队",null,null,null,null],["#491","达克莱伊","恶","树果",null,null,"恶果","恶果",null,null,null],["#517","食梦梦","超能力","树果","超果","超果推荐 天然雀",null,null,null,null,null],["#518","梦梦蚀","超能力","树果","超果","超果推荐 天然雀",null,null,null,null,null],["#557","石居蟹","虫","功能","弱","精选驳杂 难堪大用",null,null,null,null,null],["#558","岩殿居蟹","虫","功能","弱","精选驳杂 难堪大用",null,null,null,null,null],["#627","毛头小鹰","飞行","能量",null,null,"飞果",null,null,null,null],["#628","勇士雄鹰","飞行","能量",null,null,"飞果",null,null,null,null],["#696","宝宝暴龙","岩石","树果",null,null,"岩果","岩果",null,null,null],["#697","怪颚龙","岩石","树果",null,null,"岩果","岩果",null,null,null],["#700","仙子伊布","妖精","功能","奶妈","奶妈推荐 拉鲁拉丝 草苗龟",null,null,null,null,null],["#702","咚咚鼠","电","功能",null,null,"暴击","暴击",null,null,null],["#710-1","南瓜精(小)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#710","南瓜精(中)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#710-2","南瓜精(大)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#710-3","南瓜精(巨)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#711-1","南瓜怪人(小)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#711","南瓜怪人(中)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#711-2","南瓜怪人(大)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#711-3","南瓜怪人(巨)","幽灵","食材",null,null,"aaa","aaa","南瓜","豆","土豆"],["#714","嗡蝠","龙","能量",null,null,"龙果","龙果",null,null,null],["#715","音波龙","龙","能量",null,null,"龙果","龙果",null,null,null],["#736","强颚鸡母虫","虫","食材",null,null,"aaa+abb","aaa","咖啡","蘑菇","蜜"],["#737","虫电宝","虫","食材",null,null,"aaa+abb","aaa","咖啡","蘑菇","蜜"],["#738","锹农炮虫","虫","食材",null,null,"aaa+abb","aaa","咖啡","蘑菇","蜜"],["#742","萌虻","妖精","食材",null,null,"aaa+abb",null,"蜜","油","玉米"],["#743","蝶结萌虻","妖精","食材",null,null,"aaa+abb",null,"蜜","油","玉米"],["#759","童偶熊","格斗","食材",null,null,"aaa+abb","aaa","玉米","肠","蛋"],["#760","穿着熊","格斗","食材",null,null,"aaa+abb","aaa","玉米","肠","蛋"],["#764","花疗环环","妖精","食材","食材","玉米推荐 童偶熊",null,null,"玉米","姜","可可"],["#777","托戈德玛尔","钢","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#778","谜拟Q","幽灵","能量",null,null,"鬼果",null,null,null,null],["#780","老翁龙","龙","食材",null,null,"aaa",null,"豆","牛油果","肠"],["#845","古月鸟","飞行","食材",null,null,"aaa",null,"油","土豆","蛋"],["#848","毒电婴","毒","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#849","颤弦蝾螈","毒","功能","弱","玩具技能 博君一笑",null,null,null,null,null],["#906","新叶喵","草","食材",null,null,"aaa","aaa","土豆","奶","姜"],["#907","蒂蕾喵","草","食材",null,null,"aaa","aaa","土豆","奶","姜"],["#908","魔幻假面喵","恶","食材",null,null,"aaa","aaa","土豆","奶","姜"],["#909","呆火鳄","火","食材",null,null,"aaa",null,"苹果","肠","叶子"],["#910","炙烫鳄","火","食材",null,null,"aaa",null,"苹果","肠","叶子"],["#911","骨纹巨声鳄","幽灵","食材",null,null,"aaa",null,"苹果","肠","叶子"],["#912","润水鸭","水","食材",null,null,"aaa","aaa","豆","葱","油"],["#913","涌跃鸭","水","食材",null,null,"aaa","aaa","豆","葱","油"],["#914","狂欢浪舞鸭","格斗","食材",null,null,"aaa","aaa","豆","葱","油"],["#921","布拨","电","功能",null,null,"奶妈","奶妈",null,null,null],["#922","布土拨","电","功能",null,null,"奶妈","奶妈",null,null,null],["#923","巴布土拨","电","功能",null,null,"奶妈","奶妈",null,null,null],["#974","走鲸","冰","食材",null,null,"aaa","aaa","土豆","肠","南瓜"],["#975","浩大鲸","冰","食材",null,null,"aaa","aaa","土豆","肠","南瓜"],["#980","土王","毒","食材",null,null,"aaa","aaa","可可","咖啡","土豆"]];
 
 /* ============ 宝可梦盒：素材映射 + 持久化层 ============ */
-const BOX_ASSET_MAP = {"#001":{"kind":"gif","file":"bulbasaur","name":"妙蛙种子"},"#002":{"kind":"gif","file":"ivysaur","name":"妙蛙草"},"#003":{"kind":"gif","file":"venusaur","name":"妙蛙花"},"#004":{"kind":"gif","file":"charmander","name":"小火龙"},"#005":{"kind":"gif","file":"charmeleon","name":"火恐龙"},"#006":{"kind":"gif","file":"charizard","name":"喷火龙"},"#007":{"kind":"gif","file":"squirtle","name":"杰尼龟"},"#008":{"kind":"gif","file":"wartortle","name":"卡咪龟"},"#009":{"kind":"gif","file":"blastoise","name":"水箭龟"},"#010":{"kind":"gif","file":"caterpie","name":"绿毛虫"},"#011":{"kind":"gif","file":"metapod","name":"铁甲蛹"},"#012":{"kind":"gif","file":"butterfree","name":"巴大蝶"},"#019":{"kind":"gif","file":"rattata","name":"小拉达"},"#020":{"kind":"gif","file":"raticate","name":"拉达"},"#023":{"kind":"gif","file":"ekans","name":"阿柏蛇"},"#024":{"kind":"gif","file":"arbok","name":"阿柏怪"},"#025":{"kind":"gif","file":"pikachu","name":"皮卡丘"},"#025-1":{"kind":"gif","file":"pikachu","name":"皮卡丘（万圣节）"},"#025-2":{"kind":"gif","file":"pikachu","name":"皮卡丘（佳节）"},"#026":{"kind":"gif","file":"raichu","name":"雷丘"},"#027":{"kind":"gif","file":"sandshrew","name":"穿山鼠"},"#028":{"kind":"gif","file":"sandslash","name":"穿山王"},"#035":{"kind":"gif","file":"clefairy","name":"皮皮"},"#036":{"kind":"gif","file":"clefable","name":"皮可西"},"#037":{"kind":"gif","file":"vulpix","name":"六尾"},"#037-1":{"kind":"gif","file":"vulpix-alola","name":"冰六尾"},"#038":{"kind":"gif","file":"ninetales","name":"九尾"},"#038-1":{"kind":"gif","file":"ninetales-alola","name":"冰九尾"},"#039":{"kind":"gif","file":"jigglypuff","name":"胖丁"},"#040":{"kind":"gif","file":"wigglytuff","name":"胖可丁"},"#050":{"kind":"gif","file":"diglett","name":"地鼠"},"#051":{"kind":"gif","file":"dugtrio","name":"三地鼠"},"#052":{"kind":"gif","file":"meowth","name":"喵喵"},"#053":{"kind":"gif","file":"persian","name":"猫老大"},"#054":{"kind":"gif","file":"psyduck","name":"可达鸭"},"#055":{"kind":"gif","file":"golduck","name":"哥达鸭"},"#056":{"kind":"gif","file":"mankey","name":"猴怪"},"#057":{"kind":"gif","file":"primeape","name":"火爆猴"},"#058":{"kind":"gif","file":"growlithe","name":"卡蒂狗"},"#059":{"kind":"gif","file":"arcanine","name":"风速狗"},"#069":{"kind":"gif","file":"bellsprout","name":"喇叭芽"},"#070":{"kind":"gif","file":"weepinbell","name":"口呆花"},"#071":{"kind":"gif","file":"victreebel","name":"大食花"},"#074":{"kind":"gif","file":"geodude","name":"小拳石"},"#075":{"kind":"gif","file":"graveler","name":"隆隆石"},"#076":{"kind":"gif","file":"golem","name":"隆隆岩"},"#079":{"kind":"gif","file":"slowpoke","name":"呆呆兽"},"#080":{"kind":"gif","file":"slowbro","name":"呆壳兽"},"#081":{"kind":"gif","file":"magnemite","name":"小磁怪"},"#082":{"kind":"gif","file":"magneton","name":"三合一磁怪"},"#083":{"kind":"gif","file":"farfetchd","name":"大葱鸭"},"#084":{"kind":"gif","file":"doduo","name":"嘟嘟"},"#085":{"kind":"gif","file":"dodrio","name":"嘟嘟利"},"#092":{"kind":"gif","file":"gastly","name":"鬼斯"},"#093":{"kind":"gif","file":"haunter","name":"鬼斯通"},"#094":{"kind":"gif","file":"gengar","name":"耿鬼"},"#095":{"kind":"gif","file":"onix","name":"大岩蛇"},"#104":{"kind":"gif","file":"cubone","name":"卡拉卡拉"},"#105":{"kind":"gif","file":"marowak","name":"嘎啦嘎啦"},"#113":{"kind":"gif","file":"chansey","name":"吉利蛋"},"#115":{"kind":"gif","file":"kangaskhan","name":"袋兽"},"#122":{"kind":"gif","file":"mrmime","name":"魔墙人偶"},"#127":{"kind":"gif","file":"pinsir","name":"凯罗斯"},"#132":{"kind":"gif","file":"ditto","name":"百变怪"},"#133":{"kind":"gif","file":"eevee","name":"伊布"},"#133-1":{"kind":"gif","file":"eevee","name":"伊布（佳节）"},"#133-2":{"kind":"gif","file":"eevee","name":"伊布（万圣节）"},"#134":{"kind":"gif","file":"vaporeon","name":"水伊布"},"#135":{"kind":"gif","file":"jolteon","name":"雷伊布"},"#136":{"kind":"gif","file":"flareon","name":"火伊布"},"#147":{"kind":"gif","file":"dratini","name":"迷你龙"},"#148":{"kind":"gif","file":"dragonair","name":"哈克龙"},"#149":{"kind":"gif","file":"dragonite","name":"快龙"},"#151":{"kind":"gif","file":"mew","name":"梦幻"},"#152":{"kind":"gif","file":"chikorita","name":"菊草叶"},"#153":{"kind":"gif","file":"bayleef","name":"月桂叶"},"#154":{"kind":"gif","file":"meganium","name":"大竺葵"},"#155":{"kind":"gif","file":"cyndaquil","name":"火球鼠"},"#156":{"kind":"gif","file":"quilava","name":"火岩鼠"},"#157":{"kind":"gif","file":"typhlosion","name":"火暴兽"},"#158":{"kind":"gif","file":"totodile","name":"小锯鳄"},"#159":{"kind":"gif","file":"croconaw","name":"蓝鳄"},"#160":{"kind":"gif","file":"feraligatr","name":"大力鳄"},"#172":{"kind":"gif","file":"pichu","name":"皮丘"},"#173":{"kind":"gif","file":"cleffa","name":"皮宝宝"},"#174":{"kind":"gif","file":"igglybuff","name":"宝宝丁"},"#175":{"kind":"gif","file":"togepi","name":"波克比"},"#176":{"kind":"gif","file":"togetic","name":"波克基古"},"#177":{"kind":"gif","file":"natu","name":"天然雀"},"#178":{"kind":"gif","file":"xatu","name":"天然鸟"},"#179":{"kind":"gif","file":"mareep","name":"咩利羊"},"#180":{"kind":"gif","file":"flaaffy","name":"茸茸羊"},"#181":{"kind":"gif","file":"ampharos","name":"电龙"},"#185":{"kind":"gif","file":"sudowoodo","name":"树才怪"},"#194":{"kind":"gif","file":"wooper","name":"乌波"},"#194-1":{"kind":"gif","file":"wooper-paldea","name":"毒乌波"},"#195":{"kind":"gif","file":"quagsire","name":"沼王"},"#196":{"kind":"gif","file":"espeon","name":"太阳伊布"},"#197":{"kind":"gif","file":"umbreon","name":"月亮伊布"},"#198":{"kind":"gif","file":"murkrow","name":"黑暗鸦"},"#199":{"kind":"gif","file":"slowking","name":"呆呆王"},"#202":{"kind":"gif","file":"wobbuffet","name":"果然翁"},"#208":{"kind":"gif","file":"steelix","name":"大钢蛇"},"#213":{"kind":"gif","file":"shuckle","name":"壶壶"},"#214":{"kind":"gif","file":"heracross","name":"赫拉克罗斯"},"#215":{"kind":"gif","file":"sneasel","name":"狃拉"},"#225":{"kind":"gif","file":"delibird","name":"信使鸟"},"#228":{"kind":"gif","file":"houndour","name":"戴鲁比"},"#229":{"kind":"gif","file":"houndoom","name":"黑鲁加"},"#242":{"kind":"gif","file":"blissey","name":"幸福蛋"},"#243":{"kind":"gif","file":"raikou","name":"雷公"},"#244":{"kind":"gif","file":"entei","name":"炎帝"},"#245":{"kind":"gif","file":"suicune","name":"水君"},"#246":{"kind":"gif","file":"larvitar","name":"幼基拉斯"},"#247":{"kind":"gif","file":"pupitar","name":"沙基拉斯"},"#248":{"kind":"gif","file":"tyranitar","name":"班基拉斯"},"#252":{"kind":"gif","file":"treecko","name":"木守宫"},"#253":{"kind":"gif","file":"grovyle","name":"森林蜥蜴"},"#254":{"kind":"gif","file":"sceptile","name":"蜥蜴王"},"#255":{"kind":"gif","file":"torchic","name":"火稚鸡"},"#256":{"kind":"gif","file":"combusken","name":"力壮鸡"},"#257":{"kind":"gif","file":"blaziken","name":"火焰鸡"},"#258":{"kind":"gif","file":"mudkip","name":"水跃鱼"},"#259":{"kind":"gif","file":"marshtomp","name":"沼跃鱼"},"#260":{"kind":"gif","file":"swampert","name":"巨沼怪"},"#280":{"kind":"gif","file":"ralts","name":"拉鲁拉丝"},"#281":{"kind":"gif","file":"kirlia","name":"奇鲁莉安"},"#282":{"kind":"gif","file":"gardevoir","name":"沙奈朵"},"#287":{"kind":"gif","file":"slakoth","name":"懒人獭"},"#288":{"kind":"gif","file":"vigoroth","name":"过动猿"},"#289":{"kind":"gif","file":"slaking","name":"请假王"},"#302":{"kind":"gif","file":"sableye","name":"勾魂眼"},"#303":{"kind":"gif","file":"mawile","name":"大嘴娃"},"#304":{"kind":"gif","file":"aron","name":"可可多拉"},"#305":{"kind":"gif","file":"lairon","name":"可多拉"},"#306":{"kind":"gif","file":"aggron","name":"波士可多拉"},"#311":{"kind":"gif","file":"plusle","name":"正电拍拍"},"#312":{"kind":"gif","file":"minun","name":"负电拍拍"},"#316":{"kind":"gif","file":"gulpin","name":"溶食兽"},"#317":{"kind":"gif","file":"swalot","name":"吞食兽"},"#328":{"kind":"gif","file":"trapinch","name":"大颚蚁"},"#329":{"kind":"gif","file":"vibrava","name":"超音波幼虫"},"#330":{"kind":"gif","file":"flygon","name":"沙漠蜻蜓"},"#333":{"kind":"gif","file":"swablu","name":"青绵鸟"},"#334":{"kind":"gif","file":"altaria","name":"七夕青鸟"},"#353":{"kind":"gif","file":"shuppet","name":"怨影娃娃"},"#354":{"kind":"gif","file":"banette","name":"诅咒娃娃"},"#359":{"kind":"gif","file":"absol","name":"阿勃梭鲁"},"#360":{"kind":"gif","file":"wynaut","name":"小果然"},"#363":{"kind":"gif","file":"spheal","name":"海豹球"},"#363-1":{"kind":"gif","file":"spheal","name":"海豹球（佳节）"},"#364":{"kind":"gif","file":"sealeo","name":"海魔狮"},"#365":{"kind":"gif","file":"walrein","name":"帝牙海狮"},"#371":{"kind":"gif","file":"bagon","name":"宝贝龙"},"#372":{"kind":"gif","file":"shelgon","name":"甲壳龙"},"#373":{"kind":"gif","file":"salamence","name":"暴飞龙"},"#380":{"kind":"gif","file":"latias","name":"拉帝亚斯"},"#381":{"kind":"gif","file":"latios","name":"拉帝欧斯"},"#387":{"kind":"gif","file":"turtwig","name":"草苗龟"},"#388":{"kind":"gif","file":"grotle","name":"树林龟"},"#389":{"kind":"gif","file":"torterra","name":"土台龟"},"#390":{"kind":"gif","file":"chimchar","name":"小火焰猴"},"#391":{"kind":"gif","file":"monferno","name":"猛火猴"},"#392":{"kind":"gif","file":"infernape","name":"烈焰猴"},"#393":{"kind":"gif","file":"piplup","name":"波加曼"},"#394":{"kind":"gif","file":"prinplup","name":"波皇子"},"#395":{"kind":"gif","file":"empoleon","name":"帝王拿波"},"#403":{"kind":"gif","file":"shinx","name":"小猫怪"},"#404":{"kind":"gif","file":"luxio","name":"勒克猫"},"#405":{"kind":"gif","file":"luxray","name":"伦琴猫"},"#425":{"kind":"gif","file":"drifloon","name":"飘飘球"},"#426":{"kind":"gif","file":"drifblim","name":"随风球"},"#430":{"kind":"gif","file":"honchkrow","name":"乌鸦头头"},"#438":{"kind":"gif","file":"bonsly","name":"盆才怪"},"#439":{"kind":"gif","file":"mimejr","name":"魔尼尼"},"#440":{"kind":"gif","file":"happiny","name":"小福蛋"},"#442":{"kind":"gif","file":"spiritomb","name":"花岩怪"},"#447":{"kind":"gif","file":"riolu","name":"利欧路"},"#448":{"kind":"gif","file":"lucario","name":"路卡利欧"},"#453":{"kind":"gif","file":"croagunk","name":"不良蛙"},"#454":{"kind":"gif","file":"toxicroak","name":"毒骷蛙"},"#459":{"kind":"gif","file":"snover","name":"雪笠怪"},"#460":{"kind":"gif","file":"abomasnow","name":"暴雪王"},"#461":{"kind":"gif","file":"weavile","name":"玛狃拉"},"#462":{"kind":"gif","file":"magnezone","name":"自爆磁怪"},"#468":{"kind":"gif","file":"togekiss","name":"波克基斯"},"#470":{"kind":"gif","file":"leafeon","name":"叶伊布"},"#471":{"kind":"gif","file":"glaceon","name":"冰伊布"},"#475":{"kind":"gif","file":"gallade","name":"艾路雷朵"},"#488":{"kind":"gif","file":"cresselia","name":"克雷色利亚"},"#491":{"kind":"gif","file":"darkrai","name":"达克莱伊"},"#517":{"kind":"gif","file":"munna","name":"食梦梦"},"#518":{"kind":"gif","file":"musharna","name":"梦梦蚀"},"#557":{"kind":"gif","file":"dwebble","name":"石居蟹"},"#558":{"kind":"gif","file":"crustle","name":"岩殿居蟹"},"#627":{"kind":"gif","file":"rufflet","name":"毛头小鹰"},"#628":{"kind":"gif","file":"braviary","name":"勇士雄鹰"},"#696":{"kind":"gif","file":"tyrunt","name":"宝宝暴龙"},"#697":{"kind":"gif","file":"tyrantrum","name":"怪颚龙"},"#700":{"kind":"gif","file":"sylveon","name":"仙子伊布"},"#702":{"kind":"gif","file":"dedenne","name":"咚咚鼠"},"#710":{"kind":"png","file":"南瓜精","name":"南瓜精"},"#711":{"kind":"png","file":"南瓜怪人","name":"南瓜怪人"},"#714":{"kind":"gif","file":"noibat","name":"嗡蝠"},"#715":{"kind":"gif","file":"noivern","name":"音波龙"},"#736":{"kind":"gif","file":"grubbin","name":"强颚鸡母虫"},"#737":{"kind":"gif","file":"charjabug","name":"虫电宝"},"#738":{"kind":"gif","file":"vikavolt","name":"锹农炮虫"},"#742":{"kind":"gif","file":"cutiefly","name":"萌虻"},"#743":{"kind":"gif","file":"ribombee","name":"蝶结萌虻"},"#759":{"kind":"gif","file":"stufful","name":"童偶熊"},"#760":{"kind":"gif","file":"bewear","name":"穿着熊"},"#764":{"kind":"gif","file":"comfey","name":"花疗环环"},"#777":{"kind":"gif","file":"togedemaru","name":"托戈德玛尔"},"#778":{"kind":"gif","file":"mimikyu","name":"谜拟Q"},"#780":{"kind":"gif","file":"drampa","name":"老翁龙"},"#845":{"kind":"png","file":"古月鸟","name":"古月鸟"},"#848":{"kind":"gif","file":"toxel","name":"毒电婴"},"#849":{"kind":"gif","file":"toxtricity","name":"颤弦蝾螈"},"#906":{"kind":"png","file":"新叶喵","name":"新叶喵"},"#907":{"kind":"png","file":"蒂蕾喵","name":"蒂蕾喵"},"#908":{"kind":"png","file":"魔幻假面喵","name":"魔幻假面喵"},"#909":{"kind":"png","file":"呆火鳄","name":"呆火鳄"},"#910":{"kind":"png","file":"炙烫鳄","name":"炙烫鳄"},"#911":{"kind":"png","file":"骨纹巨声鳄","name":"骨纹巨声鳄"},"#912":{"kind":"png","file":"润水鸭","name":"润水鸭"},"#913":{"kind":"png","file":"涌跃鸭","name":"涌跃鸭"},"#914":{"kind":"png","file":"狂欢浪舞鸭","name":"狂欢浪舞鸭"},"#921":{"kind":"png","file":"布拨","name":"布拨"},"#922":{"kind":"png","file":"布土拨","name":"布土拨"},"#923":{"kind":"png","file":"巴布土拨","name":"巴布土拨"},"#974":{"kind":"png","file":"走鲸","name":"走鲸"},"#975":{"kind":"png","file":"浩大鲸","name":"浩大鲸"},"#980":{"kind":"gif","file":"clodsire","name":"土王"},"#710-1":{"kind":"png","file":"南瓜精","name":"南瓜精"},"#711-1":{"kind":"png","file":"南瓜怪人","name":"南瓜怪人"},"#710-2":{"kind":"png","file":"南瓜精","name":"南瓜精"},"#711-2":{"kind":"png","file":"南瓜怪人","name":"南瓜怪人"},"#710-3":{"kind":"png","file":"南瓜精","name":"南瓜精"},"#711-3":{"kind":"png","file":"南瓜怪人","name":"南瓜怪人"}};
+const BOX_ASSET_MAP = {"#001":{"kind":"gif","file":"bulbasaur","name":"妙蛙种子"},"#002":{"kind":"gif","file":"ivysaur","name":"妙蛙草"},"#003":{"kind":"gif","file":"venusaur","name":"妙蛙花"},"#004":{"kind":"gif","file":"charmander","name":"小火龙"},"#005":{"kind":"gif","file":"charmeleon","name":"火恐龙"},"#006":{"kind":"gif","file":"charizard","name":"喷火龙"},"#007":{"kind":"gif","file":"squirtle","name":"杰尼龟"},"#008":{"kind":"gif","file":"wartortle","name":"卡咪龟"},"#009":{"kind":"gif","file":"blastoise","name":"水箭龟"},"#010":{"kind":"gif","file":"caterpie","name":"绿毛虫"},"#011":{"kind":"gif","file":"metapod","name":"铁甲蛹"},"#012":{"kind":"gif","file":"butterfree","name":"巴大蝶"},"#019":{"kind":"gif","file":"rattata","name":"小拉达"},"#020":{"kind":"gif","file":"raticate","name":"拉达"},"#023":{"kind":"gif","file":"ekans","name":"阿柏蛇"},"#024":{"kind":"gif","file":"arbok","name":"阿柏怪"},"#025":{"kind":"gif","file":"pikachu","name":"皮卡丘"},"#025-1":{"kind":"gif","file":"pikachu","name":"皮卡丘（万圣节）"},"#025-2":{"kind":"gif","file":"pikachu","name":"皮卡丘（佳节）"},"#026":{"kind":"gif","file":"raichu","name":"雷丘"},"#027":{"kind":"gif","file":"sandshrew","name":"穿山鼠"},"#028":{"kind":"gif","file":"sandslash","name":"穿山王"},"#035":{"kind":"gif","file":"clefairy","name":"皮皮"},"#036":{"kind":"gif","file":"clefable","name":"皮可西"},"#037":{"kind":"gif","file":"vulpix","name":"六尾"},"#037-1":{"kind":"gif","file":"vulpix-alola","name":"冰六尾"},"#038":{"kind":"gif","file":"ninetales","name":"九尾"},"#038-1":{"kind":"gif","file":"ninetales-alola","name":"冰九尾"},"#039":{"kind":"gif","file":"jigglypuff","name":"胖丁"},"#040":{"kind":"gif","file":"wigglytuff","name":"胖可丁"},"#050":{"kind":"gif","file":"diglett","name":"地鼠"},"#051":{"kind":"gif","file":"dugtrio","name":"三地鼠"},"#052":{"kind":"gif","file":"meowth","name":"喵喵"},"#053":{"kind":"gif","file":"persian","name":"猫老大"},"#054":{"kind":"gif","file":"psyduck","name":"可达鸭"},"#055":{"kind":"gif","file":"golduck","name":"哥达鸭"},"#056":{"kind":"gif","file":"mankey","name":"猴怪"},"#057":{"kind":"gif","file":"primeape","name":"火爆猴"},"#058":{"kind":"gif","file":"growlithe","name":"卡蒂狗"},"#059":{"kind":"gif","file":"arcanine","name":"风速狗"},"#069":{"kind":"gif","file":"bellsprout","name":"喇叭芽"},"#070":{"kind":"gif","file":"weepinbell","name":"口呆花"},"#071":{"kind":"gif","file":"victreebel","name":"大食花"},"#074":{"kind":"gif","file":"geodude","name":"小拳石"},"#075":{"kind":"gif","file":"graveler","name":"隆隆石"},"#076":{"kind":"gif","file":"golem","name":"隆隆岩"},"#079":{"kind":"gif","file":"slowpoke","name":"呆呆兽"},"#080":{"kind":"gif","file":"slowbro","name":"呆壳兽"},"#081":{"kind":"gif","file":"magnemite","name":"小磁怪"},"#082":{"kind":"gif","file":"magneton","name":"三合一磁怪"},"#083":{"kind":"gif","file":"farfetchd","name":"大葱鸭"},"#084":{"kind":"gif","file":"doduo","name":"嘟嘟"},"#085":{"kind":"gif","file":"dodrio","name":"嘟嘟利"},"#092":{"kind":"gif","file":"gastly","name":"鬼斯"},"#093":{"kind":"gif","file":"haunter","name":"鬼斯通"},"#094":{"kind":"gif","file":"gengar","name":"耿鬼"},"#095":{"kind":"gif","file":"onix","name":"大岩蛇"},"#104":{"kind":"gif","file":"cubone","name":"卡拉卡拉"},"#105":{"kind":"gif","file":"marowak","name":"嘎啦嘎啦"},"#113":{"kind":"gif","file":"chansey","name":"吉利蛋"},"#115":{"kind":"gif","file":"kangaskhan","name":"袋兽"},"#122":{"kind":"gif","file":"mrmime","name":"魔墙人偶"},"#127":{"kind":"gif","file":"pinsir","name":"凯罗斯"},"#132":{"kind":"gif","file":"ditto","name":"百变怪"},"#133":{"kind":"gif","file":"eevee","name":"伊布"},"#133-1":{"kind":"gif","file":"eevee","name":"伊布（佳节）"},"#133-2":{"kind":"gif","file":"eevee","name":"伊布（万圣节）"},"#134":{"kind":"gif","file":"vaporeon","name":"水伊布"},"#135":{"kind":"gif","file":"jolteon","name":"雷伊布"},"#136":{"kind":"gif","file":"flareon","name":"火伊布"},"#147":{"kind":"gif","file":"dratini","name":"迷你龙"},"#148":{"kind":"gif","file":"dragonair","name":"哈克龙"},"#149":{"kind":"gif","file":"dragonite","name":"快龙"},"#151":{"kind":"gif","file":"mew","name":"梦幻"},"#152":{"kind":"gif","file":"chikorita","name":"菊草叶"},"#153":{"kind":"gif","file":"bayleef","name":"月桂叶"},"#154":{"kind":"gif","file":"meganium","name":"大竺葵"},"#155":{"kind":"gif","file":"cyndaquil","name":"火球鼠"},"#156":{"kind":"gif","file":"quilava","name":"火岩鼠"},"#157":{"kind":"gif","file":"typhlosion","name":"火暴兽"},"#158":{"kind":"gif","file":"totodile","name":"小锯鳄"},"#159":{"kind":"gif","file":"croconaw","name":"蓝鳄"},"#160":{"kind":"gif","file":"feraligatr","name":"大力鳄"},"#172":{"kind":"gif","file":"pichu","name":"皮丘"},"#173":{"kind":"gif","file":"cleffa","name":"皮宝宝"},"#174":{"kind":"gif","file":"igglybuff","name":"宝宝丁"},"#175":{"kind":"gif","file":"togepi","name":"波克比"},"#176":{"kind":"gif","file":"togetic","name":"波克基古"},"#177":{"kind":"gif","file":"natu","name":"天然雀"},"#178":{"kind":"gif","file":"xatu","name":"天然鸟"},"#179":{"kind":"gif","file":"mareep","name":"咩利羊"},"#180":{"kind":"gif","file":"flaaffy","name":"茸茸羊"},"#181":{"kind":"gif","file":"ampharos","name":"电龙"},"#185":{"kind":"gif","file":"sudowoodo","name":"树才怪"},"#194":{"kind":"gif","file":"wooper","name":"乌波"},"#194-1":{"kind":"gif","file":"wooper-paldea","name":"毒乌波"},"#195":{"kind":"gif","file":"quagsire","name":"沼王"},"#196":{"kind":"gif","file":"espeon","name":"太阳伊布"},"#197":{"kind":"gif","file":"umbreon","name":"月亮伊布"},"#198":{"kind":"gif","file":"murkrow","name":"黑暗鸦"},"#199":{"kind":"gif","file":"slowking","name":"呆呆王"},"#202":{"kind":"gif","file":"wobbuffet","name":"果然翁"},"#208":{"kind":"gif","file":"steelix","name":"大钢蛇"},"#213":{"kind":"gif","file":"shuckle","name":"壶壶"},"#214":{"kind":"gif","file":"heracross","name":"赫拉克罗斯"},"#215":{"kind":"gif","file":"sneasel","name":"狃拉"},"#225":{"kind":"gif","file":"delibird","name":"信使鸟"},"#228":{"kind":"gif","file":"houndour","name":"戴鲁比"},"#229":{"kind":"gif","file":"houndoom","name":"黑鲁加"},"#242":{"kind":"gif","file":"blissey","name":"幸福蛋"},"#243":{"kind":"gif","file":"raikou","name":"雷公"},"#244":{"kind":"gif","file":"entei","name":"炎帝"},"#245":{"kind":"gif","file":"suicune","name":"水君"},"#246":{"kind":"gif","file":"larvitar","name":"幼基拉斯"},"#247":{"kind":"gif","file":"pupitar","name":"沙基拉斯"},"#248":{"kind":"gif","file":"tyranitar","name":"班基拉斯"},"#252":{"kind":"gif","file":"treecko","name":"木守宫"},"#253":{"kind":"gif","file":"grovyle","name":"森林蜥蜴"},"#254":{"kind":"gif","file":"sceptile","name":"蜥蜴王"},"#255":{"kind":"gif","file":"torchic","name":"火稚鸡"},"#256":{"kind":"gif","file":"combusken","name":"力壮鸡"},"#257":{"kind":"gif","file":"blaziken","name":"火焰鸡"},"#258":{"kind":"gif","file":"mudkip","name":"水跃鱼"},"#259":{"kind":"gif","file":"marshtomp","name":"沼跃鱼"},"#260":{"kind":"gif","file":"swampert","name":"巨沼怪"},"#280":{"kind":"gif","file":"ralts","name":"拉鲁拉丝"},"#281":{"kind":"gif","file":"kirlia","name":"奇鲁莉安"},"#282":{"kind":"gif","file":"gardevoir","name":"沙奈朵"},"#287":{"kind":"gif","file":"slakoth","name":"懒人獭"},"#288":{"kind":"gif","file":"vigoroth","name":"过动猿"},"#289":{"kind":"gif","file":"slaking","name":"请假王"},"#302":{"kind":"gif","file":"sableye","name":"勾魂眼"},"#303":{"kind":"gif","file":"mawile","name":"大嘴娃"},"#304":{"kind":"gif","file":"aron","name":"可可多拉"},"#305":{"kind":"gif","file":"lairon","name":"可多拉"},"#306":{"kind":"gif","file":"aggron","name":"波士可多拉"},"#311":{"kind":"gif","file":"plusle","name":"正电拍拍"},"#312":{"kind":"gif","file":"minun","name":"负电拍拍"},"#316":{"kind":"gif","file":"gulpin","name":"溶食兽"},"#317":{"kind":"gif","file":"swalot","name":"吞食兽"},"#328":{"kind":"gif","file":"trapinch","name":"大颚蚁"},"#329":{"kind":"gif","file":"vibrava","name":"超音波幼虫"},"#330":{"kind":"gif","file":"flygon","name":"沙漠蜻蜓"},"#333":{"kind":"gif","file":"swablu","name":"青绵鸟"},"#334":{"kind":"gif","file":"altaria","name":"七夕青鸟"},"#353":{"kind":"gif","file":"shuppet","name":"怨影娃娃"},"#354":{"kind":"gif","file":"banette","name":"诅咒娃娃"},"#359":{"kind":"gif","file":"absol","name":"阿勃梭鲁"},"#360":{"kind":"gif","file":"wynaut","name":"小果然"},"#363":{"kind":"gif","file":"spheal","name":"海豹球"},"#363-1":{"kind":"gif","file":"spheal","name":"海豹球（佳节）"},"#364":{"kind":"gif","file":"sealeo","name":"海魔狮"},"#365":{"kind":"gif","file":"walrein","name":"帝牙海狮"},"#371":{"kind":"gif","file":"bagon","name":"宝贝龙"},"#372":{"kind":"gif","file":"shelgon","name":"甲壳龙"},"#373":{"kind":"gif","file":"salamence","name":"暴飞龙"},"#380":{"kind":"gif","file":"latias","name":"拉帝亚斯"},"#381":{"kind":"gif","file":"latios","name":"拉帝欧斯"},"#387":{"kind":"gif","file":"turtwig","name":"草苗龟"},"#388":{"kind":"gif","file":"grotle","name":"树林龟"},"#389":{"kind":"gif","file":"torterra","name":"土台龟"},"#390":{"kind":"gif","file":"chimchar","name":"小火焰猴"},"#391":{"kind":"gif","file":"monferno","name":"猛火猴"},"#392":{"kind":"gif","file":"infernape","name":"烈焰猴"},"#393":{"kind":"gif","file":"piplup","name":"波加曼"},"#394":{"kind":"gif","file":"prinplup","name":"波皇子"},"#395":{"kind":"gif","file":"empoleon","name":"帝王拿波"},"#403":{"kind":"gif","file":"shinx","name":"小猫怪"},"#404":{"kind":"gif","file":"luxio","name":"勒克猫"},"#405":{"kind":"gif","file":"luxray","name":"伦琴猫"},"#425":{"kind":"gif","file":"drifloon","name":"飘飘球"},"#426":{"kind":"gif","file":"drifblim","name":"随风球"},"#430":{"kind":"gif","file":"honchkrow","name":"乌鸦头头"},"#438":{"kind":"gif","file":"bonsly","name":"盆才怪"},"#439":{"kind":"gif","file":"mimejr","name":"魔尼尼"},"#440":{"kind":"gif","file":"happiny","name":"小福蛋"},"#442":{"kind":"gif","file":"spiritomb","name":"花岩怪"},"#447":{"kind":"gif","file":"riolu","name":"利欧路"},"#448":{"kind":"gif","file":"lucario","name":"路卡利欧"},"#453":{"kind":"gif","file":"croagunk","name":"不良蛙"},"#454":{"kind":"gif","file":"toxicroak","name":"毒骷蛙"},"#459":{"kind":"gif","file":"snover","name":"雪笠怪"},"#460":{"kind":"gif","file":"abomasnow","name":"暴雪王"},"#461":{"kind":"gif","file":"weavile","name":"玛狃拉"},"#462":{"kind":"gif","file":"magnezone","name":"自爆磁怪"},"#468":{"kind":"gif","file":"togekiss","name":"波克基斯"},"#470":{"kind":"gif","file":"leafeon","name":"叶伊布"},"#471":{"kind":"gif","file":"glaceon","name":"冰伊布"},"#475":{"kind":"gif","file":"gallade","name":"艾路雷朵"},"#488":{"kind":"gif","file":"cresselia","name":"克雷色利亚"},"#491":{"kind":"gif","file":"darkrai","name":"达克莱伊"},"#517":{"kind":"gif","file":"munna","name":"食梦梦"},"#518":{"kind":"gif","file":"musharna","name":"梦梦蚀"},"#557":{"kind":"gif","file":"dwebble","name":"石居蟹"},"#558":{"kind":"gif","file":"crustle","name":"岩殿居蟹"},"#627":{"kind":"gif","file":"rufflet","name":"毛头小鹰"},"#628":{"kind":"gif","file":"braviary","name":"勇士雄鹰"},"#696":{"kind":"gif","file":"tyrunt","name":"宝宝暴龙"},"#697":{"kind":"gif","file":"tyrantrum","name":"怪颚龙"},"#700":{"kind":"gif","file":"sylveon","name":"仙子伊布"},"#702":{"kind":"gif","file":"dedenne","name":"咚咚鼠"},"#710":{"kind":"gif","file":"pumpkaboo","name":"南瓜精"},"#711":{"kind":"gif","file":"gourgeist","name":"南瓜怪人"},"#714":{"kind":"gif","file":"noibat","name":"嗡蝠"},"#715":{"kind":"gif","file":"noivern","name":"音波龙"},"#736":{"kind":"gif","file":"grubbin","name":"强颚鸡母虫"},"#737":{"kind":"gif","file":"charjabug","name":"虫电宝"},"#738":{"kind":"gif","file":"vikavolt","name":"锹农炮虫"},"#742":{"kind":"gif","file":"cutiefly","name":"萌虻"},"#743":{"kind":"gif","file":"ribombee","name":"蝶结萌虻"},"#759":{"kind":"gif","file":"stufful","name":"童偶熊"},"#760":{"kind":"gif","file":"bewear","name":"穿着熊"},"#764":{"kind":"gif","file":"comfey","name":"花疗环环"},"#777":{"kind":"gif","file":"togedemaru","name":"托戈德玛尔"},"#778":{"kind":"gif","file":"mimikyu","name":"谜拟Q"},"#780":{"kind":"gif","file":"drampa","name":"老翁龙"},"#845":{"kind":"png","file":"古月鸟","name":"古月鸟"},"#848":{"kind":"gif","file":"toxel","name":"毒电婴"},"#849":{"kind":"gif","file":"toxtricity","name":"颤弦蝾螈"},"#906":{"kind":"gif","file":"sprigatito","name":"新叶喵"},"#907":{"kind":"gif","file":"floragato","name":"蒂蕾喵"},"#908":{"kind":"gif","file":"meowscarada","name":"魔幻假面喵"},"#909":{"kind":"gif","file":"fuecoco","name":"呆火鳄"},"#910":{"kind":"gif","file":"crocalor","name":"炙烫鳄"},"#911":{"kind":"gif","file":"skeledirge","name":"骨纹巨声鳄"},"#912":{"kind":"gif","file":"quaxly","name":"润水鸭"},"#913":{"kind":"gif","file":"quaxwell","name":"涌跃鸭"},"#914":{"kind":"gif","file":"quaquaval","name":"狂欢浪舞鸭"},"#921":{"kind":"png","file":"布拨","name":"布拨"},"#922":{"kind":"png","file":"布土拨","name":"布土拨"},"#923":{"kind":"png","file":"巴布土拨","name":"巴布土拨"},"#974":{"kind":"png","file":"走鲸","name":"走鲸"},"#975":{"kind":"gif","file":"cetitan","name":"浩大鲸"},"#980":{"kind":"gif","file":"clodsire","name":"土王"},"#710-1":{"kind":"gif","file":"pumpkaboo","name":"南瓜精"},"#711-1":{"kind":"gif","file":"gourgeist","name":"南瓜怪人"},"#710-2":{"kind":"gif","file":"pumpkaboo","name":"南瓜精"},"#711-2":{"kind":"gif","file":"gourgeist","name":"南瓜怪人"},"#710-3":{"kind":"gif","file":"pumpkaboo","name":"南瓜精"},"#711-3":{"kind":"gif","file":"gourgeist","name":"南瓜怪人"}};
 function boxAssetPath(dex, shiny){
   const a = BOX_ASSET_MAP[dex];
   if(!a) return null;
@@ -2481,6 +2592,7 @@ function loadBoxData(){
 function saveBoxData(){
   try{ localStorage.setItem(BOX_STORAGE_KEY, JSON.stringify(boxData)); }
   catch(e){ console.warn('宝可梦盒保存失败（可能是存储空间已满）', e); }
+  scheduleCloudPush(); // v3.17：登录状态下顺带同步到账号（内部有防抖，没登录直接返回）
 }
 function genBoxId(){ return 'b'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 /* 昵称统一走这个函数截长度（用户手打的想打什么符号是他的自由）。
@@ -5219,12 +5331,274 @@ function updateBoxMedalFab(){
   const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
   fab.style.display = (open && !inDetail) ? 'flex' : 'none';
   fab.classList.toggle('on', !!userPrefs.boxMedalOn);
+  updateBoxAuthUI(open && !inDetail); // v3.17：账号相关的吸底条/浮窗跟奖章浮窗同一时机同步
 }
 function toggleBoxMedalFab(){
   userPrefs.boxMedalOn = !userPrefs.boxMedalOn;
   saveUserPrefs();
   updateBoxMedalFab();
   if(typeof renderBoxPage==='function') renderBoxPage();
+}
+
+/* ============================================================
+   v3.17 账号系统：注册 / 登录 / 云端同步
+   ------------------------------------------------------------
+   后端是自建的 Cloudflare Worker + D1（见 effiprobcalc-backend/）。
+   融合规则（用户指定）：
+     · 宝可梦盒 —— 双向全保留，按条目 id 取并集，云端的排在前面
+     · 个人设置 —— 以账号记录为准，覆盖本地
+     · 新账号（云端还没有记录）—— 直接把本地整体上传
+   ============================================================ */
+
+// 后端地址。留空字符串 = 请求同源的 /api/...（Worker 挂在自己域名的 /api/* 路由上时用这种）；
+// Worker 部署在 workers.dev 上就填完整地址，例如 'https://effiprobcalc-auth.xxx.workers.dev'
+const AUTH_API_BASE = 'https://effiprobcalc-auth.zuckerfrei-pomelk.workers.dev';
+const AUTH_TOKEN_KEY = 'effiprobcalc_auth_v1';
+// 用 var 而不是 let：saveBoxData/saveUserPrefs 里的 scheduleCloudPush 有可能在这一段执行到之前
+// 就被顶层初始化代码调用，var 至少能拿到 undefined 而不是踩进 TDZ 直接抛 ReferenceError
+var authState = { token:null, user:null };
+
+function loadAuthState(){
+  try{
+    const raw = localStorage.getItem(AUTH_TOKEN_KEY);
+    if(!raw) return;
+    const o = JSON.parse(raw);
+    if(o && typeof o==='object' && typeof o.token==='string' && o.user) authState = {token:o.token, user:o.user};
+  }catch(e){}
+}
+function saveAuthState(){
+  try{ localStorage.setItem(AUTH_TOKEN_KEY, JSON.stringify(authState)); }catch(e){}
+}
+function clearAuthState(){
+  authState = { token:null, user:null };
+  try{ localStorage.removeItem(AUTH_TOKEN_KEY); }catch(e){}
+}
+function authLoggedIn(){ return !!(authState && authState.token); }
+
+async function authApi(path, {method='GET', body=null, auth=false}={}){
+  const headers = {};
+  if(body) headers['Content-Type'] = 'application/json';
+  if(auth) headers['Authorization'] = 'Bearer ' + (authState.token||'');
+  let res;
+  try{
+    res = await fetch(AUTH_API_BASE + path, {method, headers, body: body?JSON.stringify(body):undefined});
+  }catch(e){
+    throw new Error('连不上服务器，检查一下网络');
+  }
+  let data = {};
+  try{ data = await res.json(); }catch(e){}
+  if(!res.ok){
+    // token 过期/被换掉：本地登录态已经没用了，直接清掉，让界面回到未登录
+    if(res.status === 401 && auth){ clearAuthState(); updateBoxMedalFab(); }
+    throw new Error(data.error || ('请求失败（'+res.status+'）'));
+  }
+  return data;
+}
+
+/* ---- 融合：盒子取并集（按 id 去重，云端优先排前面），设置以云端为准 ---- */
+function mergeBoxLists(cloudList, localList){
+  const out = [], seen = new Set();
+  [cloudList, localList].forEach(list=>{
+    (Array.isArray(list)?list:[]).forEach(e=>{
+      if(!e || typeof e!=='object' || !e.id || seen.has(e.id)) return;
+      seen.add(e.id); out.push(e);
+    });
+  });
+  return out;
+}
+// 融合后的收尾：写回本地 → 重画 → 立刻整体推一次云端，让两边彻底一致
+function applyMergedData(cloud){
+  const hasRecord = !!cloud.hasCloudRecord;
+  const merged = mergeBoxLists(cloud.box, boxData);
+  let overflow = 0;
+  if(merged.length > BOX_MAX_COUNT){ overflow = merged.length - BOX_MAX_COUNT; merged.length = BOX_MAX_COUNT; }
+  boxData = merged;
+  try{ localStorage.setItem(BOX_STORAGE_KEY, JSON.stringify(boxData)); }catch(e){}
+
+  if(hasRecord && cloud.prefs && typeof cloud.prefs==='object'){
+    // 逐字段套用而不是整体替换：云端可能是旧版本存的，缺字段时要保留本地默认值
+    Object.keys(PREFS_DEFAULT).forEach(k=>{
+      if(cloud.prefs[k] !== undefined) userPrefs[k] = cloud.prefs[k];
+    });
+    clampSleepPrefs();
+    try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
+  }
+  return overflow;
+}
+function cloudPayload(){ return {box: boxData, prefs: userPrefs}; }
+async function pushCloudData(){
+  if(!authLoggedIn()) return;
+  await authApi('/api/data', {method:'PUT', body:cloudPayload(), auth:true});
+}
+let cloudPushTimer = null;
+function scheduleCloudPush(){
+  if(!authState || !authState.token) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = setTimeout(()=>{ pushCloudData().catch(()=>{}); }, 1500);
+}
+
+/* ---- 盒子底部吸底条 / 账号设置浮窗的显隐 ---- */
+function updateBoxAuthUI(visible){
+  const bar = document.getElementById('boxAuthBar');
+  const fab = document.getElementById('boxAccountFab');
+  if(!bar || !fab) return;
+  const logged = authLoggedIn();
+  // 登录后吸底条整个撤掉，改成左下角浮窗；未登录则反过来
+  bar.style.display = logged ? 'none' : 'flex';
+  fab.style.display = (visible && logged) ? 'flex' : 'none';
+}
+
+/* ---- 注册/登录弹窗 ---- */
+let authModalMode = 'register';
+function setAuthMsg(text, ok){
+  const el = document.getElementById('authMsg');
+  el.textContent = text || '';
+  el.classList.toggle('ok', !!ok);
+}
+function openAuthModal(mode){
+  authModalMode = mode;
+  const isReg = mode === 'register';
+  document.getElementById('authFieldsRegister').style.display = isReg ? 'flex' : 'none';
+  document.getElementById('authFieldsLogin').style.display = isReg ? 'none' : 'flex';
+  document.getElementById('authSubmitBtn').textContent = isReg ? '注册' : '登录';
+  document.getElementById('authBrandSub').textContent = isReg
+    ? '注册一个账号，盒子和设置就能跟着你换设备'
+    : '登录后会把这台设备上的盒子并进账号里';
+  const sw = document.getElementById('authSwitchLine');
+  sw.innerHTML = isReg ? '已经有账号了？<b>去登录</b>' : '还没有账号？<b>去注册</b>';
+  sw.querySelector('b').onclick = ()=> openAuthModal(isReg ? 'login' : 'register');
+  setAuthMsg('');
+  document.getElementById('authSubmitBtn').disabled = false;
+  document.getElementById('authModal').style.display = 'flex';
+}
+function closeAuthModal(){ document.getElementById('authModal').style.display = 'none'; }
+
+// 注册和登录只有请求参数不同，融合/收尾完全一样，所以合在一个提交函数里
+async function authSubmit(){
+  const btn = document.getElementById('authSubmitBtn');
+  const isReg = authModalMode === 'register';
+  let path, body;
+  if(isReg){
+    const email = document.getElementById('authRegEmail').value.trim();
+    const username = document.getElementById('authRegName').value.trim();
+    const pwd = document.getElementById('authRegPwd').value;
+    const pwd2 = document.getElementById('authRegPwd2').value;
+    if(!email || !username || !pwd){ setAuthMsg('四项都要填一下'); return; }
+    if(pwd !== pwd2){ setAuthMsg('两次输入的密码不一样'); return; }
+    if(pwd.length < 6){ setAuthMsg('密码至少 6 位'); return; }
+    path = '/api/register'; body = {email, username, password:pwd};
+  }else{
+    const account = document.getElementById('authLoginAcc').value.trim();
+    const pwd = document.getElementById('authLoginPwd').value;
+    if(!account || !pwd){ setAuthMsg('账号和密码都要填'); return; }
+    path = '/api/login'; body = {account, password:pwd};
+  }
+  btn.disabled = true;
+  setAuthMsg(isReg ? '正在注册…' : '正在登录…', true);
+  try{
+    const data = await authApi(path, {method:'POST', body});
+    authState = {token:data.token, user:data.user};
+    saveAuthState();
+    const overflow = applyMergedData(data);
+    // 融合结果立刻整体回传，让两边一致。这一步失败不算登录失败——本地已经是融合后的数据了，
+    // 之后任意一次改动都会由 scheduleCloudPush 再推一次，所以这里吞掉错误继续走完
+    try{ await pushCloudData(); }catch(e){ console.warn('融合结果回传失败，稍后会自动重试', e); }
+    ['authRegEmail','authRegName','authRegPwd','authRegPwd2','authLoginAcc','authLoginPwd']
+      .forEach(id=>{ const el = document.getElementById(id); if(el) el.value = ''; });
+    closeAuthModal();
+    if(typeof renderBoxPage==='function') renderBoxPage();
+    renderAll();
+    updateBoxMedalFab();
+    alert(overflow > 0
+      ? `${isReg?'注册':'登录'}成功，数据已融合。\n注意：合并后超出了 ${BOX_MAX_COUNT} 只的上限，多出的 ${overflow} 只没有保留。`
+      : `${isReg?'注册':'登录'}成功，数据已融合。`);
+  }catch(e){
+    setAuthMsg(e.message || '出错了');
+    btn.disabled = false;
+  }
+}
+
+/* ---- 账号设置 / 修改密码 ---- */
+function openAccountModal(){
+  const u = authState.user || {};
+  // 用户名/邮箱是用户自己输入的，一律走 textContent，不拼 innerHTML
+  const box = document.getElementById('accountInfoLine');
+  box.textContent = '';
+  [['用户名：', u.username||''], ['邮箱：', u.email||'']].forEach(([lab, val], i)=>{
+    if(i) box.appendChild(document.createElement('br'));
+    const tag = document.createElement('span'); tag.textContent = lab;
+    box.appendChild(tag);
+    box.appendChild(document.createTextNode(val));
+  });
+  document.getElementById('accountModal').style.display = 'flex';
+}
+function closeAccountModal(){ document.getElementById('accountModal').style.display = 'none'; }
+function openPwdModal(){
+  document.getElementById('pwdNew1').value = '';
+  document.getElementById('pwdNew2').value = '';
+  const msg = document.getElementById('pwdMsg'); msg.textContent = ''; msg.classList.remove('ok');
+  document.getElementById('pwdSubmitBtn').disabled = false;
+  document.getElementById('pwdModal').style.display = 'flex';
+}
+async function pwdSubmit(){
+  const p1 = document.getElementById('pwdNew1').value;
+  const p2 = document.getElementById('pwdNew2').value;
+  const msg = document.getElementById('pwdMsg');
+  const btn = document.getElementById('pwdSubmitBtn');
+  msg.classList.remove('ok');
+  if(p1.length < 6){ msg.textContent = '密码至少 6 位'; return; }
+  if(p1 !== p2){ msg.textContent = '两次输入的密码不一样'; return; }
+  btn.disabled = true;
+  msg.textContent = '正在修改…'; msg.classList.add('ok');
+  try{
+    const data = await authApi('/api/password', {method:'POST', body:{password:p1}, auth:true});
+    if(data.token){ authState.token = data.token; saveAuthState(); } // 换新 token，本机不用重新登录
+    document.getElementById('pwdModal').style.display = 'none';
+    closeAccountModal();
+    alert('密码已修改。');
+  }catch(e){
+    msg.classList.remove('ok');
+    msg.textContent = e.message || '修改失败';
+    btn.disabled = false;
+  }
+}
+function authLogout(){
+  if(!confirm('退出登录？\n这台设备上已有的盒子和设置会原样留着，下次登录会再并回账号里。')) return;
+  clearAuthState();
+  closeAccountModal();
+  updateBoxMedalFab();
+}
+
+/* ---- 事件绑定 ---- */
+loadAuthState();
+document.getElementById('boxAuthRegisterBtn').onclick = ()=> openAuthModal('register');
+document.getElementById('boxAuthLoginBtn').onclick = ()=> openAuthModal('login');
+document.getElementById('authModalClose').onclick = closeAuthModal;
+document.getElementById('authModal').onclick = (e)=>{ if(e.target.id==='authModal') closeAuthModal(); };
+document.getElementById('authSubmitBtn').onclick = authSubmit;
+document.getElementById('boxAccountFab').onclick = openAccountModal;
+document.getElementById('accountModalClose').onclick = closeAccountModal;
+document.getElementById('accountModal').onclick = (e)=>{ if(e.target.id==='accountModal') closeAccountModal(); };
+document.getElementById('accountChangePwdBtn').onclick = openPwdModal;
+document.getElementById('accountLogoutBtn').onclick = authLogout;
+document.getElementById('pwdModalClose').onclick = ()=>{ document.getElementById('pwdModal').style.display='none'; };
+document.getElementById('pwdModal').onclick = (e)=>{ if(e.target.id==='pwdModal') document.getElementById('pwdModal').style.display='none'; };
+document.getElementById('pwdSubmitBtn').onclick = pwdSubmit;
+// 输入框里按回车直接提交，省得在手机上还要去点按钮
+document.querySelectorAll('#authFieldsRegister input, #authFieldsLogin input').forEach(el=>{
+  el.addEventListener('keydown', e=>{ if(e.key==='Enter') authSubmit(); });
+});
+document.querySelectorAll('#pwdModal .auth-fields input').forEach(el=>{
+  el.addEventListener('keydown', e=>{ if(e.key==='Enter') pwdSubmit(); });
+});
+// 已登录时开页先拉一次云端：换设备/多端编辑后打开就能拿到最新的，同样走并集融合
+if(authLoggedIn()){
+  authApi('/api/data', {auth:true}).then(async data=>{
+    applyMergedData(data);
+    await pushCloudData();
+    if(typeof renderBoxPage==='function' && typeof boxOverlayOpen!=='undefined' && boxOverlayOpen) renderBoxPage();
+    renderAll();
+  }).catch(()=>{}); // 拉不到就照常用本地数据，不打断使用
 }
 
 /* ---- 盒子详情页里改睡饱饱/南瓜尺寸时，实时写回该条目（沿用 18.20 那套"选完即写回"的做法）---- */
@@ -5839,6 +6213,7 @@ function loadUserPrefs(){
 }
 function saveUserPrefs(){
   try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
+  scheduleCloudPush(); // v3.17：同上，个人设置改动也跟着上云
 }
 function clampSleepPrefs(){
   let a = Math.round(userPrefs.sleep1), b = Math.round(userPrefs.sleep2);
@@ -8200,8 +8575,10 @@ document.getElementById('creditModalClose').onclick = ()=>{ document.getElementB
 document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='creditModal') document.getElementById('creditModal').style.display='none'; };
 
 /* ============ 标题行右侧4只吉祥物：随机起播+6秒内必播一次+独立10%闪光 ============ */
-(function initSiteMascots(){
-  const root = document.getElementById('siteMascotCluster');
+/* v3.17：抽成按容器初始化的函数，注册/登录浮窗里那一组直接复用同一套播放逻辑。
+   每个容器有自己独立的闪光状态和定时器，互不干扰；弹窗 display:none 时
+   IntersectionObserver 报不可见，定时器自动停掉，弹开时再恢复。 */
+function initMascotCluster(root){
   if(!root) return;
   const imgs = [...root.querySelectorAll('img[data-mascot-file]')];
   const timers = new Map(); // img -> {tid, iid}
@@ -8261,7 +8638,9 @@ document.getElementById('creditModal').onclick = (e)=>{ if(e.target.id==='credit
     });
   }, {threshold:0});
   io.observe(root);
-})();
+}
+initMascotCluster(document.getElementById('siteMascotCluster'));
+initMascotCluster(document.getElementById('authMascotCluster'));
 
 function collapseModule4IfExpanded(){
   const body = document.getElementById('body-mod4');
@@ -10055,29 +10434,32 @@ function renderBoxPage(){
     const asset = BOX_ASSET_MAP[entry.dex];
     const imgWrap = document.createElement('div');
     imgWrap.className = 'box-grid-img-wrap';
+    // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），素材自身的动画不受影响。
+    // v3.17 南瓜两族换成 gif 后这层壳对 gif 分支也要生效，所以提到两个分支外面统一处理
+    // （gif 分支要把 canvas 和 img 一起塞进壳里，否则静帧和播放态的缩放会对不上）
+    const pumpkinScale = PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
+    let imgHost = imgWrap;
+    if(pumpkinScale && asset){
+      const shell = document.createElement('div');
+      shell.className = 'box-pumpkin-scale';
+      shell.style.transform = 'scale('+pumpkinScale+')';
+      imgWrap.appendChild(shell);
+      imgHost = shell;
+    }
     if(asset && asset.kind==='gif'){
       const canvas = document.createElement('canvas');
       canvas.className = 'box-grid-canvas';
       const img = document.createElement('img');
       img.className = 'box-grid-img';
       img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
-      imgWrap.appendChild(canvas);
-      imgWrap.appendChild(img);
+      imgHost.appendChild(canvas);
+      imgHost.appendChild(img);
       boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny));
     } else if(asset && asset.kind==='png'){
       const img = document.createElement('img');
       img.className = 'box-grid-img';
       img.src = boxAssetPath(entry.dex, entry.shiny);
-      if(PUMPKIN_BOX_SCALE_BY_DEX[entry.dex]){
-        // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），png 自身的弹跳动画还挂在 img 上不受影响
-        const shell = document.createElement('div');
-        shell.className = 'box-pumpkin-scale';
-        shell.style.transform = 'scale('+PUMPKIN_BOX_SCALE_BY_DEX[entry.dex]+')';
-        shell.appendChild(img);
-        imgWrap.appendChild(shell);
-      } else {
-        imgWrap.appendChild(img);
-      }
+      imgHost.appendChild(img);
     } else {
       // 没有素材（多半是 OCR 连物种都没认出来，dex 为空）：放个问号占位，别留一个空白格
       const q = document.createElement('span');
