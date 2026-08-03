@@ -5356,9 +5356,12 @@ function updateBoxMedalFab(){
   // 详情页打开时也要收起：这颗浮窗 z-index(1200) 高于详情页浮层(1150)，不收就直接压在详情页上。
   // panelFab / boxCreateFab 在详情页同样是主动收起的，这里跟它们保持一致。
   const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
-  fab.style.display = (open && !inDetail) ? 'flex' : 'none';
+  // 批量删除条打开时同样要收起：批量删除条也吸在盒子浮窗底边，会被这颗浮窗压住甚至挡住"删除"按钮
+  const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
+  const shouldShow = open && !inDetail && !inBatch;
+  fab.style.display = shouldShow ? 'flex' : 'none';
   fab.classList.toggle('on', !!userPrefs.boxMedalOn);
-  updateBoxAuthUI(open && !inDetail); // v3.17：账号相关的吸底条/浮窗跟奖章浮窗同一时机同步
+  updateBoxAuthUI(shouldShow); // v3.17：账号相关的吸底条/浮窗跟奖章浮窗同一时机同步
 }
 function toggleBoxMedalFab(){
   userPrefs.boxMedalOn = !userPrefs.boxMedalOn;
@@ -5473,6 +5476,27 @@ function updateBoxAuthUI(visible){
   // 登录后吸底条整个撤掉，改成左下角浮窗；未登录则反过来
   bar.style.display = logged ? 'none' : 'flex';
   fab.style.display = (visible && logged) ? 'flex' : 'none';
+  updateBoxFabAuthOffset();
+}
+// 未登录时吸底条（注册/登录）紧贴盒子浮窗底边，跟四颗小圆浮窗（修改面板/新建/奖章/账号设置）
+// 常驻的 100px/158px 高度正好压在一起；这里量出吸底条顶边离视口底部的真实距离，
+// 不够两排浮窗站的话就把两排一起上移，登录后吸底条撤掉了就恢复回默认位置
+function updateBoxFabAuthOffset(){
+  const bar = document.getElementById('boxAuthBar');
+  if(!bar || typeof boxOverlayOpen==='undefined' || !boxOverlayOpen) return;
+  const lowerIds = ['boxCreateFab','boxMedalFab'];
+  const upperIds = ['panelFab','boxAccountFab'];
+  const barVisible = bar.style.display !== 'none';
+  if(!barVisible){
+    [...lowerIds,...upperIds].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom=''; });
+    return;
+  }
+  const barTop = bar.getBoundingClientRect().top;
+  const clearance = Math.ceil(window.innerHeight - barTop + 8); // 吸底条顶边到视口底部的距离 + 8px 间隙
+  const lowerBottom = Math.max(100, clearance);
+  const upperBottom = lowerBottom + 58; // 维持两排浮窗原有的 58px 间距（158-100）
+  lowerIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom = lowerBottom+'px'; });
+  upperIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom = upperBottom+'px'; });
 }
 
 /* ---- 注册/登录弹窗 ---- */
@@ -9734,7 +9758,7 @@ function applyBoxOverlayBounds(){
     if(t && br) t.style.left = (br.left + br.width/2 - wr.left) + 'px';
   });
 }
-window.addEventListener('resize', ()=>{ if(boxOverlayOpen) applyBoxOverlayBounds(); });
+window.addEventListener('resize', ()=>{ if(boxOverlayOpen){ applyBoxOverlayBounds(); updateBoxFabAuthOffset(); } });
 function positionBoxOverlayOrigin(bubble){
   const ballEl = document.querySelector('#tabBtnBox .tab-bubble-ball');
   const fr = ballEl.getBoundingClientRect();
@@ -11224,6 +11248,18 @@ function boxSetBatchBarVisible(on){
   document.getElementById('boxBatchBar').style.display = on ? 'flex' : 'none';
   const t = document.getElementById('boxBubbleTail');
   if(t) t.classList.toggle('on-panel', !!on);
+  // 批量删除条跟"修改面板/新建/奖章/账号设置"这四颗小圆浮窗一样吸在盒子浮窗底边附近，
+  // 开启时会被浮窗压住甚至挡住"删除"按钮，这里开启时统一先隐藏；关闭时交还给各自原有的
+  // 显隐逻辑决定要不要恢复（不能无脑强制显示，登录态/详情页态都可能不需要它们出现）
+  if(on){
+    ['panelFab','boxCreateFab','boxMedalFab','boxAccountFab'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+  } else {
+    const pf = document.getElementById('panelFab'); if(pf) pf.style.display = 'flex';
+    const bcf = document.getElementById('boxCreateFab'); if(bcf) bcf.style.display = 'flex';
+    updateBoxMedalFab(); // 顺带同步奖章/账号浮窗 + 吸底条的显隐，以及浮窗避让吸底条的偏移量
+  }
 }
 document.getElementById('boxBatchDeleteBtn').onclick = ()=>{
   boxBatchDeleteMode = !boxBatchDeleteMode;
