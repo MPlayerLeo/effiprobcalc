@@ -10540,13 +10540,22 @@ function renderBoxCountWidget(filteredCount){
   const total = boxData.length;
   el.innerHTML = `<span>${filteredCount}</span><span class="box-count-dash">－</span><span>${total}</span>`;
 }
-// 昵称固定单行不换行：格子宽度算下来放不下时，就一格一格缩字号，直到放得下或触底为止
+// 昵称固定单行不换行：格子宽度算下来放不下时，先一格一格缩字号；缩到底仍放不下（名字实在太长）
+// 就不再继续缩——字太小会看不清——改成从末尾一个字一个字砍掉，换成省略号，直到放得下为止
 function fitBoxGridLabel(el){
+  const fullText = el.textContent;
   el.style.fontSize = '';
   let size = parseFloat(getComputedStyle(el).fontSize) || 10;
   let guard = 0;
-  while(el.scrollWidth > el.clientWidth && size > 6 && guard < 20){
+  while(el.scrollWidth > el.clientWidth && size > 7 && guard < 20){
     size -= 0.5; el.style.fontSize = size+'px'; guard++;
+  }
+  if(el.scrollWidth > el.clientWidth){
+    const chars = Array.from(fullText);
+    while(chars.length > 1 && el.scrollWidth > el.clientWidth){
+      chars.pop();
+      el.textContent = chars.join('') + '…';
+    }
   }
 }
 function renderBoxPage(){
@@ -10615,7 +10624,9 @@ function renderBoxPage(){
     }
     const label = document.createElement('div');
     label.className = 'box-grid-label';
-    label.textContent = entry.nickname || entry.name;
+    // 保险起见在显示端也强制截断一次：万一存量数据（导入/云端合并等旧路径）里混进了超限昵称，
+    // 也不能让格子布局被冲垮
+    label.textContent = boxTrimNickname(entry.nickname || entry.name) || entry.name;
     const levelLabel = document.createElement('div');
     levelLabel.className = 'box-grid-level';
     levelLabel.textContent = 'Lv.'+entry.level;
@@ -10848,11 +10859,11 @@ function renderBoxDetailHeader(entry){
   // 之后一失焦就会把没打完的字错误地写进下一只头上。逐字实时写回后这个空子就不存在了。
   nickInput.oninput = ()=>{
     const live = boxGetEntry(entry.id);
-    if(live){ live.nickname = nickInput.value; saveBoxData(); }
+    if(live){ live.nickname = boxTrimNickname(nickInput.value); saveBoxData(); }
   };
   nickInput.onblur = ()=>{
     const live = boxGetEntry(entry.id);
-    if(live){ live.nickname = nickInput.value.trim() || live.name; saveBoxData(); nickInput.value = live.nickname; renderBoxPage(); }
+    if(live){ live.nickname = boxTrimNickname(nickInput.value) || live.name; saveBoxData(); nickInput.value = live.nickname; renderBoxPage(); }
   };
   const lvEl = document.getElementById('boxdet-pkLevelSel');
   lvEl.innerHTML = '';
