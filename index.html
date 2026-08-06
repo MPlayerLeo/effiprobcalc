@@ -9446,12 +9446,12 @@ function renderCaptureSubtype(){
       return `<div class="cap-isl-btn${active?' active':''}" data-island="${isl.id}" style="background-image:${isl.bg}"><span class="cap-isl-btn-label">${isl.name}</span></div>`; }).join('');
     subHtml = `<div class="cap-attrs-row"><div class="cap-sub-attrs">${attrsPills}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill" id="capCtrlBtn"><span>参数</span><span>设置</span></div></div>
       <div class="cap-islands-row"><div class="cap-isl-grid">${islandBtns}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill cap-ctrl-btn-danger" id="capClearAttrBtn"><span>清除</span><span>所选</span></div></div>`;
-    noteHtml = `<div class="cap-sub-note">＊默认含副技能「树果数量S」，岛屿顺果</div>`;
+    noteHtml = `<div class="cap-sub-note">＊默认含副技能「树果数量S」，岛屿顺果，能量型默认满技能等级</div>`;
   } else if(capState.type==='food'){
     const foods = Object.keys(CAP_ING_ENERGY).filter(f=>f!=='尾巴').concat(['尾巴']);
     subHtml = `<div class="cap-sub-foods">`+foods.map(f=>{ const active=capState.subFood===f; const icon=ING_ICONS[f];
       return `<div class="cap-food-pill${active?' active':''}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
-    noteHtml = `<div class="cap-sub-note">＊由于默认主技能最高等级，因此食材精选宝可梦产量虚高，请勿培养食材精选宝可梦</div>`;
+    noteHtml = `<div class="cap-sub-note" style="color:#d9333f;">＊由于默认主技能最高等级，因此食材精选宝可梦产量虚高，请勿培养食材精选宝可梦</div>`;
   } else {
     subHtml = `<div class="cap-sub-skills">`+CAP_SKILL_SUBS.map(s=>{ const active=capState.subSkill===s;
       return `<div class="cap-skill-pill${active?' active':''}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
