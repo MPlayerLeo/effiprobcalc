@@ -1211,6 +1211,10 @@
     .yield-section-right{ flex:0 0 44%; flex-direction:column; align-items:flex-start; gap:6px; padding:9px; }
     .yield-section-right .yield-stat{ flex-wrap:wrap; gap:0 4px; white-space:normal; }
     .yield-section-right .yield-stat-label{ flex:1 1 100%; line-height:1.3; }
+    /* .yield-stat-break 的 flex:0 0 100% 是给桌面端"横向换行"布局用来强制另起一行的；
+       这里父容器已经改成 flex-direction:column，100% 就变成"占满整列高度"，
+       反而把这一项挤到旁边另开一列，跑出卡片右边被裁掉——列布局下每项本来就自己一行，不需要这条规则 */
+    .yield-section-right .yield-stat-break{ flex:0 0 auto; }
     .yield-section-skill .yield-section-mid{ flex-wrap:nowrap; }
     .yield-section-skill-cnt{ padding:9px; }
     .yield-section-skill-effect{ padding:9px; gap:6px; }
