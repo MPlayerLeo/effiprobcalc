@@ -605,12 +605,12 @@
     font-size:9.5px; font-weight:800; color:var(--ink); line-height:1.05;
   }
   .box-count-dash{ color:#adb2ba; font-weight:700; line-height:.9; }
-  /* 改用弹性换行：按钮各自按文字内容撑开宽度，够宽就挤在同一行，放不下自动换到下一行——
-     不再靠写死的列跨度数字硬凑，加新按钮/改文字都不会把行数挤爆 */
-  .box-filter-grid{ flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; gap:6px; align-content:flex-start; }
+  /* 改用 4 列栅格：8 个筛选按钮正好铺满 4×2 两行，每列等宽拉伸——
+     不管按钮文字多长/容器多宽，都稳定占满两行，不会看宽度多少而挤成 1 行或 3 行 */
+  .box-filter-grid{ flex:1 1 auto; min-width:0; display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; }
   .box-filter-btn{
-    border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:8px;
-    padding:6px 6px; font-size:10.5px; font-weight:700; cursor:pointer; white-space:nowrap; flex:0 0 auto;
+    width:100%; min-width:0; border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:8px;
+    padding:6px 2px; font-size:11.5px; font-weight:700; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .box-filter-btn.box-filter-active{ border-color:var(--accent); background:var(--accent); color:#fff; }
   .box-filter-reset-btn{
@@ -662,9 +662,9 @@
   /* gif 播放时同理：点开瞬间才提层，跟 png 弹跳走一样的套路，避免播放第一帧闪糊一下 */
   .box-grid-img.box-gif-playing{ will-change:transform; }
   /* 距离画面框下沿固定 2px */
-  /* 昵称固定单行、不换行：字号由 fitBoxGridLabel 按实际格宽动态缩到能放下一整行为止，
-     行高写死保证不管字号缩没缩，格子高度都不会跳动 */
-  .box-grid-label{ font-size:10px; font-weight:700; color:var(--ink); text-align:center; margin-top:2px; width:100%; line-height:12px; height:12px; overflow:hidden; white-space:nowrap; }
+  /* 昵称固定单行、不换行、字号不缩：放不下就用原生 text-overflow 省略号截断，
+     不再用 JS 量宽度动态缩字号——那套量法很容易被动画期间的 transform/时序坑到，直接交给 CSS 最稳 */
+  .box-grid-label{ font-size:10px; font-weight:700; color:var(--ink); text-align:center; margin-top:2px; width:100%; line-height:12px; height:12px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
   /* 等级紧贴昵称正下方，字号更小、纯紫色，跟昵称一样固定单行不换行 */
   .box-grid-level{ font-size:8px; font-weight:700; color:#7a4f9e; text-align:center; width:100%; line-height:10px; height:10px; overflow:hidden; white-space:nowrap; }
   .box-grid-flagged{ background:rgba(193,68,58,.18); border-radius:10px; }
@@ -10544,24 +10544,6 @@ function renderBoxCountWidget(filteredCount){
   const total = boxData.length;
   el.innerHTML = `<span>${filteredCount}</span><span class="box-count-dash">－</span><span>${total}</span>`;
 }
-// 昵称固定单行不换行：格子宽度算下来放不下时，先一格一格缩字号；缩到底仍放不下（名字实在太长）
-// 就不再继续缩——字太小会看不清——改成从末尾一个字一个字砍掉，换成省略号，直到放得下为止
-function fitBoxGridLabel(el){
-  const fullText = el.textContent;
-  el.style.fontSize = '';
-  let size = parseFloat(getComputedStyle(el).fontSize) || 10;
-  let guard = 0;
-  while(el.scrollWidth > el.clientWidth && size > 7 && guard < 20){
-    size -= 0.5; el.style.fontSize = size+'px'; guard++;
-  }
-  if(el.scrollWidth > el.clientWidth){
-    const chars = Array.from(fullText);
-    while(chars.length > 1 && el.scrollWidth > el.clientWidth){
-      chars.pop();
-      el.textContent = chars.join('') + '…';
-    }
-  }
-}
 function renderBoxPage(){
   renderBoxFilterRow();
   renderBoxSortRow();
@@ -10645,7 +10627,6 @@ function renderBoxPage(){
     item.addEventListener('contextmenu', (e)=> e.preventDefault()); // 长按已被改名占用，挡掉系统右键/长按菜单
     grid.appendChild(item);
   });
-  grid.querySelectorAll('.box-grid-label').forEach(fitBoxGridLabel);
   if(entries.length){
     // 拉到最下面时额外允许再下拉约2排的空白区域；行高是响应式的，不能写死像素，
     // 拿刚渲染出来的真实格子高度换算
@@ -11515,10 +11496,8 @@ function boxFilterOptGrid(title, itemsHtml){
 }
 // span\uff1d\u5728 6 \u5217\u6805\u683c\u91cc\u5360\u51e0\u5217\uff1b\u4e24\u884c\u5206\u522b\u662f 1+1+1+1+2 \u548c 3+3\uff0c\u6b63\u597d\u5404\u5360\u6ee1 6 \u5217
 const BOX_FILTER_DEFS = [
-  {key:'shiny', label:'\u95ea\u5149', span:1}, {key:'types', label:'\u7c7b\u578b', span:1}, {key:'attrs', label:'\u5c5e\u6027', span:1},
-  {key:'levels', label:'\u7b49\u7ea7', span:1}, {key:'eff', label:'\u6548\u7387\u503c', span:2},
-  {key:'medals', label:'\u7761\u9971\u9971\u5956\u7ae0', span:3}, {key:'foods', label:'\u98df\u6750', span:1},
-  {key:'skillTypes', label:'\u4e3b\u6280\u80fd', span:1},
+  {key:'shiny', label:'\u95ea\u5149'}, {key:'types', label:'\u7c7b\u578b'}, {key:'attrs', label:'\u5c5e\u6027'}, {key:'levels', label:'\u7b49\u7ea7'},
+  {key:'eff', label:'\u6548\u7387\u503c'}, {key:'medals', label:'\u7761\u9971\u9971\u5956\u7ae0'}, {key:'foods', label:'\u98df\u6750'}, {key:'skillTypes', label:'\u4e3b\u6280\u80fd'},
 ];
 // 每次改选项都会重画筛选按钮行，旧的锚点节点已经被丢弃，得按位置重新拿一次
 function boxFilterAnchorFor(key){
