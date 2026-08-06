@@ -9451,6 +9451,7 @@ function renderCaptureSubtype(){
     const foods = Object.keys(CAP_ING_ENERGY).filter(f=>f!=='尾巴').concat(['尾巴']);
     subHtml = `<div class="cap-sub-foods">`+foods.map(f=>{ const active=capState.subFood===f; const icon=ING_ICONS[f];
       return `<div class="cap-food-pill${active?' active':''}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
+    noteHtml = `<div class="cap-sub-note">＊由于默认主技能最高等级，因此食材精选宝可梦产量虚高，请勿培养食材精选宝可梦</div>`;
   } else {
     subHtml = `<div class="cap-sub-skills">`+CAP_SKILL_SUBS.map(s=>{ const active=capState.subSkill===s;
       return `<div class="cap-skill-pill${active?' active':''}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
