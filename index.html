@@ -11508,6 +11508,13 @@ function renderBoxFilterRow(){
         renderBoxPage();
         return;
       }
+      // 再点一次已经打开的那颗按钮：收起浮窗，而不是重新打开
+      const overlay = document.getElementById('boxFilterPopupOverlay');
+      const panel = document.getElementById('boxFilterPopupPanel');
+      if(overlay.classList.contains('open') && panel.classList.contains('for-'+d.key)){
+        closeBoxFilterPop();
+        return;
+      }
       openBoxFilterPopup(d.key, btn);
     };
     row.appendChild(btn);
@@ -11610,6 +11617,7 @@ function boxFilterPopShow(key, anchorEl, innerHtml){
   panel.innerHTML = '<div class="box-filter-pop-tail" id="boxFilterPopTail"></div>'+innerHtml;
   overlay.classList.add('open');
   boxFilterPopPosition();
+  boxFilterBindAutoClose();
 }
 function boxFilterPopPosition(){
   const panel = document.getElementById('boxFilterPopupPanel');
@@ -11629,7 +11637,28 @@ function boxFilterPopPosition(){
   const tail = document.getElementById('boxFilterPopTail');
   if(tail) tail.style.left = Math.max(12, Math.min(pw-12, cx-left))+'px';
 }
+// 浮窗坐标是打开那一刻按锚点按钮算出来的固定值，一滚动就会跟按钮脱节，所以滚动/滑动直接关掉它。
+// 必须用【捕获阶段】监听：盒子网格是在自己的内层容器里滚的，scroll 事件不冒泡到 window。
+let _boxFilterAutoCloseOff = null;
+function boxFilterUnbindAutoClose(){
+  if(_boxFilterAutoCloseOff){ _boxFilterAutoCloseOff(); _boxFilterAutoCloseOff = null; }
+}
+function boxFilterBindAutoClose(){
+  boxFilterUnbindAutoClose();
+  const on = function(){ closeBoxFilterPop(); };
+  // 延一帧再挂：打开浮窗这一下本身可能触发一次滚动/重排，立刻挂会自己把自己关掉
+  const t = setTimeout(function(){
+    document.addEventListener('scroll', on, {capture:true, passive:true});
+    document.addEventListener('touchmove', on, {capture:true, passive:true});
+  }, 0);
+  _boxFilterAutoCloseOff = function(){
+    clearTimeout(t);
+    document.removeEventListener('scroll', on, {capture:true});
+    document.removeEventListener('touchmove', on, {capture:true});
+  };
+}
 function closeBoxFilterPop(){
+  boxFilterUnbindAutoClose();
   document.getElementById('boxFilterPopupOverlay').classList.remove('open');
   boxFilterPopAnchor = null;
 }
