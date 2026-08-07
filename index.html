@@ -9450,8 +9450,29 @@ function capShowBubble(anchor, html){
   b.style.left = Math.min(window.innerWidth-b.offsetWidth-8, Math.max(8, r.left+r.width/2-b.offsetWidth/2))+'px';
   b.style.top = (r.top - b.offsetHeight - 8 + window.scrollY)+'px';
   setTimeout(()=>{ document.addEventListener('click', capHideBubble, {once:true}); }, 0);
+  capBubbleBindAutoClose();
 }
-function capHideBubble(){ const b=document.getElementById('capBubble'); if(b) b.remove(); }
+function capHideBubble(){ capBubbleUnbindAutoClose(); const b=document.getElementById('capBubble'); if(b) b.remove(); }
+// 气泡坐标是打开那一刻按锚点算出来的固定值，一滚动/滑动就会跟锚点脱节，所以滚动/滑动直接关掉它。
+// 必须用【捕获阶段】监听：图表/列表可能在自己的内层容器里滚，scroll 事件不冒泡到 window。
+let _capBubbleAutoCloseOff = null;
+function capBubbleUnbindAutoClose(){
+  if(_capBubbleAutoCloseOff){ _capBubbleAutoCloseOff(); _capBubbleAutoCloseOff = null; }
+}
+function capBubbleBindAutoClose(){
+  capBubbleUnbindAutoClose();
+  const on = function(){ capHideBubble(); };
+  // 延一帧再挂：打开气泡这一下本身可能触发一次滚动/重排，立刻挂会自己把自己关掉
+  const t = setTimeout(function(){
+    document.addEventListener('scroll', on, {capture:true, passive:true});
+    document.addEventListener('touchmove', on, {capture:true, passive:true});
+  }, 0);
+  _capBubbleAutoCloseOff = function(){
+    clearTimeout(t);
+    document.removeEventListener('scroll', on, {capture:true});
+    document.removeEventListener('touchmove', on, {capture:true});
+  };
+}
 
 // 点条目弹出的跳转气泡：三个按钮对应捕捉推荐(page4)以外的另外三个主页面
 const CAP_JUMP_TARGETS = [
