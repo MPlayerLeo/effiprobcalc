@@ -9794,6 +9794,10 @@ function pageSwitchAnimateTo(targetId){
     if(e.touches.length!==1 || pageSwiping || pageSwipeBlocked()){ tracking=false; return; }
     // 起手在横向滚动的小组件（如捕捉推荐页的岛屿选择条）里就不当成翻页手势，让它正常横滚
     if(e.target.closest && e.target.closest('.cap-cscroll')){ tracking=false; return; }
+    // 起手在捕捉推荐页的条目内容区（标题下方那一大片）也不当成翻页手势：
+    // 快速上下滑动时手指难免带一点横向偏移，容易被误判成翻页导致整页（含标题）跟着滑走，
+    // 这里直接把内容区排除在翻页判定之外，保证内容区滑动只负责自己的纵向滚动，标题不动
+    if(e.target.closest && e.target.closest('.cap-rank-viewport')){ tracking=false; return; }
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
   }, {passive:true});
   document.addEventListener('touchend', (e)=>{
