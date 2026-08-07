@@ -629,6 +629,8 @@
 
   /* overscroll-behavior:contain —— 网格滚到头之后继续拖，不要把滚动"传染"给下层页面 */
   .box-grid-scroll{ flex:1 1 auto; overflow-y:auto; overscroll-behavior:contain; padding:12px 10px 20px; }
+  /* 每行6还是5列由 JS 的 applyBoxGridColumns() 按实测可用宽度动态决定并覆盖这里的
+     grid-template-columns（保证6个中文字符的昵称不被截断），这里只是列数未知前的兜底默认值 */
   .box-grid{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px 6px; }
   .box-grid-empty{ text-align:center; color:#8a8375; font-size:13px; padding:60px 20px; line-height:1.6; }
   /* 拉到底时额外留出的空白区（约2排格子高，具体高度由 JS 按实际格子渲染高度算出）：
@@ -1187,7 +1189,9 @@
   .yield-section-skill .yield-section-title{ background:var(--skill-bg); color:var(--skill-tx); }
   .yield-section-mid{ flex:1 1 50%; display:flex; flex-wrap:wrap; align-items:center; gap:8px 10px; padding:10px 12px; min-width:0; }
   .yield-section-right{ flex:1 1 42%; display:flex; flex-wrap:wrap; align-items:center; gap:6px 10px; padding:10px 12px; border-left:1px dashed var(--line); min-width:0; }
-  .yield-section-fruit .yield-section-mid, .yield-section-fruit .yield-section-right{ flex-direction:column; align-items:flex-start; }
+  /* justify-content:center：树果区左右两栏都是纵向 flex，之前没写 justify-content，
+     默认 flex-start 导致内容整体贴在顶上（右栏比左栏矮时更明显），改成居中让内容在栏高范围内上下居中 */
+  .yield-section-fruit .yield-section-mid, .yield-section-fruit .yield-section-right{ flex-direction:column; align-items:flex-start; justify-content:center; }
   .yield-section-skill .yield-section-mid{ flex-direction:row; align-items:stretch; padding:0; gap:0; }
   /* 持续满包"满包中"占位：不走 skill-cnt/-effect 那两个自带内边距的子块，直接塞进 .yield-section-mid，
      需要比上面那条 padding:0 更高优先级的选择器把内边距找补回来，才能和树果区文字左边缘对齐 */
@@ -2013,6 +2017,21 @@
         <h2><span class="n">2</span>产能分析</h2>
         <div id="boxdet-energySubmenu"></div>
         <div id="boxdet-gradYieldBox"></div>
+      </div>
+      <!-- 持有上限：跟控制参数浮窗（dash- 前缀）里那套三态开关+副技能持有+睡眠时长数轴是同一套
+           renderCarryBlock(pfx) 渲染逻辑，这里只需要把同名 id 换成 boxdet- 前缀就能直接复用 -->
+      <div class="card" id="boxdet-carryCard" style="margin-top:16px;">
+        <h2><span class="n">3</span>持有上限</h2>
+        <div class="btnrow" id="boxdet-carryModeSel"></div>
+        <div class="carry-opts" id="boxdet-carryOpts" style="display:none;">
+          <div class="carry-opts-row">
+            <div class="carry-opts-lab">副技能持有</div>
+            <div class="btnrow" id="boxdet-carrySubSel"></div>
+            <div class="carry-opts-note" id="boxdet-carrySubNote"></div>
+          </div>
+          <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
+          <div class="sleep-axis" id="boxdet-sleepAxis"></div>
+        </div>
       </div>
       <div style="display:none;">
         <div class="btnrow" id="boxdet-typeSel"></div>
@@ -5169,7 +5188,7 @@ function renderDashPanelShinyLevel(){
   }
 }
 /* ============ v3.16 持有上限控制区（三态开关 + 副技能持有 + 睡饱饱 + 睡眠时长数轴） ============ */
-const CARRY_CTRL_PFXS = ['', 'p2-', 'p3-', 'dash-'];
+const CARRY_CTRL_PFXS = ['', 'p2-', 'p3-', 'dash-', 'boxdet-'];
 
 function renderCarryBlock(pfx){
   const modeEl = document.getElementById(pfx+'carryModeSel');
@@ -5343,7 +5362,7 @@ function sleepDragTo(track, clientX, knob){
   // 拖动过程中不跑 renderAll（会把正在拖的 DOM 重建掉），只就地刷新四套数轴 + 产量数字
   CARRY_CTRL_PFXS.forEach(p=>{ if(p!==track.getAttribute('data-pfx')) renderSleepAxis(p); });
   updateSleepAxisInPlace(track);
-  renderYieldAnalysis(''); renderYieldAnalysis('p2-');
+  renderYieldAnalysis(''); renderYieldAnalysis('p2-'); renderYieldAnalysis('boxdet-');
 }
 function updateSleepAxisInPlace(track){
   const u1 = userPrefs.sleep1, u2 = userPrefs.sleep2;
@@ -9805,7 +9824,7 @@ function applyBoxOverlayBounds(){
     if(t && br) t.style.left = (br.left + br.width/2 - wr.left) + 'px';
   });
 }
-window.addEventListener('resize', ()=>{ if(boxOverlayOpen){ applyBoxOverlayBounds(); updateBoxFabAuthOffset(); } });
+window.addEventListener('resize', ()=>{ if(boxOverlayOpen){ applyBoxOverlayBounds(); updateBoxFabAuthOffset(); applyBoxGridColumns(); } });
 function positionBoxOverlayOrigin(bubble){
   const ballEl = document.querySelector('#tabBtnBox .tab-bubble-ball');
   const fr = ballEl.getBoundingClientRect();
@@ -10635,12 +10654,43 @@ function renderBoxCountWidget(filteredCount){
   const total = boxData.length;
   el.innerHTML = `<span>${filteredCount}</span><span class="box-count-dash">－</span><span>${total}</span>`;
 }
+// 每行放6个还是5个：按 boxGridScroll 实际可用宽度算出6列时每格能分到多宽，
+// 用同样字号/字重实测6个中文字符要多宽（不同字体度量不完全等于字号本身，直接量比猜准），
+// 6列分到的宽度不够就退到5列——保证昵称至少6个中文字符不被省略号截断
+let _boxLabelMeasureEl = null;
+function boxMeasureSixCharWidth(){
+  if(!_boxLabelMeasureEl){
+    _boxLabelMeasureEl = document.createElement('span');
+    _boxLabelMeasureEl.className = 'box-grid-label';
+    _boxLabelMeasureEl.style.cssText = 'position:absolute; visibility:hidden; left:-9999px; top:-9999px; width:auto; height:auto; white-space:nowrap;';
+    document.body.appendChild(_boxLabelMeasureEl);
+  }
+  _boxLabelMeasureEl.textContent = '测'.repeat(6);
+  return _boxLabelMeasureEl.scrollWidth;
+}
+function computeBoxGridColumnCount(){
+  const scroll = document.getElementById('boxGridScroll');
+  if(!scroll) return 6;
+  const cs = getComputedStyle(scroll);
+  const innerWidth = scroll.clientWidth - (parseFloat(cs.paddingLeft)||0) - (parseFloat(cs.paddingRight)||0);
+  if(innerWidth <= 0) return 6;
+  const colGap = 6; // 对应 .box-grid 的 gap:8px 6px 里的列间距
+  const width6 = (innerWidth - colGap*5) / 6;
+  const needed = boxMeasureSixCharWidth();
+  return width6 >= needed ? 6 : 5;
+}
+function applyBoxGridColumns(){
+  const grid = document.getElementById('boxGrid');
+  if(!grid) return;
+  grid.style.gridTemplateColumns = 'repeat('+computeBoxGridColumnCount()+', 1fr)';
+}
 function renderBoxPage(){
   renderBoxFilterRow();
   renderBoxSortRow();
   const grid = document.getElementById('boxGrid');
   const empty = document.getElementById('boxGridEmpty');
   if(!grid) return;
+  applyBoxGridColumns();
   const entries = boxFilteredEntries();
   renderBoxCountWidget(entries.length);
   grid.innerHTML = '';
