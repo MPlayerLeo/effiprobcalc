@@ -43,6 +43,9 @@
      margin会穿透collapse到容器外部，容器本身border/padding box的高度天然就停在这行内容的下沿），
      absolute+bottom:0正好卡在这条线上，不需要额外量高度硬编码 */
   .site-header-row{ position:relative; }
+  /* 捕捉推荐页内容长，上下滚动时优先滚内容，网页标题（这一块）和页内的次级选择区域都不跟着动：
+     只在捕捉推荐页是当前页时才把它转成 sticky，其它页维持原样不受影响 */
+  .wrap:has(#page4.active-page) .site-header-row{ position:sticky; top:0; z-index:25; background:var(--panel); }
   .site-mascot-cluster{ position:absolute; right:4px; bottom:0; width:137px; height:40px; pointer-events:none; }
   /* will-change:transform 让合成层从一开始就常驻，避免gif动画帧切换/重开src时因为临时提升
      合成层触发一次性重新栅格化导致的动画中途变糊（跟第十八节18.14走鲸png变糊是同一个坑） */
@@ -1248,7 +1251,9 @@
 
   /* ================= 捕捉推荐页 ================= */
   .cap-card{ padding:0; overflow:visible; }
-  .cap-header{ position:sticky; top:0; z-index:20; background:var(--panel); padding:10px 10px 8px; border-radius:16px 16px 0 0; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  /* top 用 JS（applyCapHeaderStickyOffset）量出网页标题实际高度写进这个变量，
+     这样次级选择区域正好贴在网页标题下方，不会被它盖住 */
+  .cap-header{ position:sticky; top:var(--cap-header-top,0px); z-index:20; background:var(--panel); padding:10px 10px 8px; border-radius:16px 16px 0 0; box-shadow:0 2px 8px rgba(0,0,0,.05); }
   .cap-row1{ display:flex; align-items:flex-end; gap:8px; border-bottom:2px solid var(--line); }
   .cap-type-tabs{ display:flex; gap:5px; flex:1 1 auto; }
   .cap-type-tab{ padding:8px 11px; border-radius:12px 12px 0 0; font-size:13px; font-weight:800; cursor:pointer; border:2px solid transparent; border-bottom:none; opacity:.55; transition:opacity .2s; user-select:none; margin-bottom:-2px; white-space:nowrap; }
@@ -3756,6 +3761,22 @@ function capSkillEffectHtml(base, e){
   if(base.specialDream!=null) html += `<span class="cap-val cap-special-dream">${capSkillIcon('dream')}<b>${capFmt(base.specialDream*e,1)}</b></span>`;
   return html;
 }
+// 排名对比页的>/<号和1/2/3名次徽章要按实际产量比大小，这里单独抽一个只算数值、不拼HTML的版本，
+// 缩放规则跟 capPageActualYieldHtml 保持一致（含持有上限）
+function capPageActualYieldValue(base, eff, build){
+  if(!base) return null;
+  let e = ffloat(eff);
+  const cm = build ? carryModelForBuild(build) : null;
+  if(cm){
+    if(base.kind==='flame') e *= cm.fruitScale;
+    else if(base.kind==='food') e *= cm.ingScale;
+    else if(base.kind==='skill') e *= cm.skillScale;
+  }
+  if(base.kind==='flame') return base.value*e;
+  if(base.kind==='food') return base.value*e;
+  if(base.kind==='skill') return base.byEffect ? base.effect*e : base.count*e;
+  return null;
+}
 // build 传进来时（页3 三个对比面板）按该面板自己的持有上限参数缩放；不传时（面板天梯）保持无限持有口径
 function capPageActualYieldHtml(base, eff, build){
   if(!base) return '';
@@ -3913,23 +3934,24 @@ function computePanelRankingData(panel){
   } else {
     const baseYield = capPageBaseYield(type, level, build);
     const yieldHtml = eff => baseYield ? capPageActualYieldHtml(baseYield, eff, build) : null;
+    const yieldValue = eff => baseYield ? capPageActualYieldValue(baseYield, eff, build) : null;
 
     const eff = computeEfficiency(labels, type, level, persona);
     const raw = getRawRankByGold(type, level, eff, hasHelper);
-    result.raw = {rank:raw.rank, total:raw.total, eff, outputKind:yieldHtml(eff), outputValue:null, hasHelper, cmp};
+    result.raw = {rank:raw.rank, total:raw.total, eff, outputKind:yieldHtml(eff), outputValue:yieldValue(eff), hasHelper, cmp};
 
     const fusionEff = computeFusionEfficiency(labels, type, level, persona);
     const fusion = getFusionRank(type, level, fusionEff);
-    result.fusion = {rank:fusion.rank, total:fusion.total, eff:fusionEff, outputKind:yieldHtml(fusionEff), outputValue:null, cmp};
+    result.fusion = {rank:fusion.rank, total:fusion.total, eff:fusionEff, outputKind:yieldHtml(fusionEff), outputValue:yieldValue(fusionEff), cmp};
 
     const fusionRawEff = computeRawFusionEfficiency(labels, type, level, persona);
     const fusionRaw = getRawFusionRank(type, level, fusionRawEff);
-    result.fusionRaw = {rank:fusionRaw.rank, total:fusionRaw.total, eff:fusionRawEff, outputKind:yieldHtml(fusionRawEff), outputValue:null, cmp};
+    result.fusionRaw = {rank:fusionRaw.rank, total:fusionRaw.total, eff:fusionRawEff, outputKind:yieldHtml(fusionRawEff), outputValue:yieldValue(fusionRawEff), cmp};
 
     result.squad = [1,2,3,4].map(n=>{
       const eff2 = computeDisplayEfficiency(labels, type, level, persona, n);
       const rk = getSquadRank(type, level, eff2, n);
-      return {n, rank:rk.rank, total:rk.total, eff:eff2, outputKind:yieldHtml(eff2), outputValue:null, cmp};
+      return {n, rank:rk.rank, total:rk.total, eff:eff2, outputKind:yieldHtml(eff2), outputValue:yieldValue(eff2), cmp};
     });
   }
   return result;
@@ -4075,21 +4097,30 @@ function fmtOutput(val){
   return `日产${formatIntComma(Math.round(val))}能量`;
 }
 function compareRankAsc(a,b){ if(a.rank<b.rank) return -1; if(a.rank>b.rank) return 1; return 0; }
+// >/< 号和下面 computeMedals 的 1/2/3 名次徽章都按实际产量（含持有上限缩放）比大小，不用纯名次位置——
+// 名次是在各自的效率序列里排的，同一位次在不同面板代表的实际产出可能不一样，产量才是玩家真正关心的量。
+// outputValue 算不出来时（比如食材型还没选具体食材）退回用名次比，不让符号/徽章直接消失
+function compareByYield(a,b){
+  if(a.outputValue==null || b.outputValue==null) return compareRankAsc(a,b);
+  if(a.outputValue>b.outputValue) return -1;
+  if(a.outputValue<b.outputValue) return 1;
+  return 0;
+}
 function twoPanelSymbol(dataA, dataB, requireSameGold){
   if(!dataA || !dataB) return '';
   if(!panelsComparable(dataA.cmp, dataB.cmp)) return '×';
   if(requireSameGold && dataA.hasHelper !== dataB.hasHelper) return '×';
-  const c = compareRankAsc(dataA, dataB);
+  const c = compareByYield(dataA, dataB);
   return c<0 ? '&gt;' : (c>0 ? '&lt;' : '=');
 }
 function computeMedals(withIdx, requireSameGold){
   const badges = {};
   function assignTiers(group){
     if(group.length<=1){ group.forEach(x=>{ badges[x.idx] = {type:'na'}; }); return; }
-    const sorted = group.slice().sort((a,b)=>compareRankAsc(a.data,b.data));
+    const sorted = group.slice().sort((a,b)=>compareByYield(a.data,b.data));
     let tier=1;
     for(let i=0;i<sorted.length;i++){
-      if(i>0 && compareRankAsc(sorted[i-1].data, sorted[i].data)!==0) tier++;
+      if(i>0 && compareByYield(sorted[i-1].data, sorted[i].data)!==0) tier++;
       badges[sorted[i].idx] = {type:'medal', tier: Math.min(tier,3)};
     }
   }
@@ -9698,13 +9729,21 @@ function switchPage(pageId){
     if(overlay && state.selectedDex){ showRankCalcOverlay(); setTimeout(async ()=>{ renderPkDispWindow(); renderRankModule(); await renderLadderCard(); renderFinalPkRow(); overlay.style.display='none'; maybeOpenFinalPkPopup(); },20); }
     else { renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); maybeOpenFinalPkPopup(); }
   }
-  if(pageId==='page4'){ renderCapturePage(); }
+  if(pageId==='page4'){ renderCapturePage(); applyCapHeaderStickyOffset(); }
+}
+// 捕捉推荐页网页标题变成 sticky 后，下面的 .cap-header 得贴在标题下沿，不能也贴 top:0
+// （那样会叠在标题上面）——这里量一次标题实际高度写进 CSS 变量，宽度断点变化时（resize）跟着重量
+function applyCapHeaderStickyOffset(){
+  const header = document.querySelector('.site-header-row');
+  if(!header) return;
+  document.documentElement.style.setProperty('--cap-header-top', header.offsetHeight+'px');
 }
 document.querySelectorAll('.tab-item').forEach(t=>{
   t.onclick = ()=> switchPage(t.dataset.page);
 });
 window.addEventListener('load', ()=> setTimeout(positionTabIndicator, 60));
 window.addEventListener('resize', positionTabIndicator);
+window.addEventListener('resize', ()=>{ if(document.getElementById('page4').classList.contains('active-page')) applyCapHeaderStickyOffset(); });
 
 /* ============ 四个主页面左右滑动切换（直接平移，不淡化）============
    顺序按页签栏视觉顺序、跳过宝可梦盒：毕业判定→捕捉推荐→效率概率→排名对比，
@@ -10648,8 +10687,11 @@ function boxCommitPickToPanel(entryId){
   state.satiety = e.satiety || 0;
   if(panelN > state.compareCount) state.compareCount = panelN;
   ensureDashTargetIsPanel1();
-  closeBoxOverlay();
+  // 先 renderAll 再关盒子：这时 boxOverlayOpen 还是 true，renderRankModule/renderLadderCard
+  // 内部会直接跳过（见各自顶部的 boxOverlayOpen 判断），真正的排名重算交给下面 closeBoxOverlay
+  // 里"退出盒子统一补算一次"的分支去做——它会先弹"排名计算中"再算，避免卡顿感，还省了重算两遍
   renderAll();
+  closeBoxOverlay();
   showBoxToast('✓ 已加入对比');
 }
 function boxGridItemPointerDown(e, id, itemEl){
