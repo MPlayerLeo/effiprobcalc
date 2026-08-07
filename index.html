@@ -2722,9 +2722,11 @@ function boxApplyEntryToState(id){
   if(!e) return false;
   ensureDashTargetIsPanel1();
   selectPokemon(e.dex);
-  // 昵称要走 pendingNickname 回填到修改面板的昵称框——塞进 pkSearchText（种族搜索框）不会显示在任何地方
+  // 昵称走 state.boxNickname 回填到修改面板的昵称框——塞进 pkSearchText（种族搜索框）不会显示在任何地方；
+  // boxNickname 是排名对比页"宝可梦展示窗"标题真正读的那个字段，不能再用只有修改面板输入框自己
+  // 认识的另一个字段，否则从盒子"输出"到面板后，面板标题那边看不到昵称
   state.pkSearchText = '';
-  state.pendingNickname = e.nickname || e.name;
+  state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
   state.level = e.level;
   state.selected = e.selected.slice();
@@ -3695,7 +3697,7 @@ function ladderEnergyYieldHtml(labels, persona, level, mode, squadN){
 
 /* ---- 实际产量：复用捕捉推荐引擎，按当前所选宝可梦+等级算出与面板无关的"基础产量"，
    再由各排名模式（原始/融合/同队N）各自的面板效率去乘，得到该模式下的实际产量 ---- */
-function capPageBaseYield(type, level, build){
+function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
   const dex = build ? build.selectedDex : state.selectedDex;
   if(typeof CAP_DEX==='undefined' || !dex) return null;
   const x = capFindDex(effectiveDexFor(dex));
@@ -3706,7 +3708,26 @@ function capPageBaseYield(type, level, build){
   const pityEligible = (x.dtype==='能量' || x.dtype==='功能');
   if(type==='fruit' || type==='energy'){
     const ctrl = {direction: state.fruitDirection, dragon: state.dragonCount, latias: state.latiasActive, pity: state.pityOn};
-    let value = capBEEnergy(x, level, medal, ctrl);
+    // 下面这个 value 后面会在 capPageActualYieldValue/Html 里再乘一次 eff（computeEfficiencyFromSums
+    // 的 'fruit' 分支：hasFruit/帮忙间隔/性格三个乘子），eff 的口径有两件事必须先在这里对齐，
+    // 否则跟页1"产能分析"（renderYieldAnalysis）算出来的真实数字对不上：
+    //   1. eff 里"选没选树果数量S"是按真实 hasFruit 状态才乘 1.5 倍的——这里不能像 capBEEnergy/
+    //      capBerryEnergy 那样预设"一定选了树果数量S"（那是给页4捕捉推荐"跨物种假设都点满"的
+    //      通用比较用的，语义不一样），否则乘 eff 时会把这个加成算两次，不管选没选树果数量S
+    //      结果都会系统性偏高（实测约1.5倍）。
+    //   2. eff 完全不含"食材概率"这个维度（食材概率决定的是多少次帮忙落到食材而不是树果，
+    //      效率评分口径里认为这是独立的另一件事），这里必须单独按真实食材概率折算，
+    //      否则等于假设100%都出树果，进一步偏高。
+    const labelsForIng = labelsOverride || (build ? buildLabels(build) : currentLabels());
+    const personaForIng = personaOverride || (build ? buildPersona(build) : currentPersona());
+    const sumsForIng = windowSums(labelsForIng, windowSizeOf(level));
+    const realIngProb = energySkillProb(x.ingProb||0, ffloat(sumsForIng.f), personaForIng.f);
+    const ingFrac = 1 - realIngProb;
+    const berryBase = x.dtype==='树果' ? 2 : 1; // 不含+1，交给 eff 自己按真实 hasFruit 状态去乘
+    let value = (x.dtype==='能量')
+      ? capEnergyEnergy(x, level, medal, ctrl) // 实际不可达：能量型走独立的 computeEnergyRealYield，保留只为语义完整
+      : capHelpsPerDay(x.interval, level, medal) * berryBase * capBerryPerBerry(x.attr, level);
+    value *= ingFrac;
     let specialStaminaDeduct = null;
     if(spec && spec.kind==='energy'){ // 达克莱伊：技能额外产出能量，同时扣活力（仅展示，不参与任何合计）
       const triggerCount = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
@@ -3732,13 +3753,28 @@ function capPageBaseYield(type, level, build){
       specialIngredients = spec.items.map(it=>({name:it.name, amt: it.amt*count}));
       if(spec.dream) specialDream = spec.dream*count;
     }
-    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null, specialIngredients, specialDream};
+    // 能量型宝可梦的技能不属于"奶妈/梦碎/暴击/帮手加速/开锅"这五类功能型技能（CAP_SKILL_BY_EFFECT
+    // 管不到），触发时产出的是额外能量（树果剧增/能量填充/龙星群三组），数据在 CAP_ENERGY_SKILL 里，
+    // 跟 capEnergyEnergy() 用的是同一份——之前这里没读这份数据，导致产能分析技能区对能量型宝可梦
+    // 只显示了触发次数，没把这部分能量产出带出来
+    let energyPerTrigger = null;
+    if(x.dtype==='能量'){
+      const sk = CAP_ENERGY_SKILL[x.name];
+      if(sk){
+        const ctrl = {direction: state.fruitDirection, dragon: state.dragonCount, latias: state.latiasActive, pity: state.pityOn};
+        if(sk.kind==='fixed') energyPerTrigger = sk.val;
+        else if(sk.kind==='fruit') energyPerTrigger = (ctrl.direction==='reverse'?sk.reverse:sk.normal) * capBerryPerBerry(x.attr, level);
+        else if(sk.kind==='dragon'){ let m = sk.table[ctrl.dragon]||sk.table.solo; if(ctrl.latias) m += 10; energyPerTrigger = m * capBerryPerBerry(x.attr, level); }
+      }
+    }
+    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null, specialIngredients, specialDream, energyPerTrigger};
   }
   return null;
 }
 function capSkillYieldHtml(base, e){
   let html='';
   if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
+  if(base.energyPerTrigger!=null) html += `<span class="cap-val cap-eff">${capFlameImg()}<b>${capFmt(Math.round(base.energyPerTrigger*base.count*e),0)}</b></span>`;
   html += `<span class="cap-val cap-cnt">${capSkillIcon('skillcount')}<b>${capFmt(base.count*e,2)}</b></span>`;
   if(base.specialIngredients){
     base.specialIngredients.forEach(it=>{
@@ -3755,6 +3791,7 @@ function capSkillCountHtml(base, e){
 function capSkillEffectHtml(base, e){
   let html='';
   if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
+  if(base.energyPerTrigger!=null) html += `<span class="cap-val cap-eff">${capFlameImg()}<b>${capFmt(Math.round(base.energyPerTrigger*base.count*e),0)}</b></span>`;
   if(base.specialIngredients){
     base.specialIngredients.forEach(it=>{
       const icon = ING_ICONS[it.name];
@@ -4390,7 +4427,10 @@ function ladderRowBodyHtml(row, type, level, topEffNum, red, mode, squadN){
   if(type==='energy'){
     yieldHtml = ladderEnergyYieldHtml(row.labels, row.persona, level, mode, squadN);
   } else {
-    const base = capPageBaseYield(type, level);
+    // 天梯每一行代表一套不同的假设面板（不是当前真实选中的面板），食材概率折算必须按这一行
+    // 自己的 labels/persona 算，不能落回 state 当前选中的那一套，否则几千行会全部套用同一个
+    // （错误的）食材概率
+    const base = capPageBaseYield(type, level, null, row.labels, row.persona);
     yieldHtml = base ? capPageActualYieldHtml(base, row.eff) : '';
   }
   const rowNum = type==='energy' ? row.eff : ffloat(row.eff);
@@ -4540,11 +4580,11 @@ const state = {
   carrySub: null,
   // 睡饱饱档位 0/200/500/1000/2000（徽章宝可梦强制 2000，见 satietyTierFor）
   satiety: 0,
-  // 非盒子编辑态下的修改面板浮窗（正常编辑/手动新建/排名对比）没有现成的盒子条目可以挂昵称，
-  // 这里先记在 state 上，点「加入盒子」时直接拿来用
-  pendingNickname: '',
-  // 从宝可梦盒选中加入排名对比面板时带过来的昵称，只用于"宝可梦展示窗"顶部显示；
-  // 手动选种族/搜索选中时要清空（见 selectPokemon），不跟着面板选择残留串号
+  // 当前面板（或修改面板浮窗正在编辑的这一份）的昵称——全站唯一一处昵称存放点：
+  // 修改面板浮窗的昵称输入框、排名对比页"宝可梦展示窗"标题、从宝可梦盒选中/输出到面板时
+  // 带过来的昵称，统一读写这一个字段，不再分裂成"盒子编辑态"和"其余场景"两套各自独立、
+  // 互相不同步的字段（之前叫 pendingNickname 的那个就是那套遗留分裂状态，已合并掉）。
+  // 手动选种族/搜索选中时要清空（见 selectPokemon），不跟着面板切换/种族切换残留串号
   boxNickname: null,
   // 默认就停在"已经点过一次添加对比"的展开态（compareCount=2），不用用户手动点一下才看到2号面板槽位；
   // 真正的占位面板（panel2Snap）在 blankBuildFromPanel1 定义之后统一初始化，见下方
@@ -7168,8 +7208,8 @@ function renderPkDashCompact(){
   const boxEntryLive = (typeof dashboardBoxEditContext!=='undefined' && dashboardBoxEditContext) ? boxGetEntry(dashboardBoxEditContext.entryId) : null;
 
   // 左边那个大输入框固定是"宝可梦种族"（所有场景一致），右上角那个小的是昵称——
-  // 所有修改面板浮窗都显示；盒子编辑态绑定条目本身，其余场景（正常编辑/手动新建/排名对比）
-  // 暂存在 state.pendingNickname 上，点「加入盒子」时直接带过去
+  // 所有修改面板浮窗都显示，统一读 state.boxNickname（盒子编辑态打开时已经从条目回填进这个
+  // 字段，见 openDashboardForBoxEntry；其余场景则是当前面板自己的昵称，见 snapshotBuild/applyBuild）
   const nickWrap = document.getElementById('dash-boxNickWrap');
   const nickInput = document.getElementById('dash-boxNickInput');
 
@@ -7179,7 +7219,7 @@ function renderPkDashCompact(){
   }
   if(nickWrap) nickWrap.style.display = '';
   if(nickInput && document.activeElement !== nickInput){
-    nickInput.value = boxEntryLive ? (boxEntryLive.nickname || boxEntryLive.name) : state.pendingNickname;
+    nickInput.value = state.boxNickname || '';
     fitSearchInputFont(nickInput, 11.5);
   }
   // 推荐程度胶囊挪到了等级那一行，两种模式都显示
@@ -7412,25 +7452,26 @@ document.getElementById('dash-pkSearchInput').addEventListener('input', (e)=>{
   fitSearchInputFont(e.target, 14);
   renderPkDropdown();
 });
-// 昵称输入框：盒子编辑态改完立刻写回条目；其余场景（正常编辑/手动新建/排名对比）
-// 没有条目可写，先记在 state.pendingNickname 上，点「加入盒子」时带过去
+// 昵称输入框：不管哪个场景，实时输入都先落到 state.boxNickname（唯一存放点，见 state 定义处的
+// 注释）；盒子编辑态额外在失焦时把结果直接写回条目本身（"加入盒子/输出"这类按钮不会再帮你补写，
+// 所以这里必须自己落地），其余场景交给 renderAll 触发的 snapshotBuild 自然带走
 document.getElementById('dash-boxNickInput').addEventListener('input', (e)=>{
   fitSearchInputFont(e.target, 11.5);
-  if(!dashboardBoxEditContext) state.pendingNickname = e.target.value;
+  state.boxNickname = e.target.value;
 });
 document.getElementById('dash-boxNickInput').addEventListener('blur', (e)=>{
+  state.boxNickname = boxTrimNickname(e.target.value);
+  e.target.value = state.boxNickname || '';
   if(dashboardBoxEditContext){
     const entry = boxGetEntry(dashboardBoxEditContext.entryId);
     if(entry){
-      entry.nickname = boxTrimNickname(e.target.value) || entry.name;
+      entry.nickname = state.boxNickname || entry.name;
+      state.boxNickname = entry.nickname; // 落回真实存的值（可能兜底成种族名），跟条目字面保持一致
       saveBoxData();
       e.target.value = entry.nickname;
       renderBoxPage();
     }
-    return;
   }
-  state.pendingNickname = boxTrimNickname(e.target.value);
-  e.target.value = state.pendingNickname;
 });
 // 详情页头像下方的种族名输入框：同样是就地搜索/切换物种，改完立刻写回盒子条目
 document.getElementById('boxdet-speciesInput').addEventListener('input', (e)=>{
@@ -10267,7 +10308,7 @@ function openDashboardForNewEntry(){
   state.incAttr = null; state.decAttr = null;
   state.ingChoice2 = null; state.ingChoice3 = null;
   state.shiny = false;
-  state.pendingNickname = '';
+  state.boxNickname = null;
   renderAll();
   openDashboard();
 }
@@ -10330,9 +10371,9 @@ document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
 document.getElementById('dashCreateAddBtn').onclick = ()=>{
   if(!state.selectedDex){ alert('请先选择宝可梦。'); return; }
   // 取消起名弹窗：昵称框里已经打了字就直接用，没打就让 boxAddEntry 回落到种族名
-  const res = boxAddEntry(state.pendingNickname);
+  const res = boxAddEntry(state.boxNickname);
   if(res.ok){
-    state.pendingNickname = '';
+    state.boxNickname = null;
     closeDashboard(); // 会顺带把 state 还原成打开新建面板之前的样子
     renderBoxPage();
   } else if(res.reason==='full'){
@@ -10542,6 +10583,11 @@ function boxUpdateEntryFromState(entryId){
   if(!e) return;
   const snap = boxSnapshotFromState();
   Object.assign(e, snap);
+  // 昵称单独从 state.boxNickname 同步，不并进 boxSnapshotFromState——那份快照另外被 boxAddEntry
+  // 复用，新建盒子条目时"这次起的名字"要以调用方传入的参数为准，不能被这里带的昵称顺带覆盖掉。
+  // state.boxNickname 在打开修改面板/详情页编辑这只时已经从条目回填过，这里落地是防止用户
+  // 中途没让输入框失焦（比如直接点了关闭/详情页外的按钮）导致最后一次修改没写回
+  if(state.boxNickname!=null) e.nickname = boxTrimNickname(state.boxNickname) || e.name;
   saveBoxData();
   renderBoxPage();
 }
@@ -11013,10 +11059,11 @@ function openDashboardForBoxEntry(entryId){
   if(!e) return;
   dashboardBoxEditContext = {entryId};
   ensureDashTargetIsPanel1();
-  selectPokemon(e.dex);
-  // 昵称由 renderPkDashCompact 从条目里直接回填，这里不能借 pkSearchText 传，
-  // 否则会被当成"用户在搜物种"，凭空弹出一个关不掉的下拉框
+  selectPokemon(e.dex); // 注意：selectPokemon 内部会把 state.boxNickname 清空，下面必须在它之后再赋值
+  // 昵称不能借 pkSearchText 传（种族搜索框），否则会被当成"用户在搜物种"，凭空弹出一个关不掉的下拉框；
+  // 直接写回 state.boxNickname，跟修改面板浮窗的昵称输入框、排名对比页展示窗共用同一个字段
   state.pkSearchText = '';
+  state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
   state.level = e.level;
   state.selected = e.selected.slice();
@@ -11060,10 +11107,15 @@ function renderBoxDetailHeader(entry){
   nickInput.oninput = ()=>{
     const live = boxGetEntry(entry.id);
     if(live){ live.nickname = boxTrimNickname(nickInput.value); saveBoxData(); }
+    // 同步 state.boxNickname：详情页「修改」按钮会带着当前 state 跳进修改面板浮窗，
+    // 「保存/关闭」按钮走的 boxUpdateEntryFromState 也会用这个字段兜底回写条目，
+    // 两边不同步的话，中途切一趟修改面板可能把这里刚打的字盖掉
+    state.boxNickname = live ? live.nickname : boxTrimNickname(nickInput.value);
   };
   nickInput.onblur = ()=>{
     const live = boxGetEntry(entry.id);
     if(live){ live.nickname = boxTrimNickname(nickInput.value) || live.name; saveBoxData(); nickInput.value = live.nickname; renderBoxPage(); }
+    state.boxNickname = live ? live.nickname : (boxTrimNickname(nickInput.value) || null);
   };
   const lvEl = document.getElementById('boxdet-pkLevelSel');
   lvEl.innerHTML = '';
@@ -11135,7 +11187,8 @@ function boxDetailLoadEntry(entryId){
   if(e.flagged){ e.flagged = false; saveBoxData(); }
   boxDetailEntryId = entryId;
   ensureDashTargetIsPanel1();
-  selectPokemon(e.dex);
+  selectPokemon(e.dex); // selectPokemon 内部会清空 state.boxNickname，下面必须在它之后再赋值
+  state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
   state.level = e.level;
   state.selected = e.selected.slice();
@@ -11430,9 +11483,9 @@ document.getElementById('boxDeleteWarnOverlay').addEventListener('click', (e)=>{
 document.getElementById('dashAddBoxBtn').onclick = ()=>{
   if(!state.selectedDex) return;
   // 取消起名弹窗：昵称框里已经打了字就直接用，没打就让 boxAddEntry 回落到种族名
-  const res = boxAddEntry(state.pendingNickname);
+  const res = boxAddEntry(state.boxNickname);
   if(res.ok){
-    state.pendingNickname = '';
+    state.boxNickname = null;
     renderBoxPage();
     closeDashboard(); // 跟"确认所选"一样，存完就收起面板
   } else if(res.reason==='full'){
