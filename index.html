@@ -635,7 +635,10 @@
      独占整行，不能让它跟最后一排的真实格子挤在同一个网格行里，否则那一排会被它撑高、把真实格子拉伸变形 */
   .box-grid-bottom-spacer{ grid-column:1 / -1; }
   /* -webkit-touch-callout:none：长按要用来改昵称，不能让 iOS 弹"存储图像"那套系统菜单 */
-  .box-grid-item{ position:relative; display:flex; flex-direction:column; align-items:center; cursor:pointer; user-select:none; -webkit-touch-callout:none; }
+  /* min-width:0：格子是 grid 项，默认 min-width:auto 会按内容最小尺寸撑开——
+     昵称 white-space:nowrap 的最小内容宽度就是整行文字的宽度，之前没写这条，
+     长昵称会把格子（进而整行）撑爆，下面 .box-grid-label 的省略号截断因此从没真正生效过 */
+  .box-grid-item{ position:relative; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:pointer; user-select:none; -webkit-touch-callout:none; }
   /* 每格的画面区是一个固定比例的框（按素材里最大的那张 gif braviary 102×110 定的 51:55），
      宽度随屏幕走、高度由比例算出，所以同一行里每个格子的下沿一定在同一条水平线上。
      gif/png 一律绝对定位贴着这个框的下沿居中——绝对定位不参与父级布局，
@@ -847,12 +850,16 @@
   .pk-disp-row{ display:flex; gap:10px; align-items:flex-start; }
   .pk-disp-col{ flex:1 1 0; min-width:0; }
   .pk-disp-title{ display:flex; align-items:center; gap:6px; margin-bottom:10px; flex-wrap:nowrap; }
-  .pk-disp-name{ font-size:14px; font-weight:800; flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  /* 名称列改包一层：昵称（若来自盒子）叠在种族名正上方，同时这一列整体还要跟徽章行左右并排 */
+  .pk-disp-name-wrap{ flex:1 1 auto; min-width:0; }
+  .pk-disp-nickname{ font-size:11px; font-weight:700; color:var(--accent-dk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-bottom:1px; }
+  .pk-disp-name{ font-size:14px; font-weight:800; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .pk-disp-name .dex{ color:#999; font-weight:600; margin-left:4px; font-size:10.5px; }
   .pk-disp-badges{ display:flex; gap:5px; align-items:center; flex:0 0 auto; flex-wrap:wrap; justify-content:flex-end; }
   .pk-disp-badges .typebtn, .pk-disp-badges .level-badge{ font-size:11px; padding:4px 8px; cursor:default; margin-left:0; }
   .pk-disp-col-header{ margin-bottom:8px; }
   .pk-disp-col-header .pk-disp-name{ font-size:12px; white-space:normal; overflow:visible; }
+  .pk-disp-col-header .pk-disp-nickname{ font-size:10px; }
   .pk-disp-col-header .pk-disp-badges{ justify-content:flex-start; margin-top:4px; }
   .pk-disp-empty{ color:#bbb; font-size:12.5px; text-align:center; padding:24px 0; }
 
@@ -3927,15 +3934,20 @@ function renderPkDispWindow(){
   if(!uniform){
     titleEl.innerHTML = '';
   } else {
-    const rec = getSelectedPokemonRecord();
+    // 不能想当然用 state（面板1）取数据：面板1本身可能是空的——比如从宝可梦盒直接把这只
+    // 塞进了2/3号面板，面板1还没选——这时真正"唯一有选择"的面板可能是2号或3号，
+    // 得从 builds 里找到真正有选择的那个面板取数据，标题才不会因为面板1是空的而白给
+    const activeBuild = builds.find(b=>panelHasSelection(b));
+    const rec = activeBuild ? getPokemonRecordFor(activeBuild) : null;
     if(!rec){
       titleEl.innerHTML = '';
     } else {
+      const nickHtml = activeBuild.boxNickname ? `<div class="pk-disp-nickname">${activeBuild.boxNickname}</div>` : '';
       const nameHtml = `${rec[1]}<span class="dex">${rec[0]}</span>`;
-      const typeCls = state.type==='energy' ? 'energy' : state.type;
-      const typeLabelText = state.type==='energy' ? '能量型' : (state.type==='skill'?'功能型':typeLabel(state.type));
-      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${state.level}级</span>`;
-      titleEl.innerHTML = `<div class="pk-disp-name">${nameHtml}</div><div class="pk-disp-badges">${badgesHtml}</div>`;
+      const typeCls = activeBuild.type==='energy' ? 'energy' : activeBuild.type;
+      const typeLabelText = activeBuild.type==='energy' ? '能量型' : (activeBuild.type==='skill'?'功能型':typeLabel(activeBuild.type));
+      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${activeBuild.level}级</span>`;
+      titleEl.innerHTML = `<div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${nameHtml}</div></div><div class="pk-disp-badges">${badgesHtml}</div>`;
     }
   }
   row.innerHTML = '';
@@ -3957,7 +3969,7 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
       btn.type = 'button';
       btn.className = 'add-panel-btn';
       btn.textContent = '添加面板';
-      btn.onclick = ()=>{ setDashTarget(panelN); openDashboard(); };
+      btn.onclick = ()=>{ showAddPanelChoiceBubble(btn, panelN); };
       col.appendChild(btn);
     } else {
       col.innerHTML = `<div class="pk-disp-empty">尚未选择副技能</div>`;
@@ -3969,7 +3981,8 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
   if(showOwnHeader && rec){
     const typeCls = build.type==='energy' ? 'energy' : build.type;
     const typeLabelText = build.type==='energy' ? '能量型' : (build.type==='skill'?'功能型':typeLabel(build.type));
-    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${build.level}级</span></div></div>`;
+    const nickHtml = build.boxNickname ? `<div class="pk-disp-nickname">${build.boxNickname}</div>` : '';
+    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${build.level}级</span></div></div>`;
   }
 
   let skillsHtml;
@@ -4014,6 +4027,23 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
 
   col.innerHTML = `${headerHtml}${skillsHtml}${personaHtml}${ingHtml}`;
   return col;
+}
+// "添加面板"点开的二选一气泡：选"添加面板"照旧走修改面板浮窗；选"宝可梦盒"则开盒子，
+// 用盒子格子本身的"点两次/点气泡"展开手势直接选中并应用到这个面板号（见 boxCommitPickToPanel）。
+// capShowBubble/capHideBubble 是通用的定位气泡工具，虽然名字带 cap 前缀但不限页面复用。
+function showAddPanelChoiceBubble(anchorEl, panelN){
+  const html = '<div class="cap-jump-bubble">'+
+    '<button type="button" class="cap-jump-btn" data-choice="box">宝可梦盒</button>'+
+    '<button type="button" class="cap-jump-btn" data-choice="dash">添加面板</button>'+
+  '</div>';
+  capShowBubble(anchorEl, html);
+  document.querySelectorAll('#capBubble .cap-jump-btn').forEach(el=>{
+    el.onclick = ()=>{
+      capHideBubble();
+      if(el.getAttribute('data-choice')==='box'){ boxPickTargetPanel = panelN; openBoxOverlay(); }
+      else { setDashTarget(panelN); openDashboard(); }
+    };
+  });
 }
 
 /* ============ 排名对比页：排名对比模块渲染 ============ */
@@ -4459,7 +4489,12 @@ const state = {
   // 非盒子编辑态下的修改面板浮窗（正常编辑/手动新建/排名对比）没有现成的盒子条目可以挂昵称，
   // 这里先记在 state 上，点「加入盒子」时直接拿来用
   pendingNickname: '',
-  compareCount: 1,
+  // 从宝可梦盒选中加入排名对比面板时带过来的昵称，只用于"宝可梦展示窗"顶部显示；
+  // 手动选种族/搜索选中时要清空（见 selectPokemon），不跟着面板选择残留串号
+  boxNickname: null,
+  // 默认就停在"已经点过一次添加对比"的展开态（compareCount=2），不用用户手动点一下才看到2号面板槽位；
+  // 真正的占位面板（panel2Snap）在 blankBuildFromPanel1 定义之后统一初始化，见下方
+  compareCount: 2,
   dashTarget: 1,
   panel2Snap: null,
   panel3Snap: null,
@@ -4484,6 +4519,7 @@ function snapshotBuild(){
     // v3.16：睡饱饱/副技能持有组合按面板各自独立（三态开关和睡眠时长才是全站共用的；
     // 南瓜四个尺寸现在是四个完全独立的物种，尺寸信息已经在 selectedDex 里，不需要单独字段）
     satiety: state.satiety, carrySub: state.carrySub,
+    boxNickname: state.boxNickname || null,
   };
 }
 function applyBuild(build){
@@ -4493,6 +4529,7 @@ function applyBuild(build){
   state.type = build.type; state.level = build.level; state.energyPokemon = build.energyPokemon;
   state.satiety = build.satiety || 0;
   state.carrySub = build.carrySub || null;
+  state.boxNickname = build.boxNickname || null;
 }
 function blankBuildFromPanel1(){
   return {
@@ -4500,9 +4537,12 @@ function blankBuildFromPanel1(){
     selectedDex: state.selectedDex, pkSearchText: state.pkSearchText,
     ingChoice2: null, ingChoice3: null,
     type: state.type, level: state.level, energyPokemon: state.energyPokemon,
-    satiety: 0, carrySub: null,
+    satiety: 0, carrySub: null, boxNickname: null,
   };
 }
+// 复刻 addCompareBtn 点击处理器里的占位初始化：state.compareCount 默认已经是 2，
+// 这里把 2 号面板槽位也一并补上空白占位，跟"真的点过一次添加对比"完全一致
+state.panel2Snap = blankBuildFromPanel1();
 function setDashTarget(n){
   if(n === state.dashTarget) return;
   const cur = snapshotBuild();
@@ -6851,6 +6891,9 @@ function selectPokemon(dex){
     const capRowSel = capFindDex(effectiveYieldDex());
     if(!(capRowSel && (capRowSel.ingA||capRowSel.ingB||capRowSel.ingC))){ state.ingChoice2=null; state.ingChoice3=null; }
   }
+  // 手动选种族/搜索选中：清掉上一只（可能来自盒子）留下的昵称，不跟着面板串号；
+  // 从盒子选宝可梦加入对比的流程会在调用完这个函数之后再把 boxNickname 补回去
+  state.boxNickname = null;
   renderAll();
   maybeOpenFinalPkPopup();
   if(rec && mappedType && mappedType!=='energy'){
@@ -9380,6 +9423,9 @@ function capRenderFoodChart(container){
 }
 function capShowBubble(anchor, html){
   capHideBubble();
+  // 上一个气泡挂的"点外面关闭"监听器如果还没被消费（比如用户没点空白就直接点了下一个条目），
+  // 会在这次点击冒泡到 document 时把刚建好的新气泡立刻关掉——先把它摘掉，避免误杀新气泡
+  document.removeEventListener('click', capHideBubble);
   const b=document.createElement('div'); b.className='cap-bubble'; b.id='capBubble'; b.innerHTML=html; document.body.appendChild(b);
   const r=anchor.getBoundingClientRect();
   b.style.left = Math.min(window.innerWidth-b.offsetWidth-8, Math.max(8, r.left+r.width/2-b.offsetWidth/2))+'px';
@@ -9539,6 +9585,9 @@ function renderCaptureBody(){
   content.onclick = (e)=>{
     const row = e.target.closest('.cap-row');
     if(!row) return;
+    // 已有气泡开着时，不管点的是原条目还是别的条目，这一下先把它关掉就好，不直接跳去新气泡——
+    // 避免"点开A→直接点B"看起来像是A的气泡瞬间跳成了B"，改成先关后开，跟点空白处关闭的观感统一
+    if(document.getElementById('capBubble')){ capHideBubble(); return; }
     const dex = row.getAttribute('data-dex');
     if(dex) capOpenJumpBubble(row, dex);
   };
@@ -9719,6 +9768,10 @@ function pageSwitchAnimateTo(targetId){
 
 /* ============ 宝可梦盒：顶层气泡开关 ============ */
 let boxOverlayOpen = false;
+// 非 null 时表示这次打开盒子是从"排名对比页→添加面板→宝可梦盒"这条路径进来的，
+// 值是目标面板号(1/2/3)；这时盒子格子的"点两次/点气泡"展开手势不再走详情页，
+// 而是直接把选中的这只应用到目标面板并关盒子——见 boxGridItemClick 和气泡自身的点击处理
+let boxPickTargetPanel = null;
 function updateBoxTabCapsule(active){
   const capsule = document.getElementById('tabBoxCapsule');
   const ball = document.querySelector('#tabBtnBox .tab-bubble-ball');
@@ -9816,6 +9869,9 @@ function openBoxOverlay(){
 }
 function closeBoxOverlay(){
   if(!boxOverlayOpen) return;
+  // 不管是选中后自动关（boxCommitPickToPanel 已经清过一次）还是用户中途退出没选，
+  // 拾取态都不该带到下一次盒子会话里，双重保险清一次
+  boxPickTargetPanel = null;
   if(typeof boxDetailEntryId!=='undefined' && boxDetailEntryId) closeBoxDetail();
   closeBoxInfoBubble();
   closeBoxFilterPop();
@@ -10515,11 +10571,42 @@ function boxGridItemClick(id, itemEl){
   // 选中/取消已经在 pointerdown 里做过一次了（拖选需要它）；这里再切换一次等于原地切回去，
   // 单点必须"滑一下"才会生效的怪现象就是这么来的——批量删除态下点击不再重复处理
   if(boxBatchDeleteMode) return;
-  if(boxActiveBubbleEntryId === id){ closeBoxInfoBubble(); openBoxDetail(id); return; }
-  boxStopActiveBubblePlay();
+  if(boxActiveBubbleEntryId === id){
+    closeBoxInfoBubble();
+    if(boxPickTargetPanel!=null){ boxCommitPickToPanel(id); } else { openBoxDetail(id); }
+    return;
+  }
+  // 已经有别的格子气泡开着：这一下先关掉它就好，不直接跳去新格子的气泡——
+  // 跟捕捉推荐页保持一致的"先关后开"节奏，避免气泡在格子间瞬间跳来跳去
+  if(boxActiveBubbleEntryId != null){ closeBoxInfoBubble(); return; }
   boxActiveBubbleEntryId = id;
   boxSetGridItemPlaying(itemEl, id, true);
   openBoxInfoBubble(id, itemEl);
+}
+/* 从排名对比页"添加面板→宝可梦盒"进来时：点两次(或点气泡)选中的这只直接应用到目标面板号，
+   套用 setDashTarget/ensureDashTargetIsPanel1 那套面板槽位切换逻辑，写完立刻关盒子回到排名对比页 */
+function boxCommitPickToPanel(entryId){
+  const panelN = boxPickTargetPanel;
+  boxPickTargetPanel = null;
+  const e = boxGetEntry(entryId);
+  if(!e || !panelN) return;
+  setDashTarget(panelN);
+  selectPokemon(e.dex);
+  state.pkSearchText = '';
+  state.boxNickname = e.nickname || e.name;
+  state.shiny = !!e.shiny;
+  state.level = e.level;
+  state.selected = e.selected.slice();
+  state.incAttr = e.incAttr;
+  state.decAttr = e.decAttr;
+  state.ingChoice2 = e.ingChoice2;
+  state.ingChoice3 = e.ingChoice3;
+  state.satiety = e.satiety || 0;
+  if(panelN > state.compareCount) state.compareCount = panelN;
+  ensureDashTargetIsPanel1();
+  closeBoxOverlay();
+  renderAll();
+  showBoxToast('✓ 已加入对比');
 }
 function boxGridItemPointerDown(e, id, itemEl){
   if(!boxBatchDeleteMode) return;
@@ -10784,7 +10871,10 @@ function boxBubbleBindAutoClose(){
 }
 document.getElementById('boxInfoBubble').addEventListener('click', (e)=>{
   if(e.target.closest('.box-bub-act-btn')) return;
-  if(boxActiveBubbleEntryId!=null){ const id = boxActiveBubbleEntryId; closeBoxInfoBubble(); openBoxDetail(id); }
+  if(boxActiveBubbleEntryId!=null){
+    const id = boxActiveBubbleEntryId; closeBoxInfoBubble();
+    if(boxPickTargetPanel!=null){ boxCommitPickToPanel(id); } else { openBoxDetail(id); }
+  }
 });
 document.addEventListener('click', (e)=>{
   const overlay = document.getElementById('boxInfoBubbleOverlay');
