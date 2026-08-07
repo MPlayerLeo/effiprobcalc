@@ -4191,7 +4191,11 @@ function rankColInnerHtml(d, opts){
     ? (()=>{ const label=d.hasHelper?'金帮':'非金帮'; const cls=d.hasHelper?' class="gold-tag"':''; return `<div class="rank-line1"><span${cls}>${label} ${d.rank}</span> / ${d.total}</div>`; })()
     : `<div class="rank-line1">${d.rank} / ${d.total}</div>`;
   const line2 = `<div class="rank-line2">效率 ${fmtEff(d.eff)}</div>`;
-  const line3 = d.outputKind ? `<div class="rank-line3">${d.outputValue!=null ? fmtOutput(d.outputValue) : d.outputKind}</div>` : '';
+  // outputKind 对能量型是字面量'energy'（配 fmtOutput 显示"日产XX能量"）；树果/食材/功能型的 outputKind
+  // 本身就是 capPageActualYieldHtml/capSkillYieldHtml 拼好的HTML（图标+对应单位数值，跟产能分析页一致），
+  // 之前误把 outputValue!=null 当判断条件，导致这三类只要算得出数值就被 fmtOutput 强行显示成"日产XX能量"，
+  // 把奶妈的"活力"、梦碎的"梦碎片"、开锅的"技能次数"全盖成了错误的"能量"文案
+  const line3 = d.outputKind ? `<div class="rank-line3">${d.outputKind==='energy' ? fmtOutput(d.outputValue) : d.outputKind}</div>` : '';
   return line1 + line2 + line3;
 }
 function buildRankColsHtml(perPanel, withIdx, opts){
@@ -10344,8 +10348,7 @@ function closeDashboard(){
   // （用 setTimeout 而非 rAF：rAF 在标签页失焦/隐藏时会被浏览器挂起，可能导致浮窗卡死不消失）
   const page3 = document.getElementById('page3');
   if(page3 && page3.classList.contains('active-page')){
-    const overlay = document.getElementById('rankCalcOverlay');
-    overlay.style.display = 'flex';
+    const overlay = showRankCalcOverlay();
     setTimeout(async ()=>{
       renderPkDispWindow();
       renderRankModule();
