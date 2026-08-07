@@ -654,21 +654,24 @@
     position:absolute; bottom:0; left:0; right:0; margin-left:auto; margin-right:auto;
     width:auto; height:auto; max-width:100%; max-height:100%; image-rendering:pixelated;
   }
-  /* 干脆利落的一跳：蹬地弹起 → 到顶立刻加速下坠 → 落地后停一拍，而不是整秒都在飘 */
+  /* 干脆利落的一跳：蹬地弹起 → 到顶立刻加速下坠 → 落地后停一拍，而不是整秒都在飘。
+     故意动 bottom 而不是 transform:translateY——transform 动画不管加不加 will-change，
+     浏览器都会自动把这张图单开一个GPU合成层，pixelated的硬边像素图一旦进合成层就会被
+     非最近邻栅格化，动画期间全程发糊、边缘还渗描边（这条comment和下面这条踩的是同一个坑，
+     之前"只在播放时才提层"只是把糊的时间窗从"常驻"缩小到"播放期间"，没有真正去掉糊本身，
+     所以GIF/PNG跳动时还是会糊）。bottom是走布局的属性，不会被提成合成层，
+     全程留在普通栅格化路径上，pixelated才能一直生效，代价是每帧多一次布局，
+     对51×55的单个小图标可以忽略不计 */
   @keyframes boxPngBounce{
-    0%  { transform:translateY(0);    animation-timing-function:cubic-bezier(.18,.85,.32,1); }
-    30% { transform:translateY(-8px); animation-timing-function:cubic-bezier(.7,0,.84,0); }
-    55%,100%{ transform:translateY(0); }
+    0%  { bottom:0px;  animation-timing-function:cubic-bezier(.18,.85,.32,1); }
+    30% { bottom:8px;  animation-timing-function:cubic-bezier(.7,0,.84,0); }
+    55%,100%{ bottom:0px; }
   }
-  /* will-change 只在真正跳动的这一张图上加，不写成所有格子常驻：常驻在每张图上会让浏览器给
-     每个素材都单开一个GPU合成层，pixelated的硬边像素图经过合成层的非最近邻栅格化后，
-     静止时也会一直发糊、边缘还会渗出一圈淡淡的描边——之前为解决"点击瞬间提层糊一下"
-     把will-change写死在基础规则里，结果把这个问题从"点开瞬间闪一下"变成"常驻性糊+描边"，
-     范围反而更大更明显。只在真正播放这一帧才提层，多数时候（包括走鲸这类非南瓜png）
-     完全不会被提层，也就不会有糊/描边 */
-  .box-grid-img.box-png-bouncing{ animation:boxPngBounce 1s infinite; will-change:transform; }
-  /* gif 播放时同理：点开瞬间才提层，跟 png 弹跳走一样的套路，避免播放第一帧闪糊一下 */
-  .box-grid-img.box-gif-playing{ will-change:transform; }
+  .box-grid-img.box-png-bouncing{ animation:boxPngBounce 1s infinite; }
+  /* gif 播放本身是浏览器自己逐帧解码重绘，不涉及transform，不需要也不该提层——
+     will-change:transform 在这里除了让浏览器强行开一个合成层、把pixelated硬边糊掉之外
+     没有任何好处，去掉即可，播放时不再发糊 */
+  .box-grid-img.box-gif-playing{}
   /* 距离画面框下沿固定 2px */
   /* 昵称固定单行、不换行、字号不缩：放不下就用原生 text-overflow 省略号截断，
      不再用 JS 量宽度动态缩字号——那套量法很容易被动画期间的 transform/时序坑到，直接交给 CSS 最稳 */
@@ -3968,10 +3971,11 @@ function renderPkDispWindow(){
   const n = state.compareCount;
   const builds = [];
   for(let i=1;i<=n;i++) builds.push(getPanelBuild(i));
-  // 各面板种族相同（或只有1个面板）时，标题行沿用原来的做法只渲染一次；
-  // 面板间种族不同时，共享标题不再成立，改由每一列各自展示自己的名称/类型/等级
+  // 只有真正只有1个面板选中宝可梦时，才共用一份标题；
+  // 只要有2个及以上面板选中了宝可梦，不论种族是否相同，都各自展示自己的昵称/名称/类型/等级，
+  // 否则不同面板各自的昵称、性格等设置会被合并标题吞掉，只剩下第一个面板的信息
   const activeDexes = builds.filter(b=>panelHasSelection(b)).map(b=>b.selectedDex).filter(Boolean);
-  const uniform = activeDexes.length<=1 || activeDexes.every(d=>d===activeDexes[0]);
+  const uniform = activeDexes.length<=1;
   if(!uniform){
     titleEl.innerHTML = '';
   } else {
