@@ -1564,6 +1564,104 @@
   color:#fff; cursor:pointer; }
 .account-btn-blue{ background:#3a7fd5; }
 .account-btn-red{ background:#c1443a; }
+
+/* ============ v3.18 盒子底部吸底按钮条 ============ */
+/* 替代 v3.17 那四颗小圆浮窗（修改面板/新建/奖章/账号设置）。跟原 .box-auth-bar 一样是
+   .box-bubble-panel 这个 flex 列的最后一个子项，flex:0 0 auto 让它钉在气泡底边不参与滚动。
+   position:relative 是给上方常驻的头像气泡（.box-panel-mon-bubble）当定位父级用的 */
+.box-action-bar{
+  position:relative;
+  flex:0 0 auto; display:flex; gap:6px; padding:8px 10px;
+  background:var(--panel); border-top:1px solid var(--line);
+}
+.box-act-btn{
+  flex:1 1 0; min-width:0; border:none; border-radius:9px; padding:9px 2px;
+  font-size:12px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+}
+.box-act-btn:hover{ filter:brightness(1.08); }
+/* 「+」按钮不跟其他按钮争宽度：它只有一个字符，给固定窄宽，把空间让给四个中文按钮 */
+.box-act-create{ flex:0 0 44px; background:#3f9a52; font-size:24px; font-weight:400; padding:9px 0; }
+.box-act-more{ background:#c1443a; }
+.box-act-register{ background:#3a7fd5; }
+.box-act-login{ background:#e0a32e; }
+.box-act-panel{ background:#7a4f9e; }
+@media (max-width:360px){
+  .box-act-btn{ font-size:11px; padding:9px 1px; }
+  .box-action-bar{ gap:4px; padding:8px 6px; }
+}
+
+/* 「修改面板」头像气泡：原来是小圆浮窗上文字与头像每3秒交替淡入淡出，v3.18 改成从
+   「修改面板」按钮（吸底条最右一颗）正上方固定引出、常驻显示，不再交替。
+   right 与 .box-action-bar 的右内边距对齐，尾巴指向下方按钮中心 */
+.box-panel-mon-bubble{
+  position:absolute; right:10px; bottom:100%; margin-bottom:9px;
+  display:none; z-index:6;
+  background:var(--panel); border:2px solid #7a4f9e; border-radius:12px;
+  padding:4px; box-shadow:0 3px 10px rgba(0,0,0,.22);
+}
+.box-panel-mon-bubble.on{ display:block; }
+/* 尾巴用两层三角叠出描边效果：外层紫色是边框，内层面板色盖在上面留出 2px 边 */
+.box-panel-mon-bubble::before,
+.box-panel-mon-bubble::after{
+  content:''; position:absolute; right:18px; width:0; height:0;
+  border-left:7px solid transparent; border-right:7px solid transparent;
+}
+.box-panel-mon-bubble::before{ top:100%; border-top:9px solid #7a4f9e; }
+.box-panel-mon-bubble::after{ top:calc(100% - 2px); border-top:9px solid var(--panel); }
+.pk-portrait.pk-portrait-bubble{ width:42px; height:42px; border-radius:10px; font-size:9px; cursor:pointer; }
+
+/* ============ v3.18 更多功能浮窗 ============ */
+.mf-section{ display:flex; flex-direction:column; gap:9px; margin-bottom:16px; }
+.mf-toggle-row{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:10px 12px; background:var(--paper); border:1px solid var(--line); border-radius:10px;
+}
+.mf-toggle-label{ font-size:14px; font-weight:800; color:var(--ink); }
+.mf-toggle-hint{ font-size:11px; color:#9a9484; font-weight:700; margin-top:2px; }
+/* iOS 风格拨动开关：纯 CSS，.on 决定底色与滑块位移 */
+.mf-switch{
+  flex:0 0 auto; width:48px; height:28px; border-radius:14px; background:#cfc9bb;
+  position:relative; cursor:pointer; transition:background .2s ease; user-select:none;
+}
+.mf-switch::after{
+  content:''; position:absolute; top:3px; left:3px; width:22px; height:22px; border-radius:50%;
+  background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.3); transition:transform .2s ease;
+}
+.mf-switch.on{ background:#3f9a52; }
+.mf-switch.on::after{ transform:translateX(20px); }
+.account-btn-psc{ background:#e0a32e; }
+
+/* ============ v3.18 宝睡小当家联动：OAuth2 授权确认页 ============ */
+/* 版式对齐对方 PSC 那张授权确认图，配色换成本站的琥珀色系；
+   这一套样式之后做 Provider 侧（对方来读我方盒子时弹的授权页）可以整套复用 */
+.psc-label{ text-align:center; font-size:12px; font-weight:800; color:#c99a2e; letter-spacing:.18em; margin-bottom:6px; }
+.psc-title{ text-align:center; font-size:19px; font-weight:900; color:var(--ink); line-height:1.45; margin-bottom:16px; }
+.psc-card{ background:var(--paper); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:16px; }
+.psc-card-row + .psc-card-row{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+.psc-card-k{ font-size:11.5px; color:#9a9484; font-weight:700; margin-bottom:3px; }
+.psc-card-v{ font-size:15px; font-weight:800; color:var(--ink); word-break:break-all; }
+.psc-scope-head{ font-size:13.5px; font-weight:900; color:var(--ink); margin-bottom:9px; }
+.psc-scope{ display:flex; align-items:center; gap:11px; padding:11px 12px; background:var(--paper);
+  border:1px solid var(--line); border-radius:12px; margin-bottom:9px; }
+.psc-scope-ic{ flex:0 0 auto; width:36px; height:36px; border-radius:10px; background:rgba(224,163,46,.18);
+  display:flex; align-items:center; justify-content:center; font-size:17px; }
+.psc-scope-body{ flex:1 1 auto; min-width:0; }
+.psc-scope-t{ font-size:14px; font-weight:800; color:var(--ink); }
+.psc-scope-d{ font-size:11.5px; color:#8a8375; line-height:1.5; margin-top:2px; }
+.psc-scope-ok{ flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:#e0a32e; color:#fff;
+  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
+.psc-note{ display:flex; gap:8px; padding:11px 12px; background:rgba(224,163,46,.15); border-radius:10px;
+  font-size:11.5px; color:#7a6f56; line-height:1.6; margin:14px 0 16px; }
+.psc-msg{ font-size:12.5px; text-align:center; min-height:18px; margin-bottom:10px; color:#c1443a; font-weight:700; }
+.psc-msg.ok{ color:#3f9a52; }
+.psc-linked-badge{ text-align:center; font-size:12.5px; font-weight:800; color:#3f9a52; margin-bottom:14px; }
+.psc-actions{ display:flex; gap:10px; }
+.psc-btn{ border:none; border-radius:11px; padding:13px 4px; font-size:14.5px; font-weight:800; cursor:pointer; }
+.psc-btn:disabled{ opacity:.55; cursor:default; }
+.psc-btn-deny{ flex:0 0 34%; background:var(--paper); border:1px solid var(--line); color:var(--ink); }
+.psc-btn-allow{ flex:1 1 0; background:#e0a32e; color:#fff; }
+.psc-btn-unlink{ flex:1 1 0; background:#c1443a; color:#fff; }
 </style>
 
 </head>
@@ -1971,9 +2069,15 @@
       <button type="button" class="box-batch-cancel-btn" id="boxBatchCancelBtn">取消</button>
       <button type="button" class="box-batch-delete-btn" id="boxBatchDeleteConfirmBtn">删除</button>
     </div>
-    <div class="box-auth-bar" id="boxAuthBar">
-      <button type="button" class="box-auth-btn box-auth-register" id="boxAuthRegisterBtn">注册</button>
-      <button type="button" class="box-auth-btn box-auth-login" id="boxAuthLoginBtn">登录</button>
+    <!-- v3.18：原来的注册/登录吸底条 + 右下角「修改面板」「+」/左下角「奖章」「账号设置」四颗小圆浮窗，
+         统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
+    <div class="box-action-bar" id="boxActionBar">
+      <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
+      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">更多<br>功能</button>
+      <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
+      <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn">+</button>
+      <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
+      <button type="button" class="box-act-btn box-act-panel" id="boxActPanelBtn">修改<br>面板</button>
     </div>
   </div>
   </div>
@@ -2282,8 +2386,7 @@
   </div>
 </div>
 
-<div class="box-medal-fab" id="boxMedalFab">奖章</div>
-<div class="box-medal-fab box-account-fab" id="boxAccountFab"><span>账号</span><span>设置</span></div>
+<!-- v3.18：原「奖章」「账号设置」两颗左下角小圆浮窗已撤除，功能并入「更多功能」浮窗 -->
 
 <div class="cap-ctrl-overlay auth-overlay" id="authModal">
   <div class="cap-ctrl-box auth-box">
@@ -2314,14 +2417,134 @@
   </div>
 </div>
 
-<div class="cap-ctrl-overlay auth-overlay" id="accountModal">
-  <div class="cap-ctrl-box">
-    <div class="cap-ctrl-head">账号设置<span class="cap-ctrl-close" id="accountModalClose">✕</span></div>
-    <div class="account-info" id="accountInfoLine"></div>
-    <div class="account-btns">
-      <button type="button" class="account-btn account-btn-blue" id="accountChangePwdBtn">修改密码</button>
-      <button type="button" class="account-btn account-btn-red" id="accountLogoutBtn">退出登录</button>
+<!-- v3.18 更多功能浮窗：顶部沿用登录/注册浮窗的吉祥物+站名，登录时紧跟着显示用户名/邮箱，
+     中间是奖章显示 / 宝可梦等级显示两个拨动开关，底部是联动/改密/登出三颗按钮。
+     v3.17 的 #accountModal「账号设置」浮窗整体被它取代 -->
+<div class="cap-ctrl-overlay auth-overlay" id="moreFuncModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="auth-head"><span class="cap-ctrl-close" id="moreFuncModalClose">✕</span></div>
+    <div class="auth-mascot-outer">
+      <div class="auth-mascot-cluster" id="moreFuncMascotCluster">
+        <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
+        <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
+        <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
+        <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
+      </div>
     </div>
+    <div class="auth-brand-title">土王智商高</div>
+    <div class="account-info" id="moreFuncAccountInfo"></div>
+    <div class="mf-section">
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">奖章显示</div>
+          <div class="mf-toggle-hint" id="mfMedalHint">关闭</div>
+        </div>
+        <div class="mf-switch" id="mfMedalSwitch"></div>
+      </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">宝可梦等级显示</div>
+          <div class="mf-toggle-hint" id="mfLevelHint">开启</div>
+        </div>
+        <div class="mf-switch" id="mfLevelSwitch"></div>
+      </div>
+    </div>
+    <div class="account-btns">
+      <button type="button" class="account-btn account-btn-psc" id="mfPscBtn">宝睡小当家联动</button>
+      <button type="button" class="account-btn account-btn-blue" id="mfChangePwdBtn">修改密码</button>
+      <button type="button" class="account-btn account-btn-red" id="mfLogoutBtn">退出登录</button>
+    </div>
+  </div>
+</div>
+
+<!-- v3.18 宝睡小当家联动：本地授权确认页。点「前往授权」才真正跳到对方的 authorize 端点，
+     本地这一页只负责讲清楚"我方将要申请什么权限、授权后回到哪里" -->
+<div class="cap-ctrl-overlay auth-overlay" id="pscModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="auth-head"><span class="cap-ctrl-close" id="pscModalClose">✕</span></div>
+    <div class="auth-mascot-outer">
+      <div class="auth-mascot-cluster" id="pscMascotCluster">
+        <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
+        <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
+        <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
+        <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
+      </div>
+    </div>
+    <div class="auth-brand-title">土王智商高</div>
+    <div class="psc-label" id="pscLabel">授权确认</div>
+    <div class="psc-title" id="pscTitle">连接你的<b>宝睡小当家</b>账号</div>
+    <div class="psc-linked-badge" id="pscLinkedBadge" style="display:none;"></div>
+    <div class="psc-card">
+      <div class="psc-card-row">
+        <div class="psc-card-k">当前账号</div>
+        <div class="psc-card-v" id="pscCurAccount"></div>
+      </div>
+      <div class="psc-card-row">
+        <div class="psc-card-k">授权后返回</div>
+        <div class="psc-card-v" id="pscReturnHost">iqdooh.top</div>
+      </div>
+    </div>
+    <div id="pscScopeBlock">
+      <div class="psc-scope-head">我方将向宝睡小当家申请以下权限</div>
+      <div class="psc-scope">
+        <div class="psc-scope-ic">📦</div>
+        <div class="psc-scope-body">
+          <div class="psc-scope-t">只读宝可梦盒子</div>
+          <div class="psc-scope-d">读取你在宝睡小当家盒子里的宝可梦资料；不能新增、修改或删除对方的记录。</div>
+        </div>
+        <div class="psc-scope-ok">✓</div>
+      </div>
+      <div class="psc-scope">
+        <div class="psc-scope-ic">🔒</div>
+        <div class="psc-scope-body">
+          <div class="psc-scope-t">离线访问</div>
+          <div class="psc-scope-d">在你离开本页后继续访问，最长 30 天；你随时可以在这里解除连接。</div>
+        </div>
+        <div class="psc-scope-ok">✓</div>
+      </div>
+    </div>
+    <div class="psc-note">
+      <span>🛡️</span>
+      <span>不会向宝睡小当家透露本站的密码、登录凭证或已删除的记录；对方的访问令牌只保存在本站服务端。</span>
+    </div>
+    <div class="psc-msg" id="pscMsg"></div>
+    <div class="psc-actions" id="pscActions"></div>
+  </div>
+</div>
+
+<!-- v3.18 反向：第三方（宝睡小当家等）来读我方盒子时，我方自己的授权确认页。
+     入口是对方把浏览器送到 iqdooh.top/?oauth2_req=<id>，由 oauthConsentBootstrap 拉起 -->
+<div class="cap-ctrl-overlay auth-overlay" id="oauthConsentModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="auth-mascot-outer">
+      <div class="auth-mascot-cluster" id="oauthMascotCluster">
+        <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
+        <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
+        <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
+        <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
+      </div>
+    </div>
+    <div class="auth-brand-title">土王智商高</div>
+    <div class="psc-label">授权确认</div>
+    <div class="psc-title" id="oauthTitle"></div>
+    <div class="psc-card">
+      <div class="psc-card-row">
+        <div class="psc-card-k">当前账号</div>
+        <div class="psc-card-v" id="oauthCurAccount"></div>
+      </div>
+      <div class="psc-card-row">
+        <div class="psc-card-k">授权后返回</div>
+        <div class="psc-card-v" id="oauthReturnHost"></div>
+      </div>
+    </div>
+    <div class="psc-scope-head">它将获得以下权限</div>
+    <div id="oauthScopeList"></div>
+    <div class="psc-note">
+      <span>🛡️</span>
+      <span>不会向第三方透露本站内部 userId、密码、同步版本或已删除记录。</span>
+    </div>
+    <div class="psc-msg" id="oauthMsg"></div>
+    <div class="psc-actions" id="oauthActions"></div>
   </div>
 </div>
 
@@ -3890,7 +4113,6 @@ function renderFinalPkRow(){
   });
 }
 document.getElementById('finalPkOverlay').onclick = (e)=>{ if(e.target.id==='finalPkOverlay') closeFinalPkPopup(); };
-document.getElementById('boxMedalFab').onclick = toggleBoxMedalFab;
 document.getElementById('finalPkPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('finalPkCloseBtn').onclick = closeFinalPkPopup;
 
@@ -5522,25 +5744,35 @@ function applyPkPortraitSatietyMedal(portraitEl){
   renderSatietyMedalOnPortrait(portraitEl, x, currentSatietyTier(x));
 }
 
-/* ---- 盒子左下角"奖章"开关浮窗：只在盒子浮层里出现，状态持久化 ---- */
-function updateBoxMedalFab(){
-  const fab = document.getElementById('boxMedalFab');
-  if(!fab) return;
+/* ---- v3.18 盒子底部吸底按钮条：取代 v3.17 的四颗小圆浮窗 + 注册/登录吸底条 ----
+   未登录 5 颗（更多功能/注册/+/登录/修改面板），登录后撤掉注册/登录只剩 3 颗。
+   详情页/批量删除态下整条收起：这两种态各自也吸在盒子浮窗底边，同时出现会互相压住。
+   函数名沿用 v3.17 的调用点（原 updateBoxMedalFab），所有旧调用点语义不变——
+   都是"盒子状态变了，把底部这一坨重新同步一次" */
+function updateBoxActionBar(){
+  const bar = document.getElementById('boxActionBar');
+  if(!bar) return;
   const open = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
-  // 详情页打开时也要收起：这颗浮窗 z-index(1200) 高于详情页浮层(1150)，不收就直接压在详情页上。
-  // panelFab / boxCreateFab 在详情页同样是主动收起的，这里跟它们保持一致。
   const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
-  // 批量删除条打开时同样要收起：批量删除条也吸在盒子浮窗底边，会被这颗浮窗压住甚至挡住"删除"按钮
   const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
   const shouldShow = open && !inDetail && !inBatch;
-  fab.style.display = shouldShow ? 'flex' : 'none';
-  fab.classList.toggle('on', !!userPrefs.boxMedalOn);
-  updateBoxAuthUI(shouldShow); // v3.17：账号相关的吸底条/浮窗跟奖章浮窗同一时机同步
+  bar.style.display = shouldShow ? 'flex' : 'none';
+  const logged = (typeof authLoggedIn==='function') && authLoggedIn();
+  ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = logged ? 'none' : 'flex';
+  });
+  updateBoxPanelMonBubble();
 }
-function toggleBoxMedalFab(){
+function toggleBoxMedal(){
   userPrefs.boxMedalOn = !userPrefs.boxMedalOn;
   saveUserPrefs();
-  updateBoxMedalFab();
+  updateBoxActionBar();
+  if(typeof renderBoxPage==='function') renderBoxPage();
+}
+function toggleBoxLevel(){
+  userPrefs.boxLevelOn = !userPrefs.boxLevelOn;
+  saveUserPrefs();
   if(typeof renderBoxPage==='function') renderBoxPage();
 }
 
@@ -5593,7 +5825,7 @@ async function authApi(path, {method='GET', body=null, auth=false}={}){
   try{ data = await res.json(); }catch(e){}
   if(!res.ok){
     // token 过期/被换掉：本地登录态已经没用了，直接清掉，让界面回到未登录
-    if(res.status === 401 && auth){ clearAuthState(); updateBoxMedalFab(); }
+    if(res.status === 401 && auth){ clearAuthState(); updateBoxActionBar(); }
     throw new Error(data.error || ('请求失败（'+res.status+'）'));
   }
   return data;
@@ -5652,37 +5884,10 @@ function scheduleCloudPush(){
   cloudPushTimer = setTimeout(()=>{ pushCloudData().catch(()=>{}); }, 1500);
 }
 
-/* ---- 盒子底部吸底条 / 账号设置浮窗的显隐 ---- */
-function updateBoxAuthUI(visible){
-  const bar = document.getElementById('boxAuthBar');
-  const fab = document.getElementById('boxAccountFab');
-  if(!bar || !fab) return;
-  const logged = authLoggedIn();
-  // 登录后吸底条整个撤掉，改成左下角浮窗；未登录则反过来
-  bar.style.display = logged ? 'none' : 'flex';
-  fab.style.display = (visible && logged) ? 'flex' : 'none';
-  updateBoxFabAuthOffset();
-}
-// 未登录时吸底条（注册/登录）紧贴盒子浮窗底边，跟四颗小圆浮窗（修改面板/新建/奖章/账号设置）
-// 常驻的 100px/158px 高度正好压在一起；这里量出吸底条顶边离视口底部的真实距离，
-// 不够两排浮窗站的话就把两排一起上移，登录后吸底条撤掉了就恢复回默认位置
-function updateBoxFabAuthOffset(){
-  const bar = document.getElementById('boxAuthBar');
-  if(!bar || typeof boxOverlayOpen==='undefined' || !boxOverlayOpen) return;
-  const lowerIds = ['boxCreateFab','boxMedalFab'];
-  const upperIds = ['panelFab','boxAccountFab'];
-  const barVisible = bar.style.display !== 'none';
-  if(!barVisible){
-    [...lowerIds,...upperIds].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom=''; });
-    return;
-  }
-  const barTop = bar.getBoundingClientRect().top;
-  const clearance = Math.ceil(window.innerHeight - barTop + 8); // 吸底条顶边到视口底部的距离 + 8px 间隙
-  const lowerBottom = Math.max(100, clearance);
-  const upperBottom = lowerBottom + 58; // 维持两排浮窗原有的 58px 间距（158-100）
-  lowerIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom = lowerBottom+'px'; });
-  upperIds.forEach(id=>{ const el=document.getElementById(id); if(el) el.style.bottom = upperBottom+'px'; });
-}
+/* v3.18：v3.17 的 updateBoxAuthUI / updateBoxFabAuthOffset 一并撤掉。
+   前者管的"吸底条与账号浮窗二选一"已由 updateBoxActionBar 里的登录态分支接管；
+   后者是为了让四颗常驻小圆浮窗躲开吸底条而动态改 bottom，现在浮窗本身没了，
+   按钮条自己就是 flex 列的最后一项，不存在互相压住的问题，整套避让逻辑不再需要 */
 
 /* ---- 注册/登录弹窗 ---- */
 let authModalMode = 'register';
@@ -5744,7 +5949,7 @@ async function authSubmit(){
     closeAuthModal();
     if(typeof renderBoxPage==='function') renderBoxPage();
     renderAll();
-    updateBoxMedalFab();
+    updateBoxActionBar();
     alert(overflow > 0
       ? `${isReg?'注册':'登录'}成功，数据已融合。\n注意：合并后超出了 ${BOX_MAX_COUNT} 只的上限，多出的 ${overflow} 只没有保留。`
       : `${isReg?'注册':'登录'}成功，数据已融合。`);
@@ -5754,21 +5959,254 @@ async function authSubmit(){
   }
 }
 
-/* ---- 账号设置 / 修改密码 ---- */
-function openAccountModal(){
+/* ---- v3.18 更多功能浮窗（取代 v3.17 的「账号设置」浮窗） ---- */
+// 两个拨动开关的外观 + 下方"开启/关闭"提示文字，跟 userPrefs 单向同步
+function syncMoreFuncSwitches(){
+  [['mfMedalSwitch','mfMedalHint', !!userPrefs.boxMedalOn],
+   ['mfLevelSwitch','mfLevelHint', !!userPrefs.boxLevelOn]].forEach(([swId, hintId, on])=>{
+    const sw = document.getElementById(swId), hint = document.getElementById(hintId);
+    if(sw) sw.classList.toggle('on', on);
+    if(hint) hint.textContent = on ? '开启' : '关闭';
+  });
+}
+function openMoreFuncModal(){
+  const logged = authLoggedIn();
   const u = authState.user || {};
   // 用户名/邮箱是用户自己输入的，一律走 textContent，不拼 innerHTML
-  const box = document.getElementById('accountInfoLine');
+  const box = document.getElementById('moreFuncAccountInfo');
   box.textContent = '';
-  [['用户名：', u.username||''], ['邮箱：', u.email||'']].forEach(([lab, val], i)=>{
-    if(i) box.appendChild(document.createElement('br'));
-    const tag = document.createElement('span'); tag.textContent = lab;
-    box.appendChild(tag);
-    box.appendChild(document.createTextNode(val));
+  box.style.display = logged ? '' : 'none';
+  if(logged){
+    [['用户名：', u.username||''], ['邮箱：', u.email||'']].forEach(([lab, val], i)=>{
+      if(i) box.appendChild(document.createElement('br'));
+      const tag = document.createElement('span'); tag.textContent = lab;
+      box.appendChild(tag);
+      box.appendChild(document.createTextNode(val));
+    });
+  }
+  // 改密码/退出登录是账号态专属，未登录时整颗撤掉（联动按钮同理：没账号就没得绑）
+  ['mfChangePwdBtn','mfLogoutBtn','mfPscBtn'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = logged ? '' : 'none';
   });
-  document.getElementById('accountModal').style.display = 'flex';
+  syncMoreFuncSwitches();
+  document.getElementById('moreFuncModal').style.display = 'flex';
 }
-function closeAccountModal(){ document.getElementById('accountModal').style.display = 'none'; }
+function closeMoreFuncModal(){ document.getElementById('moreFuncModal').style.display = 'none'; }
+
+/* ---- v3.18 宝睡小当家（PSC）联动：我方作为第三方客户端接入对方的 OIDC ----
+   全套 OAuth2 细节（client_secret / PKCE verifier / access token / refresh token）
+   一律只存在于我方 Worker 服务端，浏览器这边只跟自家 /api/psc/* 打交道，
+   对方文档第 13 节的安全清单要求的就是这个：token 绝不落到前端。 */
+const PSC_PARTNER_NAME = '宝睡小当家';
+let pscLinkState = null; // {linked, sub, updatedAt}；null = 还没向后端问过
+
+function setPscMsg(text, ok){
+  const el = document.getElementById('pscMsg');
+  if(!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('ok', !!ok);
+}
+// 按钮区按连接状态整块重画：未连接是「取消 / 前往授权」，已连接是「关闭 / 解除连接」
+function renderPscActions(){
+  const box = document.getElementById('pscActions');
+  const linked = !!(pscLinkState && pscLinkState.linked);
+  box.textContent = '';
+  const mk = (cls, text, fn)=>{
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'psc-btn '+cls; b.textContent = text; b.onclick = fn;
+    box.appendChild(b); return b;
+  };
+  mk('psc-btn-deny', linked ? '关闭' : '拒绝', closePscModal);
+  if(linked) mk('psc-btn-unlink', '解除连接', pscUnlink);
+  else mk('psc-btn-allow', '✓ 前往授权', pscStartLink);
+}
+function renderPscModal(){
+  const linked = !!(pscLinkState && pscLinkState.linked);
+  const u = authState.user || {};
+  // 用户名/邮箱是用户自己填的，一律 textContent
+  document.getElementById('pscCurAccount').textContent =
+    (u.username || '') + (u.email ? ' · ' + u.email : '');
+  document.getElementById('pscReturnHost').textContent = location.host || 'iqdooh.top';
+  document.getElementById('pscLabel').textContent = linked ? '联动状态' : '授权确认';
+  // 标题里合作方名字加粗，其余部分走 textContent 拼，不整段拼 innerHTML
+  const title = document.getElementById('pscTitle');
+  title.textContent = '';
+  title.appendChild(document.createTextNode(linked ? '已连接你的' : '连接你的'));
+  const b = document.createElement('b'); b.textContent = PSC_PARTNER_NAME;
+  title.appendChild(b);
+  title.appendChild(document.createTextNode('账号'));
+  const badge = document.getElementById('pscLinkedBadge');
+  badge.style.display = linked ? '' : 'none';
+  if(linked){
+    const t = pscLinkState.updatedAt ? new Date(pscLinkState.updatedAt).toLocaleString('zh-CN') : '';
+    badge.textContent = '● 已连接' + (t ? '　最近同步：' + t : '');
+  }
+  // 已连接时权限清单换成"当前已授予"的说法，不再是"将要申请"
+  const head = document.querySelector('#pscScopeBlock .psc-scope-head');
+  if(head) head.textContent = linked ? '宝睡小当家已授予本站以下权限' : '我方将向宝睡小当家申请以下权限';
+  renderPscActions();
+}
+async function openPscModal(){
+  if(!authLoggedIn()){ alert('请先登录本站账号，再做联动。'); return; }
+  setPscMsg('');
+  pscLinkState = null;
+  renderPscModal();
+  document.getElementById('pscModal').style.display = 'flex';
+  setPscMsg('正在查询联动状态…', true);
+  try{
+    pscLinkState = await authApi('/api/psc/status', {auth:true});
+    setPscMsg('');
+  }catch(e){
+    pscLinkState = {linked:false};
+    setPscMsg(e.message || '查询联动状态失败');
+  }
+  renderPscModal();
+}
+function closePscModal(){ document.getElementById('pscModal').style.display = 'none'; }
+async function pscStartLink(){
+  const btns = document.querySelectorAll('#pscActions .psc-btn');
+  btns.forEach(b=> b.disabled = true);
+  setPscMsg('正在准备授权…', true);
+  try{
+    // 授权事务（state/nonce/PKCE verifier）由服务端生成并保存，前端只拿到最终跳转地址
+    const data = await authApi('/api/psc/start', {method:'POST', auth:true});
+    if(!data || !data.authorizeUrl) throw new Error('没拿到授权地址');
+    location.href = data.authorizeUrl;
+  }catch(e){
+    setPscMsg(e.message || '发起授权失败');
+    btns.forEach(b=> b.disabled = false);
+  }
+}
+async function pscUnlink(){
+  if(!confirm('解除与' + PSC_PARTNER_NAME + '的连接？\n本站会撤销对方签发的令牌，之后需要重新授权才能再读取对方盒子。')) return;
+  const btns = document.querySelectorAll('#pscActions .psc-btn');
+  btns.forEach(b=> b.disabled = true);
+  setPscMsg('正在解除…', true);
+  try{
+    await authApi('/api/psc/unlink', {method:'POST', auth:true});
+    pscLinkState = {linked:false};
+    setPscMsg('已解除连接', true);
+  }catch(e){
+    setPscMsg(e.message || '解除失败');
+  }
+  renderPscModal();
+}
+// 授权回来时 Worker 会带 ?psc=ok / denied / error 回到本站，这里读一次就把参数抹掉，
+// 免得用户刷新或分享链接时又弹一次（同时也避免 state 之类的东西留在地址栏里）
+function pscConsumeReturnParam(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const r = q.get('psc');
+  if(!r) return;
+  q.delete('psc'); q.delete('psc_msg');
+  const rest = q.toString();
+  history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+  if(r === 'ok') alert('已成功连接' + PSC_PARTNER_NAME + '。');
+  else if(r === 'denied') alert('你在' + PSC_PARTNER_NAME + '那边拒绝了本次授权，未做任何改动。');
+  else alert('连接' + PSC_PARTNER_NAME + '失败，请稍后再试。');
+}
+
+/* ---- v3.18 反向：我方作为 OIDC Provider 时自己的授权确认页 ----
+   第三方走 /api/oauth2/authorize，我方 Worker 校验完参数后把浏览器送到
+   iqdooh.top/?oauth2_req=<id>，这里接住并渲染确认页；用户点允许/拒绝后
+   由后端生成最终 redirectUrl（带 code 或 error），前端只负责跳过去。 */
+const OAUTH_SCOPE_TEXT = {
+  'openid':           {ic:'🪪', t:'确认你的账号身份', d:'向第三方提供一个仅对该应用有效的匿名标识；不包含你的用户名、邮箱或密码。'},
+  'pokemon_box.read': {ic:'📦', t:'只读宝可梦盒子',   d:'读取盒子中的宝可梦资料；不能新增、修改或删除记录。'},
+  'offline_access':   {ic:'🔒', t:'离线访问',         d:'在你离开本页后继续访问，最长 30 天；你可以随时撤销这次连接。'},
+};
+let oauthReqId = null;
+
+function setOauthMsg(text, ok){
+  const el = document.getElementById('oauthMsg');
+  if(!el) return;
+  el.textContent = text || '';
+  el.classList.toggle('ok', !!ok);
+}
+function renderOauthScopes(scopes){
+  const box = document.getElementById('oauthScopeList');
+  box.textContent = '';
+  scopes.forEach(s=>{
+    const meta = OAUTH_SCOPE_TEXT[s];
+    if(!meta) return; // 不认识的 scope 不编文案，直接不显示，免得给用户看半句假话
+    const row = document.createElement('div'); row.className = 'psc-scope';
+    const ic = document.createElement('div'); ic.className = 'psc-scope-ic'; ic.textContent = meta.ic;
+    const body = document.createElement('div'); body.className = 'psc-scope-body';
+    const t = document.createElement('div'); t.className = 'psc-scope-t'; t.textContent = meta.t;
+    const d = document.createElement('div'); d.className = 'psc-scope-d'; d.textContent = meta.d;
+    body.appendChild(t); body.appendChild(d);
+    const ok = document.createElement('div'); ok.className = 'psc-scope-ok'; ok.textContent = '✓';
+    row.appendChild(ic); row.appendChild(body); row.appendChild(ok);
+    box.appendChild(row);
+  });
+}
+async function oauthDecide(approve){
+  const btns = document.querySelectorAll('#oauthActions .psc-btn');
+  btns.forEach(b=> b.disabled = true);
+  setOauthMsg(approve ? '正在授权…' : '正在取消…', true);
+  try{
+    const data = await authApi('/api/oauth2/decide', {method:'POST', auth:true, body:{req:oauthReqId, approve}});
+    if(!data || !data.redirectUrl) throw new Error('没拿到返回地址');
+    location.href = data.redirectUrl;
+  }catch(e){
+    setOauthMsg(e.message || '操作失败');
+    btns.forEach(b=> b.disabled = false);
+  }
+}
+// 地址栏里带 ?oauth2_req= 就说明是第三方把用户送过来授权的，接住并渲染确认页
+async function oauthConsentBootstrap(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const req = q.get('oauth2_req');
+  if(!req) return;
+  // 参数读完立刻从地址栏抹掉：授权请求是一次性的，留在栏里刷新会拿到"已过期"
+  q.delete('oauth2_req');
+  const rest = q.toString();
+  history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+  oauthReqId = req;
+
+  if(!authLoggedIn()){
+    alert('请先登录土王智商高账号，再回到对方站点重新发起授权。');
+    openAuthModal('login');
+    return;
+  }
+  const u = authState.user || {};
+  document.getElementById('oauthCurAccount').textContent =
+    (u.username || '') + (u.email ? ' · ' + u.email : '');
+  document.getElementById('oauthTitle').textContent = '　';
+  document.getElementById('oauthScopeList').textContent = '';
+  document.getElementById('oauthActions').textContent = '';
+  setOauthMsg('正在读取授权请求…', true);
+  document.getElementById('oauthConsentModal').style.display = 'flex';
+
+  let info;
+  try{
+    info = await authApi('/api/oauth2/authinfo?req=' + encodeURIComponent(req), {auth:true});
+  }catch(e){
+    setOauthMsg(e.message || '读取授权请求失败');
+    return;
+  }
+  setOauthMsg('');
+  // 第三方名称来自我方自己注册的客户端表，但仍走 textContent，不拼 innerHTML
+  const title = document.getElementById('oauthTitle');
+  title.textContent = '';
+  const b = document.createElement('b'); b.textContent = info.clientName || '第三方应用';
+  title.appendChild(b);
+  title.appendChild(document.createTextNode(' 想连接你的账号'));
+  document.getElementById('oauthReturnHost').textContent = info.returnHost || '';
+  renderOauthScopes(info.scopes || []);
+
+  const actions = document.getElementById('oauthActions');
+  actions.textContent = '';
+  const mk = (cls, text, fn)=>{
+    const btn = document.createElement('button');
+    btn.type='button'; btn.className='psc-btn '+cls; btn.textContent=text; btn.onclick=fn;
+    actions.appendChild(btn);
+  };
+  mk('psc-btn-deny', '拒绝', ()=> oauthDecide(false));
+  mk('psc-btn-allow', '✓ 允许访问', ()=> oauthDecide(true));
+}
 function openPwdModal(){
   document.getElementById('pwdNew1').value = '';
   document.getElementById('pwdNew2').value = '';
@@ -5790,7 +6228,7 @@ async function pwdSubmit(){
     const data = await authApi('/api/password', {method:'POST', body:{password:p1}, auth:true});
     if(data.token){ authState.token = data.token; saveAuthState(); } // 换新 token，本机不用重新登录
     document.getElementById('pwdModal').style.display = 'none';
-    closeAccountModal();
+    closeMoreFuncModal();
     alert('密码已修改。');
   }catch(e){
     msg.classList.remove('ok');
@@ -5801,22 +6239,29 @@ async function pwdSubmit(){
 function authLogout(){
   if(!confirm('退出登录？\n这台设备上已有的盒子和设置会原样留着，下次登录会再并回账号里。')) return;
   clearAuthState();
-  closeAccountModal();
-  updateBoxMedalFab();
+  closeMoreFuncModal();
+  updateBoxActionBar();
 }
 
 /* ---- 事件绑定 ---- */
 loadAuthState();
-document.getElementById('boxAuthRegisterBtn').onclick = ()=> openAuthModal('register');
-document.getElementById('boxAuthLoginBtn').onclick = ()=> openAuthModal('login');
+document.getElementById('boxActRegisterBtn').onclick = ()=> openAuthModal('register');
+document.getElementById('boxActLoginBtn').onclick = ()=> openAuthModal('login');
 document.getElementById('authModalClose').onclick = closeAuthModal;
 document.getElementById('authModal').onclick = (e)=>{ if(e.target.id==='authModal') closeAuthModal(); };
 document.getElementById('authSubmitBtn').onclick = authSubmit;
-document.getElementById('boxAccountFab').onclick = openAccountModal;
-document.getElementById('accountModalClose').onclick = closeAccountModal;
-document.getElementById('accountModal').onclick = (e)=>{ if(e.target.id==='accountModal') closeAccountModal(); };
-document.getElementById('accountChangePwdBtn').onclick = openPwdModal;
-document.getElementById('accountLogoutBtn').onclick = authLogout;
+document.getElementById('boxActMoreBtn').onclick = openMoreFuncModal;
+document.getElementById('moreFuncModalClose').onclick = closeMoreFuncModal;
+document.getElementById('moreFuncModal').onclick = (e)=>{ if(e.target.id==='moreFuncModal') closeMoreFuncModal(); };
+document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
+document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
+document.getElementById('mfChangePwdBtn').onclick = openPwdModal;
+document.getElementById('mfLogoutBtn').onclick = authLogout;
+document.getElementById('mfPscBtn').onclick = openPscModal;
+document.getElementById('pscModalClose').onclick = closePscModal;
+document.getElementById('pscModal').onclick = (e)=>{ if(e.target.id==='pscModal') closePscModal(); };
+pscConsumeReturnParam(); // 从对方授权页跳回来时会带 ?psc=...，读一次就抹掉
+oauthConsentBootstrap(); // 第三方把用户送来授权时会带 ?oauth2_req=...，接住并弹授权确认页
 document.getElementById('pwdModalClose').onclick = ()=>{ document.getElementById('pwdModal').style.display='none'; };
 document.getElementById('pwdModal').onclick = (e)=>{ if(e.target.id==='pwdModal') document.getElementById('pwdModal').style.display='none'; };
 document.getElementById('pwdSubmitBtn').onclick = pwdSubmit;
@@ -6459,7 +6904,9 @@ const SLEEP1_CAP_UNITS = 33;    // 第一觉硬顶 8h15min——仅当第二觉�
 
 /* ---- 个性设置（睡眠时长 / 盒子奖章开关）：独立 localStorage，不随宝可梦盒备份迁移 ---- */
 const PREFS_KEY = 'effiprobcalc_prefs_v1';
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, campingTicket: false}; // 26格=6.5h，8格=2h
+// boxLevelOn 默认 true：v3.17 起盒子格子昵称下方一直是无条件显示等级的，
+// v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, campingTicket: false}; // 26格=6.5h，8格=2h
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -6472,6 +6919,7 @@ function loadUserPrefs(){
       if(Number.isFinite(o.sleep1)) userPrefs.sleep1 = o.sleep1;
       if(Number.isFinite(o.sleep2)) userPrefs.sleep2 = o.sleep2;
       if(typeof o.boxMedalOn==='boolean') userPrefs.boxMedalOn = o.boxMedalOn;
+      if(typeof o.boxLevelOn==='boolean') userPrefs.boxLevelOn = o.boxLevelOn;
       if(typeof o.campingTicket==='boolean') userPrefs.campingTicket = o.campingTicket;
     }
   }catch(e){}
@@ -8790,6 +9238,9 @@ function initMascotCluster(root){
 }
 initMascotCluster(document.getElementById('siteMascotCluster'));
 initMascotCluster(document.getElementById('authMascotCluster'));
+initMascotCluster(document.getElementById('moreFuncMascotCluster')); // v3.18 更多功能浮窗顶部那一组
+initMascotCluster(document.getElementById('pscMascotCluster'));      // v3.18 宝睡小当家联动授权页顶部那一组
+initMascotCluster(document.getElementById('oauthMascotCluster'));    // v3.18 我方作为 Provider 时的授权确认页
 
 function collapseModule4IfExpanded(){
   const body = document.getElementById('body-mod4');
@@ -9937,7 +10388,7 @@ function applyBoxOverlayBounds(){
     if(t && br) t.style.left = (br.left + br.width/2 - wr.left) + 'px';
   });
 }
-window.addEventListener('resize', ()=>{ if(boxOverlayOpen){ applyBoxOverlayBounds(); updateBoxFabAuthOffset(); applyBoxGridColumns(); } });
+window.addEventListener('resize', ()=>{ if(boxOverlayOpen){ applyBoxOverlayBounds(); applyBoxGridColumns(); } });
 function positionBoxOverlayOrigin(bubble){
   const ballEl = document.querySelector('#tabBtnBox .tab-bubble-ball');
   const fr = ballEl.getBoundingClientRect();
@@ -9990,12 +10441,10 @@ function openBoxOverlay(){
   document.getElementById('tabBtnBox').classList.add('box-active');
   updateBoxTabCapsule(true);
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
-  const cf = document.getElementById('controlsFab'); if(cf) cf.style.display='none';
-  const pf = document.getElementById('panelFab');
-  if(pf){ pf.style.display='flex'; pf.classList.add('box-page-visible'); }
-  // 「+」新建按钮只在盒子里出现，占用「控制参数」腾出来的下方位置
-  const bcf = document.getElementById('boxCreateFab');
-  if(bcf){ bcf.style.display='flex'; bcf.classList.add('box-page-visible'); }
+  // v3.18：盒子里不再出现任何小圆浮窗，「修改面板」「+」都挪进了底部吸底按钮条
+  ['controlsFab','panelFab','boxCreateFab'].forEach(id=>{
+    const el = document.getElementById(id); if(el) el.style.display='none';
+  });
   undockFabs(); // 进盒子前可能正停靠在「计算概率」上方，先还原成右下角固定态
   if(typeof renderBoxPage==='function') renderBoxPage();
 }
@@ -10011,9 +10460,9 @@ function closeBoxOverlay(){
   const backdrop = document.getElementById('boxBackdrop');
   if(backdrop) backdrop.classList.remove('open');
   unlockPageScroll();
-  // 必须在这里主动同步：盒子关闭时不会再走 renderBoxPage，而 updateBoxMedalFab 的另一个调用点
+  // 必须在这里主动同步：盒子关闭时不会再走 renderBoxPage，而 updateBoxActionBar 的另一个调用点
   // 正是 renderBoxCountWidget（只在盒子渲染时跑）。少了这一句，浮窗就会一直留在屏幕左下角。
-  updateBoxMedalFab();
+  updateBoxActionBar();
   const overlay = document.getElementById('boxOverlay');
   const bubble = document.getElementById('boxBubbleWrap');
   positionBoxOverlayOrigin(bubble);
@@ -10276,6 +10725,9 @@ function updateFabVisibility(){
   const fab = document.getElementById('panelFab');
   // 详情页里改面板走底栏那颗蓝色「修改」按钮，小圆浮窗收起来，别压在详情页上
   if(typeof boxDetailEntryId!=='undefined' && boxDetailEntryId){ if(fab) fab.style.display = 'none'; return; }
+  // v3.18：盒子浮层里「修改面板」已经并进底部吸底按钮条，小圆浮窗一律不出现。
+  // 这一句必须在 page4 判断之前——关详情页的 finish() 会调到这里，那时盒子还开着
+  if(typeof boxOverlayOpen!=='undefined' && boxOverlayOpen){ if(fab) fab.style.display = 'none'; return; }
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')) return;
   fab.style.display = 'flex';
@@ -10370,6 +10822,11 @@ document.getElementById('panelFab').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 document.getElementById('boxCreateFab').onclick = ()=> openDashboardForNewEntry();
+// v3.18：盒子里这两件事改由底部吸底按钮条上的按钮触发，行为跟对应的小圆浮窗完全一致
+document.getElementById('boxActPanelBtn').onclick = ()=>{
+  if(dashboardOpen) closeDashboard(); else openDashboard();
+};
+document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEntry();
 document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
 document.getElementById('dashCreateAddBtn').onclick = ()=>{
   if(!state.selectedDex){ alert('请先选择宝可梦。'); return; }
@@ -10414,6 +10871,26 @@ function updatePanelFabFace(){
       if(f) f.classList.toggle('fab-show-mon');
     }, 3000);
   }
+  updateBoxPanelMonBubble(); // 盒子里那份常驻气泡跟小圆浮窗共用同一个数据源，一起刷新
+}
+/* v3.18 盒子吸底条上方的头像气泡：与 updatePanelFabFace 同源，但不做 3 秒交替——
+   面板里有宝可梦就常驻显示头像，没有就整颗气泡收起（不留空框） */
+function updateBoxPanelMonBubble(){
+  const bubble = document.getElementById('boxPanelMonBubble');
+  if(!bubble) return;
+  const rec = (typeof getSelectedPokemonRecord==='function') ? getSelectedPokemonRecord() : null;
+  const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
+  const b64 = pair ? (state.shiny ? pair[1] : pair[0]) : null;
+  if(!b64){ bubble.classList.remove('on'); bubble.innerHTML = ''; return; }
+  let holder = bubble.querySelector('.pk-portrait');
+  if(!holder){
+    holder = document.createElement('div');
+    holder.className = 'pk-portrait pk-portrait-bubble';
+    bubble.innerHTML = '';
+    bubble.appendChild(holder);
+  }
+  renderPortraitInto(holder, rec, 10);
+  bubble.classList.add('on');
 }
 document.getElementById('dashboardOverlay').onclick = (e)=>{
   if(e.target.id === 'dashboardOverlay') closeDashboard();
@@ -10768,7 +11245,7 @@ window.addEventListener('pointerup', ()=>{ boxDragActive = false; boxDragSelectM
 // 不筛选时 filteredCount 本来就等于 total，样式不用跟着分两套——一直显示"当前个数－盒子总数"，
 // 不筛选时两个数字自然相等，界面不会因为切换筛选/不筛选而跳来跳去
 function renderBoxCountWidget(filteredCount){
-  updateBoxMedalFab();   // v3.16：盒子每次渲染顺带同步左下角"奖章"开关浮窗的显隐/选中态
+  updateBoxActionBar();   // v3.16：盒子每次渲染顺带同步左下角"奖章"开关浮窗的显隐/选中态
   const el = document.getElementById('boxCountWidget');
   if(!el) return;
   const total = boxData.length;
@@ -10874,12 +11351,16 @@ function renderBoxPage(){
     // 保险起见在显示端也强制截断一次：万一存量数据（导入/云端合并等旧路径）里混进了超限昵称，
     // 也不能让格子布局被冲垮
     label.textContent = boxTrimNickname(entry.nickname || entry.name) || entry.name;
-    const levelLabel = document.createElement('div');
-    levelLabel.className = 'box-grid-level';
-    levelLabel.textContent = 'Lv.'+entry.level;
     item.appendChild(imgWrap);
     item.appendChild(label);
-    item.appendChild(levelLabel);
+    // v3.18：等级行受「更多功能」里的"宝可梦等级显示"开关控制。关掉时整个元素不建，
+    // 而不是 visibility:hidden——那样会白占 10px 高度，格子间距看着不对
+    if(userPrefs.boxLevelOn){
+      const levelLabel = document.createElement('div');
+      levelLabel.className = 'box-grid-level';
+      levelLabel.textContent = 'Lv.'+entry.level;
+      item.appendChild(levelLabel);
+    }
     item.onclick = ()=> boxGridItemClick(entry.id, item);
     item.addEventListener('pointerdown', (e)=>{ boxGridItemPointerDown(e, entry.id, item); boxGridItemLongPressStart(e, entry.id); });
     item.addEventListener('pointerenter', (e)=> boxGridItemPointerEnter(e, entry.id, item));
@@ -11229,11 +11710,10 @@ function openBoxDetail(entryId){
   // display:none 时量到 0，会直接退化成拆得最碎的那个候选（闪光/金帮/超级/毕业 四行）
   applyBoxOverlayBounds();
   document.getElementById('boxDetailOverlay').classList.add('open');
-  // 详情页借用的是同一份全局 state，这里不能再开手动新建面板，先把「+」收起来；
-  // 「修改面板」小圆浮窗也一并收起，改面板走底栏那颗蓝色按钮
-  const bcf = document.getElementById('boxCreateFab'); if(bcf) bcf.style.display = 'none';
-  const pfb = document.getElementById('panelFab'); if(pfb) pfb.style.display = 'none';
-  updateBoxMedalFab(); // 「奖章」浮窗同样收起（关详情页时 finish() 末尾的 renderBoxPage 会把它放回来）
+  // 详情页借用的是同一份全局 state，不能再开手动新建面板；改面板走详情页底栏那颗蓝色按钮。
+  // v3.18：吸底按钮条整条收起（updateBoxActionBar 里的 inDetail 分支），关详情页时
+  // finish() 末尾的 renderBoxPage 会把它放回来
+  updateBoxActionBar();
 
   boxDetailLoadEntry(entryId);
 }
@@ -11248,8 +11728,7 @@ function closeBoxDetail(){
     if(boxDetailM7OrigParent) boxDetailM7OrigParent.insertBefore(m7, boxDetailM7OrigNext);
     document.getElementById('boxDetailOverlay').classList.remove('open');
     if(panel){ panel.style.transition=''; panel.style.transform=''; panel.style.opacity=''; }
-    const bcfBack = document.getElementById('boxCreateFab');
-    if(bcfBack && boxOverlayOpen) bcfBack.style.display = 'flex';
+    // v3.18：「+」不再是小圆浮窗，退出详情页后由 updateBoxActionBar 连同整条吸底条一起放回来
     if(!boxDetailCommitted && boxDetailPrevStateSnapshot){
       Object.assign(state, boxDetailPrevStateSnapshot);
     }
@@ -11525,18 +12004,10 @@ function boxSetBatchBarVisible(on){
   document.getElementById('boxBatchBar').style.display = on ? 'flex' : 'none';
   const t = document.getElementById('boxBubbleTail');
   if(t) t.classList.toggle('on-panel', !!on);
-  // 批量删除条跟"修改面板/新建/奖章/账号设置"这四颗小圆浮窗一样吸在盒子浮窗底边附近，
-  // 开启时会被浮窗压住甚至挡住"删除"按钮，这里开启时统一先隐藏；关闭时交还给各自原有的
-  // 显隐逻辑决定要不要恢复（不能无脑强制显示，登录态/详情页态都可能不需要它们出现）
-  if(on){
-    ['panelFab','boxCreateFab','boxMedalFab','boxAccountFab'].forEach(id=>{
-      const el = document.getElementById(id); if(el) el.style.display = 'none';
-    });
-  } else {
-    const pf = document.getElementById('panelFab'); if(pf) pf.style.display = 'flex';
-    const bcf = document.getElementById('boxCreateFab'); if(bcf) bcf.style.display = 'flex';
-    updateBoxMedalFab(); // 顺带同步奖章/账号浮窗 + 吸底条的显隐，以及浮窗避让吸底条的偏移量
-  }
+  // v3.18：批量删除条和吸底按钮条都钉在盒子浮窗底边，同时出现会互相压住甚至挡住"删除"。
+  // 两者的显隐现在都由 updateBoxActionBar 里的 inBatch 分支统一裁决，这里只要触发一次重算即可
+  // （四颗小圆浮窗已撤除，不再需要逐个 display 开关）
+  updateBoxActionBar();
 }
 document.getElementById('boxBatchDeleteBtn').onclick = ()=>{
   boxBatchDeleteMode = !boxBatchDeleteMode;
