@@ -43,9 +43,10 @@
      margin会穿透collapse到容器外部，容器本身border/padding box的高度天然就停在这行内容的下沿），
      absolute+bottom:0正好卡在这条线上，不需要额外量高度硬编码 */
   .site-header-row{ position:relative; }
-  /* 捕捉推荐页内容长，上下滚动时优先滚内容，网页标题（这一块）和页内的次级选择区域都不跟着动：
-     只在捕捉推荐页是当前页时才把它转成 sticky，其它页维持原样不受影响 */
-  .wrap:has(#page4.active-page) .site-header-row{ position:sticky; top:0; z-index:25; background:var(--panel); }
+  /* v3.18：这里原来有一条「捕捉推荐页把网页标题转成 sticky」的规则，为了滚动时压住下方内容
+     还给它铺了 background:var(--panel)。但 --panel 是纯白 #ffffff，而 body 是米色渐变，
+     于是标题后面就多出一块很突兀的白色方框。现在改成条目区自己滚（见下方 .cap-rank-viewport），
+     整个上半部分本来就不动了，sticky 和那层白底一并撤掉。 */
   .site-mascot-cluster{ position:absolute; right:4px; bottom:0; width:137px; height:40px; pointer-events:none; }
   /* will-change:transform 让合成层从一开始就常驻，避免gif动画帧切换/重开src时因为临时提升
      合成层触发一次性重新栅格化导致的动画中途变糊（跟第十八节18.14走鲸png变糊是同一个坑） */
@@ -445,32 +446,55 @@
     .effbox .val, .effbox input{ font-size:20px; }
     .shiny-row .val{ font-size:18px; }
   }
-  .panel-fab{
+  /* ============ v3.18 页面吸底按钮条 ============ */
+  /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数）。做法与盒子里的 .box-action-bar 一致，
+     只是这里钉在页面切换栏正上方：控制参数在中间「宝可梦盒」球的左边，修改面板在右边。
+     中间留出 60px 空档给那颗凸起的球，整条 pointer-events:none，只有两颗按钮自己可点，
+     免得这条透明的横带挡住下层页面内容。 */
+  .page-action-bar{
     display:none;
-    position:fixed; bottom:158px; right:24px; width:48px; height:48px; border-radius:50%;
-    background:#3a8fae; color:#fff; align-items:center; justify-content:center;
-    font-size:10px; font-weight:800; text-align:center; line-height:1.2; cursor:pointer;
-    box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:500; user-select:none;
+    position:fixed; left:0; right:0; bottom:63px; z-index:1090;
+    pointer-events:none;
   }
-  .panel-fab:hover{ filter:brightness(1.15); }
-  .panel-fab.panel-fab-lower{ bottom:100px; }
-  .panel-fab.box-page-visible{ z-index:1160; }
-  #panelFab{ background:var(--accent); }
-  #controlsFab{ background:#3a8fae; }
-  /* 手动新建宝可梦：只在盒子里出现，位置与「控制参数」相同（盒子里那个是隐藏的） */
-  #boxCreateFab{ background:#3f9a52; font-size:30px; font-weight:400; line-height:1; }
-  /* 「修改面板」小圆浮窗的两张脸：文字与宝可梦头像叠在一起交替淡入淡出 */
-  .fab-face{
-    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-    transition:opacity .5s ease; pointer-events:none;
+  .page-action-inner{
+    max-width:640px; margin:0 auto; width:100%;
+    display:flex; align-items:flex-end; padding:0 12px;
   }
-  .fab-face-mon{ opacity:0; }
-  /* 头像沿用站内统一的头像框（.pk-portrait）。33px 是能整个塞进 48px 圆里的最大正方形
-     （48/√2≈33.9），再大四个角就会顶出圆外 */
-  .pk-portrait.pk-portrait-fab{ width:33px; height:33px; border-radius:9px; font-size:8px; cursor:pointer; }
-  #panelFab.fab-show-mon .fab-face-text{ opacity:0; }
-  #panelFab.fab-show-mon .fab-face-mon{ opacity:1; }
-  @media print{ .panel-fab, .dashboard-overlay, .tabbar{ display:none !important; } }
+  .page-act-side{ flex:1 1 0; min-width:0; display:flex; }
+  .page-act-side-left{ justify-content:flex-end; padding-right:10px; }
+  .page-act-side-right{ justify-content:flex-start; padding-left:10px; }
+  /* 只包住「修改面板」这一颗按钮，宽度就等于按钮宽度；position:relative 让上方的头像气泡
+     能按按钮自己的右缘对齐（挂在外层 .page-act-side-right 上的话会对到那一整栏的边上） */
+  .page-act-panel-wrap{ position:relative; display:inline-flex; }
+  .page-act-gap{ flex:0 0 60px; }
+  .page-act-btn{
+    pointer-events:auto;
+    border:none; border-radius:11px; padding:10px 16px;
+    font-size:12.5px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
+    white-space:nowrap; user-select:none;
+    box-shadow:0 3px 12px rgba(0,0,0,.22);
+  }
+  .page-act-btn:hover{ filter:brightness(1.1); }
+  /* 颜色沿用改造前那两颗小圆浮窗 */
+  #pageActControlsBtn{ background:#3a8fae; }
+  #pageActPanelBtn{ background:var(--accent); }
+  /* 「修改面板」头像气泡：与盒子里那颗同源，浮在按钮右缘正上方，常驻不交替 */
+  .page-panel-mon-bubble{
+    position:absolute; right:0; bottom:100%; margin-bottom:9px;
+    display:none; z-index:6;
+    background:var(--panel); border:2px solid #7a4f9e; border-radius:12px;
+    padding:4px; box-shadow:0 3px 10px rgba(0,0,0,.22);
+    pointer-events:auto; cursor:pointer;
+  }
+  .page-panel-mon-bubble.on{ display:block; }
+  .page-panel-mon-bubble::before,
+  .page-panel-mon-bubble::after{
+    content:''; position:absolute; right:18px; width:0; height:0;
+    border-left:7px solid transparent; border-right:7px solid transparent;
+  }
+  .page-panel-mon-bubble::before{ top:100%; border-top:9px solid #7a4f9e; }
+  .page-panel-mon-bubble::after{ top:calc(100% - 2px); border-top:9px solid var(--panel); }
+  @media print{ .page-action-bar, .dashboard-overlay, .tabbar{ display:none !important; } }
 
   /* ============ 三页签导航 ============ */
   .app-page{ display:none; }
@@ -1306,6 +1330,18 @@
   .cap-skill-icon-red{ background-color:#c0392b; }
 
   .cap-rank-viewport{ padding:8px 8px 12px; overflow:hidden; }
+  /* v3.18 捕捉推荐页：条目区变成自己的滚动容器，上下滚只滚它，网页标题/吉祥物和类型等级
+     选择区全程不动。高度由 applyCapHeaderStickyOffset 量出（视口底部到条目区顶部的距离）
+     写进 --cap-view-h，页面本身因此不再产生纵向滚动。 */
+  .wrap:has(#page4.active-page) .cap-header{ position:static; }
+  .wrap:has(#page4.active-page) .cap-rank-viewport{
+    height:var(--cap-view-h, 50vh);
+    overflow-y:auto; overflow-x:hidden;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+  /* 条目区自己滚之后，页面底部就不用再给固定栏留那么高的空档了 */
+  body:has(#page4.active-page){ padding-bottom:12px; }
   @keyframes capSlideR{ from{opacity:0; transform:translateX(80px);} to{opacity:1; transform:translateX(0);} }
   @keyframes capSlideL{ from{opacity:0; transform:translateX(-80px);} to{opacity:1; transform:translateX(0);} }
   .cap-slide-r{ animation:capSlideR .34s cubic-bezier(.2,.7,.3,1); }
@@ -1583,7 +1619,7 @@
 .box-act-btn:hover{ filter:brightness(1.08); }
 /* 「+」按钮不跟其他按钮争宽度：它只有一个字符，给固定窄宽，把空间让给四个中文按钮 */
 .box-act-create{ flex:0 0 44px; background:#3f9a52; font-size:24px; font-weight:400; padding:9px 0; }
-.box-act-more{ background:#c1443a; }
+.box-act-more{ background:#7a4f9e; }
 .box-act-register{ background:#3a7fd5; }
 .box-act-login{ background:#e0a32e; }
 .box-act-panel{ background:#7a4f9e; }
@@ -1663,6 +1699,11 @@
 .psc-btn-deny{ flex:0 0 34%; background:var(--paper); border:1px solid var(--line); color:var(--ink); }
 .psc-btn-allow{ flex:1 1 0; background:#e0a32e; color:#fff; }
 .psc-btn-unlink{ flex:1 1 0; background:#c1443a; color:#fff; }
+/* 同步按钮：功能未上线，先占位。整行单独一排，放在拒绝/授权那一排之上 */
+.psc-sync-row{ margin-bottom:10px; }
+.psc-btn-sync{ width:100%; background:#3a7fd5; color:#fff; display:flex; align-items:center;
+  justify-content:center; gap:7px; }
+.psc-sync-hint{ font-size:11px; color:#9a9484; text-align:center; margin-top:6px; line-height:1.5; }
 </style>
 
 </head>
@@ -1998,9 +2039,20 @@
 
 </div>
 
-<div class="panel-fab" id="panelFab"><span class="fab-face fab-face-text" id="panelFabText">修改<br>面板</span><span class="fab-face fab-face-mon" id="panelFabMon"></span></div>
-<div class="panel-fab panel-fab-lower" id="controlsFab">控制<br>参数</div>
-<div class="panel-fab panel-fab-lower box-create-fab" id="boxCreateFab">+</div>
+<div class="page-action-bar" id="pageActionBar">
+  <div class="page-action-inner">
+    <div class="page-act-side page-act-side-left">
+      <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+    </div>
+    <div class="page-act-gap"></div>
+    <div class="page-act-side page-act-side-right">
+      <div class="page-act-panel-wrap">
+        <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
+        <button type="button" class="page-act-btn" id="pageActPanelBtn">修改面板</button>
+      </div>
+    </div>
+  </div>
+</div>
 <div class="box-toast" id="boxToast"></div>
 
 <div class="tabbar" id="tabBar">
@@ -2509,6 +2561,13 @@
       <span>不会向宝睡小当家透露本站的密码、登录凭证或已删除的记录；对方的访问令牌只保存在本站服务端。</span>
     </div>
     <div class="psc-msg" id="pscMsg"></div>
+    <!-- 同步按钮：占位，功能未上线（以后用来双向同步两站盒子）。只在已连接时出现 -->
+    <div class="psc-sync-row" id="pscSyncRow" style="display:none;">
+      <button type="button" class="psc-btn psc-btn-sync" id="pscSyncBtn" disabled>
+        <span>🔄</span><span>同步宝可梦盒</span>
+      </button>
+      <div class="psc-sync-hint">功能开发中：将来可把两站盒子里的宝可梦互相同步。</div>
+    </div>
     <div class="psc-actions" id="pscActions"></div>
   </div>
 </div>
@@ -6046,6 +6105,9 @@ function renderPscModal(){
   // 已连接时权限清单换成"当前已授予"的说法，不再是"将要申请"
   const head = document.querySelector('#pscScopeBlock .psc-scope-head');
   if(head) head.textContent = linked ? '宝睡小当家已授予本站以下权限' : '我方将向宝睡小当家申请以下权限';
+  // 同步按钮只在已连接时露出；功能没上线，始终 disabled
+  const syncRow = document.getElementById('pscSyncRow');
+  if(syncRow) syncRow.style.display = linked ? '' : 'none';
   renderPscActions();
 }
 async function openPscModal(){
@@ -10218,10 +10280,8 @@ function switchPage(pageId){
   document.querySelectorAll('.app-page').forEach(p=>p.classList.toggle('active-page', p.id===pageId));
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active', t.dataset.page===pageId));
   window.scrollTo(0,0);
-  const showFabs = pageId!=='page4';
-  if(showFabs){ updateFabVisibility(); updateControlsFabVisibility(); }
-  else { ['panelFab','controlsFab'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display = 'none'; }); }
-  scheduleFabDockUpdate();
+  // v3.18：显示/隐藏（含 page4 该不该出现）全在 updatePageActionBar 里判断，这里一句就够
+  updatePageActionBar();
   positionTabIndicator();
   if(pageId==='page3'){
     // 从面板选择进入排名对比页时排名计算较重，先弹"排名计算中"再算，避免白屏卡顿
@@ -10232,12 +10292,19 @@ function switchPage(pageId){
   }
   if(pageId==='page4'){ renderCapturePage(); applyCapHeaderStickyOffset(); }
 }
-// 捕捉推荐页网页标题变成 sticky 后，下面的 .cap-header 得贴在标题下沿，不能也贴 top:0
-// （那样会叠在标题上面）——这里量一次标题实际高度写进 CSS 变量，宽度断点变化时（resize）跟着重量
+/* v3.18：捕捉推荐页改成"上半部分不动、只有条目区自己滚"。这里量出条目区顶部到页面切换栏
+   之间还剩多少高度，写进 --cap-view-h 当条目区的固定高度。
+   量的是视口坐标，所以必须在页面本身没有被滚走的时候量——切到 page4 时 switchPage 里已经
+   window.scrollTo(0,0) 过，resize 时页面也不会有纵向滚动（条目区自己吃掉了溢出）。 */
 function applyCapHeaderStickyOffset(){
-  const header = document.querySelector('.site-header-row');
-  if(!header) return;
-  document.documentElement.style.setProperty('--cap-header-top', header.offsetHeight+'px');
+  const vp = document.querySelector('.cap-rank-viewport');
+  const tabbar = document.getElementById('tabBar');
+  if(!vp || !tabbar) return;
+  const top = vp.getBoundingClientRect().top;
+  const bottom = tabbar.getBoundingClientRect().top;
+  // 留 10px 呼吸空隙；下限 160px 是防止极端窄屏/横屏时算出个负数把条目区压没
+  const h = Math.max(160, Math.round(bottom - top - 10));
+  document.documentElement.style.setProperty('--cap-view-h', h+'px');
 }
 document.querySelectorAll('.tab-item').forEach(t=>{
   t.onclick = ()=> switchPage(t.dataset.page);
@@ -10334,10 +10401,9 @@ function pageSwitchAnimateTo(targetId){
     if(e.touches.length!==1 || pageSwiping || pageSwipeBlocked()){ tracking=false; return; }
     // 起手在横向滚动的小组件（如捕捉推荐页的岛屿选择条）里就不当成翻页手势，让它正常横滚
     if(e.target.closest && e.target.closest('.cap-cscroll')){ tracking=false; return; }
-    // 起手在捕捉推荐页的条目内容区（标题下方那一大片）也不当成翻页手势：
-    // 快速上下滑动时手指难免带一点横向偏移，容易被误判成翻页导致整页（含标题）跟着滑走，
-    // 这里直接把内容区排除在翻页判定之外，保证内容区滑动只负责自己的纵向滚动，标题不动
-    if(e.target.closest && e.target.closest('.cap-rank-viewport')){ tracking=false; return; }
+    // v3.18：这里原来还排除了 .cap-rank-viewport（捕捉推荐条目区），因为当时整页一起滚，
+    // 上下滑带点横向偏移就会把标题也滑走。现在条目区是自己的滚动容器，纵向滑动由它自己消化，
+    // 于是把这条排除撤掉——条目区里左右滑同样能翻页。方向判定改到 touchend 里从严处理。
     sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
   }, {passive:true});
   document.addEventListener('touchend', (e)=>{
@@ -10346,6 +10412,9 @@ function pageSwitchAnimateTo(targetId){
     const t = e.changedTouches[0];
     const dx = t.clientX - sx, dy = t.clientY - sy;
     if(Math.abs(dy) >= 60 || Math.abs(dx) <= 70) return; // 竖着滑或幅度不够，都不当成翻页手势
+    // 再加一道"横向要明显压过纵向"的门槛。条目区现在也参与翻页判定了，滚列表时手指多少会斜一点，
+    // 只靠上面那两条阈值不足以把"想滚列表"和"想翻页"分开
+    if(Math.abs(dx) < Math.abs(dy) * 1.5) return;
     pageSwitchBySwipe(dx < 0 ? 1 : -1);
   }, {passive:true});
 })();
@@ -10407,8 +10476,11 @@ function positionBoxOverlayOrigin(bubble){
    只是把滚到下层页面的滚动事件拦掉。盒子自己内部的滚动区照常放行。 */
 let pageScrollLocked = false;
 function blockOuterScroll(e){
-  // 盒子气泡（含详情页气泡，两者都带 .box-bubble-wrap）内部要能正常滚动，放行
-  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap')) return;
+  // 盒子气泡（含详情页气泡，两者都带 .box-bubble-wrap）内部要能正常滚动，放行。
+  // .cap-ctrl-box 是各类浮窗（控制参数/登录注册/更多功能/宝睡小当家联动/反向授权确认）
+  // 共用的滚动容器，本身就带 max-height:80vh + overflow-y:auto。这些浮窗多半是从盒子里
+  // 点开的，此时 pageScrollLocked 还是 true，不放行的话浮窗内容超过一屏就完全滚不动。
+  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap, .cap-ctrl-box')) return;
   e.preventDefault();
 }
 function lockPageScroll(){
@@ -10442,11 +10514,9 @@ function openBoxOverlay(){
   document.getElementById('tabBtnBox').classList.add('box-active');
   updateBoxTabCapsule(true);
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('active'));
-  // v3.18：盒子里不再出现任何小圆浮窗，「修改面板」「+」都挪进了底部吸底按钮条
-  ['controlsFab','panelFab','boxCreateFab'].forEach(id=>{
-    const el = document.getElementById(id); if(el) el.style.display='none';
-  });
-  undockFabs(); // 进盒子前可能正停靠在「计算概率」上方，先还原成右下角固定态
+  // v3.18：盒子里「修改面板」「控制参数」「+」都由盒子自己的底部吸底按钮条提供，
+  // 页面那条按钮条整体收起
+  updatePageActionBar();
   if(typeof renderBoxPage==='function') renderBoxPage();
 }
 function closeBoxOverlay(){
@@ -10471,19 +10541,13 @@ function closeBoxOverlay(){
   bubble.classList.add('box-bubble-closing');
   document.getElementById('tabBtnBox').classList.remove('box-active');
   updateBoxTabCapsule(false);
-  const pf = document.getElementById('panelFab'); if(pf) pf.classList.remove('box-page-visible');
-  const bcf = document.getElementById('boxCreateFab');
-  if(bcf){ bcf.style.display='none'; bcf.classList.remove('box-page-visible'); }
   setTimeout(()=>{ overlay.classList.remove('open'); bubble.classList.remove('box-bubble-closing'); }, 240);
   const activePageId0 = document.querySelector('.app-page.active-page');
   const activePageId = activePageId0 ? activePageId0.id : 'page1';
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active', t.dataset.page===activePageId));
   positionTabIndicator();
-  if(activePageId!=='page4'){ updateFabVisibility(); updateControlsFabVisibility(); }
-  // 捕捉推荐页(page4)本来就不该有这两颗浮窗，但 openBoxOverlay 是直接 display='flex' 强开的，
-  // 上面那句又跳过了 page4，于是关掉盒子后「修改面板」就残留在页面上。这里补一次收起，
-  // 跟 switchPage 里 showFabs=false 的分支保持一致。
-  else { ['panelFab','controlsFab'].forEach(id=>{ const el=document.getElementById(id); if(el) el.style.display='none'; }); }
+  // v3.18：page4 该不该出现由 updatePageActionBar 自己判断，不用再在这里分叉
+  updatePageActionBar();
   // 排名对比页：盒子内切换/浏览宝可梦期间排名重算是延后的（见 renderRankModule 顶部的 boxOverlayOpen 判断），
   // 退出盒子时统一在这里补算一次；做法与 closeDashboard 收尾一致，先弹"排名计算中"再算，避免白屏卡顿感
   const page3 = document.getElementById('page3');
@@ -10721,18 +10785,25 @@ function rowShiny(label,val){ return `<div class="row shiny-row"><span>${label}<
 
 /* ============ 浮动"修改面板"按钮与仪表盘 ============ */
 let dashboardOpen = false;
-const moduleVisible = {m1:false, m2:false};
-function updateFabVisibility(){
-  const fab = document.getElementById('panelFab');
-  // 详情页里改面板走底栏那颗蓝色「修改」按钮，小圆浮窗收起来，别压在详情页上
-  if(typeof boxDetailEntryId!=='undefined' && boxDetailEntryId){ if(fab) fab.style.display = 'none'; return; }
-  // v3.18：盒子浮层里「修改面板」已经并进底部吸底按钮条，小圆浮窗一律不出现。
-  // 这一句必须在 page4 判断之前——关详情页的 finish() 会调到这里，那时盒子还开着
-  if(typeof boxOverlayOpen!=='undefined' && boxOverlayOpen){ if(fab) fab.style.display = 'none'; return; }
+/* v3.18：原来「修改面板」「控制参数」是两颗右下角小圆浮窗，各自一套显示逻辑（updateFabVisibility /
+   updateControlsFabVisibility），还要额外算避让「计算概率」按钮的停靠位置。现在两颗一起并进
+   #pageActionBar（钉在页面切换栏正上方），显示与否只有一处判断，下面两个旧函数保留成薄壳，
+   免得改动散落各处的十来个调用点。 */
+function updatePageActionBar(){
+  const bar = document.getElementById('pageActionBar');
+  if(!bar) return;
+  // 盒子详情页 / 盒子浮层里都有自己的按钮，这条整体收起，别压在浮层上。
+  // boxDetailEntryId / boxOverlayOpen 都是 let，声明在本函数之后；开场那次调用还处在它们的
+  // 暂时性死区里，此时连 typeof 都会抛 ReferenceError（这点和 var 不同），所以要 try 住。
+  let inDetail = false, inBox = false;
+  try{ inDetail = !!boxDetailEntryId; }catch(e){}
+  try{ inBox = !!boxOverlayOpen; }catch(e){}
   const page4 = document.getElementById('page4');
-  if(page4 && page4.classList.contains('active-page')) return;
-  fab.style.display = 'flex';
+  const onPage4 = !!(page4 && page4.classList.contains('active-page'));
+  bar.style.display = (inDetail || inBox || onPage4) ? 'none' : 'block';
+  updatePagePanelMonBubble();
 }
+function updateFabVisibility(){ updatePageActionBar(); }
 function openDashboard(){
   dashboardOpen = true;
   document.getElementById('dashboardOverlay').style.display = 'flex';
@@ -10819,10 +10890,13 @@ function closeDashboard(){
     cb();
   }
 }
-document.getElementById('panelFab').onclick = ()=>{
+document.getElementById('pageActPanelBtn').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
-document.getElementById('boxCreateFab').onclick = ()=> openDashboardForNewEntry();
+// 头像气泡本身也当作「修改面板」的一部分，点它等同点按钮
+document.getElementById('pagePanelMonBubble').onclick = ()=>{
+  if(dashboardOpen) closeDashboard(); else openDashboard();
+};
 // v3.18：盒子里这两件事改由底部吸底按钮条上的按钮触发，行为跟对应的小圆浮窗完全一致
 document.getElementById('boxActPanelBtn').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
@@ -10842,37 +10916,32 @@ document.getElementById('dashCreateAddBtn').onclick = ()=>{
   }
 };
 
-/* 「修改面板」小圆浮窗：面板里有宝可梦时，四个字与该宝可梦头像每 3 秒淡入淡出交替一次 */
-let panelFabFlipTimer = null;
+/* v3.18：原来是小圆浮窗上「修改面板」四个字与宝可梦头像每 3 秒淡入淡出交替，现在页面这条
+   按钮条与盒子里那条一样，改成按钮上方常驻头像气泡，交替计时器一并撤掉。
+   这个函数名保留（散落各处的调用点不动），职责变成"把两处气泡一起刷新" */
 function updatePanelFabFace(){
-  const fab = document.getElementById('panelFab');
-  const monEl = document.getElementById('panelFabMon');
-  if(!fab || !monEl) return;
-  const rec = (typeof getSelectedPokemonRecord==='function') ? getSelectedPokemonRecord() : null;
+  updatePagePanelMonBubble();
+  updateBoxPanelMonBubble(); // 盒子里那份常驻气泡跟页面这份共用同一个数据源，一起刷新
+}
+/* 页面按钮条上方的头像气泡：面板里有宝可梦就常驻显示，没有就整颗收起（不留空框）。
+   与 updateBoxPanelMonBubble 逻辑一致，只是挂在 #pagePanelMonBubble 上 */
+function updatePagePanelMonBubble(){
+  const bubble = document.getElementById('pagePanelMonBubble');
+  if(!bubble) return;
+  let rec = null;
+  try{ rec = (typeof getSelectedPokemonRecord==='function') ? getSelectedPokemonRecord() : null; }catch(e){ rec = null; }
   const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
   const b64 = pair ? (state.shiny ? pair[1] : pair[0]) : null;
-  if(!b64){
-    monEl.innerHTML = '';
-    fab.classList.remove('fab-show-mon');
-    if(panelFabFlipTimer){ clearInterval(panelFabFlipTimer); panelFabFlipTimer = null; }
-    return;
-  }
-  // 走站内统一的头像框渲染，闪光时的彩虹描边也一并跟着来
-  let holder = monEl.querySelector('.pk-portrait');
+  if(!b64){ bubble.classList.remove('on'); bubble.innerHTML = ''; return; }
+  let holder = bubble.querySelector('.pk-portrait');
   if(!holder){
     holder = document.createElement('div');
-    holder.className = 'pk-portrait pk-portrait-fab';
-    monEl.innerHTML = '';
-    monEl.appendChild(holder);
+    holder.className = 'pk-portrait pk-portrait-bubble';
+    bubble.innerHTML = '';
+    bubble.appendChild(holder);
   }
-  renderPortraitInto(holder, rec, 9);
-  if(!panelFabFlipTimer){
-    panelFabFlipTimer = setInterval(()=>{
-      const f = document.getElementById('panelFab');
-      if(f) f.classList.toggle('fab-show-mon');
-    }, 3000);
-  }
-  updateBoxPanelMonBubble(); // 盒子里那份常驻气泡跟小圆浮窗共用同一个数据源，一起刷新
+  renderPortraitInto(holder, rec, 10);
+  bubble.classList.add('on');
 }
 /* v3.18 盒子吸底条上方的头像气泡：与 updatePanelFabFace 同源，但不做 3 秒交替——
    面板里有宝可梦就常驻显示头像，没有就整颗气泡收起（不留空框） */
@@ -10902,13 +10971,7 @@ document.getElementById('dashClearBtn').onclick = clearPanelSelection;
 document.getElementById('dashConfirmBtn').onclick = closeDashboard;
 
 let controlsDashboardOpen = false;
-const module3Visible = {m3:false};
-function updateControlsFabVisibility(){
-  const page4 = document.getElementById('page4');
-  if(page4 && page4.classList.contains('active-page')) return;
-  const fab = document.getElementById('controlsFab');
-  fab.style.display = 'flex';
-}
+function updateControlsFabVisibility(){ updatePageActionBar(); }
 function openControlsDashboard(){
   controlsDashboardOpen = true;
   renderControlsDash(); // 60级按钮是否显示取决于当前激活页，切页后可能没有触发过 renderAll，打开前强制刷新一次
@@ -10920,7 +10983,7 @@ function closeControlsDashboard(){
   document.getElementById('controlsDashboardOverlay').style.display = 'none';
   updateControlsFabVisibility();
 }
-document.getElementById('controlsFab').onclick = ()=>{
+document.getElementById('pageActControlsBtn').onclick = ()=>{
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
 };
 document.getElementById('controlsDashboardOverlay').onclick = (e)=>{
@@ -10930,99 +10993,19 @@ document.getElementById('controlsDashboardPanel').onclick = (e)=> e.stopPropagat
 document.getElementById('controlsDashCloseBtn').onclick = closeControlsDashboard;
 document.getElementById('controlsConfirmBtn').onclick = closeControlsDashboard;
 
-if('IntersectionObserver' in window){
-  const io = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{
-      if(e.target.id==='module1Card') moduleVisible.m1 = e.isIntersecting;
-      if(e.target.id==='module2Card') moduleVisible.m2 = e.isIntersecting;
-    });
-    updateFabVisibility();
-    updateControlsFabVisibility();
-  }, {threshold:0.1});
-  io.observe(document.getElementById('module1Card'));
-  io.observe(document.getElementById('module2Card'));
+/* v3.18：原来这里挂着两个 IntersectionObserver，靠观察 module1/2/3Card 是否进入视口来决定
+   那两颗小圆浮窗的显隐。现在按钮条钉死在切换栏上方、只跟"当前哪一页/有没有开浮层"有关，
+   跟模块滚没滚到视口里完全无关，整套观察器连同 moduleVisible/module3Visible 一并删掉。
+   开场那次同步统一放到脚本末尾（原 updateFabDocking() 的位置），那时各状态变量都已初始化。 */
 
-  const io3 = new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{
-      if(e.target.id==='module3Card') module3Visible.m3 = e.isIntersecting;
-    });
-    updateControlsFabVisibility();
-  }, {threshold:0.1});
-  io3.observe(document.getElementById('module3Card'));
-} else {
-  updateFabVisibility();
-  updateControlsFabVisibility();
-}
-
-/* ============ 浮窗避让"计算概率"按钮 ============ */
-const FAB_SIZE = 48, FAB_GAP = 10, FAB_MARGIN = 24;
-function undockFabs(){
-  ['panelFab','controlsFab'].forEach(id=>{
-    const el = document.getElementById(id);
-    el.style.position = '';
-    el.style.top = '';
-    el.style.bottom = '';
-    el.style.left = '';
-    el.style.right = '';
-  });
-}
-function dockFabsAboveButton(rect){
-  const scrollX = window.scrollX || document.documentElement.scrollLeft || 0;
-  const scrollY = window.scrollY || document.documentElement.scrollTop || 0;
-  const topPx = (scrollY + rect.top - FAB_GAP - FAB_SIZE) + 'px';
-  const rightEdgeX = scrollX + rect.right;
-  const panelFab = document.getElementById('panelFab');
-  const controlsFab = document.getElementById('controlsFab');
-  // 横排：修改面板在左，控制参数在右，整体紧贴按钮右边缘
-  controlsFab.style.position = 'absolute';
-  controlsFab.style.bottom = 'auto';
-  controlsFab.style.right = 'auto';
-  controlsFab.style.top = topPx;
-  controlsFab.style.left = (rightEdgeX - FAB_SIZE) + 'px';
-
-  panelFab.style.position = 'absolute';
-  panelFab.style.bottom = 'auto';
-  panelFab.style.right = 'auto';
-  panelFab.style.top = topPx;
-  panelFab.style.left = (rightEdgeX - FAB_SIZE - FAB_GAP - FAB_SIZE) + 'px';
-}
-function updateFabDocking(){
-  // 盒子/详情页是 position:fixed 的浮层，里面还套着自己的滚动容器；停靠逻辑把按钮的视口坐标
-  // 换算成"文档坐标 + position:absolute"，在这种上下文里算出来的位置是错的（浮窗会飞到页面中间）。
-  // 浮层开着时一律保持右下角固定态。
-  if(typeof boxOverlayOpen!=='undefined' && boxOverlayOpen){ undockFabs(); return; }
-  const calcBtn = document.getElementById('calcBtn');
-  const resultBox = document.getElementById('resultBox');
-  if(!calcBtn){ undockFabs(); return; }
-  const rect = calcBtn.getBoundingClientRect();
-  if(rect.width===0 && rect.height===0){ undockFabs(); return; }
-  let combinedBottom = rect.bottom;
-  if(resultBox && resultBox.style.display !== 'none'){
-    const boxRect = resultBox.getBoundingClientRect();
-    if(boxRect.width>0 || boxRect.height>0){
-      combinedBottom = Math.max(combinedBottom, boxRect.bottom);
-    }
-  }
-  const vh = window.innerHeight;
-  const fixedZoneHeight = FAB_MARGIN + FAB_SIZE + FAB_GAP + FAB_SIZE;
-  const fabZoneTop = vh - fixedZoneHeight; // 固定态浮窗堆叠区域顶部（视口坐标）
-  const overlapping = rect.top < vh && combinedBottom > fabZoneTop && combinedBottom > 0;
-  if(overlapping){
-    const minAnchorTop = FAB_GAP + FAB_SIZE + 10; // 确保浮窗行本身也不会被顶到视口外
-    const clampedRect = (rect.top < minAnchorTop) ? {top:minAnchorTop, bottom: rect.bottom - rect.top + minAnchorTop, left:rect.left, right:rect.right} : rect;
-    dockFabsAboveButton(clampedRect); // 停在按钮正上方，天然也就避开了下方的概率显示框
-  } else {
-    undockFabs();
-  }
-}
-let fabDockTicking = false;
-function scheduleFabDockUpdate(){
-  if(fabDockTicking) return;
-  fabDockTicking = true;
-  requestAnimationFrame(()=>{ updateFabDocking(); fabDockTicking = false; });
-}
-window.addEventListener('scroll', scheduleFabDockUpdate, {passive:true});
-window.addEventListener('resize', scheduleFabDockUpdate);
+/* v3.18：原来那套"浮窗避让计算概率按钮"的停靠逻辑（undockFabs / dockFabsAboveButton /
+   updateFabDocking / scheduleFabDockUpdate 及其 scroll/resize 监听）整套删掉了。
+   两颗浮窗已经并进 #pageActionBar 钉在页面切换栏正上方，位置固定不再随页面滚动，
+   也就不存在压住「计算概率」按钮或概率显示框的问题，不需要再算避让。
+   下面两个空壳只是接住散落各处的旧调用点，避免改动它们。 */
+function undockFabs(){}
+function scheduleFabDockUpdate(){}
+function updateFabDocking(){}
 
 
 /* ============ 宝可梦盒：辅助函数（效果/数据查找） ============ */
@@ -12616,7 +12599,7 @@ function boxShowSingleOcrProgress(){
 renderBoxFilterRow();
 
 renderAll();
-updateFabDocking();
+updatePageActionBar(); // v3.18：开场同步一次吸底按钮条（原来这里是 updateFabDocking()）
 </script>
 </body>
 </html>
