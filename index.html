@@ -515,6 +515,31 @@
   .page-panel-mon-bubble::after{ top:calc(100% - 2px); border-top:9px solid var(--panel); }
   @media print{ .page-action-bar, .dashboard-overlay, .tabbar{ display:none !important; } }
 
+  /* ============ 小圆浮窗（v3.17 旧样式，作为吸底按钮条的可选替代方案） ============
+     "更多功能"浮窗里加了"按钮样式"开关后，两套 UI 都要能独立显示：吸底按钮条（.page-action-bar /
+     .box-action-bar）保持原样不动，这里补一套圆形浮窗，只负责外观+点击，不找回旧版那套"浮窗避让
+     计算概率按钮"的停靠逻辑（已确认没必要）。四颗共用同一批 DOM 节点，按当前所在页面/是否在盒子里
+     由 updateFabCircles() 统一控制显隐、位置与层级，不再各自散落一套判断。 */
+  .ui-fab{
+    display:none;
+    position:fixed; width:48px; height:48px; border-radius:50%;
+    color:#fff; align-items:center; justify-content:center;
+    font-size:10px; font-weight:800; text-align:center; line-height:1.2; cursor:pointer;
+    box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:1090; user-select:none;
+  }
+  .ui-fab:hover{ filter:brightness(1.15); }
+  /* 盒子浮层内的实例：层级要盖过盒子浮层本身（1050），跟旧版一致提到 1160 */
+  .ui-fab.box-page-visible{ z-index:1160; }
+  #fabPanel{ background:var(--accent); right:24px; bottom:158px; }
+  #fabControls{ background:#3a8fae; right:24px; bottom:100px; }
+  #fabCreate{ background:#3f9a52; font-size:30px; font-weight:400; line-height:1; right:24px; bottom:100px; }
+  /* "更多功能"按需求固定在左下角，不跟右侧那组共用位置 */
+  #fabMore{ background:#7a4f9e; left:24px; bottom:100px; }
+  /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
+  #fabPanel.fab-lifted{ bottom:212px; }
+  #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
+  @media print{ .ui-fab{ display:none !important; } }
+
   /* ============ 三页签导航 ============ */
   .app-page{ display:none; }
   .app-page.active-page{ display:block; }
@@ -2100,6 +2125,10 @@
     </button>
   </div>
 </div>
+<div class="ui-fab" id="fabPanel">修改<br>面板</div>
+<div class="ui-fab" id="fabControls">控制<br>参数</div>
+<div class="ui-fab" id="fabCreate">+</div>
+<div class="ui-fab" id="fabMore">更多<br>功能</div>
 <div class="box-toast" id="boxToast"></div>
 
 <div class="tabbar" id="tabBar">
@@ -2573,6 +2602,13 @@
           <div class="mf-toggle-hint" id="mfPscBadgeHint">开启</div>
         </div>
         <div class="mf-switch" id="mfPscBadgeSwitch"></div>
+      </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">使用小圆浮窗</div>
+          <div class="mf-toggle-hint" id="mfFabCircleHint">关闭</div>
+        </div>
+        <div class="mf-switch" id="mfFabCircleSwitch"></div>
       </div>
     </div>
     <div class="account-btns">
@@ -6005,13 +6041,33 @@ function updateBoxActionBar(){
   const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
   const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
   const shouldShow = open && !inDetail && !inBatch;
-  bar.style.display = shouldShow ? 'flex' : 'none';
   const logged = (typeof authLoggedIn==='function') && authLoggedIn();
-  ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = logged ? 'none' : 'flex';
-  });
-  updateBoxPanelMonBubble();
+  const circleMode = !!userPrefs.fabCircleModeOn;
+  bar.classList.toggle('box-auth-only', circleMode);
+  if(circleMode){
+    // 圆形浮窗模式：更多功能/+新建/修改面板改走圆形浮窗（见 updateFabCircles）；
+    // 注册/登录沿用旧版样式，始终是按钮条，不做成圆——这条底部条只在未登录时才留下来放它俩
+    bar.style.display = (shouldShow && !logged) ? 'flex' : 'none';
+    ['boxActMoreBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.style.display = 'none';
+    });
+    ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.style.display = 'flex';
+    });
+    const bubble = document.getElementById('boxPanelMonBubble');
+    if(bubble){ bubble.classList.remove('on'); bubble.innerHTML = ''; }
+  } else {
+    bar.style.display = shouldShow ? 'flex' : 'none';
+    ['boxActMoreBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
+      const el = document.getElementById(id); if(el) el.style.display = 'flex';
+    });
+    ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
+      const el = document.getElementById(id);
+      if(el) el.style.display = logged ? 'none' : 'flex';
+    });
+    updateBoxPanelMonBubble();
+  }
+  updateFabCircles();
 }
 function toggleBoxMedal(){
   userPrefs.boxMedalOn = !userPrefs.boxMedalOn;
@@ -6028,6 +6084,14 @@ function toggleBoxPscBadge(){
   userPrefs.boxPscBadgeOn = !userPrefs.boxPscBadgeOn;
   saveUserPrefs();
   if(typeof renderBoxPage==='function') renderBoxPage();
+}
+/* 按钮样式开关：吸底按钮条 <-> 小圆浮窗。两套 DOM 一直都在，只是互斥显隐，
+   所以切换后两边（页面按钮条+盒子按钮条）都要各自重新同步一次显隐状态 */
+function toggleFabCircleMode(){
+  userPrefs.fabCircleModeOn = !userPrefs.fabCircleModeOn;
+  saveUserPrefs();
+  updatePageActionBar();
+  updateBoxActionBar();
 }
 
 /* ============================================================
@@ -6218,7 +6282,8 @@ async function authSubmit(){
 function syncMoreFuncSwitches(){
   [['mfMedalSwitch','mfMedalHint', !!userPrefs.boxMedalOn],
    ['mfLevelSwitch','mfLevelHint', !!userPrefs.boxLevelOn],
-   ['mfPscBadgeSwitch','mfPscBadgeHint', !!userPrefs.boxPscBadgeOn]].forEach(([swId, hintId, on])=>{
+   ['mfPscBadgeSwitch','mfPscBadgeHint', !!userPrefs.boxPscBadgeOn],
+   ['mfFabCircleSwitch','mfFabCircleHint', !!userPrefs.fabCircleModeOn]].forEach(([swId, hintId, on])=>{
     const sw = document.getElementById(swId), hint = document.getElementById(hintId);
     if(sw) sw.classList.toggle('on', on);
     if(hint) hint.textContent = on ? '开启' : '关闭';
@@ -6573,6 +6638,7 @@ document.getElementById('moreFuncModal').onclick = (e)=>{ if(e.target.id==='more
 document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
+document.getElementById('mfFabCircleSwitch').onclick = ()=>{ toggleFabCircleMode(); syncMoreFuncSwitches(); };
 document.getElementById('mfChangePwdBtn').onclick = openPwdModal;
 document.getElementById('mfLogoutBtn').onclick = authLogout;
 document.getElementById('mfPscBtn').onclick = openPscModal;
@@ -7231,7 +7297,7 @@ const SLEEP1_CAP_UNITS = 33;    // 第一觉硬顶 8h15min——仅当第二觉�
 const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // boxLevelOn 默认 true：v3.17 起盒子格子昵称下方一直是无条件显示等级的，
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false}; // 26格=6.5h，8格=2h
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, fabCircleModeOn: false}; // 26格=6.5h，8格=2h
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -7248,6 +7314,7 @@ function loadUserPrefs(){
       if(typeof o.boxPscBadgeOn==='boolean') userPrefs.boxPscBadgeOn = o.boxPscBadgeOn;
       if(typeof o.campingTicket==='boolean') userPrefs.campingTicket = o.campingTicket;
       if(typeof o.capGradMarkOn==='boolean') userPrefs.capGradMarkOn = o.capGradMarkOn;
+      if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
     }
   }catch(e){}
   clampSleepPrefs();
@@ -11248,14 +11315,60 @@ function updatePageActionBar(){
   try{ inDetail = !!boxDetailEntryId; }catch(e){}
   try{ inBox = !!boxOverlayOpen; }catch(e){}
   const show = !(inDetail || inBox);
-  bar.style.display = show ? 'flex' : 'none';
+  const circleMode = !!userPrefs.fabCircleModeOn;
+  // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
+  bar.style.display = (show && !circleMode) ? 'flex' : 'none';
   // 按钮条露出时，切换栏自己的顶部描边/阴影会在两者交界处压出一道黑线；
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
   const tabbar = document.getElementById('tabBar');
-  if(tabbar) tabbar.classList.toggle('tabbar-merged', show);
+  if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
   updatePagePanelMonBubble();
+  updateFabCircles();
 }
 function updateFabVisibility(){ updatePageActionBar(); }
+/* 圆形浮窗模式的显隐/位置统一在这里算，updatePageActionBar 与 updateBoxActionBar
+   各自改动后都会调一次，两套按钮条切页面/开关盒子/开关模式时都能保持同步。
+   不找回旧版那套"避让计算概率按钮"的停靠逻辑——按钮条方案本来就不挡内容，
+   固定在右下/左下角对现在的页面布局同样不构成遮挡问题。 */
+function updateFabCircles(){
+  const fabPanel = document.getElementById('fabPanel');
+  const fabControls = document.getElementById('fabControls');
+  const fabCreate = document.getElementById('fabCreate');
+  const fabMore = document.getElementById('fabMore');
+  if(!fabPanel || !fabControls || !fabCreate || !fabMore) return;
+  if(!userPrefs.fabCircleModeOn){
+    [fabPanel, fabControls, fabCreate, fabMore].forEach(el=>{
+      el.style.display = 'none'; el.classList.remove('box-page-visible','fab-lifted');
+    });
+    return;
+  }
+  let inDetail = false, inBox = false;
+  try{ inDetail = !!boxDetailEntryId; }catch(e){}
+  try{ inBox = !!boxOverlayOpen; }catch(e){}
+  const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
+  if(inBox){
+    // 盒子浮层内：更多功能/+新建/修改面板三颗圆，控制参数不出现（盒子里本来就没有它）
+    const show = !inDetail && !inBatch;
+    [fabPanel, fabCreate, fabMore].forEach(el=>{
+      el.style.display = show ? 'flex' : 'none';
+      el.classList.add('box-page-visible');
+    });
+    fabControls.style.display = 'none';
+    fabControls.classList.remove('box-page-visible','fab-lifted');
+    // 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住
+    const authBar = document.getElementById('boxActionBar');
+    const authVisible = !!(show && authBar && authBar.style.display !== 'none' && authBar.classList.contains('box-auth-only'));
+    [fabPanel, fabCreate, fabMore].forEach(el=> el.classList.toggle('fab-lifted', authVisible));
+  } else {
+    // 普通页面：控制参数+修改面板两颗圆，盒子专属的更多功能/+新建不出现
+    [fabPanel, fabCreate, fabMore].forEach(el=> el.classList.remove('box-page-visible','fab-lifted'));
+    fabCreate.style.display = 'none';
+    fabMore.style.display = 'none';
+    const show = !inDetail;
+    fabPanel.style.display = show ? 'flex' : 'none';
+    fabControls.style.display = show ? 'flex' : 'none';
+  }
+}
 function openDashboard(){
   dashboardOpen = true;
   document.getElementById('dashboardOverlay').style.display = 'flex';
@@ -11353,6 +11466,12 @@ document.getElementById('boxActPanelBtn').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEntry();
+// 圆形浮窗模式下的四颗按钮：跟对应吸底按钮条上那颗行为完全一致，只是外观换成圆
+document.getElementById('fabPanel').onclick = ()=>{
+  if(dashboardOpen) closeDashboard(); else openDashboard();
+};
+document.getElementById('fabCreate').onclick = ()=> openDashboardForNewEntry();
+document.getElementById('fabMore').onclick = openMoreFuncModal;
 document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
 document.getElementById('dashCreateAddBtn').onclick = ()=>{
   if(!state.selectedDex){ alert('请先选择宝可梦。'); return; }
@@ -11437,6 +11556,11 @@ function closeControlsDashboard(){
 document.getElementById('pageActControlsBtn').onclick = ()=>{
   // 捕捉推荐页(page4)跟其他三页共用一颗"控制参数"按钮，但内容风马牛不相及——
   // 那三页开的是等级/持有上限那套共享浮窗，这里换成页4专用的"标记已毕业"小浮窗
+  const page4 = document.getElementById('page4');
+  if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
+  if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
+};
+document.getElementById('fabControls').onclick = ()=>{
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
