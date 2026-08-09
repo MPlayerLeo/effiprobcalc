@@ -11881,6 +11881,16 @@ function boxEffectiveFinalDex(dex){
   // 准备的"退回不带后缀编号"逻辑，否则大/巨/小南瓜怪人的盒子记录会被误并到中南瓜怪人名下
   if(dex==='#711-1'||dex==='#711-2'||dex==='#711-3') return dex;
   const baseDex = dex.split('-')[0];
+  // "退回基础编号"这条路只对"真的是同一只宝可梦、只是换皮"的服装/节日变体成立（比如万圣节皮卡丘
+  // 跟普通皮卡丘属性都是电，退回去查皮卡丘的进化链没问题）。但像冰九尾(#038-1，冰属性)这种地区
+  // 变种，自己已经是查不到 POKEMON_FINAL_DEX_MAP 的最终形态，退回去只会查到普通九尾(#038，火属性)
+  // ——根本是两只完全不同的宝可梦，只是编号连号，误退回去会把毕业判定/树果搭配全部张冠李戴到
+  // 普通九尾身上。用属性(attr)是否一致做判据：不一致就说明不是"同一只换皮"，原样返回自己，不退化
+  if(baseDex!==dex && typeof POKEMON_DEX_DATA!=='undefined'){
+    const selfRow = POKEMON_DEX_DATA.find(r=>r[0]===dex);
+    const baseRow = POKEMON_DEX_DATA.find(r=>r[0]===baseDex);
+    if(selfRow && baseRow && selfRow[2]!==baseRow[2]) return dex;
+  }
   if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[baseDex]) return POKEMON_FINAL_DEX_MAP[baseDex][0];
   return baseDex;
 }
