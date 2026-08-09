@@ -449,12 +449,15 @@
   /* ============ v3.18 页面吸底按钮条 ============ */
   /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数），钉在页面切换栏正上方。
      结构是「左白块 + 中间空档 + 右白块」三段：
-       · 白底铺到屏幕左右边缘，按钮是白底里内缩 2px 的圆角矩形（不再自己贴边）
-       · 中间那段 .page-act-gap 保持完全透明，让「宝可梦盒」凸起球自带的 5px 白色圆环
-         （.tab-bubble-capsule 的 box-shadow）在这里显出半圆弧，恢复改版前那个凸起造型；
-         整条如果自己铺满白底，圆弧就会被填成一个方方正正的白块
-       · 空档 56px 比圆环 60px 略窄，圆环左右各压住白块 2px 的内边距，把接缝盖掉；
-         白块朝内那侧再倒一个圆角，让平直的白条自然收进圆弧里 */
+       · 白底铺到屏幕左右边缘，按钮是白底里内缩 5px 的圆角矩形（不再自己贴边）
+       · 内缩量 5px 特意取成和「宝可梦盒」凸起球那圈白环（.tab-bubble-capsule 的
+         box-shadow 0 0 0 5px）同宽，这样按钮四周那道白边和球周围的白环粗细一致，
+         在空档两侧接上后看起来是同一条连续的白带绕着球转
+       · 中间那段 .page-act-gap 保持完全透明，让白环在这里显出半圆弧，恢复改版前那个
+         凸起造型；整条如果自己铺满白底，圆弧就会被填成一个方方正正的白块
+       · 空档 56px 比圆环 60px 略窄，圆环左右各压住白块 2px，把接缝盖掉；
+         白块朝内那侧再倒一个圆角，让平直的白条自然收进圆弧里
+       · 整条高度 40px = 1px 上边框 + 5px 白边 + 29px 按钮 + 5px 白边 */
   .page-action-bar{
     display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
@@ -462,18 +465,19 @@
     background:transparent;
   }
   .page-act-side{
-    flex:1 1 0; min-width:0; display:flex; padding:2px;
+    flex:1 1 0; min-width:0; display:flex; padding:5px;
     background:var(--panel); border-top:1px solid var(--line);
     box-shadow:0 -2px 10px rgba(0,0,0,.08);
   }
-  /* 内侧倒角 12px，减掉 2px 内边距后正好等于按钮自身的 10px 圆角，两条弧线严丝合缝 */
-  .page-act-side-left{ border-top-right-radius:12px; }
-  .page-act-side-right{ border-top-left-radius:12px; }
+  /* 内侧倒角 15px，减掉 5px 内边距后正好等于按钮自身的 10px 圆角，
+     白边在这个转角处依然是均匀的 5px，弧线一路顺到球周围的白环上 */
+  .page-act-side-left{ border-top-right-radius:15px; }
+  .page-act-side-right{ border-top-left-radius:15px; }
   /* 透明空档：不铺白底，也不要挡住下层页面的点击 */
   .page-act-gap{ flex:0 0 56px; pointer-events:none; }
   .page-act-btn{
     position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
-    padding:11.5px 10px;
+    padding:7px 10px;
     font-size:13px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
     display:flex; align-items:center; justify-content:center; text-align:center;
     white-space:nowrap; user-select:none;
