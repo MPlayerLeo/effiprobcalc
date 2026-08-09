@@ -741,6 +741,12 @@
   }
   .box-grid-checkbox.checked{ background:var(--accent); border-color:var(--accent); }
   .box-grid-checkbox.checked::after{ content:'✓'; color:#fff; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; height:100%; }
+  /* 来源角标：从宝睡小当家同步进来的条目左上角标一个小圆点，本站自建的不标 */
+  .box-grid-source-psc{
+    position:absolute; top:2px; left:6px; width:16px; height:16px; border-radius:50%;
+    border:2px solid #fff; background:#3a8fae; box-shadow:0 1px 4px rgba(0,0,0,.3); z-index:2;
+    display:flex; align-items:center; justify-content:center; font-size:9px; line-height:1; pointer-events:none;
+  }
 
   .box-batch-bar{ flex:0 0 auto; display:flex; gap:10px; padding:10px; background:var(--panel); border-top:1px solid var(--line); }
   .box-batch-cancel-btn, .box-batch-delete-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
@@ -2587,12 +2593,12 @@
       <span>不会向宝睡小当家透露本站的密码、登录凭证或已删除的记录；对方的访问令牌只保存在本站服务端。</span>
     </div>
     <div class="psc-msg" id="pscMsg"></div>
-    <!-- 同步按钮：占位，功能未上线（以后用来双向同步两站盒子）。只在已连接时出现 -->
+    <!-- 同步按钮：只在已连接时出现。当前 scope 只有 pokemon_box.read，只能单向从对方读进本地 -->
     <div class="psc-sync-row" id="pscSyncRow" style="display:none;">
-      <button type="button" class="psc-btn psc-btn-sync" id="pscSyncBtn" disabled>
+      <button type="button" class="psc-btn psc-btn-sync" id="pscSyncBtn" onclick="pscSyncBox()">
         <span>🔄</span><span>同步宝可梦盒</span>
       </button>
-      <div class="psc-sync-hint">功能开发中：将来可把两站盒子里的宝可梦互相同步。</div>
+      <div class="psc-sync-hint">把对方盒子里本地还没有的宝可梦读进来（种族+性格+副技能+食材组合完全重复的会跳过），暂时只能单向导入。</div>
     </div>
     <div class="psc-actions" id="pscActions"></div>
   </div>
@@ -2816,6 +2822,76 @@ const SKILL_ABBR = {
   expR:'研究', expSleep:'睡眠', energy:'活力', dream:'梦碎',
 };
 const ORDER_TAGS = [10,25,50,70,80];
+
+/* ============ 宝睡小当家（PSC）盒子同步：字段映射表 ============
+   对方 subSkills/speciesId+form 走的是 pokesleep-tool（nitoyon/pokesleep-tool）同款英文命名，
+   跟我方内部 id 完全是两套体系，逐条跟 build_dex.py 的源表核对过才敢定下来，不是猜的——
+   尤其南瓜精/南瓜怪人"中"尺寸是无后缀基础 dex（不是 -1），伊布万圣节/佳节的后缀顺序
+   还跟皮卡丘正好相反，这两处光看数字规律会猜错。
+   natureUp/decAttr、ingredientCombo 是我方自己 handleOpenBox 原样吐出去的字段，判定为直传，
+   不需要再建表（对方按同一份契约应该也是同一套编码）。 */
+const PSC_SUBSKILL_NAME_MAP = {
+  'Berry Finding S': 'fruitS', 'Dream Shard Bonus': 'dream', 'Energy Recovery Bonus': 'energy',
+  'Helping Bonus': 'helperBonus', 'Research EXP Bonus': 'expR', 'Skill Level Up M': 'lvM',
+  'Sleep EXP Bonus': 'expSleep',
+  'Helping Speed M': 'speedM', 'Ingredient Finder M': 'ingM', 'Inventory Up L': 'invL',
+  'Inventory Up M': 'invM', 'Skill Level Up S': 'lvS', 'Skill Trigger M': 'skillM',
+  'Helping Speed S': 'speedS', 'Ingredient Finder S': 'ingS', 'Inventory Up S': 'invS',
+  'Skill Trigger S': 'skillS',
+};
+// key：PSC speciesId + '|' + form；value：我方 dex 字符串。电音蜥 Amped/Low Key 我方图鉴只有一条
+// #849，两种形态都收进同一条（用户确认过，接受丢失这一处形态区分）
+const PSC_FORM_DEX_MAP = {
+  '25|Halloween':'#025-1', '25|Holiday':'#025-2',
+  '37|Alola':'#037-1', '38|Alola':'#038-1',
+  '133|Halloween':'#133-2', '133|Holiday':'#133-1',
+  '194|Paldea':'#194-1',
+  '363|Holiday':'#363-1',
+  '710|Small':'#710-1', '710|Medium':'#710', '710|Large':'#710-2', '710|Jumbo':'#710-3',
+  '711|Small':'#711-1', '711|Medium':'#711', '711|Large':'#711-2', '711|Jumbo':'#711-3',
+  '849|Amped':'#849', '849|Low Key':'#849',
+  '980|Paldea':'#980',
+};
+// 无 form 的按国际图鉴号补零直接拼；有 form 但不在表里（我方图鉴暂未收录的活动/限定形态）判定为无法映射
+function pscMapDex(speciesId, form){
+  const id = Number(speciesId);
+  if(!id) return null;
+  if(form) return PSC_FORM_DEX_MAP[id+'|'+form] || null;
+  return '#'+String(id).padStart(3,'0');
+}
+// 单个技能名转我方内部 id；对方万一直接传回我方风格的内部 id（跟我方 handleOpenBox 输出一致的情况）也认
+function pscMapSubSkillName(name){
+  if(!name) return null;
+  if(PSC_SUBSKILL_NAME_MAP[name]) return PSC_SUBSKILL_NAME_MAP[name];
+  if(SKILL_DEFS.some(d=>d.id===name)) return name;
+  return undefined;
+}
+// 五槽副技能整体转换；只要有一槽认不出，整条记录判定为无法映射（宁可跳过也不能存一份技能缺失的假数据）
+function pscMapSubSkills(arr){
+  const out = [null,null,null,null,null];
+  if(!Array.isArray(arr)) return out;
+  for(let i=0;i<5 && i<arr.length;i++){
+    if(arr[i]==null) continue;
+    const mapped = pscMapSubSkillName(arr[i]);
+    if(mapped===undefined) return null;
+    out[i] = mapped;
+  }
+  return out;
+}
+// ingredientCombo 是 3 位大写字母，第 1 位恒定是我方 1 号食材（无选择余地），后两位就是 ingChoice2/3
+function pscParseIngredientCombo(combo){
+  if(typeof combo!=='string' || combo.length!==3) return {c2:null, c3:null};
+  const c2 = combo[1].toLowerCase(), c3 = combo[2].toLowerCase();
+  if(!['a','b'].includes(c2) || !['a','b','c'].includes(c3)) return {c2:null, c3:null};
+  return {c2, c3};
+}
+function pscMapAttr(v){ return (v && ATTRS.includes(v)) ? v : null; }
+// 同步专用去重签名：只看种族（含形态）+性格+副技能+食材组合这四项，昵称/等级/闪光/睡饱饱不参与比较——
+// 这四项完全一致就判定为同一只，哪怕来源、昵称、等级不一样也跳过，用户明确要求过这个口径
+function pscEntrySignature(dex, incAttr, decAttr, selected, c2, c3){
+  const subs = (selected||[]).filter(Boolean).slice().sort().join(',');
+  return [dex, incAttr||'', decAttr||'', subs, c2||'', c3||''].join('|');
+}
 
 /* ============ 性格定义 ============ */
 const ATTRS = ['H','F','S','E','V'];
@@ -6131,7 +6207,7 @@ function renderPscModal(){
   // 已连接时权限清单换成"当前已授予"的说法，不再是"将要申请"
   const head = document.querySelector('#pscScopeBlock .psc-scope-head');
   if(head) head.textContent = linked ? '宝睡小当家已授予本站以下权限' : '我方将向宝睡小当家申请以下权限';
-  // 同步按钮只在已连接时露出；功能没上线，始终 disabled
+  // 同步按钮只在已连接时露出
   const syncRow = document.getElementById('pscSyncRow');
   if(syncRow) syncRow.style.display = linked ? '' : 'none';
   renderPscActions();
@@ -6180,6 +6256,54 @@ async function pscUnlink(){
     setPscMsg(e.message || '解除失败');
   }
   renderPscModal();
+}
+// 只读同步：把对方盒子里"我方图鉴认得出、本地还没有"的记录追加进本地盒子。
+// 只有 pokemon_box.read 这一个 scope，技术上做不到写回对方，所以只能是单向的
+async function pscSyncBox(){
+  const btn = document.getElementById('pscSyncBtn');
+  if(btn) btn.disabled = true;
+  setPscMsg('正在同步…', true);
+  try{
+    const data = await authApi('/api/psc/box', {auth:true});
+    const records = Array.isArray(data.records) ? data.records : [];
+    const seenSig = new Set(boxData.map(e=> pscEntrySignature(e.dex, e.incAttr, e.decAttr, e.selected, e.ingChoice2, e.ingChoice3)));
+    let added = 0, dup = 0, unmapped = 0, full = false;
+    for(const rec of records){
+      if(boxData.length + added >= BOX_MAX_COUNT){ full = true; break; }
+      const dex = pscMapDex(rec.speciesId, rec.form);
+      const rowDef = dex ? POKEMON_DEX_DATA.find(r=>r[0]===dex) : null;
+      const selected = rowDef ? pscMapSubSkills(rec.subSkills) : null;
+      if(!rowDef || !selected){ unmapped++; continue; }
+      const incAttr = pscMapAttr(rec.natureUp), decAttr = pscMapAttr(rec.natureDown);
+      const ing = pscParseIngredientCombo(rec.ingredientCombo);
+      const sig = pscEntrySignature(dex, incAttr, decAttr, selected, ing.c2, ing.c3);
+      if(seenSig.has(sig)){ dup++; continue; }
+      boxData.push({
+        id: genBoxId(),
+        dex, name: rowDef[1],
+        nickname: boxTrimNickname(rec.nickname) || rowDef[1],
+        shiny: !!rec.shiny,
+        level: Number(rec.level) || 1,
+        selected, incAttr, decAttr,
+        ingChoice2: ing.c2, ingChoice3: ing.c3,
+        satiety: Number(rec.satietyTier) || 0,
+        addedAt: Date.now(), flagged: false,
+        source: 'psc',
+      });
+      seenSig.add(sig);
+      added++;
+    }
+    saveBoxData();
+    renderBoxPage();
+    const parts = ['新增 '+added+' 只'];
+    if(dup) parts.push('跳过重复 '+dup+' 只');
+    if(unmapped) parts.push('暂不支持已跳过 '+unmapped+' 只');
+    if(full) parts.push('盒子已满，本次未同步完');
+    setPscMsg('同步完成：'+parts.join('，'), true);
+  }catch(e){
+    setPscMsg(e.message || '同步失败');
+  }
+  if(btn) btn.disabled = false;
 }
 // 授权回来时 Worker 会带 ?psc=ok / denied / error 回到本站，这里读一次就把参数抹掉，
 // 免得用户刷新或分享链接时又弹一次（同时也避免 state 之类的东西留在地址栏里）
@@ -11364,6 +11488,13 @@ function renderBoxPage(){
       const cb = document.createElement('div');
       cb.className = 'box-grid-checkbox'+(boxSelectedIds.has(entry.id)?' checked':'');
       imgWrap.appendChild(cb);
+    }
+    if(entry.source === 'psc'){
+      const srcBadge = document.createElement('div');
+      srcBadge.className = 'box-grid-source-psc';
+      srcBadge.title = '来自' + PSC_PARTNER_NAME;
+      srcBadge.textContent = '🔗';
+      imgWrap.appendChild(srcBadge);
     }
     if(userPrefs.boxMedalOn){
       const msrc = satietyMedalSrc(boxEntrySatiety(entry));   // v3.16 格子内部顶端居中的睡饱饱奖章
