@@ -2699,7 +2699,7 @@
       <button type="button" class="psc-btn psc-btn-sync" id="pscSyncBtn" onclick="pscSyncBox()">
         <span>🔄</span><span>同步宝可梦盒</span>
       </button>
-      <div class="psc-sync-hint">把对方盒子里本地还没有的宝可梦读进来（种族+性格+副技能+食材组合完全重复的会跳过），暂时只能单向导入。</div>
+      <div class="psc-sync-hint">把对方盒子里本地还没有的宝可梦读进来（种族+性格+副技能+食材组合完全重复的会跳过），暂时只能单向导入。等级不采信对方数据，按种族类型给默认值：功能型50级、食材型60级、树果/能量型70级。</div>
       <div class="psc-resync-link" id="pscResyncBtn" onclick="pscResyncFresh()">数据对不上？清空重来</div>
     </div>
     <div class="psc-actions" id="pscActions"></div>
@@ -3013,13 +3013,6 @@ function pscMapSatiety(hours){
   return 0;
 }
 // 我方等级只有 50/60/70/80 四档（见 levelOptionsForCtrlPfx），对方是连续等级，按区间归档
-function pscMapLevel(level){
-  const lv = Number(level) || 0;
-  if(lv>=80) return 80;
-  if(lv>=70) return 70;
-  if(lv>=60) return 60;
-  return 50;
-}
 // 同步专用去重签名：只看种族（含形态）+性格+副技能+食材组合这四项，昵称/等级/闪光/睡饱饱不参与比较——
 // 这四项完全一致就判定为同一只，哪怕来源、昵称、等级不一样也跳过，用户明确要求过这个口径
 function pscEntrySignature(dex, incAttr, decAttr, selected, c2, c3){
@@ -6486,7 +6479,8 @@ async function pscSyncBox(){
         dex, name: rowDef[1],
         nickname: boxTrimNickname(rec.nickname) || rowDef[1],
         shiny: !!rec.shiny,
-        level: pscMapLevel(rec.level),
+        // 对方的等级概念跟本站不通用，同步进来一律按种族类型给默认等级，不采信对方的原始等级数字
+        level: TYPE_LEVEL_DEFAULT[DEX_TYPE_MAP[rowDef[3]]],
         selected, incAttr, decAttr,
         ingChoice2: ing.c2, ingChoice3: ing.c3,
         satiety: pscMapSatiety(rec.sleepHours),
@@ -6502,6 +6496,7 @@ async function pscSyncBox(){
     if(dup) parts.push('跳过重复 '+dup+' 只');
     if(unmapped) parts.push('暂不支持已跳过 '+unmapped+' 只');
     if(full) parts.push('盒子已满，本次未同步完');
+    if(added) parts.push('等级已按类型给默认值');
     setPscMsg('同步完成：'+parts.join('，'), true);
   }catch(e){
     setPscMsg(e.message || '同步失败');
