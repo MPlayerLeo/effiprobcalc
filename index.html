@@ -11303,6 +11303,10 @@ function closeBoxOverlay(){
       hideRankCalcOverlay();
     }, 20);
   }
+  // 捕捉推荐页：盒子会话期间可能新增/编辑/删除了记录，毕业标记集合是扫全盒子缓存的，
+  // 不会跟着这些改动自动更新，退出盒子时如果正停在该页就补一次 renderCapturePage 重新扫描
+  const page4 = document.getElementById('page4');
+  if(page4 && page4.classList.contains('active-page')) renderCapturePage();
 }
 document.getElementById('tabBtnBox').onclick = ()=>{
   if(boxOverlayOpen) closeBoxOverlay(); else openBoxOverlay();
@@ -11689,6 +11693,10 @@ function closeDashboard(){
     renderRankModule();
     renderLadderCard();
   }
+  // 捕捉推荐页：浮窗内编辑的可能正是盒子里的某只，毕业标记集合（capGradSpecies等）是扫全盒子缓存的，
+  // 不会跟着这次编辑自动更新，关闭浮窗时如果正停在该页就补一次 renderCapturePage 重新扫描
+  const page4 = document.getElementById('page4');
+  if(page4 && page4.classList.contains('active-page')) renderCapturePage();
   if(typeof dashboardCloseCallback!=='undefined' && dashboardCloseCallback){
     const cb = dashboardCloseCallback;
     dashboardCloseCallback = null;
