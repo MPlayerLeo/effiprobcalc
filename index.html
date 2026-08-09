@@ -1523,6 +1523,12 @@
   .cap-cmark-av{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
   .cap-ccol-label{ display:flex; flex-direction:column; align-items:center; gap:1px; margin-top:6px; font-size:9px; font-weight:800; color:#6a6555; }
   .cap-ccol-label img{ width:20px; height:20px; object-fit:contain; }
+  /* 食材总览柱状图轴：该食材已有毕业记录时，图标加绿框+浅绿底，能量数字变绿，下方加对勾 */
+  .cap-ccol-ic{ display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; box-sizing:border-box; }
+  .cap-ccol-ic-grad{ border:2px solid #1f8a3d; background:#e9f7ec; }
+  .cap-ccol-e-grad{ color:#157a34; }
+  .cap-ccol-grad-check{ display:flex; margin-top:1px; }
+  .cap-ccol-grad-check svg{ width:11px; height:11px; }
   .cap-combo-cap{ display:flex; justify-content:center; align-items:center; gap:0; padding:1px 3px; border-radius:7px; border:1.5px solid; margin-top:1px; }
   .cap-combo-cap img{ width:11px; height:11px; }
   .cap-combo-cap.rec-green{ border-color:#1f8a3d; background:#e9f7ec; } .cap-combo-cap.rec-yellow{ border-color:#b5651d; background:#fdf3e0; } .cap-combo-cap.rec-red{ border-color:#c0392b; background:#fbe9e7; }
@@ -10557,6 +10563,7 @@ function capRenderFoodChart(container){
     const topLen = barLenPx(b.top);
     const isTallest = topLen >= chartH - 0.5;
     const c = CAP_ING_COLOR[b.food] || '#c9a24a';
+    const foodGrad = capFoodPillGraduated(b.food);
     // 并列冠军：食材产量与冠军（b.top）差距在1%以内的全部视为并列冠军（而不是只留一个），按精确食材产量从高到低排列（产量高的显示在最上面）
     const champGroup = b.recs.filter(r=> r.totalE >= b.top*0.99)
       .sort((r1,r2)=> r2.totalE - r1.totalE);
@@ -10598,7 +10605,7 @@ function capRenderFoodChart(container){
         ${lineHtml}
         ${markers}
       </div>
-      <div class="cap-ccol-label"><img src="${ING_ICONS[b.food]||''}"><span>${b.ingE}</span></div>
+      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':''}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span>${foodGrad?'<span class="cap-ccol-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>':''}</div>
     </div>`;
   }).join('');
   container.innerHTML = `<div class="cap-chart-outer">
