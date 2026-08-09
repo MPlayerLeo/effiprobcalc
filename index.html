@@ -749,8 +749,9 @@
   }
 
   .box-batch-bar{ flex:0 0 auto; display:flex; gap:10px; padding:10px; background:var(--panel); border-top:1px solid var(--line); }
-  .box-batch-cancel-btn, .box-batch-delete-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
+  .box-batch-cancel-btn, .box-batch-selectall-btn, .box-batch-delete-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
   .box-batch-cancel-btn{ background:#e5e0d2; color:var(--ink); }
+  .box-batch-selectall-btn{ background:#3a8fae; color:#fff; }
   .box-batch-delete-btn{ background:#c1443a; color:#fff; }
 
   .box-info-bubble-overlay{ display:none; position:fixed; inset:0; z-index:1200; pointer-events:none; }
@@ -1738,6 +1739,7 @@
 .psc-btn-sync{ width:100%; background:#3a7fd5; color:#fff; display:flex; align-items:center;
   justify-content:center; gap:7px; }
 .psc-sync-hint{ font-size:11px; color:#9a9484; text-align:center; margin-top:6px; line-height:1.5; }
+.psc-resync-link{ font-size:11px; color:#3a7fd5; text-align:center; margin-top:8px; font-weight:700; cursor:pointer; text-decoration:underline; }
 </style>
 
 </head>
@@ -2152,6 +2154,7 @@
     </div>
     <div class="box-batch-bar" id="boxBatchBar" style="display:none;">
       <button type="button" class="box-batch-cancel-btn" id="boxBatchCancelBtn">取消</button>
+      <button type="button" class="box-batch-selectall-btn" id="boxBatchSelectAllBtn">全选</button>
       <button type="button" class="box-batch-delete-btn" id="boxBatchDeleteConfirmBtn">删除</button>
     </div>
     <!-- v3.18：原来的注册/登录吸底条 + 右下角「修改面板」「+」/左下角「奖章」「账号设置」四颗小圆浮窗，
@@ -2599,6 +2602,7 @@
         <span>🔄</span><span>同步宝可梦盒</span>
       </button>
       <div class="psc-sync-hint">把对方盒子里本地还没有的宝可梦读进来（种族+性格+副技能+食材组合完全重复的会跳过），暂时只能单向导入。</div>
+      <div class="psc-resync-link" id="pscResyncBtn" onclick="pscResyncFresh()">数据对不上？清空重来</div>
     </div>
     <div class="psc-actions" id="pscActions"></div>
   </div>
@@ -2885,7 +2889,39 @@ function pscParseIngredientCombo(combo){
   if(!['a','b'].includes(c2) || !['a','b','c'].includes(c3)) return {c2:null, c3:null};
   return {c2, c3};
 }
-function pscMapAttr(v){ return (v && ATTRS.includes(v)) ? v : null; }
+// 对方性格字段是完整性格名（如 "Quiet"），不是拆好的加减属性；这里按对方 Nature.ts 的
+// 加成/减成表换算成我方 H/F/S/E/V 属性对。中立性格（5 个）加减都是 null。
+const PSC_NATURE_TO_ATTR = {
+  Bold:{inc:'V',dec:'H'}, Impish:{inc:'V',dec:'F'}, Lax:{inc:'V',dec:'S'}, Relaxed:{inc:'V',dec:'E'},
+  Timid:{inc:'E',dec:'H'}, Hasty:{inc:'E',dec:'V'}, Jolly:{inc:'E',dec:'F'}, Naive:{inc:'E',dec:'S'},
+  Lonely:{inc:'H',dec:'V'}, Adamant:{inc:'H',dec:'F'}, Naughty:{inc:'H',dec:'S'}, Brave:{inc:'H',dec:'E'},
+  Calm:{inc:'S',dec:'H'}, Gentle:{inc:'S',dec:'V'}, Careful:{inc:'S',dec:'F'}, Sassy:{inc:'S',dec:'E'},
+  Modest:{inc:'F',dec:'H'}, Mild:{inc:'F',dec:'V'}, Rash:{inc:'F',dec:'S'}, Quiet:{inc:'F',dec:'E'},
+  Bashful:{inc:null,dec:null}, Hardy:{inc:null,dec:null}, Docile:{inc:null,dec:null},
+  Quirky:{inc:null,dec:null}, Serious:{inc:null,dec:null},
+};
+// 返回 {inc,dec}；性格名认不出时返回 undefined（跟 pscMapSubSkillName 一样，交给调用方判定整条记录不可映射）
+function pscMapNature(name){
+  const m = PSC_NATURE_TO_ATTR[name];
+  return m || undefined;
+}
+// 对方 sleepHours 是连续小时数，按我方睡饱饱档位阈值就近下取整（对齐 pokesleep-tool 的 hoursToRibbon）
+function pscMapSatiety(hours){
+  const h = Number(hours) || 0;
+  if(h>=2000) return 2000;
+  if(h>=1000) return 1000;
+  if(h>=500) return 500;
+  if(h>=200) return 200;
+  return 0;
+}
+// 我方等级只有 50/60/70/80 四档（见 levelOptionsForCtrlPfx），对方是连续等级，按区间归档
+function pscMapLevel(level){
+  const lv = Number(level) || 0;
+  if(lv>=80) return 80;
+  if(lv>=70) return 70;
+  if(lv>=60) return 60;
+  return 50;
+}
 // 同步专用去重签名：只看种族（含形态）+性格+副技能+食材组合这四项，昵称/等级/闪光/睡饱饱不参与比较——
 // 这四项完全一致就判定为同一只，哪怕来源、昵称、等级不一样也跳过，用户明确要求过这个口径
 function pscEntrySignature(dex, incAttr, decAttr, selected, c2, c3){
@@ -6257,6 +6293,16 @@ async function pscUnlink(){
   }
   renderPscModal();
 }
+// 早期版本性格/奖章字段解析错了，导致存了一批坏数据；这批记录跟修好之后重新拉的数据
+// 去重签名对不上，直接再点同步只会变成两份。这里先清掉本地所有 source==='psc' 的旧记录
+// （不影响非 PSC 来源的条目），再整个重新拉一遍
+async function pscResyncFresh(){
+  if(!confirm('将删除盒子里所有来自' + PSC_PARTNER_NAME + '的记录，然后重新同步一次，确定继续？')) return;
+  boxData = boxData.filter(e=> e.source !== 'psc');
+  saveBoxData();
+  renderBoxPage();
+  await pscSyncBox();
+}
 // 只读同步：把对方盒子里"我方图鉴认得出、本地还没有"的记录追加进本地盒子。
 // 只有 pokemon_box.read 这一个 scope，技术上做不到写回对方，所以只能是单向的
 async function pscSyncBox(){
@@ -6273,8 +6319,9 @@ async function pscSyncBox(){
       const dex = pscMapDex(rec.speciesId, rec.form);
       const rowDef = dex ? POKEMON_DEX_DATA.find(r=>r[0]===dex) : null;
       const selected = rowDef ? pscMapSubSkills(rec.subSkills) : null;
-      if(!rowDef || !selected){ unmapped++; continue; }
-      const incAttr = pscMapAttr(rec.natureUp), decAttr = pscMapAttr(rec.natureDown);
+      const nat = pscMapNature(rec.nature);
+      if(!rowDef || !selected || !nat){ unmapped++; continue; }
+      const incAttr = nat.inc, decAttr = nat.dec;
       const ing = pscParseIngredientCombo(rec.ingredientCombo);
       const sig = pscEntrySignature(dex, incAttr, decAttr, selected, ing.c2, ing.c3);
       if(seenSig.has(sig)){ dup++; continue; }
@@ -6283,10 +6330,10 @@ async function pscSyncBox(){
         dex, name: rowDef[1],
         nickname: boxTrimNickname(rec.nickname) || rowDef[1],
         shiny: !!rec.shiny,
-        level: Number(rec.level) || 1,
+        level: pscMapLevel(rec.level),
         selected, incAttr, decAttr,
         ingChoice2: ing.c2, ingChoice3: ing.c3,
-        satiety: Number(rec.satietyTier) || 0,
+        satiety: pscMapSatiety(rec.sleepHours),
         addedAt: Date.now(), flagged: false,
         source: 'psc',
       });
@@ -10643,7 +10690,10 @@ function blockOuterScroll(e){
   // .cap-ctrl-box 是各类浮窗（控制参数/登录注册/更多功能/宝睡小当家联动/反向授权确认）
   // 共用的滚动容器，本身就带 max-height:80vh + overflow-y:auto。这些浮窗多半是从盒子里
   // 点开的，此时 pageScrollLocked 还是 true，不放行的话浮窗内容超过一屏就完全滚不动。
-  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap, .cap-ctrl-box')) return;
+  // .dashboard-panel 是「修改面板」「控制参数」「选择最终宝可梦」共用的面板外壳，内部
+  // .dash-scroll-area 同样是 flex:1 1 auto + overflow-y:auto 的独立滚动区，之前漏放行，
+  // 导致这几个面板内容超过一屏时触摸/滚轮都被这里拦掉，看起来像是"滚不动"。
+  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap, .cap-ctrl-box, .dashboard-panel')) return;
   e.preventDefault();
 }
 function lockPageScroll(){
@@ -12188,6 +12238,13 @@ document.getElementById('boxBatchDeleteBtn').onclick = ()=>{
   boxSetBatchBarVisible(boxBatchDeleteMode);
   document.getElementById('boxBatchDeleteBtn').classList.toggle('box-tool-active', boxBatchDeleteMode);
   if(boxBatchDeleteMode) closeBoxInfoBubble();
+  renderBoxPage();
+};
+document.getElementById('boxBatchSelectAllBtn').onclick = ()=>{
+  const entries = boxFilteredEntries();
+  const allSelected = entries.length>0 && entries.every(e=>boxSelectedIds.has(e.id));
+  if(allSelected){ boxSelectedIds = new Set(); }
+  else { entries.forEach(e=>boxSelectedIds.add(e.id)); }
   renderBoxPage();
 };
 document.getElementById('boxBatchCancelBtn').onclick = ()=>{
