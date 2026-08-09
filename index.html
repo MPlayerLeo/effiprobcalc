@@ -1662,7 +1662,7 @@
   border:1px solid var(--line); border-radius:9px; background:var(--paper); color:var(--ink);
 }
 .auth-fields input:focus{ outline:none; border-color:var(--accent); }
-.auth-msg{ min-height:18px; margin:9px 2px 0; font-size:12.5px; line-height:1.4; color:#c1443a; }
+.auth-msg{ min-height:18px; margin:9px 2px 0; font-size:12.5px; line-height:1.4; color:#c1443a; white-space:pre-line; }
 .auth-msg.ok{ color:#3f9a52; }
 .auth-submit{
   width:100%; margin-top:6px; border:none; border-radius:10px; padding:12px 4px;
@@ -1798,6 +1798,7 @@
   display:flex; align-items:center; justify-content:center;
 }
 #bootLoadingInner{ display:flex; flex-direction:column; align-items:center; gap:28px; padding:24px; }
+#bootLoadingSite{ font-size:13px; font-weight:700; letter-spacing:.12em; color:var(--accent-dk); opacity:.75; margin-bottom:-14px; }
 #bootLoadingLogo{ width:148px; height:148px; border-radius:22px; object-fit:cover; box-shadow:0 8px 22px rgba(0,0,0,.2); }
 /* 固定预留高度(按"土王智商高！"那个更大的字号+字重量出来的，比加载中那行小字更高)，
    两种文字共用同一个盒子，不管现在显示哪种文字，盒子高度都不变——避免文字变大时
@@ -1833,6 +1834,7 @@
 <body>
 <div id="bootLoadingMask" aria-hidden="true">
   <div id="bootLoadingInner">
+    <div id="bootLoadingSite">IQDOOH.TOP</div>
     <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
     <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
     <div id="bootLoadingMascots">
@@ -6428,7 +6430,9 @@ async function authSubmit(){
       ? `${isReg?'注册':'登录'}成功，数据已融合。\n注意：合并后超出了 ${BOX_MAX_COUNT} 只的上限，多出的 ${overflow} 只没有保留。`
       : `${isReg?'注册':'登录'}成功，数据已融合。`);
   }catch(e){
-    setAuthMsg(e.message || '出错了');
+    let msg = e.message || '出错了';
+    if(msg === '连不上服务器，检查一下网络') msg += '\n无法登陆可能出现在旧版网址，请尝试本站正式网址iqdooh.top';
+    setAuthMsg(msg);
     btn.disabled = false;
   }
 }
