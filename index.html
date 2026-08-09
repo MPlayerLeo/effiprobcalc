@@ -2463,6 +2463,13 @@
         </div>
         <div class="mf-switch" id="capGradMarkSwitch"></div>
       </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">萌新版标准</div>
+          <div class="mf-toggle-hint" id="capGradNewbieHint">萌新版</div>
+        </div>
+        <div class="mf-switch" id="capGradNewbieSwitch"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -7334,7 +7341,9 @@ const SLEEP1_CAP_UNITS = 33;    // 第一觉硬顶 8h15min——仅当第二觉�
 const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // boxLevelOn 默认 true：v3.17 起盒子格子昵称下方一直是无条件显示等级的，
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, fabCircleModeOn: false}; // 26格=6.5h，8格=2h
+// capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
+// 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false}; // 26格=6.5h，8格=2h
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -7370,6 +7379,7 @@ function loadUserPrefs(){
       if(typeof o.boxPscBadgeOn==='boolean') userPrefs.boxPscBadgeOn = o.boxPscBadgeOn;
       if(typeof o.campingTicket==='boolean') userPrefs.campingTicket = o.campingTicket;
       if(typeof o.capGradMarkOn==='boolean') userPrefs.capGradMarkOn = o.capGradMarkOn;
+      if(typeof o.capGradNewbieOn==='boolean') userPrefs.capGradNewbieOn = o.capGradNewbieOn;
       if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
@@ -10253,7 +10263,12 @@ function boxEntryGraduationGrade(entry, x, dtype){
       }
     }
   }
-  return row.grade;
+  let grade = row.grade;
+  // 树果型：跟主面板 dispGradeName 用同一套"萌新版/通用版"下调规则（毕业→和解等下调一档，
+  // 仅树果型生效），但捕捉推荐页扫的是整盒子而非当前编辑单只，没有 state.type/state.newbieMode
+  // 可用，改用控制参数浮窗里独立的 userPrefs.capGradNewbieOn 开关决定
+  if(dtype==='fruit' && !userPrefs.capGradNewbieOn && NORMAL_GRADE_SHIFT[grade]) grade = NORMAL_GRADE_SHIFT[grade];
+  return grade;
 }
 // 扫描整个盒子，返回三个集合：capGradSpecies(树果/功能/能量型，按最终种族dex)、
 // capGradFoodAAA/capGradFoodABB(食材型，按最终种族dex，aaa/abb分开记，不含aac/abc)。
@@ -10732,6 +10747,10 @@ function syncCapGradModalSwitch(){
   const on = !!userPrefs.capGradMarkOn;
   if(sw) sw.classList.toggle('on', on);
   if(hint) hint.textContent = on ? '开启' : '关闭';
+  const sw2 = document.getElementById('capGradNewbieSwitch'), hint2 = document.getElementById('capGradNewbieHint');
+  const on2 = !!userPrefs.capGradNewbieOn;
+  if(sw2) sw2.classList.toggle('on', on2);
+  if(hint2) hint2.textContent = on2 ? '萌新版' : '通用版';
 }
 function openCapGradModal(){
   syncCapGradModalSwitch();
@@ -10740,6 +10759,12 @@ function openCapGradModal(){
 function closeCapGradModal(){ document.getElementById('capGradModalOverlay').style.display = 'none'; }
 function toggleCapGradMark(){
   userPrefs.capGradMarkOn = !userPrefs.capGradMarkOn;
+  saveUserPrefs();
+  syncCapGradModalSwitch();
+  renderCapturePage();
+}
+function toggleCapGradNewbie(){
+  userPrefs.capGradNewbieOn = !userPrefs.capGradNewbieOn;
   saveUserPrefs();
   syncCapGradModalSwitch();
   renderCapturePage();
@@ -11845,6 +11870,7 @@ document.getElementById('capGradModalOverlay').onclick = (e)=>{ if(e.target.id==
 document.getElementById('capGradModalPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('capGradModalCloseBtn').onclick = closeCapGradModal;
 document.getElementById('capGradMarkSwitch').onclick = toggleCapGradMark;
+document.getElementById('capGradNewbieSwitch').onclick = toggleCapGradNewbie;
 document.getElementById('capPanelModalOverlay').onclick = (e)=>{ if(e.target.id==='capPanelModalOverlay') closeCapPanelModal(); };
 document.getElementById('capPanelModalPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('capPanelModalCloseBtn').onclick = closeCapPanelModal;
