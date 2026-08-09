@@ -455,9 +455,13 @@
          在空档两侧接上后看起来是同一条连续的白带绕着球转
        · 中间那段 .page-act-gap 保持完全透明，让白环在这里显出半圆弧，恢复改版前那个
          凸起造型；整条如果自己铺满白底，圆弧就会被填成一个方方正正的白块
-       · 空档 56px 比圆环 60px 略窄，圆环左右各压住白块 2px，把接缝盖掉；
+       · 空档 50px 比圆环 60px 窄，圆环左右各压住白块 5px，把接缝盖掉；
          白块朝内那侧再倒一个圆角，让平直的白条自然收进圆弧里
-       · 整条高度 40px = 1px 上边框 + 5px 白边 + 29px 按钮 + 5px 白边 */
+       · 整条高度 40px = 1px 上边框 + 5px 白边 + 29px 按钮 + 5px 白边
+       · 白块不带阴影/描边，直接和下方页面切换栏顶边视觉相接，两者背景色
+         同为 var(--panel)，中间不留黑色分割线
+       · 两颗按钮各朝中间（宝可梦盒方向）多占 3px：空档从 56px 减到 50px，
+         减掉的 6px 由两侧 flex:1 1 0 平分，各拿到 3px */
   .page-action-bar{
     display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
@@ -466,15 +470,14 @@
   }
   .page-act-side{
     flex:1 1 0; min-width:0; display:flex; padding:5px;
-    background:var(--panel); border-top:1px solid var(--line);
-    box-shadow:0 -2px 10px rgba(0,0,0,.08);
+    background:var(--panel);
   }
   /* 内侧倒角 15px，减掉 5px 内边距后正好等于按钮自身的 10px 圆角，
      白边在这个转角处依然是均匀的 5px，弧线一路顺到球周围的白环上 */
   .page-act-side-left{ border-top-right-radius:15px; }
   .page-act-side-right{ border-top-left-radius:15px; }
   /* 透明空档：不铺白底，也不要挡住下层页面的点击 */
-  .page-act-gap{ flex:0 0 56px; pointer-events:none; }
+  .page-act-gap{ flex:0 0 50px; pointer-events:none; }
   .page-act-btn{
     position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
     padding:7px 10px;
@@ -512,6 +515,12 @@
     position:fixed; left:0; right:0; bottom:0; z-index:1100;
     background:var(--panel); border-top:1px solid var(--line);
     box-shadow:0 -2px 10px rgba(0,0,0,.1);
+  }
+  /* 按钮条露出时挂上这个类：切换栏顶边的描边和阴影都是它自己画的，
+     z-index 比按钮条高，会盖在两者交界处形成一道黑边/阴影，去掉后
+     两块同色白底才能真正连成一片，只留中间宝可梦盒白环那道弧线 */
+  .tabbar.tabbar-merged{
+    border-top-color:transparent; box-shadow:none;
     /* 不直接用 env(safe-area-inset-bottom)（iPhone 上常有 30+px），会在页面切换栏下方留出一大条空白"下巴"；
        改用固定 6px，配合下面 .tab-item 缩小的自身高度，让整条切换栏更贴近屏幕底部的圆角 */
     padding-bottom:6px;
@@ -10819,7 +10828,12 @@ function updatePageActionBar(){
   try{ inBox = !!boxOverlayOpen; }catch(e){}
   const page4 = document.getElementById('page4');
   const onPage4 = !!(page4 && page4.classList.contains('active-page'));
-  bar.style.display = (inDetail || inBox || onPage4) ? 'none' : 'flex';
+  const show = !(inDetail || inBox || onPage4);
+  bar.style.display = show ? 'flex' : 'none';
+  // 按钮条露出时，切换栏自己的顶部描边/阴影会在两者交界处压出一道黑线；
+  // 用 .tabbar-merged 抹掉切换栏这条描边和阴影，让两块同色白底完全接上。
+  const tabbar = document.getElementById('tabBar');
+  if(tabbar) tabbar.classList.toggle('tabbar-merged', show);
   updatePagePanelMonBubble();
 }
 function updateFabVisibility(){ updatePageActionBar(); }
