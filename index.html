@@ -10630,7 +10630,11 @@ function capRenderFoodChart(container){
     av.onclick = (e)=>{ e.stopPropagation();
       const name=av.getAttribute('data-name'), food=av.getAttribute('data-food'), medal=av.getAttribute('data-medal')==='1';
       const x = CAP_DEX.find(p=>p.name===name);
-      const prod = capFoodProd(x, food, capState.level, medal);
+      // 跟 capBuildFood 保持同一套口径：面板(userPrefs.capPanelBuild.food)已生效时用真实产量算，
+      // 不能只用静态假设公式，否则气泡数字和柱子暗含的产量对不上
+      const foodBuild = userPrefs.capPanelBuild.food;
+      const foodReal = foodBuild ? capRealSums(foodBuild) : null;
+      const prod = foodReal ? capFoodProdReal(x, food, capState.level, medal, foodReal) : capFoodProd(x, food, capState.level, medal);
       const ic = ING_ICONS[food];
       const reco = capFoodReco(x, food);
       const comboHtml = capComboIconsHtml(x, food);
