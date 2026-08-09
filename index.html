@@ -1527,7 +1527,9 @@
   .cap-ccol-ic{ display:flex; align-items:center; justify-content:center; width:22px; height:22px; border-radius:6px; box-sizing:border-box; }
   .cap-ccol-ic-grad{ border:2px solid #1f8a3d; background:#e9f7ec; }
   .cap-ccol-e-grad{ color:#157a34; }
-  .cap-ccol-grad-check{ display:flex; margin-top:1px; }
+  /* 固定占位高度(11px)，不管这一列毕不毕业都占位——避免有的列多一行有的列不多，
+     导致各列柱子底边(0刻度线)对不齐 */
+  .cap-ccol-grad-check{ display:flex; align-items:center; justify-content:center; height:11px; }
   .cap-ccol-grad-check svg{ width:11px; height:11px; }
   .cap-combo-cap{ display:flex; justify-content:center; align-items:center; gap:0; padding:1px 3px; border-radius:7px; border:1.5px solid; margin-top:1px; }
   .cap-combo-cap img{ width:11px; height:11px; }
@@ -10465,8 +10467,11 @@ const CAP_COL_GAP = CAP_BAR_W/3; // 柱间距=柱宽1/3
 const CAP_MARK_BOX_H = 26; // 头像框高度(px，无食材序列框后与头像同高)，用于重叠避让计算
 function capComputeChartH(container){
   const rect = container.getBoundingClientRect();
-  const avail = window.innerHeight - rect.top - 90; // 适应手机上下可视高度，预留标签空间
-  return Math.max(160, Math.min(460, Math.round(avail)));
+  // 104 = 轴标签固定占用高度(食材图标+能量数字+毕业对勾三行，毕业标记功能上线后从90加到104)
+  // + 图表内边距 + 吸底按钮条安全间距；上限也从460降到446，避免预留值在大屏上不生效
+  // （avail 算出来比上限还大时是上限在兜底，这时候如果上限本身没算够毕业对勾那行就会被吸底条挡住）
+  const avail = window.innerHeight - rect.top - 104;
+  return Math.max(160, Math.min(446, Math.round(avail)));
 }
 /* 能缩到多小：缩到"全部柱子刚好都露出来"就够了，再小只是徒增留白。
    内容总宽 = 左侧刻度轴(40) + 柱数×(柱宽+间距)，视口宽取外层容器实际宽度。 */
@@ -10605,7 +10610,7 @@ function capRenderFoodChart(container){
         ${lineHtml}
         ${markers}
       </div>
-      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':''}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span>${foodGrad?'<span class="cap-ccol-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>':''}</div>
+      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':''}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?'<svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':''}</span></div>
     </div>`;
   }).join('');
   container.innerHTML = `<div class="cap-chart-outer">
@@ -11867,6 +11872,10 @@ function boxEffectiveFinalDex(dex){
   // 会直接查到"#194"(乌波→沼王)这条完全不相关的普通形态进化链，食材数据就串了。
   // 只有完整 dex 查不到（比如"#025-1"这种没有独立进化链的节日/服装变体）才退回去掉后缀的基础编号
   if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[dex]) return POKEMON_FINAL_DEX_MAP[dex][0];
+  // 南瓜怪人四个尺寸(#711/-1/-2/-3)互相是完全独立的最终物种，不是同一物种的不同阶段，没有"共享基础编号"
+  // 这回事。它们本身已经是最终形态，查不到 POKEMON_FINAL_DEX_MAP 很正常；不能再往下走给服装/节日变体
+  // 准备的"退回不带后缀编号"逻辑，否则大/巨/小南瓜怪人的盒子记录会被误并到中南瓜怪人名下
+  if(dex==='#711-1'||dex==='#711-2'||dex==='#711-3') return dex;
   const baseDex = dex.split('-')[0];
   if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[baseDex]) return POKEMON_FINAL_DEX_MAP[baseDex][0];
   return baseDex;
