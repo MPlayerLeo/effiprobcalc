@@ -1787,10 +1787,104 @@
 .psc-sync-hint{ font-size:11px; color:#9a9484; text-align:center; margin-top:6px; line-height:1.5; }
 .psc-resync-link{ font-size:11px; color:#3a7fd5; text-align:center; margin-top:8px; font-weight:700; cursor:pointer; text-decoration:underline; }
 .cap-panel-modal-hint{ font-size:11px; color:#9a9484; text-align:center; margin:2px 4px 12px; line-height:1.6; }
+/* 首屏加载遮罩：整站数据+逻辑塞在一个5MB+的单文件里，首次访问(尤其是从宝睡小当家授权
+   页跳回来这种没有浏览器缓存的场景)下载解析要花上几秒，期间原来是一片空白，容易被
+   当成"卡住了"。遮罩是 body 里的第一个元素，配套的启动脚本也紧跟其后、排在后面几千行
+   HTML和主 <script> 之前，不需要等那些东西就能立刻描画+开始动画，等 window.load
+   (主脚本已跑完、首屏已渲染)触发后再收走 */
+#bootLoadingMask{
+  position:fixed; inset:0; z-index:9999;
+  background:linear-gradient(180deg,#efe9d8 0%, #e7e0cc 100%);
+  display:flex; align-items:center; justify-content:center;
+}
+#bootLoadingInner{ display:flex; flex-direction:column; align-items:center; gap:16px; padding:24px; }
+#bootLoadingLogo{ width:148px; height:148px; border-radius:22px; object-fit:cover; box-shadow:0 8px 22px rgba(0,0,0,.2); }
+#bootLoadingText{ font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em; }
+#bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
+/* "土王智商高！"从屏幕正上方由大变小跳入，正好落在原来"土王智商加载中"文字的位置(同一个
+   元素，只是换了文字+加这个class)，用 back-out 缓动做一点回弹，配合"跳进来"的感觉 */
+#bootLoadingText.boot-slogan-drop{
+  font-size:27px; font-weight:900; color:var(--accent);
+  animation:bootSloganDrop .6s cubic-bezier(.34,1.56,.64,1) both;
+}
+@keyframes bootSloganDrop{
+  0%{ transform:translateY(-70vh) scale(2.6); opacity:0; }
+  55%{ opacity:1; }
+  100%{ transform:translateY(0) scale(1); opacity:1; }
+}
+#bootLoadingMascots{ position:relative; width:210px; height:64px; }
+.boot-mascot{ position:absolute; bottom:0; image-rendering:pixelated; }
+.boot-mascot-wooper{ left:9px; width:52px; height:40px; z-index:2; transform:scaleX(-1); }
+.boot-mascot-quagsire{ left:37px; width:70px; height:62px; z-index:1; transform:scaleX(-1); }
+.boot-mascot-clodsire{ left:96px; width:82px; height:62px; z-index:2; }
+.boot-mascot-paldea{ left:158px; width:50px; height:40px; z-index:2; }
 </style>
 
 </head>
 <body>
+<div id="bootLoadingMask" aria-hidden="true">
+  <div id="bootLoadingInner">
+    <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
+    <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
+    <div id="bootLoadingMascots">
+      <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
+      <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
+      <img class="boot-mascot boot-mascot-clodsire" src="box_assets/normal/clodsire.gif" alt="">
+      <img class="boot-mascot boot-mascot-paldea" src="box_assets/normal/wooper-paldea.gif" alt="">
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var dotsEl = document.getElementById('bootLoadingDots');
+  var textEl = document.getElementById('bootLoadingText');
+  var n = 1;
+  var dotTimer = setInterval(function(){
+    n = n % 3 + 1;
+    if(dotsEl) dotsEl.textContent = '.'.repeat(n);
+  }, 450);
+  var done = false;
+  // "从中间开圆洞并向四周扩散打开"：用 mask-image 的径向渐变控制遮罩自身的可见度——
+  // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
+  // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
+  // farthest-corner为100%基准，天然保证涨满时四个角都已经露出来)
+  function openMaskHole(mask){
+    var start = null, dur = 650;
+    function step(ts){
+      if(!mask.parentNode) return;
+      if(start===null) start = ts;
+      var p = Math.min(1, (ts-start)/dur);
+      var eased = 1 - Math.pow(1-p, 3);
+      var r = eased * 102;
+      var edge = Math.min(r+2, 100);
+      var grad = 'radial-gradient(circle at 50% 50%, transparent 0%, transparent '+r+'%, #000 '+edge+'%, #000 100%)';
+      mask.style.webkitMaskImage = grad;
+      mask.style.maskImage = grad;
+      if(p < 1) requestAnimationFrame(step);
+      else mask.remove();
+    }
+    requestAnimationFrame(step);
+    // 兜底：极端情况下(比如动画期间标签页切到后台，rAF被挂起)也不能把用户永远挡在外面
+    setTimeout(function(){ if(mask.parentNode) mask.remove(); }, dur + 2500);
+  }
+  function finish(){
+    if(done) return; done = true;
+    clearInterval(dotTimer);
+    var mask = document.getElementById('bootLoadingMask');
+    if(!mask) return;
+    if(textEl){
+      textEl.textContent = '土王智商高！';
+      textEl.classList.add('boot-slogan-drop');
+    }
+    // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开
+    setTimeout(function(){ openMaskHole(mask); }, 700);
+  }
+  if(document.readyState === 'complete') finish();
+  else window.addEventListener('load', finish);
+  // 兜底：极端情况下 load 一直不触发，别让遮罩把用户永远挡在外面
+  setTimeout(finish, 20000);
+})();
+</script>
 <div class="wrap">
   <div class="site-header-row">
     <h1>土王智商高 · 宝睡图鉴</h1>
@@ -6528,9 +6622,16 @@ function pscConsumeReturnParam(){
   q.delete('psc'); q.delete('psc_msg');
   const rest = q.toString();
   history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
-  if(r === 'ok') alert('已成功连接' + PSC_PARTNER_NAME + '。');
-  else if(r === 'denied') alert('你在' + PSC_PARTNER_NAME + '那边拒绝了本次授权，未做任何改动。');
-  else alert('连接' + PSC_PARTNER_NAME + '失败，请稍后再试。');
+  // 这是从对方授权页跳回来后、页面初始化脚本还没跑完时就同步触发的 alert：如果用户是从"宝睡
+  // 小当家"App内置的嵌入式浏览器/WebView跳回来的，alert() 在部分WebView里会被禁用/沙盒化，
+  // 直接抛异常。这个函数是顶层同步调用（不在事件回调里），异常一旦冒出去会中断后面还没执行到
+  // 的初始化代码（包括收尾的 renderAll()），导致页面停在半初始化状态、看起来像"卡住了"。
+  // try/catch 兜底，就算 alert 失败也不能连累后面的初始化
+  try{
+    if(r === 'ok') alert('已成功连接' + PSC_PARTNER_NAME + '。');
+    else if(r === 'denied') alert('你在' + PSC_PARTNER_NAME + '那边拒绝了本次授权，未做任何改动。');
+    else alert('连接' + PSC_PARTNER_NAME + '失败，请稍后再试。');
+  }catch(e){}
 }
 
 /* ---- v3.18 反向：我方作为 OIDC Provider 时自己的授权确认页 ----
