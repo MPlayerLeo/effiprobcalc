@@ -467,11 +467,10 @@
          这样永远不会盖到切换栏自己的可点击区域
        · 按钮内边距改回上下对称，文字用 flex 居中，视觉上不再偏上
        · 整条白底常驻显示（不再按页面 display:none/flex 切换），避免捕捉
-         推荐页（原来整条隐藏）和其他页面（整条显示）来回切换时底部可用
-         高度突然变化造成的跳变；捕捉推荐页只隐藏两颗按钮本身
-         （见 .act-btn-hidden），白底和切换栏的融合效果照常保留 */
+         推荐页/宝可梦盒等浮层里整条隐藏（连白框一起去掉，只剩纯粹的页面
+         切换栏），只在普通页面里出现 */
   .page-action-bar{
-    display:flex;
+    display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
     align-items:stretch;
     background:transparent;
@@ -494,8 +493,6 @@
     white-space:nowrap; user-select:none;
   }
   .page-act-btn:hover{ filter:brightness(1.08); }
-  /* 捕捉推荐页只隐藏按钮本身：visibility 而不是 display，占位不撤，白底高度不受影响 */
-  .page-act-btn.act-btn-hidden{ visibility:hidden; pointer-events:none; }
   /* 颜色沿用改造前那两颗小圆浮窗 */
   #pageActControlsBtn{ background:#3a8fae; }
   #pageActPanelBtn{ background:var(--accent); }
@@ -521,19 +518,22 @@
   /* ============ 三页签导航 ============ */
   .app-page{ display:none; }
   .app-page.active-page{ display:block; }
-  /* 页面按钮条(.page-action-bar)常驻显示，紧贴在切换栏正上方，两者背景色
-     同为 var(--panel)——切换栏自己不再画顶部描边/阴影，靠按钮条那道白边
-     直接接上，避免交界处出现黑线（button-bar 一直显示，这里也就不用再按
-     状态切换了，直接写死） */
   .tabbar{
     position:fixed; left:0; right:0; bottom:0; z-index:1100;
-    background:var(--panel); border-top:1px solid transparent; box-shadow:none;
-    /* 描边留着（宽度不去掉），只把颜色改透明——直接用 border-top:none 会让切换栏
-       自己的盒子矮 1px，顶边跟着往下缩，和按钮条底边（固定在 749）之间露出 1px
-       缝隙，透出下面的奶油色底色，踩过这个坑 */
+    background:var(--panel); border-top:1px solid var(--line);
+    box-shadow:0 -2px 10px rgba(0,0,0,.1);
     /* 不直接用 env(safe-area-inset-bottom)（iPhone 上常有 30+px），会在页面切换栏下方留出一大条空白"下巴"；
-       改用固定 6px，配合下面 .tab-item 缩小的自身高度，让整条切换栏更贴近屏幕底部的圆角 */
+       改用固定 6px，配合下面 .tab-item 缩小的自身高度，让整条切换栏更贴近屏幕底部的圆角。
+       写在这里（不放进 .tabbar-merged 里）是因为这条高度规则和按钮条要不要融合是两回事——
+       之前混在一起过，导致按钮条隐藏/显示时切换栏自己的高度也跟着变，又是一次跳变 */
     padding-bottom:6px;
+  }
+  /* 按钮条露出时（普通页面）挂上这个类：切换栏顶边的描边和阴影都是它自己画的，
+     z-index 比按钮条高，会盖在两者交界处形成一道黑边/阴影，去掉后两块同色白底
+     才能真正连成一片；按钮条整条隐藏时（捕捉推荐/宝可梦盒）这个类也跟着摘掉，
+     切换栏自己重新画出描边/阴影，变回最初那条独立的页面切换栏 */
+  .tabbar.tabbar-merged{
+    border-top-color:transparent; box-shadow:none;
   }
   .tabbar-inner{ max-width:640px; margin:0 auto; width:100%; display:flex; position:relative; }
   .tab-indicator{
@@ -10324,13 +10324,11 @@ function switchPage(pageId){
    window.scrollTo(0,0) 过，resize 时页面也不会有纵向滚动（条目区自己吃掉了溢出）。 */
 function applyCapHeaderStickyOffset(){
   const vp = document.querySelector('.cap-rank-viewport');
-  // 按钮条常驻显示（捕捉推荐页只隐藏按钮本身，白底还在），条目区要让到按钮条
-  // 白底的上边缘，不能再拿切换栏自己的顶边当下界，否则条目区最下面一截会被
-  // 白底盖住
-  const bar = document.getElementById('pageActionBar');
-  if(!vp || !bar) return;
+  const tabbar = document.getElementById('tabBar');
+  // 捕捉推荐页里按钮条整条隐藏，条目区只用让到切换栏自己的顶边就够了
+  if(!vp || !tabbar) return;
   const top = vp.getBoundingClientRect().top;
-  const bottom = bar.getBoundingClientRect().top;
+  const bottom = tabbar.getBoundingClientRect().top;
   // 留 10px 呼吸空隙；下限 160px 是防止极端窄屏/横屏时算出个负数把条目区压没
   const h = Math.max(160, Math.round(bottom - top - 10));
   document.documentElement.style.setProperty('--cap-view-h', h+'px');
@@ -10833,14 +10831,21 @@ let dashboardOpen = false;
 function updatePageActionBar(){
   const bar = document.getElementById('pageActionBar');
   if(!bar) return;
-  // v3.18后期改版：白底按钮条常驻显示（不再整条隐藏），只在捕捉推荐页把
-  // 两颗按钮本身隐藏——宝可梦盒的浮层/详情页顶多盖住按钮条（盒子浮层自己的
-  // 显示范围本来就止步于按钮条上方，见 .box-overlay 的 bottom:104px），不需要
-  // 额外隐藏按钮；整条常驻是为了避免捕捉推荐页和其他页面切换时底部高度跳变。
+  // 捕捉推荐页 / 宝可梦盒浮层（含详情页）里按钮条连白框一起整条收起，只剩
+  // 纯粹的页面切换栏。boxDetailEntryId / boxOverlayOpen 都是 let，声明在本
+  // 函数之后；开场那次调用还处在它们的暂时性死区里，此时连 typeof 都会抛
+  // ReferenceError（这点和 var 不同），所以要 try 住。
+  let inDetail = false, inBox = false;
+  try{ inDetail = !!boxDetailEntryId; }catch(e){}
+  try{ inBox = !!boxOverlayOpen; }catch(e){}
   const page4 = document.getElementById('page4');
   const onPage4 = !!(page4 && page4.classList.contains('active-page'));
-  document.getElementById('pageActControlsBtn')?.classList.toggle('act-btn-hidden', onPage4);
-  document.getElementById('pageActPanelBtn')?.classList.toggle('act-btn-hidden', onPage4);
+  const show = !(inDetail || inBox || onPage4);
+  bar.style.display = show ? 'flex' : 'none';
+  // 按钮条露出时，切换栏自己的顶部描边/阴影会在两者交界处压出一道黑线；
+  // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
+  const tabbar = document.getElementById('tabBar');
+  if(tabbar) tabbar.classList.toggle('tabbar-merged', show);
   updatePagePanelMonBubble();
 }
 function updateFabVisibility(){ updatePageActionBar(); }
