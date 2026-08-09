@@ -1515,9 +1515,9 @@
   .cap-cavwrap{ display:flex; flex-direction:column; align-items:center; cursor:pointer; }
   .cap-cav{ width:26px; height:26px; border-radius:8px; border:2px solid var(--accent); background:#f4effa; overflow:visible; position:relative; display:flex; align-items:center; justify-content:center; }
   .cap-cav img{ width:100%; height:100%; object-fit:cover; border-radius:6px; }
-  /* v3.18"标记已毕业"：食材柱状图头像中心叠一个绿色对勾 */
-  .cap-cav-grad-check{ position:absolute; inset:0; z-index:6; display:flex; align-items:center; justify-content:center;
-    color:#fff; font-size:14px; font-weight:900; text-shadow:0 0 2px rgba(0,0,0,.6); background:rgba(31,138,61,.55); border-radius:6px; }
+  /* v3.18"标记已毕业"：食材柱状图头像中心叠一个绿色对勾，不铺底色，纯线条勾形 */
+  .cap-cav-grad-check{ position:absolute; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; pointer-events:none; }
+  .cap-cav-grad-check svg{ width:62%; height:62%; filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff); }
   .cap-ctop{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
   .cap-cmark-line{ position:absolute; left:-2px; right:-2px; height:2.5px; background:#3a3a3a; transform:translateY(50%); z-index:3; }
   .cap-cmark-av{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
@@ -10324,7 +10324,7 @@ function capAvatarComboHtml(rec, food){
   const x = rec.x;
   const lvl = rec.reco ? rec.reco.level : 'red';
   const graduated = userPrefs.capGradMarkOn && capFoodComboGraduated(x, food);
-  const checkHtml = graduated ? `<span class="cap-cav-grad-check">✓</span>` : '';
+  const checkHtml = graduated ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>` : '';
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
     <span class="cap-cav rec-${lvl}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
   </div>`;
