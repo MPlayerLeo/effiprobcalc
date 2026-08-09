@@ -11229,6 +11229,17 @@ function boxUpdateEntryFromState(entryId){
 // 跨源画布会被标记为 tainted，toDataURL 必抛 SecurityError；只绘制（不读回像素）则不受此限制，
 // 无论通过 http(s) 服务器还是直接双击本地文件打开都能正常冻结首帧。
 const boxGifImageCache = new Map();
+// Safari 手机端单页内存上限比 Chrome 紧得多：盒子种类一多（100+ 只很常见），这里如果无限缓存
+// 解码后的 Image 对象会把内存撑爆，导致个别 gif 随机解码失败——按最近使用数量做个上限，超了就
+// 把最久没用过的挤掉（Map 天然按插入顺序排列，重新 set 一次等于刷新到最新）
+const BOX_GIF_CACHE_MAX = 80;
+function boxGifCacheTouch(src, img){
+  if(boxGifImageCache.has(src)) boxGifImageCache.delete(src);
+  boxGifImageCache.set(src, img);
+  while(boxGifImageCache.size > BOX_GIF_CACHE_MAX){
+    boxGifImageCache.delete(boxGifImageCache.keys().next().value);
+  }
+}
 function boxDrawFrozenFrame(canvas, src){
   const draw = (imgObj)=>{
     if(!imgObj.naturalWidth) return;
@@ -11240,13 +11251,16 @@ function boxDrawFrozenFrame(canvas, src){
   };
   let tmp = boxGifImageCache.get(src);
   if(tmp){
+    boxGifCacheTouch(src, tmp);
     if(tmp.complete && tmp.naturalWidth) draw(tmp);
     else tmp.addEventListener('load', ()=>draw(tmp), {once:true});
     return;
   }
   tmp = new Image();
-  boxGifImageCache.set(src, tmp);
+  boxGifCacheTouch(src, tmp);
   tmp.onload = ()=> draw(tmp);
+  // 解码失败的不留在缓存里占位——下次这张格子重新进入渲染时还能再试一次，而不是永远空白
+  tmp.onerror = ()=> boxGifImageCache.delete(src);
   tmp.src = src;
 }
 let boxBatchDeleteMode = false;
