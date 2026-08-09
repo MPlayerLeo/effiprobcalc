@@ -696,6 +696,8 @@
      昵称 white-space:nowrap 的最小内容宽度就是整行文字的宽度，之前没写这条，
      长昵称会把格子（进而整行）撑爆，下面 .box-grid-label 的省略号截断因此从没真正生效过 */
   .box-grid-item{ position:relative; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:pointer; user-select:none; -webkit-touch-callout:none; }
+  /* 批量删除态下按住格子起手是"滑动多选"手势，不能让触屏把这次按住识别成页面滚动 */
+  .box-grid.box-batch-mode .box-grid-item{ touch-action:none; }
   /* 每格的画面区是一个固定比例的框（按素材里最大的那张 gif braviary 102×110 定的 51:55），
      宽度随屏幕走、高度由比例算出，所以同一行里每个格子的下沿一定在同一条水平线上。
      gif/png 一律绝对定位贴着这个框的下沿居中——绝对定位不参与父级布局，
@@ -1342,6 +1344,11 @@
   .cap-food-pill img{ width:58%; height:58%; object-fit:contain; }
   .cap-food-pill span{ font-size:7px; font-weight:700; }
   .cap-food-pill.active{ border-color:var(--food-bd); background:var(--food-bg); box-shadow:0 1px 5px rgba(181,138,26,.4); }
+  /* v3.18"标记已毕业"：食材/功能次级按钮点亮浅绿底；树果/能量型按钮不改色，只加绿色外框 */
+  .cap-food-pill.cap-pill-grad-fill:not(.active){ background:#bdeccb; }
+  .cap-skill-pill.cap-pill-grad-fill:not(.active){ background:#bdeccb; }
+  .cap-attr-pill.cap-pill-grad-outline{ box-shadow:0 0 0 2px #1f8a3d inset; }
+  .cap-isl-btn.cap-pill-grad-outline:not(.active){ box-shadow:0 0 0 2px #1f8a3d inset; }
   .cap-food-bubble{ position:absolute; z-index:5; background:var(--accent-dk); color:#fff; font-size:11px; font-weight:700; padding:4px 9px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 10px rgba(0,0,0,.3); }
   .cap-food-bubble::after{ content:''; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--accent-dk); border-bottom:none; }
   .cap-skill-pill{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:14px; border:1.5px solid var(--skill-bd); color:var(--skill-tx); background:var(--panel); font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap; }
@@ -1430,6 +1437,9 @@
   .cap-reco.rec-green{ background:#e9f7ec; border-color:#1f8a3d; color:#1f8a3d; }
   .cap-reco.rec-yellow{ background:#fdf3e0; border-color:#b5651d; color:#b5651d; }
   .cap-reco.rec-red{ background:#fbe9e7; border-color:#c0392b; color:#c0392b; }
+  /* v3.18"标记已毕业"：整条淡绿底，推荐程度框改实心绿底白字，居中显示"已毕业" */
+  .cap-row-graduated{ background:#eaf7ec; }
+  .cap-reco-graduated{ background:#1f8a3d; border-color:#1f8a3d; color:#fff; font-size:12px; }
   .cap-info{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .cap-line1{ display:flex; align-items:center; gap:6px; }
   .cap-name{ flex:0 1 auto; font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1480,6 +1490,9 @@
   .cap-cavwrap{ display:flex; flex-direction:column; align-items:center; cursor:pointer; }
   .cap-cav{ width:26px; height:26px; border-radius:8px; border:2px solid var(--accent); background:#f4effa; overflow:visible; position:relative; display:flex; align-items:center; justify-content:center; }
   .cap-cav img{ width:100%; height:100%; object-fit:cover; border-radius:6px; }
+  /* v3.18"标记已毕业"：食材柱状图头像中心叠一个绿色对勾 */
+  .cap-cav-grad-check{ position:absolute; inset:0; z-index:6; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-size:14px; font-weight:900; text-shadow:0 0 2px rgba(0,0,0,.6); background:rgba(31,138,61,.55); border-radius:6px; }
   .cap-ctop{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
   .cap-cmark-line{ position:absolute; left:-2px; right:-2px; height:2.5px; background:#3a3a3a; transform:translateY(50%); z-index:3; }
   .cap-cmark-av{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
@@ -2254,7 +2267,7 @@
 <div class="dashboard-overlay" id="boxDeleteWarnOverlay">
   <div class="dashboard-panel box-delete-warn-panel">
     <div class="box-delete-warn-title">删除确认</div>
-    <div class="box-delete-warn-msg">该操作将永久删除所选宝可梦数据，请谨慎选择</div>
+    <div class="box-delete-warn-msg" id="boxDeleteWarnMsg">该操作将永久删除所选宝可梦数据，请谨慎选择</div>
     <div class="dash-btn-row-2">
       <button type="button" class="clearbtn-big" id="boxDeleteWarnCancelBtn">取消</button>
       <button type="button" class="box-delete-warn-confirm-btn" id="boxDeleteWarnConfirmBtn">确认删除</button>
@@ -2398,6 +2411,24 @@
   </div>
 </div>
 
+<!-- v3.18 捕捉推荐页(page4)专用的"控制参数"浮窗：跟其他三页共用的 #controlsDashboardOverlay
+     内容完全不同（那边一堆等级/持有上限/锁金强求金帮跟捕捉推荐页毫无关系），这里只放一个
+     "标记已毕业"开关，开启后扫描盒子给条目/柱状图/次级选择区打已毕业标记 -->
+<div class="dashboard-overlay" id="capGradModalOverlay">
+  <div class="dashboard-panel" id="capGradModalPanel">
+    <div class="dash-header">控制参数<span class="dash-close" id="capGradModalCloseBtn">✕</span></div>
+    <div class="dash-scroll-area">
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">标记已毕业</div>
+          <div class="mf-toggle-hint" id="capGradMarkHint">关闭</div>
+        </div>
+        <div class="mf-switch" id="capGradMarkSwitch"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="dashboard-overlay" id="ocrReviewOverlay">
   <div class="dashboard-panel" id="ocrReviewPanel">
     <div class="dash-header">识别中<span class="dash-close" id="ocrReviewCloseBtn">✕</span></div>
@@ -2535,6 +2566,13 @@
           <div class="mf-toggle-hint" id="mfLevelHint">开启</div>
         </div>
         <div class="mf-switch" id="mfLevelSwitch"></div>
+      </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">显示联动标记</div>
+          <div class="mf-toggle-hint" id="mfPscBadgeHint">开启</div>
+        </div>
+        <div class="mf-switch" id="mfPscBadgeSwitch"></div>
       </div>
     </div>
     <div class="account-btns">
@@ -5892,22 +5930,34 @@ const PUMPKIN_BOX_SCALE_BY_DEX = {
 };
 
 /* ---- 盒子：睡饱饱奖章 ---- */
+// 联动来源的记录不套用徽章宝可梦强制满级规则（见上面 satietyForcedFor 的说明）
+function boxEntryBadgeBypass(entry){ return !!(entry && entry.source==='psc'); }
+// "当前正在编辑的盒子记录"：盒子详情页(boxDetailEntryId)和修改面板从盒子里点进来编辑
+// (dashboardBoxEditContext)是两条独立的入口，state.satiety 本身不携带来源信息，
+// 所以这几处用 state 驱动渲染的地方(修改面板睡饱饱选择器/头像奖章/产能分析)都要在渲染时
+// 现查一次对应的盒子记录来源，而不是指望 state 上有 source 字段
+function currentEditingBoxEntry(){
+  if(typeof boxDetailEntryId!=='undefined' && boxDetailEntryId) return boxGetEntry(boxDetailEntryId);
+  if(typeof dashboardBoxEditContext!=='undefined' && dashboardBoxEditContext) return boxGetEntry(dashboardBoxEditContext.entryId);
+  return null;
+}
+function stateBadgeBypass(){ return boxEntryBadgeBypass(currentEditingBoxEntry()); }
 function boxEntrySatiety(entry){
   if(!entry) return 0;
   const x = entry.dex ? capFindDex(boxEffectiveFinalDex(entry.dex)) : null;
-  return satietyTierFor(x, entry.satiety);
+  return satietyTierFor(x, entry.satiety, boxEntryBadgeBypass(entry));
 }
 function satietyMedalSrc(tier){
   return (tier && SATIETY_MEDAL_IMAGES[String(tier)]) ? SATIETY_MEDAL_IMAGES[String(tier)] : null;
 }
 // 头像右上角挂奖章图：比例对齐已有的徽章图标（框直径 50%），徽章宝可梦那个角已被徽章占了，不再叠奖章
-// x 是 capFindDex 查出的行（决定是否强制/取消显示），tier 是要显示的睡饱饱档位
-function renderSatietyMedalOnPortrait(portraitEl, x, tier){
+// x 是 capFindDex 查出的行（决定是否强制/取消显示），tier 是要显示的睡饱饱档位，bypass 见上
+function renderSatietyMedalOnPortrait(portraitEl, x, tier, bypass){
   if(!portraitEl) return;
   const old = portraitEl.querySelector('.pk-satiety-medal');
   if(old) old.remove();
   portraitEl.classList.remove('pk-has-satiety-medal');
-  if(satietyForcedFor(x)) return;                 // 徽章宝可梦：布局不动，只显示原有徽章
+  if(satietyForcedFor(x, bypass)) return;          // 徽章宝可梦：布局不动，只显示原有徽章
   const src = satietyMedalSrc(tier);
   if(!src) return;                                // 0 档没有奖章图，不显示
   portraitEl.classList.add('pk-has-satiety-medal');
@@ -5928,7 +5978,7 @@ function renderSatietyMedalOnPortrait(portraitEl, x, tier){
 }
 function applyBoxDetailSatietyMedal(portraitEl, entry){
   const x = entry && entry.dex ? capFindDex(boxEffectiveFinalDex(entry.dex)) : null;
-  renderSatietyMedalOnPortrait(portraitEl, x, boxEntrySatiety(entry));
+  renderSatietyMedalOnPortrait(portraitEl, x, boxEntrySatiety(entry), boxEntryBadgeBypass(entry));
 }
 // 页1宝可梦选择模块头像右上角：跟盒子详情页同一套渲染逻辑，取的是当前编辑面板自己的睡饱饱档位
 function applyPkPortraitSatietyMedal(portraitEl){
@@ -5939,7 +5989,8 @@ function applyPkPortraitSatietyMedal(portraitEl){
     return;
   }
   const x = capFindDex(effectiveYieldDex());
-  renderSatietyMedalOnPortrait(portraitEl, x, currentSatietyTier(x));
+  const bypass = stateBadgeBypass();
+  renderSatietyMedalOnPortrait(portraitEl, x, currentSatietyTier(x, bypass), bypass);
 }
 
 /* ---- v3.18 盒子底部吸底按钮条：取代 v3.17 的四颗小圆浮窗 + 注册/登录吸底条 ----
@@ -5970,6 +6021,11 @@ function toggleBoxMedal(){
 }
 function toggleBoxLevel(){
   userPrefs.boxLevelOn = !userPrefs.boxLevelOn;
+  saveUserPrefs();
+  if(typeof renderBoxPage==='function') renderBoxPage();
+}
+function toggleBoxPscBadge(){
+  userPrefs.boxPscBadgeOn = !userPrefs.boxPscBadgeOn;
   saveUserPrefs();
   if(typeof renderBoxPage==='function') renderBoxPage();
 }
@@ -6161,7 +6217,8 @@ async function authSubmit(){
 // 两个拨动开关的外观 + 下方"开启/关闭"提示文字，跟 userPrefs 单向同步
 function syncMoreFuncSwitches(){
   [['mfMedalSwitch','mfMedalHint', !!userPrefs.boxMedalOn],
-   ['mfLevelSwitch','mfLevelHint', !!userPrefs.boxLevelOn]].forEach(([swId, hintId, on])=>{
+   ['mfLevelSwitch','mfLevelHint', !!userPrefs.boxLevelOn],
+   ['mfPscBadgeSwitch','mfPscBadgeHint', !!userPrefs.boxPscBadgeOn]].forEach(([swId, hintId, on])=>{
     const sw = document.getElementById(swId), hint = document.getElementById(hintId);
     if(sw) sw.classList.toggle('on', on);
     if(hint) hint.textContent = on ? '开启' : '关闭';
@@ -6515,6 +6572,7 @@ document.getElementById('moreFuncModalClose').onclick = closeMoreFuncModal;
 document.getElementById('moreFuncModal').onclick = (e)=>{ if(e.target.id==='moreFuncModal') closeMoreFuncModal(); };
 document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
+document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
 document.getElementById('mfChangePwdBtn').onclick = openPwdModal;
 document.getElementById('mfLogoutBtn').onclick = authLogout;
 document.getElementById('mfPscBtn').onclick = openPscModal;
@@ -6552,7 +6610,14 @@ function persistBoxLiveField(field, val){
 }
 
 function renderControls(){ renderControlsGeneric('', false); }
-function renderControlsDash(){ renderControlsGeneric('dash-', true); renderDashPanelShinyLevel(); }
+function renderControlsDash(){
+  renderControlsGeneric('dash-', true);
+  renderDashPanelShinyLevel();
+  // 锁金数量/强求金帮只对"效率概率"页(page2)的计算有意义，毕业判定/排名对比页共用的这个浮窗里要隐掉整行
+  const page2 = document.getElementById('page2');
+  const lockForceRow = document.getElementById('dash-lockSel').closest('.dash-level-camp-row');
+  if(lockForceRow) lockForceRow.style.display = (page2 && page2.classList.contains('active-page')) ? '' : 'none';
+}
 function renderControlsP2(){ renderControlsGeneric('p2-', false); }
 function renderControlsP3(){ renderControlsGeneric('p3-', false); }
 
@@ -7166,7 +7231,7 @@ const SLEEP1_CAP_UNITS = 33;    // 第一觉硬顶 8h15min——仅当第二觉�
 const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // boxLevelOn 默认 true：v3.17 起盒子格子昵称下方一直是无条件显示等级的，
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, campingTicket: false}; // 26格=6.5h，8格=2h
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false}; // 26格=6.5h，8格=2h
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -7180,7 +7245,9 @@ function loadUserPrefs(){
       if(Number.isFinite(o.sleep2)) userPrefs.sleep2 = o.sleep2;
       if(typeof o.boxMedalOn==='boolean') userPrefs.boxMedalOn = o.boxMedalOn;
       if(typeof o.boxLevelOn==='boolean') userPrefs.boxLevelOn = o.boxLevelOn;
+      if(typeof o.boxPscBadgeOn==='boolean') userPrefs.boxPscBadgeOn = o.boxPscBadgeOn;
       if(typeof o.campingTicket==='boolean') userPrefs.campingTicket = o.campingTicket;
+      if(typeof o.capGradMarkOn==='boolean') userPrefs.capGradMarkOn = o.capGradMarkOn;
     }
   }catch(e){}
   clampSleepPrefs();
@@ -7290,14 +7357,17 @@ function carryTierSelectable(tier){
   return carryReachableStates(unlocked, locked).some(s=>s.includes(tier));
 }
 
-/* ---- 睡饱饱档位：徽章宝可梦不可选，强制 2000（+8） ---- */
-function satietyForcedFor(x){ return !!(x && x.stage==='徽章'); }
-function satietyTierFor(x, raw){
-  if(satietyForcedFor(x)) return BADGE_FORCED_SATIETY;
+/* ---- 睡饱饱档位：徽章宝可梦不可选，强制 2000（+8）----
+   v3.18：这条规则是给本站手动录入的徽章宝可梦准备的（皮卡丘/大岩蛇/吉利蛋/过动猿这几只游戏里
+   本来就没有连续小时数概念）。但联动(PSC)同步来的记录，对方那边这几只是有真实 sleepHours 的，
+   不该被这条规则盖掉——所以额外加一个 bypass 开关，只有联动来源的记录才传 true */
+function satietyForcedFor(x, bypass){ return !!(x && x.stage==='徽章' && !bypass); }
+function satietyTierFor(x, raw, bypass){
+  if(satietyForcedFor(x, bypass)) return BADGE_FORCED_SATIETY;
   const v = Number(raw)||0;
   return SATIETY_TIERS.includes(v) ? v : 0;
 }
-function currentSatietyTier(x){ return satietyTierFor(x, state.satiety); }
+function currentSatietyTier(x, bypass){ return satietyTierFor(x, state.satiety, bypass); }
 
 /* ---- 实际持有上限 ---- */
 function carryLimitOf(x, tiers, satietyTier){
@@ -9900,6 +9970,142 @@ function capBuildSkill(sub){
   recs.sort((a,b)=> b.value-a.value); return recs;
 }
 
+/* ================= 捕捉推荐页："标记已毕业" ================= */
+// 食材型覆盖率转化的 build 版本：跟 capPatternIngredientAmount/computeFoodCoverageRows 一模一样，
+// 只是不读 state，改吃传进来的 ing2/ing3——毕业判定页那套只认当前面板，这里要给盒子里任意一条记录算
+function capPatternIngredientAmountForBuild(x, letter, n, ing2, ing3){
+  let sum = 0;
+  if(letter==='a') sum += x.ingAamts[0];
+  if(n>=2){
+    if(ing2==='a' && letter==='a') sum += x.ingAamts[1];
+    if(ing2==='b' && letter==='b') sum += x.ingBamts[0];
+  }
+  if(n>=3){
+    if(ing3==='a' && letter==='a') sum += x.ingAamts[2];
+    if(ing3==='b' && letter==='b') sum += x.ingBamts[1];
+    if(ing3==='c' && letter==='c') sum += x.ingCamt;
+  }
+  return sum;
+}
+function computeFoodCoverageRowsForBuild(x, level, ing2, ing3, effFrac){
+  const medal = x.stage==='徽章';
+  const n = level===50 ? 2 : 3;
+  const letters = ['a'];
+  if(ing2 && !letters.includes(ing2)) letters.push(ing2);
+  if(n>=3 && ing3 && !letters.includes(ing3)) letters.push(ing3);
+  const helps = capHelpsPerDay(x.interval, level, medal);
+  const e = ffloat(effFrac);
+  const rows = [];
+  letters.forEach(letter=>{
+    const ingName = letter==='a' ? x.ingA : (letter==='b' ? x.ingB : x.ingC);
+    if(!ingName) return;
+    const demand = FOOD_DAILY_DEMAND[ingName];
+    const amtSum = capPatternIngredientAmountForBuild(x, letter, n, ing2, ing3);
+    // 盒子记录没有单独存"副技能持有档位"，这里统一按无限持有/持续满包的口径算（缩放系数=1），
+    // 跟站内"持续满包下覆盖率/毕业判定仍按无限持有算"的既有规则一致，忽略"有限持有"这一种边缘模式
+    const actual = helps * (x.ingProb||0) * (amtSum / n) * e;
+    rows.push({letter, ingName, actual, ratio: demand ? (actual / demand) : null});
+  });
+  return rows.length ? rows : null;
+}
+// 给盒子里任意一条记录算毕业档位（不碰 state，不依赖当前面板选了谁）。
+// 返回档位字符串（如"毕业"/"金帮毕业"）或 null（算不出来，比如副技能没选/物种没图鉴数据）。
+// 能量型走"跑一遍全量排名"取名次那套（getEnergyRank 内部已有 energyDistinctCache 缓存，
+// 同一物种+等级+当前能量选项只需要算一次），不是树果/食材/功能型那张固定阈值表
+function boxEntryGraduationGrade(entry, x, dtype){
+  if(!x || !entry.selected || !entry.selected.some(v=>v!=null)) return null;
+  const level = entry.level;
+  const build = {selected: entry.selected, incAttr: entry.incAttr, decAttr: entry.decAttr};
+  const labels = buildLabels(build);
+  const persona = buildPersona(build);
+  const ws = windowSizeOf(level);
+  let hasHelper = false;
+  for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper=true; break; } }
+
+  if(dtype==='energy'){
+    const pkId = ENERGY_NAME_TO_ID[x.name];
+    if(!pkId) return null;
+    const pk = POKEMON[pkId];
+    const options = currentEnergyOptions();
+    const sums = sumsToFloat(windowSums(labels, ws));
+    const eff = computeEnergyEfficiency(pk, sums, persona, level, options);
+    const {rank} = getEnergyRank(pkId, level, eff, options, hasHelper);
+    return level===50 ? energyGradeFromRank(rank, hasHelper) : energyGradeFrom50Boundary(pkId, eff, options, hasHelper);
+  }
+
+  const eff = computeEfficiency(labels, dtype, level, persona);
+  const isSpecialSkillMon = dtype==='skill' && SPECIAL_SKILL_GRAD_MONS.has(x.name);
+  let row = classifyGrade(dtype, hasHelper, eff, isSpecialSkillMon);
+  if(!row) return null;
+
+  if(dtype==='food' && !LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(x.dex)){
+    const usesLevel60Rule = level===50;
+    const decisionRows = usesLevel60Rule
+      ? computeFoodCoverageRowsForBuild(x, 60, entry.ingChoice2, entry.ingChoice3, computeEfficiency(labels, dtype, 60, persona))
+      : computeFoodCoverageRowsForBuild(x, level, entry.ingChoice2, entry.ingChoice3, eff);
+    if(decisionRows){
+      const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
+      const maxRatio = validRatios.length ? Math.max(...validRatios) : null;
+      if(GRAD_RANK[row.grade]===1 && maxRatio!=null && maxRatio>=1.2){
+        row = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===2) || row;
+      } else if(GRAD_RANK[row.grade]>1 && maxRatio!=null && maxRatio<1.05){
+        row = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===1) || row;
+      }
+    }
+  }
+  return row.grade;
+}
+// 扫描整个盒子，返回三个集合：capGradSpecies(树果/功能/能量型，按最终种族dex)、
+// capGradFoodAAA/capGradFoodABB(食材型，按最终种族dex，aaa/abb分开记，不含aac/abc)。
+// "毕业/金帮毕业及以上"= GRAD_RANK>=2，金帮与否不作区分（用户原话）。
+// 幼体/中间体按 boxEffectiveFinalDex 解析到最终形态再记录——同一进化链效率算法不随进化变化，
+// 幼体毕业等价于最终形态毕业，全进化链共享同一份标记
+let capGradSpecies = new Set(), capGradFoodAAA = new Set(), capGradFoodABB = new Set();
+function computeCapGraduationSets(){
+  capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set();
+  if(typeof boxData==='undefined' || typeof CAP_DEX==='undefined') return;
+  for(const entry of boxData){
+    if(!entry.dex) continue;
+    const finalDex = boxEffectiveFinalDex(entry.dex);
+    const x = capFindDex(finalDex);
+    if(!x) continue;
+    const dtype = DEX_TYPE_MAP[x.dtype];
+    if(!dtype) continue;
+    let grade;
+    try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
+    if(!grade || GRAD_RANK[grade] < 2) continue;
+    if(dtype==='food'){
+      const pattern = 'a' + (entry.ingChoice2||'') + (entry.ingChoice3||'');
+      if(pattern==='aaa') capGradFoodAAA.add(finalDex);
+      else if(pattern==='abb') capGradFoodABB.add(finalDex);
+    } else {
+      capGradSpecies.add(finalDex);
+    }
+  }
+}
+// 食材型条目/头像用：给定种族+这个格子对应的食材，返回该组合是否已毕业（只认 aaa/abb，C位食材不参与）
+function capFoodComboGraduated(x, ingName){
+  if(x.ingA===ingName) return capGradFoodAAA.has(x.dex);
+  if(x.ingB===ingName) return capGradFoodABB.has(x.dex);
+  return false;
+}
+// 次级选择区域（属性/岛屿/食材/功能）标记：只要该选项下存在至少一只已毕业的种族就点亮
+function capAttrGraduated(attr){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> x.attr===attr && (x.dtype==='树果'||x.dtype==='能量') && capGradSpecies.has(x.dex));
+}
+function capIslandGraduated(isl){
+  return isl.attrs.some(a=>capAttrGraduated(a));
+}
+function capFoodPillGraduated(food){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> (x.ingA===food && capGradFoodAAA.has(x.dex)) || (x.ingB===food && capGradFoodABB.has(x.dex)));
+}
+function capSkillPillGraduated(sub){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> x.skillCat===sub && capGradSpecies.has(x.dex));
+}
+
 /* ================= 视觉辅助 ================= */
 function capFlameImg(cls){ return `<img class="cap-flame ${cls||''}" src="${CAP_ICONS.flame}" alt="能量">`; }
 function capB64Img(name){ const pair = POKEMON_PORTRAITS[name]; if(pair && pair[0]) return `<img src="data:image/webp;base64,${pair[0]}" alt="${name}">`; return `<span class="cap-portrait-q">?</span>`; }
@@ -9977,7 +10183,14 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   const babySlot = showBaby ? `<div class="cap-av cap-av-baby">${capB64Img(x.baby)}</div>` : `<div class="cap-av-baby cap-av-none">不进化</div>`;
   const nameHtml = x.name;
   const sleepInfo = capSleepTypeOf(x);
-  return `<div class="cap-row" data-dex="${x.dex}">
+  // 已毕业：食材型只认 reco.combo 是 aaa/abb 这两种（C位食材不参与）；树果/功能/能量型按种族整体判定
+  const graduated = userPrefs.capGradMarkOn && (capState.type==='food'
+    ? ((reco.combo==='aaa' && capGradFoodAAA.has(x.dex)) || (reco.combo==='abb' && capGradFoodABB.has(x.dex)))
+    : capGradSpecies.has(x.dex));
+  const recoColHtml = graduated
+    ? `<span class="cap-reco cap-reco-graduated">已毕业</span>`
+    : `<span class="cap-reco rec-${reco.level}">${capRecoLinesHtml(reco.text)}</span>`;
+  return `<div class="cap-row${graduated?' cap-row-graduated':''}" data-dex="${x.dex}">
     <div class="cap-rank ${sleepInfo.cls}"><div class="cap-rank-num">${rank}</div><div class="cap-sleep-lab">${sleepInfo.labHtml}</div></div>
     <div class="cap-avatars">
       <div class="cap-av cap-av-main">${capB64Img(x.name)}${medalBadge}</div>
@@ -9986,7 +10199,7 @@ function capRowHtml(rec, rank, maxVal, line2Html){
         ${capRowIngSeqHtml(x)}
       </div>
     </div>
-    <div class="cap-reco-col"><span class="cap-reco rec-${reco.level}">${capRecoLinesHtml(reco.text)}</span></div>
+    <div class="cap-reco-col">${recoColHtml}</div>
     <div class="cap-info">
       <div class="cap-line1">
         <span class="cap-name">${nameHtml}</span>
@@ -10043,8 +10256,10 @@ function capRowIngSeqHtml(x){
 function capAvatarComboHtml(rec, food){
   const x = rec.x;
   const lvl = rec.reco ? rec.reco.level : 'red';
+  const graduated = userPrefs.capGradMarkOn && capFoodComboGraduated(x, food);
+  const checkHtml = graduated ? `<span class="cap-cav-grad-check">✓</span>` : '';
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
-    <span class="cap-cav rec-${lvl}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}</span>
+    <span class="cap-cav rec-${lvl}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
   </div>`;
 }
 const CAP_BAR_W = 26; // 柱子宽度=宝可梦头像框宽度(px)
@@ -10297,9 +10512,29 @@ function renderCapturePage(){
   const tabsEl = document.getElementById('capTypeTabs');
   tabsEl.innerHTML = CAP_TYPE_TABS.map(t=> `<div class="cap-type-tab cap-tab-${t.color}${capState.type===t.id?' active':''}" data-ctype="${t.id}">${t.label}</div>`).join('');
   tabsEl.querySelectorAll('.cap-type-tab').forEach(el=> el.onclick=()=> capSwitchType(el.getAttribute('data-ctype')));
+  if(userPrefs.capGradMarkOn) computeCapGraduationSets();
+  else { capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set(); }
   renderCapLevel();
   renderCaptureSubtype();
   renderCaptureBody();
+}
+/* ---- 捕捉推荐页(page4)专用的"控制参数"浮窗：只有一个"标记已毕业"开关 ---- */
+function syncCapGradModalSwitch(){
+  const sw = document.getElementById('capGradMarkSwitch'), hint = document.getElementById('capGradMarkHint');
+  const on = !!userPrefs.capGradMarkOn;
+  if(sw) sw.classList.toggle('on', on);
+  if(hint) hint.textContent = on ? '开启' : '关闭';
+}
+function openCapGradModal(){
+  syncCapGradModalSwitch();
+  document.getElementById('capGradModalOverlay').style.display = 'flex';
+}
+function closeCapGradModal(){ document.getElementById('capGradModalOverlay').style.display = 'none'; }
+function toggleCapGradMark(){
+  userPrefs.capGradMarkOn = !userPrefs.capGradMarkOn;
+  saveUserPrefs();
+  syncCapGradModalSwitch();
+  renderCapturePage();
 }
 function renderCapLevel(){
   const lvEl = document.getElementById('capLevelSeg'); lvEl.innerHTML='';
@@ -10324,20 +10559,20 @@ function renderCaptureSubtype(){
   let subHtml='', noteHtml='', rightHtml='';
   if(capState.type==='berryEnergy'){
     const attrsPills = CAP_ATTRS.map(a=>{ const c=ATTR_COLORS[a]||'#999'; const active=capState.subAttr.includes(a); const icon=ATTR_ICONS[a]; const label=a==='超能力'?'超能':a;
-      return `<div class="cap-attr-pill${active?' active':''}" data-attr="${a}" style="border-color:${c}; ${active?`background:${c}; color:#fff;`:`background:${c}22; color:${c};`}">${icon?`<img src="${icon}">`:''}<span>${label}</span></div>`; }).join('');
+      return `<div class="cap-attr-pill${active?' active':''}${capAttrGraduated(a)?' cap-pill-grad-outline':''}" data-attr="${a}" style="border-color:${c}; ${active?`background:${c}; color:#fff;`:`background:${c}22; color:${c};`}">${icon?`<img src="${icon}">`:''}<span>${label}</span></div>`; }).join('');
     const islandBtns = CAP_ISLANDS.map(isl=>{ const active = isl.attrs.every(a=>capState.subAttr.includes(a));
-      return `<div class="cap-isl-btn${active?' active':''}" data-island="${isl.id}" style="background-image:${isl.bg}"><span class="cap-isl-btn-label">${isl.name}</span></div>`; }).join('');
+      return `<div class="cap-isl-btn${active?' active':''}${capIslandGraduated(isl)?' cap-pill-grad-outline':''}" data-island="${isl.id}" style="background-image:${isl.bg}"><span class="cap-isl-btn-label">${isl.name}</span></div>`; }).join('');
     subHtml = `<div class="cap-attrs-row"><div class="cap-sub-attrs">${attrsPills}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill" id="capCtrlBtn"><span>参数</span><span>设置</span></div></div>
       <div class="cap-islands-row"><div class="cap-isl-grid">${islandBtns}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill cap-ctrl-btn-danger" id="capClearAttrBtn"><span>清除</span><span>所选</span></div></div>`;
     noteHtml = `<div class="cap-sub-note">＊默认含副技能「树果数量S」，岛屿顺果，能量型默认满技能等级</div>`;
   } else if(capState.type==='food'){
     const foods = Object.keys(CAP_ING_ENERGY).filter(f=>f!=='尾巴').concat(['尾巴']);
     subHtml = `<div class="cap-sub-foods">`+foods.map(f=>{ const active=capState.subFood===f; const icon=ING_ICONS[f];
-      return `<div class="cap-food-pill${active?' active':''}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
+      return `<div class="cap-food-pill${active?' active':''}${capFoodPillGraduated(f)?' cap-pill-grad-fill':''}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
     noteHtml = `<div class="cap-sub-note" style="color:#d9333f;">＊默认主技能满级导致技能型食材精选产量虚高，注意请勿培养！</div>`;
   } else {
     subHtml = `<div class="cap-sub-skills">`+CAP_SKILL_SUBS.map(s=>{ const active=capState.subSkill===s;
-      return `<div class="cap-skill-pill${active?' active':''}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
+      return `<div class="cap-skill-pill${active?' active':''}${capSkillPillGraduated(s)?' cap-pill-grad-fill':''}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
     const pity = capState.ctrl.pity;
     rightHtml = `<div class="cap-pity-col">
       <div class="cap-pity-btn${!pity?' active':''}" data-pity="0">不含保底</div>
@@ -11012,9 +11247,7 @@ function updatePageActionBar(){
   let inDetail = false, inBox = false;
   try{ inDetail = !!boxDetailEntryId; }catch(e){}
   try{ inBox = !!boxOverlayOpen; }catch(e){}
-  const page4 = document.getElementById('page4');
-  const onPage4 = !!(page4 && page4.classList.contains('active-page'));
-  const show = !(inDetail || inBox || onPage4);
+  const show = !(inDetail || inBox);
   bar.style.display = show ? 'flex' : 'none';
   // 按钮条露出时，切换栏自己的顶部描边/阴影会在两者交界处压出一道黑线；
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
@@ -11202,6 +11435,10 @@ function closeControlsDashboard(){
   updateControlsFabVisibility();
 }
 document.getElementById('pageActControlsBtn').onclick = ()=>{
+  // 捕捉推荐页(page4)跟其他三页共用一颗"控制参数"按钮，但内容风马牛不相及——
+  // 那三页开的是等级/持有上限那套共享浮窗，这里换成页4专用的"标记已毕业"小浮窗
+  const page4 = document.getElementById('page4');
+  if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
 };
 document.getElementById('controlsDashboardOverlay').onclick = (e)=>{
@@ -11210,6 +11447,10 @@ document.getElementById('controlsDashboardOverlay').onclick = (e)=>{
 document.getElementById('controlsDashboardPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('controlsDashCloseBtn').onclick = closeControlsDashboard;
 document.getElementById('controlsConfirmBtn').onclick = closeControlsDashboard;
+document.getElementById('capGradModalOverlay').onclick = (e)=>{ if(e.target.id==='capGradModalOverlay') closeCapGradModal(); };
+document.getElementById('capGradModalPanel').onclick = (e)=> e.stopPropagation();
+document.getElementById('capGradModalCloseBtn').onclick = closeCapGradModal;
+document.getElementById('capGradMarkSwitch').onclick = toggleCapGradMark;
 
 /* v3.18：原来这里挂着两个 IntersectionObserver，靠观察 module1/2/3Card 是否进入视口来决定
    那两颗小圆浮窗的显隐。现在按钮条钉死在切换栏上方、只跟"当前哪一页/有没有开浮层"有关，
@@ -11440,20 +11681,30 @@ function boxCommitPickToPanel(entryId){
   closeBoxOverlay();
   showBoxToast('✓ 已加入对比');
 }
+function boxApplySelectVerdict(id, itemEl){
+  if(boxDragSelectMode==='select') boxSelectedIds.add(id); else boxSelectedIds.delete(id);
+  const cb = itemEl.querySelector('.box-grid-checkbox');
+  if(cb) cb.classList.toggle('checked', boxSelectedIds.has(id));
+}
 function boxGridItemPointerDown(e, id, itemEl){
   if(!boxBatchDeleteMode) return;
   boxDragActive = true;
   boxDragSelectMode = boxSelectedIds.has(id) ? 'deselect' : 'select';
-  if(boxDragSelectMode==='select') boxSelectedIds.add(id); else boxSelectedIds.delete(id);
-  const cb = itemEl.querySelector('.box-grid-checkbox');
-  if(cb) cb.classList.toggle('checked', boxSelectedIds.has(id));
+  boxApplySelectVerdict(id, itemEl);
 }
-function boxGridItemPointerEnter(e, id, itemEl){
+// v3.18：改用 elementFromPoint 在 window 级 pointermove 上做命中测试，而不是依赖每个格子自己的
+// pointerenter——触屏在 pointerdown 命中的元素上会隐式发生 pointer capture，导致手指划过的其余
+// 格子永远收不到 pointerenter，滑动多选此前实际上只有鼠标能用，触屏完全无效
+function boxGridDragMove(e){
   if(!boxBatchDeleteMode || !boxDragActive || !boxDragSelectMode) return;
-  if(boxDragSelectMode==='select') boxSelectedIds.add(id); else boxSelectedIds.delete(id);
-  const cb = itemEl.querySelector('.box-grid-checkbox');
-  if(cb) cb.classList.toggle('checked', boxSelectedIds.has(id));
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const itemEl = el && el.closest ? el.closest('.box-grid-item') : null;
+  if(!itemEl) return;
+  const id = itemEl.dataset.id;
+  if(!id) return;
+  boxApplySelectVerdict(id, itemEl);
 }
+window.addEventListener('pointermove', boxGridDragMove);
 window.addEventListener('pointerup', ()=>{ boxDragActive = false; boxDragSelectMode = null; });
 
 // 无筛选时只显示盒子总数；有筛选时从上到下显示"当前筛出的个数－短横线－盒子总数"，
@@ -11553,7 +11804,7 @@ function renderBoxPage(){
       cb.className = 'box-grid-checkbox'+(boxSelectedIds.has(entry.id)?' checked':'');
       imgWrap.appendChild(cb);
     }
-    if(entry.source === 'psc'){
+    if(entry.source === 'psc' && userPrefs.boxPscBadgeOn){
       const srcBadge = document.createElement('div');
       srcBadge.className = 'box-grid-source-psc';
       srcBadge.title = '来自' + PSC_PARTNER_NAME;
@@ -11586,7 +11837,6 @@ function renderBoxPage(){
     }
     item.onclick = ()=> boxGridItemClick(entry.id, item);
     item.addEventListener('pointerdown', (e)=>{ boxGridItemPointerDown(e, entry.id, item); boxGridItemLongPressStart(e, entry.id); });
-    item.addEventListener('pointerenter', (e)=> boxGridItemPointerEnter(e, entry.id, item));
     item.addEventListener('pointermove', boxGridItemLongPressMove);
     ['pointerup','pointercancel','pointerleave'].forEach(t=> item.addEventListener(t, boxCancelLongPress));
     item.addEventListener('contextmenu', (e)=> e.preventDefault()); // 长按已被改名占用，挡掉系统右键/长按菜单
@@ -12169,6 +12419,7 @@ document.getElementById('boxNicknameOverlay').addEventListener('click', (e)=>{ i
 let boxDeleteWarnCallback = null;
 function openBoxDeleteWarn(ids, onConfirm){
   boxDeleteWarnCallback = ()=>{ boxRemoveEntries(ids); onConfirm && onConfirm(); };
+  document.getElementById('boxDeleteWarnMsg').textContent = '该操作将永久删除所选' + ids.length + '只宝可梦数据，请谨慎选择';
   document.getElementById('boxDeleteWarnOverlay').style.display = 'flex';
 }
 document.getElementById('boxDeleteWarnConfirmBtn').onclick = ()=>{
@@ -12225,6 +12476,8 @@ document.getElementById('boxImportFileInput').addEventListener('change', (e)=>{
 // 批量条出现时气泡底部换成 --panel 底色，小尾巴要跟着换，否则会有一道色差
 function boxSetBatchBarVisible(on){
   document.getElementById('boxBatchBar').style.display = on ? 'flex' : 'none';
+  const g = document.getElementById('boxGrid');
+  if(g) g.classList.toggle('box-batch-mode', !!on);
   const t = document.getElementById('boxBubbleTail');
   if(t) t.classList.toggle('on-panel', !!on);
   // v3.18：批量删除条和吸底按钮条都钉在盒子浮窗底边，同时出现会互相压住甚至挡住"删除"。
