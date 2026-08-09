@@ -461,7 +461,13 @@
        · 白块不带阴影/描边，直接和下方页面切换栏顶边视觉相接，两者背景色
          同为 var(--panel)，中间不留黑色分割线
        · 两颗按钮各朝中间（宝可梦盒方向）多占 3px：空档从 56px 减到 50px，
-         减掉的 6px 由两侧 flex:1 1 0 平分，各拿到 3px */
+         减掉的 6px 由两侧 flex:1 1 0 平分，各拿到 3px
+       · 按钮下沿再往下延伸 3px：白块自身总高度不变（顶部不动，还是贴着
+         原来的位置），只是白块下内边距 5px->2px 让出 3px，同时按钮自身
+         下内边距 7px->10px 补回这 3px，两者刚好抵消——白块整体高度和
+         顶边位置分毫不变，纯粹是按钮的色块往下多长了 3px。按钮下沿离
+         白块下边缘仍留 2px 白边，白块下边缘依旧和切换栏顶边对齐（从未
+         越过那条线），所以永远不会盖到切换栏自己的可点击区域 */
   .page-action-bar{
     display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
@@ -469,7 +475,7 @@
     background:transparent;
   }
   .page-act-side{
-    flex:1 1 0; min-width:0; display:flex; padding:5px;
+    flex:1 1 0; min-width:0; display:flex; padding:5px 5px 2px;
     background:var(--panel);
   }
   /* 内侧倒角 15px，减掉 5px 内边距后正好等于按钮自身的 10px 圆角，
@@ -480,7 +486,7 @@
   .page-act-gap{ flex:0 0 50px; pointer-events:none; }
   .page-act-btn{
     position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
-    padding:7px 10px;
+    padding:7px 10px 10px;
     font-size:13px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
     display:flex; align-items:center; justify-content:center; text-align:center;
     white-space:nowrap; user-select:none;
