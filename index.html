@@ -1778,6 +1778,7 @@
   justify-content:center; gap:7px; }
 .psc-sync-hint{ font-size:11px; color:#9a9484; text-align:center; margin-top:6px; line-height:1.5; }
 .psc-resync-link{ font-size:11px; color:#3a7fd5; text-align:center; margin-top:8px; font-weight:700; cursor:pointer; text-decoration:underline; }
+.cap-panel-modal-hint{ font-size:11px; color:#9a9484; text-align:center; margin:2px 4px 12px; line-height:1.6; }
 </style>
 
 </head>
@@ -2121,11 +2122,11 @@
   <div class="page-act-side page-act-side-right">
     <button type="button" class="page-act-btn" id="pageActPanelBtn">
       <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
-      修改面板
+      <span id="pageActPanelLabel">修改面板</span>
     </button>
   </div>
 </div>
-<div class="ui-fab" id="fabPanel">修改<br>面板</div>
+<div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
 <div class="ui-fab" id="fabControls">控制<br>参数</div>
 <div class="ui-fab" id="fabCreate">+</div>
 <div class="ui-fab" id="fabMore">更多<br>功能</div>
@@ -2453,6 +2454,29 @@
           <div class="mf-toggle-hint" id="capGradMarkHint">关闭</div>
         </div>
         <div class="mf-switch" id="capGradMarkSwitch"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- v3.18 捕捉推荐页"加入面板"：只给副技能+性格两项，选完按当前大类(树果/能量共用一套、
+     食材、功能各一套)真实重算柱状图数值+排序，推荐等级徽章不受影响（仍是离线整理的静态数据） -->
+<div class="dashboard-overlay" id="capPanelModalOverlay">
+  <div class="dashboard-panel dashboard-panel-flex" id="capPanelModalPanel">
+    <div class="dash-header dash-header-flex" style="position:relative;">加入面板<span class="dash-close" id="capPanelModalCloseBtn">✕</span></div>
+    <div class="dash-scroll-area">
+      <div class="cap-panel-modal-hint" id="capPanelModalHint">选副技能+性格，按这份假设面板重新计算柱状图数值和排序（推荐等级不受影响）</div>
+      <div class="btnrow dash-btnrow" id="capPanel-grp-speed"></div>
+      <div class="btnrow dash-btnrow" id="capPanel-grp-ing"></div>
+      <div class="btnrow dash-btnrow" id="capPanel-grp-skill"></div>
+      <div class="btnrow dash-btnrow" id="capPanel-grp-pillow"></div>
+      <div class="persona-row dash-persona-row" id="capPanel-incRow"></div>
+      <div class="persona-row dash-persona-row" id="capPanel-decRow"></div>
+    </div>
+    <div class="dash-sticky-footer">
+      <div class="dash-btn-row-4" id="capPanelModalBtnRow">
+        <button type="button" class="clearbtn-big dash-clear-btn" id="capPanelResetBtn">恢复默认</button>
+        <button type="button" class="confirmbtn-big dash-clear-btn" id="capPanelConfirmBtn">确认所选</button>
       </div>
     </div>
   </div>
@@ -3090,7 +3114,9 @@ function windowSums(labels, windowSize){
 }
 // 60级与50级槽位数相同（尚未解锁下一档副技能槽），面板天梯/排名对比才会开放选择60级
 function windowSizeOf(level){ if(level===50||level===60) return 3; return level===70?4:5; }
-function sumsToFloat(sums){ return {h: Number(sums.h.n)/Number(sums.h.d), s: Number(sums.s.n)/Number(sums.s.d), hasFruit: sums.hasFruit}; }
+// f 字段是这次给捕捉推荐页"加入面板"新加的（食材概率副技能实际影响食材产量要用到）；
+// 老调用点都不读 .f，加这个字段不影响它们
+function sumsToFloat(sums){ return {h: Number(sums.h.n)/Number(sums.h.d), f: Number(sums.f.n)/Number(sums.f.d), s: Number(sums.s.n)/Number(sums.s.d), hasFruit: sums.hasFruit}; }
 function ffloat(f){ return (f && typeof f==='object' && f.n!==undefined) ? Number(f.n)/Number(f.d) : Number(f); }
 
 function computeEfficiencyFromSums(sums, type, persona){
@@ -7301,6 +7327,13 @@ const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: tru
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
+// capPanelBuild 不放进 PREFS_DEFAULT：那是个嵌套对象，Object.assign 只做浅拷贝，放进去的话
+// userPrefs.capPanelBuild 会和 PREFS_DEFAULT.capPanelBuild 指向同一个对象，之后任何一次
+// userPrefs.capPanelBuild.food=... 都会连带把"默认值"本身改掉，后面新开的页面就再也拿不到干净的默认了
+userPrefs.capPanelBuild = {berryEnergy:null, food:null, skill:null};
+function capPanelBuildValid(b){
+  return !!(b && Array.isArray(b.selected) && b.selected.length===5 && (b.incAttr==null||typeof b.incAttr==='string') && (b.decAttr==null||typeof b.decAttr==='string'));
+}
 function loadUserPrefs(){
   try{
     const raw = localStorage.getItem(PREFS_KEY);
@@ -7315,6 +7348,12 @@ function loadUserPrefs(){
       if(typeof o.campingTicket==='boolean') userPrefs.campingTicket = o.campingTicket;
       if(typeof o.capGradMarkOn==='boolean') userPrefs.capGradMarkOn = o.capGradMarkOn;
       if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
+      if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
+        ['berryEnergy','food','skill'].forEach(t=>{
+          const b = o.capPanelBuild[t];
+          userPrefs.capPanelBuild[t] = capPanelBuildValid(b) ? {selected:b.selected.slice(0,5), incAttr:b.incAttr||null, decAttr:b.decAttr||null} : null;
+        });
+      }
     }
   }catch(e){}
   clampSleepPrefs();
@@ -9885,14 +9924,70 @@ function capEnergyEnergy(x, level, medal, ctrl){
   return berryE + helps * rate * per;
 }
 function capBEEnergy(x, level, medal, ctrl){ return x.dtype==='能量' ? capEnergyEnergy(x, level, medal, ctrl) : capBerryEnergy(x, level, medal); }
-function capFoodProd(x, ingName, level, medal){
+// 槽位用量求和从 capFoodProd 里抽出来，"加入面板"的真实产量版本(capFoodProdReal)要复用同一段，
+// 不能各写一份、改一处漏一处
+function capFoodAmountSum(x, ingName, level){
   const slots = level===50 ? ['s0','s30'] : ['s0','s30','s60']; const n = slots.length; let sum = 0;
   slots.forEach(s=>{ let amt = 0;
     if(s==='s0'){ if(x.ingA===ingName) amt = x.ingAamts[0]; }
     else if(s==='s30'){ if(x.ingA===ingName) amt = x.ingAamts[1]; else if(x.ingB===ingName) amt = x.ingBamts[0]; }
     else { if(x.ingA===ingName) amt = x.ingAamts[2]; else if(x.ingB===ingName) amt = x.ingBamts[1]; else if(x.ingC===ingName) amt = x.ingCamt; }
     sum += (amt||0); });
+  return {sum, n};
+}
+function capFoodProd(x, ingName, level, medal){
+  const {sum, n} = capFoodAmountSum(x, ingName, level);
   return capHelpsPerDay(x.interval, level, medal) * (x.ingProb||0) * (sum / n);
+}
+
+/* ================= 捕捉推荐页"加入面板"：按用户选的副技能+性格算真实产量 =================
+   跟上面几个静态假设版本(capBerryEnergy/capEnergyEnergy/capFoodProd/capSkillCount)一一对应，
+   区别只是帮速/树果S/食材概率/技能概率不再是写死的档位，而是从 build（{selected,incAttr,decAttr}）
+   真实算出来的加成——公式直接复用 computeEfficiencyFromSums/computeEnergyFromSums 那套页1-3
+   已经验证过的换算关系（帮速: interval×(1-h)，H+性格×0.9/H-性格×1.075；树果S: 无S基线是helps×2
+   (树果型)/helps×1(能量型)，选中后变helps×3/helps×2，比例分别对应computeEfficiencyFromSums里的
+   1.5倍和computeEnergyFromSums里的2倍；食材概率/技能概率: 都走 energySkillProb 这同一条
+   "基础值×(1+副技能加成)×性格±20%"公式，只是分别喂 sums.f/persona.f 和 sums.s/persona.s），
+   不是另起一套猜的公式。 */
+function capRealSums(build){
+  const labels = buildLabels(build);
+  const persona = buildPersona(build);
+  return {sums: sumsToFloat(windowSums(labels, 5)), persona};
+}
+function capRealHelpsPerDay(x, level, medal, sums, persona){
+  let interval = capInterval(x.interval, level, medal) * (1 - sums.h);
+  if(persona.h===1) interval *= 0.9; else if(persona.h===-1) interval *= 1.075;
+  return 86400 / interval;
+}
+function capBerryEnergyReal(x, level, medal, real){
+  const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
+  return helps * (real.sums.hasFruit?3:2) * capBerryPerBerry(x.attr, level);
+}
+function capEnergyEnergyReal(x, level, medal, ctrl, real){
+  const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
+  const berryE = helps * (real.sums.hasFruit?2:1) * capBerryPerBerry(x.attr, level);
+  const sk = CAP_ENERGY_SKILL[x.name]; let per = 0;
+  if(sk){
+    if(sk.kind==='fixed') per = sk.val;
+    else if(sk.kind==='fruit') per = (ctrl.direction==='reverse'?sk.reverse:sk.normal) * capBerryPerBerry(x.attr, level);
+    else if(sk.kind==='dragon'){ let m = sk.table[ctrl.dragon]||sk.table.solo; if(ctrl.latias) m += 10; per = m * capBerryPerBerry(x.attr, level); }
+  }
+  const realProb = energySkillProb(x.skillProb, real.sums.s, real.persona.s);
+  const rate = capSkillRate(realProb, x.interval, level, medal, ctrl.pity);
+  return berryE + helps * rate * per;
+}
+function capBEEnergyReal(x, level, medal, ctrl, real){ return x.dtype==='能量' ? capEnergyEnergyReal(x, level, medal, ctrl, real) : capBerryEnergyReal(x, level, medal, real); }
+function capFoodProdReal(x, ingName, level, medal, real){
+  const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
+  const realIngProb = energySkillProb(x.ingProb||0, real.sums.f, real.persona.f);
+  const {sum, n} = capFoodAmountSum(x, ingName, level);
+  return helps * realIngProb * (sum / n);
+}
+function capSkillCountReal(x, level, medal, pity, real){
+  const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
+  const realProb = energySkillProb(x.skillProb, real.sums.s, real.persona.s);
+  const rate = capSkillRate(realProb, x.interval, level, medal, pity);
+  return helps * rate;
 }
 // 按当前毕业判定页实际选择的食材组合（如 abb/aac）取某个字母食材在各槽位的用量总和，
 // 与 capFoodProd 不同：不假设该字母占满所有可选槽位，而是严格按 state.ingChoice2/ingChoice3 的真实选择计算
@@ -9995,9 +10090,15 @@ function capRecoFromGH(h,g){
 function capBuildBerryEnergy(){
   let pool = CAP_DEX.filter(x=> (x.dtype==='树果'||x.dtype==='能量'));
   if(capState.subAttr.length) pool = pool.filter(x=> capState.subAttr.includes(x.attr));
+  // "加入面板"给这一类设了自定义面板时，柱状图数值/排序改按真实产量算；推荐等级徽章不受影响（另一套静态数据）
+  const build = userPrefs.capPanelBuild.berryEnergy;
+  const real = build ? capRealSums(build) : null;
   const recs=[];
-  pool.forEach(x=>{ recs.push({x,medal:false,value:capBEEnergy(x,capState.level,false,capState.ctrl)});
-    if(x.stage==='徽章') recs.push({x,medal:true,value:capBEEnergy(x,capState.level,true,capState.ctrl)}); });
+  pool.forEach(x=>{
+    const val = medal => real ? capBEEnergyReal(x,capState.level,medal,capState.ctrl,real) : capBEEnergy(x,capState.level,medal,capState.ctrl);
+    recs.push({x,medal:false,value:val(false)});
+    if(x.stage==='徽章') recs.push({x,medal:true,value:val(true)});
+  });
   recs.sort((a,b)=> b.value-a.value); return recs;
 }
 function capBuildFood(ingName){
@@ -10006,18 +10107,23 @@ function capBuildFood(ingName){
   let pool = CAP_DEX.filter(x=> (x.dtype==='食材' || CAP_FOOD_RECLASSIFY.has(x.dex)) &&
     (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName ||
      (CAP_SKILL_SPECIAL_OUTPUT[x.dex] && CAP_SKILL_SPECIAL_OUTPUT[x.dex].kind==='ingredients' && CAP_SKILL_SPECIAL_OUTPUT[x.dex].items.some(it=>it.name===ingName))));
+  const build = userPrefs.capPanelBuild.food;
+  const real = build ? capRealSums(build) : null;
   const recs=[];
   pool.forEach(x=>{
     const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
     const mk=(medal)=>{
-      let value = (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName) ? capFoodProd(x,ingName,capState.level,medal) : 0;
+      let value = (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName)
+        ? (real ? capFoodProdReal(x,ingName,capState.level,medal,real) : capFoodProd(x,ingName,capState.level,medal))
+        : 0;
       if(spec && spec.kind==='ingredients'){
         const match = spec.items.find(it=>it.name===ingName);
         if(match){
-          // 页4继续用无面板加成基础值；保底仅对能量/功能dtype生效
+          // 保底仅对能量/功能dtype生效
           const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? capState.ctrl.pity : false;
-          const helps = capHelpsPerDay(x.interval, capState.level, medal);
-          const rate = capSkillRate(x.skillProb, x.interval, capState.level, medal, pityFlag);
+          const helps = real ? capRealHelpsPerDay(x, capState.level, medal, real.sums, real.persona) : capHelpsPerDay(x.interval, capState.level, medal);
+          const baseSkillProb = real ? energySkillProb(x.skillProb, real.sums.s, real.persona.s) : x.skillProb;
+          const rate = capSkillRate(baseSkillProb, x.interval, capState.level, medal, pityFlag);
           value += helps * rate * match.amt;
         }
       }
@@ -10030,8 +10136,12 @@ function capBuildFood(ingName){
 function capBuildSkill(sub){
   const byEffect = CAP_SKILL_BY_EFFECT[sub];
   let pool = CAP_DEX.filter(x=> x.skillCat===sub);
+  const build = userPrefs.capPanelBuild.skill;
+  const real = build ? capRealSums(build) : null;
   const recs=[];
-  pool.forEach(x=>{ const mk=(medal)=>{ const count=capSkillCount(x,capState.level,medal,capState.ctrl.pity); const effect=count*(x.skillEff||0);
+  pool.forEach(x=>{ const mk=(medal)=>{
+      const count = real ? capSkillCountReal(x,capState.level,medal,capState.ctrl.pity,real) : capSkillCount(x,capState.level,medal,capState.ctrl.pity);
+      const effect=count*(x.skillEff||0);
       return {x,medal,count,effect,value:byEffect?effect:count}; };
     recs.push(mk(false)); if(x.stage==='徽章') recs.push(mk(true)); });
   recs.sort((a,b)=> b.value-a.value); return recs;
@@ -10602,6 +10712,115 @@ function toggleCapGradMark(){
   saveUserPrefs();
   syncCapGradModalSwitch();
   renderCapturePage();
+}
+
+/* ================= 捕捉推荐页"加入面板" =================
+   每个大类(树果/能量共用、食材、功能)各自记一份自定义面板，userPrefs.capPanelBuild[type]，
+   null 表示没自定义，柱状图数值/排序走原来那套写死档位的静态假设；一旦确认过一次面板，
+   就一直记着，直到点"恢复默认"清空为止。capPanelDraft 是浮窗打开期间的工作副本，
+   不点"确认所选"就不会写回 userPrefs，关闭浮窗直接丢弃。 */
+const CAP_PANEL_DEFAULT = {
+  berryEnergy: {selected:['fruitS',null,null,null,null], incAttr:null, decAttr:null},
+  food:        {selected:['ingM',null,null,null,null],   incAttr:'F',  decAttr:'E'}, // 冷静
+  skill:       {selected:['skillM',null,null,null,null], incAttr:'S',  decAttr:'E'}, // 自大
+};
+function capPanelDefaultBuild(type){
+  const d = CAP_PANEL_DEFAULT[type];
+  return {selected:d.selected.slice(), incAttr:d.incAttr, decAttr:d.decAttr};
+}
+let capPanelDraft = null;
+function capMakeSkillButton(build, s){
+  const idx = build.selected.indexOf(s.id);
+  const isSelected = idx>=0;
+  const hasEmptySlot = build.selected.some(x=>x==null);
+  const btn = document.createElement('div');
+  btn.className = 'skillbtn '+s.color + (isSelected?' selected':'') + (!isSelected && !hasEmptySlot ? ' disabled':'');
+  btn.innerHTML = SKILL_ABBR[s.id] + (isSelected? ` <span class="badge">${ORDER_TAGS[idx]}</span>` : '');
+  btn.onclick = ()=>{
+    const i = build.selected.indexOf(s.id);
+    if(i>=0){ build.selected[i] = null; }
+    else { const emptyIdx = build.selected.findIndex(x=>x==null); if(emptyIdx>=0) build.selected[emptyIdx] = s.id; }
+    renderCapPanelModal();
+  };
+  return btn;
+}
+function renderCapPanelSkillButtons(build){
+  const groups = {'grp-speed':[], 'grp-ing':[], 'grp-skill':[], 'grp-pillow':[]};
+  SKILL_DEFS.forEach(s=>groups[s.group].push(s));
+  Object.keys(groups).forEach(gid=>{
+    const el = document.getElementById('capPanel-'+gid);
+    if(!el) return;
+    el.innerHTML = '';
+    groups[gid].forEach(s=> el.appendChild(capMakeSkillButton(build, s)));
+  });
+}
+function renderCapPanelPersonaRows(build){
+  const names = ATTR_NAME_SHORT;
+  const incEl = document.getElementById('capPanel-incRow');
+  const decEl = document.getElementById('capPanel-decRow');
+  if(!incEl || !decEl) return;
+  incEl.innerHTML=''; decEl.innerHTML='';
+  ATTRS.forEach(a=>{
+    const b1 = document.createElement('div');
+    b1.className = 'pbtn inc' + (build.incAttr===a?' selected':'');
+    b1.textContent = names[a]+' +';
+    b1.onclick = ()=>{
+      build.incAttr = build.incAttr===a? null : a;
+      if(build.decAttr===build.incAttr) build.decAttr=null;
+      renderCapPanelModal();
+    };
+    incEl.appendChild(b1);
+    const b2 = document.createElement('div');
+    b2.className = 'pbtn dec' + (build.decAttr===a?' selected':'');
+    b2.textContent = names[a]+' −';
+    b2.onclick = ()=>{
+      build.decAttr = build.decAttr===a? null : a;
+      if(build.incAttr===build.decAttr) build.incAttr=null;
+      renderCapPanelModal();
+    };
+    decEl.appendChild(b2);
+  });
+}
+function renderCapPanelModal(){
+  if(!capPanelDraft) return;
+  renderCapPanelSkillButtons(capPanelDraft);
+  renderCapPanelPersonaRows(capPanelDraft);
+}
+function openCapPanelModal(){
+  const type = capState.type;
+  const active = userPrefs.capPanelBuild[type];
+  capPanelDraft = active
+    ? {selected:active.selected.slice(), incAttr:active.incAttr, decAttr:active.decAttr}
+    : capPanelDefaultBuild(type);
+  renderCapPanelModal();
+  document.getElementById('capPanelModalOverlay').style.display = 'flex';
+}
+function closeCapPanelModal(){
+  document.getElementById('capPanelModalOverlay').style.display = 'none';
+  capPanelDraft = null;
+}
+// 重排一个大类的柱状图可能要扫全部对应种族重新算production，量不算小，跟其他重算入口一样
+// 先弹"排名计算中"占位、让浏览器先画出这一帧，再跑实际计算，避免卡顿感
+function capPanelRerankWithOverlay(){
+  const overlay = document.getElementById('rankCalcOverlay');
+  if(!overlay){ renderCaptureBody(); return; }
+  showRankCalcOverlay();
+  setTimeout(()=>{ renderCaptureBody(); hideRankCalcOverlay(); }, 20);
+}
+function confirmCapPanelBuild(){
+  if(!capPanelDraft) return;
+  const type = capState.type;
+  userPrefs.capPanelBuild[type] = {selected:capPanelDraft.selected.slice(), incAttr:capPanelDraft.incAttr, decAttr:capPanelDraft.decAttr};
+  saveUserPrefs();
+  closeCapPanelModal();
+  capPanelRerankWithOverlay();
+}
+function resetCapPanelBuild(){
+  const type = capState.type;
+  userPrefs.capPanelBuild[type] = null;
+  saveUserPrefs();
+  closeCapPanelModal();
+  capPanelRerankWithOverlay();
 }
 function renderCapLevel(){
   const lvEl = document.getElementById('capLevelSeg'); lvEl.innerHTML='';
@@ -11324,8 +11543,20 @@ function updatePageActionBar(){
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
   updatePagePanelMonBubble();
   updateFabCircles();
+  updatePanelBtnLabel(inBox);
 }
 function updateFabVisibility(){ updatePageActionBar(); }
+// 页4(捕捉推荐)里"修改面板"改叫"加入面板"（点开的是选副技能+性格的轻量浮窗，不是完整修改面板）；
+// 盒子里那颗同名按钮/圆形浮窗跟页4无关，不受这里影响
+function updatePanelBtnLabel(inBox){
+  const page4 = document.getElementById('page4');
+  const onPage4 = !inBox && !!(page4 && page4.classList.contains('active-page'));
+  const text = onPage4 ? '加入面板' : '修改面板';
+  const pageLabel = document.getElementById('pageActPanelLabel');
+  if(pageLabel) pageLabel.textContent = text;
+  const fabLabel = document.getElementById('fabPanelLabel');
+  if(fabLabel) fabLabel.innerHTML = onPage4 ? '加入<br>面板' : '修改<br>面板';
+}
 /* 圆形浮窗模式的显隐/位置统一在这里算，updatePageActionBar 与 updateBoxActionBar
    各自改动后都会调一次，两套按钮条切页面/开关盒子/开关模式时都能保持同步。
    不找回旧版那套"避让计算概率按钮"的停靠逻辑——按钮条方案本来就不挡内容，
@@ -11459,6 +11690,9 @@ function closeDashboard(){
 // （之前气泡是按钮的旁支兄弟节点，各自绑一份同样的 toggle 逻辑，点气泡会因为事件冒泡到
 // 按钮再触发一次，一开一关刚好抵消，界面上看起来毫无反应）
 document.getElementById('pageActPanelBtn').onclick = ()=>{
+  const page4 = document.getElementById('page4');
+  const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
+  if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 // v3.18：盒子里这两件事改由底部吸底按钮条上的按钮触发，行为跟对应的小圆浮窗完全一致
@@ -11468,6 +11702,9 @@ document.getElementById('boxActPanelBtn').onclick = ()=>{
 document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEntry();
 // 圆形浮窗模式下的四颗按钮：跟对应吸底按钮条上那颗行为完全一致，只是外观换成圆
 document.getElementById('fabPanel').onclick = ()=>{
+  const page4 = document.getElementById('page4');
+  const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
+  if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 document.getElementById('fabCreate').onclick = ()=> openDashboardForNewEntry();
@@ -11575,6 +11812,11 @@ document.getElementById('capGradModalOverlay').onclick = (e)=>{ if(e.target.id==
 document.getElementById('capGradModalPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('capGradModalCloseBtn').onclick = closeCapGradModal;
 document.getElementById('capGradMarkSwitch').onclick = toggleCapGradMark;
+document.getElementById('capPanelModalOverlay').onclick = (e)=>{ if(e.target.id==='capPanelModalOverlay') closeCapPanelModal(); };
+document.getElementById('capPanelModalPanel').onclick = (e)=> e.stopPropagation();
+document.getElementById('capPanelModalCloseBtn').onclick = closeCapPanelModal;
+document.getElementById('capPanelResetBtn').onclick = resetCapPanelBuild;
+document.getElementById('capPanelConfirmBtn').onclick = confirmCapPanelBuild;
 
 /* v3.18：原来这里挂着两个 IntersectionObserver，靠观察 module1/2/3Card 是否进入视口来决定
    那两颗小圆浮窗的显隐。现在按钮条钉死在切换栏上方、只跟"当前哪一页/有没有开浮层"有关，
