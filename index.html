@@ -2682,16 +2682,25 @@
     </div>
     <div class="auth-brand-title">土王智商高</div>
     <div class="auth-brand-sub" id="authBrandSub">注册一个账号，盒子和设置就能跟着你换设备</div>
-    <div class="auth-fields" id="authFieldsRegister">
-      <input type="email" id="authRegEmail" placeholder="邮箱" autocomplete="email">
-      <input type="text" id="authRegName" placeholder="用户名（2~16 个字）" autocomplete="username">
-      <input type="password" id="authRegPwd" placeholder="密码（至少 6 位）" autocomplete="new-password">
-      <input type="password" id="authRegPwd2" placeholder="确认密码" autocomplete="new-password">
-    </div>
-    <div class="auth-fields" id="authFieldsLogin" style="display:none;">
-      <input type="text" id="authLoginAcc" placeholder="邮箱或用户名" autocomplete="username">
-      <input type="password" id="authLoginPwd" placeholder="密码" autocomplete="current-password">
-    </div>
+    <!-- 这两个<form>只是给浏览器一个明确的凭据字段边界：整站没有别的<form>标签时，Chrome等
+         浏览器会把全文档所有输入框当成同一张"隐形表单"来做自动填充关联，导致跟这两个密码框
+         毫不相干的宝可梦名字搜索框(#pkSearchInput)也总弹"要不要填充已保存的密码"。真正提交
+         走的是下面按钮的onclick(authSubmit)，这里的<form>不需要真的提交，onsubmit直接拦掉，
+         防止用户在输入框里按回车触发原生表单提交刷新页面 -->
+    <form onsubmit="return false;">
+      <div class="auth-fields" id="authFieldsRegister">
+        <input type="email" id="authRegEmail" placeholder="邮箱" autocomplete="email">
+        <input type="text" id="authRegName" placeholder="用户名（2~16 个字）" autocomplete="username">
+        <input type="password" id="authRegPwd" placeholder="密码（至少 6 位）" autocomplete="new-password">
+        <input type="password" id="authRegPwd2" placeholder="确认密码" autocomplete="new-password">
+      </div>
+    </form>
+    <form onsubmit="return false;">
+      <div class="auth-fields" id="authFieldsLogin" style="display:none;">
+        <input type="text" id="authLoginAcc" placeholder="邮箱或用户名" autocomplete="username">
+        <input type="password" id="authLoginPwd" placeholder="密码" autocomplete="current-password">
+      </div>
+    </form>
     <div class="auth-msg" id="authMsg"></div>
     <button type="button" class="auth-submit" id="authSubmitBtn">注册</button>
     <div class="auth-switch" id="authSwitchLine"></div>
@@ -2854,10 +2863,12 @@
 <div class="cap-ctrl-overlay auth-overlay" id="pwdModal">
   <div class="cap-ctrl-box auth-box">
     <div class="cap-ctrl-head">修改密码<span class="cap-ctrl-close" id="pwdModalClose">✕</span></div>
-    <div class="auth-fields">
-      <input type="password" id="pwdNew1" placeholder="新密码（至少 6 位）" autocomplete="new-password">
-      <input type="password" id="pwdNew2" placeholder="确认新密码" autocomplete="new-password">
-    </div>
+    <form onsubmit="return false;">
+      <div class="auth-fields">
+        <input type="password" id="pwdNew1" placeholder="新密码（至少 6 位）" autocomplete="new-password">
+        <input type="password" id="pwdNew2" placeholder="确认新密码" autocomplete="new-password">
+      </div>
+    </form>
     <div class="auth-msg" id="pwdMsg"></div>
     <button type="button" class="auth-submit" id="pwdSubmitBtn">确认修改</button>
   </div>
