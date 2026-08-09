@@ -532,7 +532,7 @@
   .ui-fab.box-page-visible{ z-index:1160; }
   #fabPanel{ background:var(--accent); right:24px; bottom:158px; }
   #fabControls{ background:#3a8fae; right:24px; bottom:100px; }
-  #fabCreate{ background:#3f9a52; font-size:30px; font-weight:400; line-height:1; right:24px; bottom:100px; }
+  #fabCreate{ background:#3f9a52; right:24px; bottom:100px; }
   /* "更多功能"按需求固定在左下角，不跟右侧那组共用位置 */
   #fabMore{ background:#7a4f9e; left:24px; bottom:100px; }
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
@@ -1690,8 +1690,8 @@
   white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 .box-act-btn:hover{ filter:brightness(1.08); }
-/* 「+」按钮不跟其他按钮争宽度：它只有一个字符，给固定窄宽，把空间让给四个中文按钮 */
-.box-act-create{ flex:0 0 44px; background:#3f9a52; font-size:24px; font-weight:400; padding:9px 0; }
+/* 「+」按钮不跟其他按钮争宽度：只是个图标，给固定窄宽，把空间让给四个中文按钮 */
+.box-act-create{ flex:0 0 44px; background:#3f9a52; padding:9px 0; }
 .box-act-more{ background:#7a4f9e; }
 .box-act-register{ background:#3a7fd5; }
 .box-act-login{ background:#e0a32e; }
@@ -2128,7 +2128,7 @@
 </div>
 <div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
 <div class="ui-fab" id="fabControls">控制<br>参数</div>
-<div class="ui-fab" id="fabCreate">+</div>
+<div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
 <div class="ui-fab" id="fabMore">更多<br>功能</div>
 <div class="box-toast" id="boxToast"></div>
 
@@ -2206,7 +2206,7 @@
       <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
       <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">更多功能</button>
       <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
-      <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn">+</button>
+      <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn"><svg viewBox="0 0 24 24" width="20" height="20" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></button>
       <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
       <button type="button" class="box-act-btn box-act-panel" id="boxActPanelBtn">修改面板</button>
     </div>
@@ -6211,6 +6211,14 @@ function applyMergedData(cloud){
     Object.keys(PREFS_DEFAULT).forEach(k=>{
       if(cloud.prefs[k] !== undefined) userPrefs[k] = cloud.prefs[k];
     });
+    // capPanelBuild 没放进 PREFS_DEFAULT（避免浅拷贝共享引用），上面那个循环扫不到它，
+    // 得单独按同样的校验规则把云端"加入面板"选择拉回来，否则这项设置只上得去、拉不回来
+    if(cloud.prefs.capPanelBuild && typeof cloud.prefs.capPanelBuild==='object'){
+      ['berryEnergy','food','skill'].forEach(t=>{
+        const b = cloud.prefs.capPanelBuild[t];
+        if(capPanelBuildValid(b)) userPrefs.capPanelBuild[t] = {selected:b.selected.slice(0,5), incAttr:b.incAttr||null, decAttr:b.decAttr||null};
+      });
+    }
     clampSleepPrefs();
     try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
   }
@@ -7327,10 +7335,22 @@ const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: tru
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
+// 捕捉推荐页"加入面板"三个大类各自的智能默认面板：树果/能量=树果数量s；食材=食材概率m+冷静；
+// 功能=技能概率m+自大。userPrefs.capPanelBuild 一开始就用这套默认（非 null），
+// 柱状图从加载起就按真实产量算，不需要用户先手动确认一次
+const CAP_PANEL_DEFAULT = {
+  berryEnergy: {selected:['fruitS',null,null,null,null], incAttr:null, decAttr:null},
+  food:        {selected:['ingM',null,null,null,null],   incAttr:'F',  decAttr:'E'}, // 冷静
+  skill:       {selected:['skillM',null,null,null,null], incAttr:'S',  decAttr:'E'}, // 自大
+};
+function capPanelDefaultBuild(type){
+  const d = CAP_PANEL_DEFAULT[type];
+  return {selected:d.selected.slice(), incAttr:d.incAttr, decAttr:d.decAttr};
+}
 // capPanelBuild 不放进 PREFS_DEFAULT：那是个嵌套对象，Object.assign 只做浅拷贝，放进去的话
 // userPrefs.capPanelBuild 会和 PREFS_DEFAULT.capPanelBuild 指向同一个对象，之后任何一次
 // userPrefs.capPanelBuild.food=... 都会连带把"默认值"本身改掉，后面新开的页面就再也拿不到干净的默认了
-userPrefs.capPanelBuild = {berryEnergy:null, food:null, skill:null};
+userPrefs.capPanelBuild = {berryEnergy:capPanelDefaultBuild('berryEnergy'), food:capPanelDefaultBuild('food'), skill:capPanelDefaultBuild('skill')};
 function capPanelBuildValid(b){
   return !!(b && Array.isArray(b.selected) && b.selected.length===5 && (b.incAttr==null||typeof b.incAttr==='string') && (b.decAttr==null||typeof b.decAttr==='string'));
 }
@@ -7351,7 +7371,7 @@ function loadUserPrefs(){
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
           const b = o.capPanelBuild[t];
-          userPrefs.capPanelBuild[t] = capPanelBuildValid(b) ? {selected:b.selected.slice(0,5), incAttr:b.incAttr||null, decAttr:b.decAttr||null} : null;
+          userPrefs.capPanelBuild[t] = capPanelBuildValid(b) ? {selected:b.selected.slice(0,5), incAttr:b.incAttr||null, decAttr:b.decAttr||null} : capPanelDefaultBuild(t);
         });
       }
     }
@@ -10715,19 +10735,13 @@ function toggleCapGradMark(){
 }
 
 /* ================= 捕捉推荐页"加入面板" =================
-   每个大类(树果/能量共用、食材、功能)各自记一份自定义面板，userPrefs.capPanelBuild[type]，
-   null 表示没自定义，柱状图数值/排序走原来那套写死档位的静态假设；一旦确认过一次面板，
-   就一直记着，直到点"恢复默认"清空为止。capPanelDraft 是浮窗打开期间的工作副本，
-   不点"确认所选"就不会写回 userPrefs，关闭浮窗直接丢弃。 */
-const CAP_PANEL_DEFAULT = {
-  berryEnergy: {selected:['fruitS',null,null,null,null], incAttr:null, decAttr:null},
-  food:        {selected:['ingM',null,null,null,null],   incAttr:'F',  decAttr:'E'}, // 冷静
-  skill:       {selected:['skillM',null,null,null,null], incAttr:'S',  decAttr:'E'}, // 自大
-};
-function capPanelDefaultBuild(type){
-  const d = CAP_PANEL_DEFAULT[type];
-  return {selected:d.selected.slice(), incAttr:d.incAttr, decAttr:d.decAttr};
-}
+   每个大类(树果/能量共用、食材、功能)各自记一份面板，userPrefs.capPanelBuild[type]，
+   初始就是 CAP_PANEL_DEFAULT 那套智能默认（非 null），柱状图从一开始就按真实产量算，
+   不需要用户先手动点一次确认；用户可以在浮窗里改成别的面板，"恢复默认"就是把它
+   改回 CAP_PANEL_DEFAULT。capPanelDraft 是浮窗打开期间的工作副本，
+   不点"确认所选"就不会写回 userPrefs，关闭浮窗直接丢弃。
+   （CAP_PANEL_DEFAULT / capPanelDefaultBuild 定义挪到了文件靠前的 userPrefs 初始化处，
+   因为 userPrefs.capPanelBuild 的初始值就要用它） */
 let capPanelDraft = null;
 function capMakeSkillButton(build, s){
   const idx = build.selected.indexOf(s.id);
@@ -10817,7 +10831,7 @@ function confirmCapPanelBuild(){
 }
 function resetCapPanelBuild(){
   const type = capState.type;
-  userPrefs.capPanelBuild[type] = null;
+  userPrefs.capPanelBuild[type] = capPanelDefaultBuild(type);
   saveUserPrefs();
   closeCapPanelModal();
   capPanelRerankWithOverlay();
