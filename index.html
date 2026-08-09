@@ -447,29 +447,41 @@
     .shiny-row .val{ font-size:18px; }
   }
   /* ============ v3.18 页面吸底按钮条 ============ */
-  /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数）。跟盒子里的 .box-action-bar
-     一样是实心白底、贴边框的整条横栏，钉在页面切换栏正上方：控制参数占满左半到屏幕边缘，
-     修改面板占满右半到屏幕边缘，中间留 60px 空档避开「宝可梦盒」那颗凸起的球——
-     两颗按钮各自 flex:1 1 0，天然从屏幕边缘一路铺到空档，不再是悬浮的圆角小块。
-     条本身就是不透明的实心横栏（跟切换栏一样），不需要再用 pointer-events:none 透传点击。 */
+  /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数），钉在页面切换栏正上方。
+     结构是「左白块 + 中间空档 + 右白块」三段：
+       · 白底铺到屏幕左右边缘，按钮是白底里内缩 2px 的圆角矩形（不再自己贴边）
+       · 中间那段 .page-act-gap 保持完全透明，让「宝可梦盒」凸起球自带的 5px 白色圆环
+         （.tab-bubble-capsule 的 box-shadow）在这里显出半圆弧，恢复改版前那个凸起造型；
+         整条如果自己铺满白底，圆弧就会被填成一个方方正正的白块
+       · 空档 56px 比圆环 60px 略窄，圆环左右各压住白块 2px 的内边距，把接缝盖掉；
+         白块朝内那侧再倒一个圆角，让平直的白条自然收进圆弧里 */
   .page-action-bar{
     display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
     align-items:stretch;
+    background:transparent;
+  }
+  .page-act-side{
+    flex:1 1 0; min-width:0; display:flex; padding:2px;
     background:var(--panel); border-top:1px solid var(--line);
     box-shadow:0 -2px 10px rgba(0,0,0,.08);
   }
-  .page-act-gap{ flex:0 0 60px; }
+  /* 内侧倒角 12px，减掉 2px 内边距后正好等于按钮自身的 10px 圆角，两条弧线严丝合缝 */
+  .page-act-side-left{ border-top-right-radius:12px; }
+  .page-act-side-right{ border-top-left-radius:12px; }
+  /* 透明空档：不铺白底，也不要挡住下层页面的点击 */
+  .page-act-gap{ flex:0 0 56px; pointer-events:none; }
   .page-act-btn{
-    position:relative; flex:1 1 0; min-width:0; border:none; padding:15px 10px;
+    position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
+    padding:11.5px 10px;
     font-size:13px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
     display:flex; align-items:center; justify-content:center; text-align:center;
     white-space:nowrap; user-select:none;
   }
   .page-act-btn:hover{ filter:brightness(1.08); }
   /* 颜色沿用改造前那两颗小圆浮窗 */
-  #pageActControlsBtn{ background:#3a8fae; justify-content:flex-end; padding-right:18px; }
-  #pageActPanelBtn{ background:var(--accent); justify-content:flex-start; padding-left:18px; }
+  #pageActControlsBtn{ background:#3a8fae; }
+  #pageActPanelBtn{ background:var(--accent); }
   /* 「修改面板」头像气泡：与盒子里那颗同源，挂在按钮内部（position:relative 就是按钮自己），
      贴着屏幕右边缘上方，常驻不交替。点击气泡的事件会冒泡到按钮本身，不用再单独绑一次 */
   .page-panel-mon-bubble{
@@ -2033,12 +2045,16 @@
 </div>
 
 <div class="page-action-bar" id="pageActionBar">
-  <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+  <div class="page-act-side page-act-side-left">
+    <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+  </div>
   <div class="page-act-gap"></div>
-  <button type="button" class="page-act-btn" id="pageActPanelBtn">
-    <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
-    修改面板
-  </button>
+  <div class="page-act-side page-act-side-right">
+    <button type="button" class="page-act-btn" id="pageActPanelBtn">
+      <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
+      修改面板
+    </button>
+  </div>
 </div>
 <div class="box-toast" id="boxToast"></div>
 
