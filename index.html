@@ -447,44 +447,37 @@
     .shiny-row .val{ font-size:18px; }
   }
   /* ============ v3.18 页面吸底按钮条 ============ */
-  /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数）。做法与盒子里的 .box-action-bar 一致，
-     只是这里钉在页面切换栏正上方：控制参数在中间「宝可梦盒」球的左边，修改面板在右边。
-     中间留出 60px 空档给那颗凸起的球，整条 pointer-events:none，只有两颗按钮自己可点，
-     免得这条透明的横带挡住下层页面内容。 */
+  /* 替代 v3.17 那两颗右下角小圆浮窗（修改面板 / 控制参数）。跟盒子里的 .box-action-bar
+     一样是实心白底、贴边框的整条横栏，钉在页面切换栏正上方：控制参数占满左半到屏幕边缘，
+     修改面板占满右半到屏幕边缘，中间留 60px 空档避开「宝可梦盒」那颗凸起的球——
+     两颗按钮各自 flex:1 1 0，天然从屏幕边缘一路铺到空档，不再是悬浮的圆角小块。
+     条本身就是不透明的实心横栏（跟切换栏一样），不需要再用 pointer-events:none 透传点击。 */
   .page-action-bar{
     display:none;
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
-    pointer-events:none;
+    align-items:stretch;
+    background:var(--panel); border-top:1px solid var(--line);
+    box-shadow:0 -2px 10px rgba(0,0,0,.08);
   }
-  .page-action-inner{
-    max-width:640px; margin:0 auto; width:100%;
-    display:flex; align-items:flex-end; padding:0 12px;
-  }
-  .page-act-side{ flex:1 1 0; min-width:0; display:flex; }
-  .page-act-side-left{ justify-content:flex-end; padding-right:10px; }
-  .page-act-side-right{ justify-content:flex-start; padding-left:10px; }
-  /* 只包住「修改面板」这一颗按钮，宽度就等于按钮宽度；position:relative 让上方的头像气泡
-     能按按钮自己的右缘对齐（挂在外层 .page-act-side-right 上的话会对到那一整栏的边上） */
-  .page-act-panel-wrap{ position:relative; display:inline-flex; }
   .page-act-gap{ flex:0 0 60px; }
   .page-act-btn{
-    pointer-events:auto;
-    border:none; border-radius:11px; padding:10px 16px;
-    font-size:12.5px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
+    position:relative; flex:1 1 0; min-width:0; border:none; padding:15px 10px;
+    font-size:13px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
+    display:flex; align-items:center; justify-content:center; text-align:center;
     white-space:nowrap; user-select:none;
-    box-shadow:0 3px 12px rgba(0,0,0,.22);
   }
-  .page-act-btn:hover{ filter:brightness(1.1); }
+  .page-act-btn:hover{ filter:brightness(1.08); }
   /* 颜色沿用改造前那两颗小圆浮窗 */
-  #pageActControlsBtn{ background:#3a8fae; }
-  #pageActPanelBtn{ background:var(--accent); }
-  /* 「修改面板」头像气泡：与盒子里那颗同源，浮在按钮右缘正上方，常驻不交替 */
+  #pageActControlsBtn{ background:#3a8fae; justify-content:flex-end; padding-right:18px; }
+  #pageActPanelBtn{ background:var(--accent); justify-content:flex-start; padding-left:18px; }
+  /* 「修改面板」头像气泡：与盒子里那颗同源，挂在按钮内部（position:relative 就是按钮自己），
+     贴着屏幕右边缘上方，常驻不交替。点击气泡的事件会冒泡到按钮本身，不用再单独绑一次 */
   .page-panel-mon-bubble{
-    position:absolute; right:0; bottom:100%; margin-bottom:9px;
+    position:absolute; right:14px; bottom:100%; margin-bottom:9px;
     display:none; z-index:6;
     background:var(--panel); border:2px solid #7a4f9e; border-radius:12px;
     padding:4px; box-shadow:0 3px 10px rgba(0,0,0,.22);
-    pointer-events:auto; cursor:pointer;
+    cursor:pointer;
   }
   .page-panel-mon-bubble.on{ display:block; }
   .page-panel-mon-bubble::before,
@@ -2040,18 +2033,12 @@
 </div>
 
 <div class="page-action-bar" id="pageActionBar">
-  <div class="page-action-inner">
-    <div class="page-act-side page-act-side-left">
-      <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
-    </div>
-    <div class="page-act-gap"></div>
-    <div class="page-act-side page-act-side-right">
-      <div class="page-act-panel-wrap">
-        <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
-        <button type="button" class="page-act-btn" id="pageActPanelBtn">修改面板</button>
-      </div>
-    </div>
-  </div>
+  <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+  <div class="page-act-gap"></div>
+  <button type="button" class="page-act-btn" id="pageActPanelBtn">
+    <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
+    修改面板
+  </button>
 </div>
 <div class="box-toast" id="boxToast"></div>
 
@@ -10415,7 +10402,19 @@ function pageSwitchAnimateTo(targetId){
     // 再加一道"横向要明显压过纵向"的门槛。条目区现在也参与翻页判定了，滚列表时手指多少会斜一点，
     // 只靠上面那两条阈值不足以把"想滚列表"和"想翻页"分开
     if(Math.abs(dx) < Math.abs(dy) * 1.5) return;
-    pageSwitchBySwipe(dx < 0 ? 1 : -1);
+    const step = dx < 0 ? 1 : -1; // 与 pageSwitchBySwipe 同一套约定：左滑=+1（下一个），右滑=-1（上一个）
+    // 捕捉推荐页优先在自己的三个子标签（树果/能量→食材→功能）里左右切换；只有已经切到
+    // 两端、这次滑动会越界时（树果再向右滑 / 功能再向左滑），才把手势交给大页面切换
+    const activeEl = document.querySelector('.app-page.active-page');
+    if(activeEl && activeEl.id === 'page4'){
+      const capIdx = CAP_TYPE_ORDER.indexOf(capState.type);
+      const capNextIdx = capIdx + step;
+      if(capNextIdx >= 0 && capNextIdx < CAP_TYPE_ORDER.length){
+        capSwitchType(CAP_TYPE_ORDER[capNextIdx]);
+        return;
+      }
+    }
+    pageSwitchBySwipe(step);
   }, {passive:true});
 })();
 
@@ -10800,7 +10799,7 @@ function updatePageActionBar(){
   try{ inBox = !!boxOverlayOpen; }catch(e){}
   const page4 = document.getElementById('page4');
   const onPage4 = !!(page4 && page4.classList.contains('active-page'));
-  bar.style.display = (inDetail || inBox || onPage4) ? 'none' : 'block';
+  bar.style.display = (inDetail || inBox || onPage4) ? 'none' : 'flex';
   updatePagePanelMonBubble();
 }
 function updateFabVisibility(){ updatePageActionBar(); }
@@ -10890,11 +10889,10 @@ function closeDashboard(){
     cb();
   }
 }
+// 头像气泡现在是按钮内部的子元素，点气泡的 click 会自然冒泡到按钮，不用再单独绑一次
+// （之前气泡是按钮的旁支兄弟节点，各自绑一份同样的 toggle 逻辑，点气泡会因为事件冒泡到
+// 按钮再触发一次，一开一关刚好抵消，界面上看起来毫无反应）
 document.getElementById('pageActPanelBtn').onclick = ()=>{
-  if(dashboardOpen) closeDashboard(); else openDashboard();
-};
-// 头像气泡本身也当作「修改面板」的一部分，点它等同点按钮
-document.getElementById('pagePanelMonBubble').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 // v3.18：盒子里这两件事改由底部吸底按钮条上的按钮触发，行为跟对应的小圆浮窗完全一致
