@@ -1850,6 +1850,22 @@
 .boot-mascot-quagsire{ left:37px; width:70px; height:62px; z-index:1; transform:scaleX(-1); }
 .boot-mascot-clodsire{ left:96px; width:82px; height:62px; z-index:2; }
 .boot-mascot-paldea{ left:158px; width:50px; height:40px; z-index:2; }
+/* 旧域名专用的"导出盒子"入口：localStorage 是按源(origin)隔离的，旧站
+   (mplayerleo.github.io)上存的宝可梦盒新站(iqdooh.top)根本读不到，用户不自己导一份
+   就等于丢了。所以旧站这一屏在检测到本地确实还有盒子数据时，才在吉祥物下方补出这块
+   备注+按钮；本地没数据就整块不出现（不能无脑显示，否则等于骗用户去点一个空文件）。
+   导出逻辑是自带的、不调用主脚本里的 boxExportToFile——主脚本要下载解析 5MB+ 的单文件，
+   用户很可能在它跑完之前就点了；直接读 localStorage 自己拼 JSON 才是从这一屏可用的 */
+#bootOldsiteExport{ display:none; flex-direction:column; align-items:center; gap:10px; margin-top:-10px; }
+#bootLoadingMask.boot-oldsite #bootOldsiteExport.on{ display:flex; }
+#bootOldsiteExportNote{ font-size:13px; font-weight:700; color:var(--accent-dk); opacity:.85; }
+#bootOldsiteExportBtn{
+  font-family:inherit; border:none; border-radius:12px; padding:10px 24px;
+  font-size:14px; font-weight:800; color:#fff; background:var(--accent);
+  cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+#bootOldsiteExportBtn:active{ transform:translateY(1px); }
+#bootOldsiteExportBtn.done{ background:#3f9d5a; }
 </style>
 
 </head>
@@ -1864,6 +1880,11 @@
       <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
       <img class="boot-mascot boot-mascot-clodsire" src="box_assets/normal/clodsire.gif" alt="">
       <img class="boot-mascot boot-mascot-paldea" src="box_assets/normal/wooper-paldea.gif" alt="">
+    </div>
+    <!-- 只在旧域名、且本地确实还存着盒子数据时才显示，见上面 CSS 注释 -->
+    <div id="bootOldsiteExport">
+      <div id="bootOldsiteExportNote">还有盒子数据留在旧版？</div>
+      <button type="button" id="bootOldsiteExportBtn">导出盒子</button>
     </div>
   </div>
 </div>
@@ -1881,6 +1902,39 @@
     textEl.appendChild(l1); textEl.appendChild(l2);
     mask.classList.add('boot-oldsite');
     mask.addEventListener('click', function(){ location.href = 'https://iqdooh.top/'; });
+    // 旧站本地还留着盒子数据的话，给一个自带的导出入口（原理见样式表里 #bootOldsiteExport 的注释）
+    (function(){
+      var wrapEl = document.getElementById('bootOldsiteExport');
+      var btn = document.getElementById('bootOldsiteExportBtn');
+      if(!wrapEl || !btn) return;
+      var entries = null;
+      try{
+        var raw = localStorage.getItem('effiprobcalc_box_v1');
+        if(raw){
+          var parsed = JSON.parse(raw);
+          if(Array.isArray(parsed) && parsed.length) entries = parsed;
+        }
+      }catch(e){ entries = null; } // 隐私模式下 localStorage 会直接抛，当没数据处理
+      if(!entries) return;
+      wrapEl.classList.add('on');
+      // 整块吞掉冒泡：点备注/点按钮都不该触发"点画面任意位置跳新版"，否则一按就被弹走
+      wrapEl.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      btn.addEventListener('click', function(){
+        // 字段格式跟主脚本的 boxExportToFile 保持一致，导出的文件能直接被新站"导入盒子"吃下
+        var payload = {version:1, exportedAt:Date.now(), entries:entries};
+        var url = URL.createObjectURL(new Blob([JSON.stringify(payload)], {type:'application/json'}));
+        var t = new Date(), pad = function(n){ return String(n).padStart(2,'0'); };
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '宝可梦盒备份_' + t.getFullYear() + pad(t.getMonth()+1) + pad(t.getDate())
+                   + '_' + pad(t.getHours()) + pad(t.getMinutes()) + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+        btn.textContent = '已导出 ' + entries.length + ' 只';
+        btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = '导出盒子'; btn.classList.remove('done'); }, 2400);
+      });
+    })();
     return;
   }
   var dotsEl = document.getElementById('bootLoadingDots');
