@@ -1518,6 +1518,8 @@
   /* v3.18"标记已毕业"：食材柱状图头像中心叠一个绿色对勾，不铺底色，纯线条勾形 */
   .cap-cav-grad-check{ position:absolute; inset:0; z-index:6; display:flex; align-items:center; justify-content:center; pointer-events:none; }
   .cap-cav-grad-check svg{ width:62%; height:62%; filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff); }
+  /* 已毕业头像框再叠一圈绿色外框，粗细跟自身2px边框一致，紧贴在外侧 */
+  .cap-cav-grad{ box-shadow:0 0 0 2px #1f8a3d; }
   .cap-ctop{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
   .cap-cmark-line{ position:absolute; left:-2px; right:-2px; height:2.5px; background:#3a3a3a; transform:translateY(50%); z-index:3; }
   .cap-cmark-av{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
@@ -10621,7 +10623,7 @@ function capAvatarComboHtml(rec, food){
   const graduated = userPrefs.capGradMarkOn && capFoodComboGraduated(x, food);
   const checkHtml = graduated ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>` : '';
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
-    <span class="cap-cav rec-${lvl}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
+    <span class="cap-cav rec-${lvl}${graduated?' cap-cav-grad':''}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
   </div>`;
 }
 const CAP_BAR_W = 26; // 柱子宽度=宝可梦头像框宽度(px)
