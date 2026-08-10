@@ -1055,7 +1055,20 @@
     background:var(--panel); border-radius:14px; padding:22px 32px; box-shadow:0 10px 40px rgba(0,0,0,.35);
     font-size:15px; font-weight:800; color:var(--accent-dk); letter-spacing:.04em; min-width:220px;
   }
-  .rank-calc-mascot{ display:block; margin:14px auto 0; height:48px; width:auto; image-rendering:pixelated; }
+  /* "排名计算中"浮窗的乌波：4 只（普通/帕底亚 × 普通/闪光）在 HTML 里就带着真实 src 一起随页面加载好，
+     开浮窗时只切 display，绝不重新赋 src——重新赋 src 要走异步 load+decode，而调用方紧接着就用重计算把
+     主线程占死，那个回调排不上队，浮窗从开到关全程就是一张白图（这就是"第一次没有乌波"的原因）。
+     另外 GIF 的逐帧推进也是主线程驱动的，重计算期间必然定格，所以真正的"会动"靠下面这个 CSS transform
+     跳跃动画兜底——transform 动画跑在合成线程上，主线程卡死也照常播。 */
+  .rank-calc-mascot-stage{ margin:14px auto 0; height:48px; display:flex; align-items:flex-end; justify-content:center; }
+  .rank-calc-mascot{ display:none; height:48px; width:auto; image-rendering:pixelated; }
+  .rank-calc-mascot.on{ display:block; will-change:transform; animation:rankCalcMascotHop 620ms ease-in-out infinite; }
+  @keyframes rankCalcMascotHop{
+    0%{ transform:translateY(0); }
+    42%{ transform:translateY(-9px); }
+    72%{ transform:translateY(0); }
+    100%{ transform:translateY(0); }
+  }
   .dashboard-panel-flex{
     display:flex; flex-direction:column; overflow:hidden; padding:0;
   }
@@ -2526,7 +2539,12 @@
 <div class="rank-calc-overlay" id="rankCalcOverlay">
   <div class="rank-calc-box box-upload-progress-panel">
     <div class="box-upload-progress-title" id="rankCalcText">排名计算中...</div>
-    <img class="rank-calc-mascot" id="rankCalcMascot">
+    <div class="rank-calc-mascot-stage" id="rankCalcMascotStage">
+      <img class="rank-calc-mascot" data-wooper="normal-wooper"        src="box_assets/normal/wooper.gif"        decoding="sync" alt="">
+      <img class="rank-calc-mascot" data-wooper="normal-wooper-paldea" src="box_assets/normal/wooper-paldea.gif" decoding="sync" alt="">
+      <img class="rank-calc-mascot" data-wooper="shiny-wooper"         src="box_assets/shiny/wooper.gif"         decoding="sync" alt="">
+      <img class="rank-calc-mascot" data-wooper="shiny-wooper-paldea"  src="box_assets/shiny/wooper-paldea.gif"  decoding="sync" alt="">
+    </div>
   </div>
 </div>
 
@@ -5824,11 +5842,11 @@ function renderEnergySubmenu(containerId, pfx, compact){
 function setLevelWithRankOverlay(lv){
   const page3 = document.getElementById('page3');
   if(page3 && page3.classList.contains('active-page')){
-    const overlay = showRankCalcOverlay();
+    showRankCalcOverlay();
     setTimeout(async ()=>{
       state.level = lv;
       await renderAll(); // 等真正算完（乌波进度条走到头）再收起浮窗，不然浮窗会在算完之前就被提前关掉
-      overlay.style.display = 'none';
+      hideRankCalcOverlay(); // 必须走这个函数，直接改 display 会把乌波的动画留在后台空转
     }, 20);
   } else {
     state.level = lv;
@@ -11871,12 +11889,12 @@ function closeDashboard(){
   // （用 setTimeout 而非 rAF：rAF 在标签页失焦/隐藏时会被浏览器挂起，可能导致浮窗卡死不消失）
   const page3 = document.getElementById('page3');
   if(page3 && page3.classList.contains('active-page')){
-    const overlay = showRankCalcOverlay();
+    showRankCalcOverlay();
     setTimeout(async ()=>{
       renderPkDispWindow();
       renderRankModule();
       await renderLadderCard();
-      overlay.style.display = 'none';
+      hideRankCalcOverlay(); // 同上，别直接改 display
     }, 20);
   } else {
     renderPkDispWindow();
@@ -13493,49 +13511,51 @@ window.addEventListener('resize', ()=>{
 // 普通乌波/毒乌波各 45%，闪光各 5%
 // color 取各自身上的主色：普通乌波蓝、帕底亚乌波咖啡、闪光乌波粉、闪光帕底亚乌波紫，
 // 抽到谁进度条就用谁的颜色
+// key 对应"排名计算中"浮窗里那 4 个常驻 <img> 的 data-wooper，用来切显示哪一只
 const BOX_WOOPER_MASCOTS = [
-  {src:'box_assets/normal/wooper.gif', w:45, color:'#4a9ed6'},
-  {src:'box_assets/normal/wooper-paldea.gif', w:45, color:'#8a5a3b'},
-  {src:'box_assets/shiny/wooper.gif', w:5, color:'#e07aa8'},
-  {src:'box_assets/shiny/wooper-paldea.gif', w:5, color:'#8b5fbf'},
+  {key:'normal-wooper',        src:'box_assets/normal/wooper.gif', w:45, color:'#4a9ed6'},
+  {key:'normal-wooper-paldea', src:'box_assets/normal/wooper-paldea.gif', w:45, color:'#8a5a3b'},
+  {key:'shiny-wooper',         src:'box_assets/shiny/wooper.gif', w:5, color:'#e07aa8'},
+  {key:'shiny-wooper-paldea',  src:'box_assets/shiny/wooper-paldea.gif', w:5, color:'#8b5fbf'},
 ];
 function boxRandomWooper(){
   let r = Math.random()*100;
   for(const m of BOX_WOOPER_MASCOTS){ r -= m.w; if(r<=0) return m; }
   return BOX_WOOPER_MASCOTS[0];
 }
-// "排名计算中"浮窗：显示浮窗的同一刻就必须把乌波换好、播放好——
-// 复用页头吉祥物的 blob 缓存 + #fragment 强制重播（同一张图片素材，早已在 preloadMascotGifs 里缓存过），
-// 不能等外层重算完（renderRankModule/renderLadderCard 等）再来设置，那样浮窗弹出的瞬间乌波是空的，
-// 且主线程被后续重算占满，乌波只能等算完才显现
-// 单靠打开那一刻的一次性 #片段重播并不保险：blob URL 配合 #片段强制重播这招在部分浏览器/长耗时
-// 计算（主线程被同步计算占满时 GIF 解码可能被搁置）下会卡在某一帧不再往下播，只播一次也扛不住
-// 浮窗开着的这段时间——所以额外挂一个 6 秒一次的定时重播（和页头吉祥物 replayFrame 的做法一致），
-// 浮窗开多久就重播多久，关闭浮窗时务必用 hideRankCalcOverlay 顺手清掉这个定时器
-let rankCalcMascotTimer = null;
+// "排名计算中"浮窗的乌波。这里踩过两个坑，别再改回去：
+// 1) 曾经是一个空 <img>，每次开浮窗现赋 src（blob URL + #片段"强制重播"）。但赋 src 是异步 load+decode，
+//    而调用方紧接着就跑重计算（renderRankModule/renderLadderResult 等同步大活）把主线程占满，
+//    load 回调根本排不上队 → 浮窗从开到关全程是张空图，这就是"第一次弹出没有乌波"。
+//    而且 #片段这招在 Chrome 里根本不成立：fragment 不参与资源标识，命中的是同一份内存缓存，动画不会重启。
+// 2) GIF 的逐帧推进由主线程驱动，重计算期间必然定格，6 秒一次的 setInterval 重播同样跑在被占死的主线程上，
+//    救不了 → "后续出现乌波也不会动"。
+// 现在的做法：4 只乌波在 HTML 里就带真实 src 随页面一起加载好，开浮窗只切 class，零加载零解码，
+// 保证一弹出就有画面；"会动"交给 .rank-calc-mascot.on 上的 CSS transform 跳跃动画——transform 动画跑在
+// 合成线程，主线程被同步计算卡死也照常播。因此不再需要任何定时器。
 function showRankCalcOverlay(){
   const overlay = document.getElementById('rankCalcOverlay');
   if(!overlay) return null;
   const text = document.getElementById('rankCalcText');
-  const mascot = document.getElementById('rankCalcMascot');
-  if(rankCalcMascotTimer){ clearInterval(rankCalcMascotTimer); rankCalcMascotTimer = null; }
-  if(mascot){
-    const m = boxRandomWooper(); // 只在打开这一刻掷一次骰子，定时重播沿用同一只，不会开着开着自己换宝可梦
+  const stage = document.getElementById('rankCalcMascotStage');
+  if(stage){
+    const m = boxRandomWooper(); // 只在打开这一刻掷一次骰子，浮窗开着期间不会自己换宝可梦
     if(text) text.style.color = m.color;
-    const replay = ()=>{
-      const cached = mascotBlobCache.get(m.src);
-      mascot.src = cached ? (cached+'#'+Date.now()) : (m.src+'?t='+Date.now());
-    };
-    replay();
-    rankCalcMascotTimer = setInterval(replay, 6000);
+    stage.querySelectorAll('img[data-wooper]').forEach(img=>{
+      // 先整体摘掉 on 再挂上，保证跳跃动画每次开浮窗都从头播一遍
+      img.classList.remove('on');
+      if(img.dataset.wooper === m.key) img.classList.add('on');
+    });
   }
   overlay.style.display = 'flex';
   return overlay;
 }
 function hideRankCalcOverlay(){
-  if(rankCalcMascotTimer){ clearInterval(rankCalcMascotTimer); rankCalcMascotTimer = null; }
   const overlay = document.getElementById('rankCalcOverlay');
   if(overlay) overlay.style.display = 'none';
+  // 收起时把 on 摘掉，别让看不见的 GIF/动画在后台空转
+  const stage = document.getElementById('rankCalcMascotStage');
+  if(stage) stage.querySelectorAll('img[data-wooper]').forEach(img=> img.classList.remove('on'));
 }
 // 抽一只乌波挂到进度条上：图和进度条颜色一起换
 function boxPickWooperFor(fillEl, mascotEl){
