@@ -10496,6 +10496,14 @@ function boxEntryGraduationGrade(entry, x, dtype){
 // "毕业/金帮毕业及以上"= GRAD_RANK>=2，金帮与否不作区分（用户原话）。
 // 幼体/中间体按 boxEffectiveFinalDex 解析到最终形态再记录——同一进化链效率算法不随进化变化，
 // 幼体毕业等价于最终形态毕业，全进化链共享同一份标记
+// 该种族的某个食材组合到底能不能用：只有出现在推荐(reco)或可用(avail)里才算数。
+// 像耿鬼aaa、毒骷蛙abb 这种两边都没有的组合，捕捉推荐里本来显示的就是"不宜使用"，
+// 哪怕盒子里真养出一只毕业的也不该盖成"已毕业"——不可用的组合根本不存在"毕业了就不用再抓"这回事，
+// 盖上去反而把"这条路走不通"这个更重要的信息藏掉了。所以在扫盒子这一步就把它们挡在集合外，
+// 条目、食材柱状图、食材次级按钮三处标记同时恢复成原本的推荐程度显示
+function capComboUsable(x, combo){
+  return capParseCombos(x.reco).has(combo) || capParseCombos(x.avail).has(combo);
+}
 let capGradSpecies = new Set(), capGradFoodAAA = new Set(), capGradFoodABB = new Set();
 function computeCapGraduationSets(){
   capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set();
@@ -10512,8 +10520,9 @@ function computeCapGraduationSets(){
     if(!grade || GRAD_RANK[grade] < 2) continue;
     if(dtype==='food'){
       const pattern = 'a' + (entry.ingChoice2||'') + (entry.ingChoice3||'');
-      if(pattern==='aaa') capGradFoodAAA.add(finalDex);
-      else if(pattern==='abb') capGradFoodABB.add(finalDex);
+      // 组合本身不可用的（推荐程度=不宜使用，如耿鬼aaa/毒骷蛙abb）一律不记毕业，见 capComboUsable
+      if(pattern==='aaa' && capComboUsable(x,'aaa')) capGradFoodAAA.add(finalDex);
+      else if(pattern==='abb' && capComboUsable(x,'abb')) capGradFoodABB.add(finalDex);
     } else {
       capGradSpecies.add(finalDex);
     }
