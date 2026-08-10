@@ -1808,6 +1808,13 @@
   font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em;
 }
 #bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
+/* 旧域名(mplayerleo.github.io)兜底跳转提示：两行加粗文字，替掉原本的"加载中"单行，
+   点哪都跳转新址，遮罩永不打开——旧站从用户视角只剩这一屏 */
+#bootLoadingMask.boot-oldsite{ cursor:pointer; }
+#bootLoadingText.boot-oldsite-notice{
+  height:auto; flex-direction:column; gap:6px; font-size:15px; line-height:1.5;
+  font-weight:800; color:var(--accent); text-align:center; max-width:280px;
+}
 /* "土王智商高！"像盖印章一样，从屏幕外(正对着屏幕、离得很近很大)径直怼下来，不是沿屏幕
    从上往下滑——所以不带 translateY，纯靠缩放从很大猛地缩小；落地前有一点点"压扁"回弹
    （scale 略小于1再弹回1），模拟盖章砸下去的冲击感，跟之前那种飘落式的回弹(scale大于1)
@@ -1847,8 +1854,21 @@
 </div>
 <script>
 (function(){
-  var dotsEl = document.getElementById('bootLoadingDots');
+  var mask = document.getElementById('bootLoadingMask');
   var textEl = document.getElementById('bootLoadingText');
+  // 旧域名(mplayerleo.github.io，仓库同时给GitHub Pages和Cloudflare Pages两边供源，
+  // 不能直接改整个仓库)：停在这一屏当跳转页用，不跑加载动画、不揭开遮罩
+  if(location.hostname === 'mplayerleo.github.io'){
+    textEl.textContent = '';
+    textEl.classList.add('boot-oldsite-notice');
+    var l1 = document.createElement('div'); l1.textContent = '您现在正在使用的是旧版土王智商高';
+    var l2 = document.createElement('div'); l2.textContent = '点击画面上的任意位置跳转新版土王智商高';
+    textEl.appendChild(l1); textEl.appendChild(l2);
+    mask.classList.add('boot-oldsite');
+    mask.addEventListener('click', function(){ location.href = 'https://iqdooh.top/'; });
+    return;
+  }
+  var dotsEl = document.getElementById('bootLoadingDots');
   var n = 1;
   var dotTimer = setInterval(function(){
     n = n % 3 + 1;
@@ -10009,8 +10029,9 @@ const CAP_SKILL_SPECIAL_OUTPUT = {
   "#491": { kind:'energy', energyPerTrigger:18515, staminaDeduct:12 }, // 达克莱伊
   "#558": { kind:'ingredients', items:[{name:'牛油果',amt:6},{name:'土豆',amt:6},{name:'油',amt:6}] }, // 岩殿居蟹
   "#743": { kind:'ingredients', items:[{name:'蜜',amt:6},{name:'油',amt:6},{name:'玉米',amt:6}] }, // 蝶结萌虻
+  "#701": { kind:'ingredients', items:[{name:'叶子',amt:6},{name:'肠',amt:6},{name:'姜',amt:6}] }, // 摔角鹰人
 };
-const CAP_FOOD_RECLASSIFY = new Set(["#558","#028"]); // 岩殿居蟹/穿山王主技能产食材，并入捕捉推荐食材tab排名（蝶结萌虻dtype本身已是食材，无需加入）
+const CAP_FOOD_RECLASSIFY = new Set(["#558","#028","#701"]); // 岩殿居蟹/穿山王/摔角鹰人主技能产食材，并入捕捉推荐食材tab排名（蝶结萌虻dtype本身已是食材，无需加入）
 const CAP_ATTRS = ['一般','火','水','电','草','冰','格斗','毒','地面','飞行','超能力','虫','岩石','幽灵','龙','恶','钢','妖精']
   .sort((a,b)=> capBerryPerBerry(b,50) - capBerryPerBerry(a,50));
 function capBerryAttrKey(attr){ return attr==='超能力' ? '超能' : attr; }
