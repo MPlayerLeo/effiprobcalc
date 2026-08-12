@@ -1119,7 +1119,10 @@
   .gstd-body.gstd-slide-l{ animation:gstdSlideL .22s ease; }
   @keyframes gstdSlideR{ from{ opacity:0; transform:translateX(30px); } to{ opacity:1; transform:none; } }
   @keyframes gstdSlideL{ from{ opacity:0; transform:translateX(-30px); } to{ opacity:1; transform:none; } }
-  .gstd-h{ font-size:14px; font-weight:900; color:var(--accent-dk); margin:16px 0 6px; }
+  /* 小标题铺一条浅紫底：div 本身块级，天然铺满整行成"长条"。底色取 --accent 的浅色调，
+     跟文字色 --accent-dk 同一个紫系，别另挑一个紫，否则和差异块的紫虚线框打架 */
+  .gstd-h{ font-size:14px; font-weight:900; color:var(--accent-dk); margin:16px 0 8px;
+           background:#ece2f6; border-radius:8px; padding:5px 10px; }
   .gstd-h:first-child{ margin-top:0; }
   .gstd-p{ font-size:12.5px; line-height:1.75; color:var(--ink); margin:6px 0; }
   .gstd-p b{ font-weight:800; }
