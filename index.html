@@ -1081,6 +1081,75 @@
   }
   .dash-close{ cursor:pointer; font-size:18px; color:#999; padding:2px 8px; }
   .dash-close:hover{ color:#333; }
+
+  /* ============ 毕业标准说明浮窗（三处"毕业判定"标题旁的问号按钮共用） ============
+     正文是纯静态说明，全部集中在 GRAD_STD_TABS 一处数据里，改文案不用碰渲染代码。
+     各档位标题的颜色一律走 tierStyleOf()，跟毕业判定结果框取的是同一份 TIER_STYLE，
+     不另写一套色值——否则以后调色必定漏掉一边。 */
+  .grad-help-btn{
+    flex:0 0 auto; width:17px; height:17px; margin-left:5px; padding:0;
+    border:1.5px solid var(--accent); border-radius:50%;
+    background:var(--panel); color:var(--accent); font-family:inherit;
+    font-size:11px; font-weight:900; line-height:1; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center; vertical-align:middle;
+  }
+  .grad-help-btn:active{ background:var(--accent); color:#fff; }
+  #gradStdPanel{ max-width:560px; max-height:86vh; }
+  .gstd-tabs{
+    flex:0 0 auto; display:flex; gap:3px; padding:8px 10px;
+    border-bottom:1px solid var(--line); overflow-x:auto; -webkit-overflow-scrolling:touch;
+  }
+  /* 四个类型页签直接复用全站的类型配色（.typebtn.fruit/food/skill/energy 那一套），
+     未选中的压暗到 .55 不透明度——跟捕捉推荐页 .cap-type-tab 同一套观感。
+     概览/备注/版本差异不属于任何类型，用中性的米灰，避免跟能量型的紫撞色 */
+  .gstd-tab{
+    flex:1 0 auto; white-space:nowrap; text-align:center; cursor:pointer;
+    border:1.5px solid; border-radius:8px; padding:5px 6px;
+    font-size:12px; font-weight:800; opacity:.55; transition:opacity .18s;
+  }
+  .gstd-tab.on{ opacity:1; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+  .gstd-tab-fruit{ background:var(--fruit-bg); border-color:var(--fruit-bd); color:var(--fruit-tx); }
+  .gstd-tab-food{ background:var(--food-bg); border-color:var(--food-bd); color:var(--food-tx); }
+  .gstd-tab-skill{ background:var(--skill-bg); border-color:var(--skill-bd); color:var(--skill-tx); }
+  .gstd-tab-energy{ background:#e8d5f0; border-color:#8a4fb0; color:#4a1f66; }
+  .gstd-tab-neutral{ background:#e7e2d5; border-color:#9a9484; color:#4a4437; }
+  .gstd-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:12px 16px 20px; }
+  /* 切页签的横滑动画：跟捕捉推荐页 .cap-slide-r/l 同一套观感，方向也同一套约定 */
+  .gstd-body.gstd-slide-r{ animation:gstdSlideR .22s ease; }
+  .gstd-body.gstd-slide-l{ animation:gstdSlideL .22s ease; }
+  @keyframes gstdSlideR{ from{ opacity:0; transform:translateX(30px); } to{ opacity:1; transform:none; } }
+  @keyframes gstdSlideL{ from{ opacity:0; transform:translateX(-30px); } to{ opacity:1; transform:none; } }
+  .gstd-h{ font-size:14px; font-weight:800; color:var(--accent-dk); margin:16px 0 6px; }
+  .gstd-h:first-child{ margin-top:0; }
+  .gstd-p{ font-size:12.5px; line-height:1.75; color:var(--ink); margin:6px 0; }
+  .gstd-p b{ font-weight:800; }
+  .gstd-tbl-title{ font-size:12px; font-weight:800; color:#8a8375; margin:10px 0 4px; }
+  .gstd-tbl{ width:100%; border-collapse:collapse; font-size:12.5px; margin-bottom:6px; table-layout:fixed; }
+  .gstd-tbl th, .gstd-tbl td{ border:1px solid var(--line); padding:5px 7px; text-align:left; word-break:break-word; }
+  /* 两列说明表：首列是 tbody 里的 th，占 44% 当小标题用 */
+  .gstd-tbl tbody th{ font-weight:800; width:44%; background:rgba(0,0,0,.02); }
+  .gstd-tbl td{ font-weight:700; color:var(--ink); }
+  /* 多列表格（门槛表/对照表）才有 thead，列宽交给浏览器均分 */
+  .gstd-tbl thead th{ font-size:11px; font-weight:800; color:#8a8375; background:rgba(0,0,0,.04); width:auto; }
+  .gstd-tbl-grade{ font-size:12px; }
+  .gstd-ul{ margin:6px 0 6px 18px; padding:0; font-size:12.5px; line-height:1.75; color:var(--ink); }
+  .gstd-ul li{ margin:3px 0; }
+  .gstd-ul .gstd-ul{ margin-bottom:0; font-size:12px; }
+  .gstd-diff-title{ display:block; font-size:13px; font-weight:800; color:var(--accent-dk); margin-bottom:4px; }
+  .gstd-note{
+    font-size:12px; line-height:1.7; color:#8a6d3b; background:#f9f3e2;
+    border-left:3px solid var(--gold-bd); border-radius:0 8px 8px 0; padding:7px 10px; margin:8px 0;
+  }
+  .gstd-diff{
+    font-size:12.5px; line-height:1.7; color:var(--ink); background:rgba(122,79,158,.08);
+    border:1.5px dashed var(--accent); border-radius:10px; padding:9px 11px; margin:10px 0;
+  }
+  .gstd-diff-tag{
+    display:inline-block; font-size:11px; font-weight:900; color:#fff; background:var(--accent);
+    border-radius:6px; padding:1px 7px; margin-bottom:5px;
+  }
+  .gstd-diff .gstd-tbl{ margin-top:6px; }
+  .gstd-diff .gstd-tbl th{ background:rgba(255,255,255,.5); }
   .final-pk-note{ font-size:11.5px; color:#8a8375; margin:2px 0 12px; line-height:1.4; }
   .final-pk-grid, .final-pk-btnrow{ display:flex; flex-wrap:wrap; gap:10px; }
   .final-pk-btn{ display:flex; flex-direction:column; align-items:center; gap:4px; width:60px; cursor:pointer; border:none; background:none; padding:0; }
@@ -2112,7 +2181,7 @@
   </div>
 
   <div class="card" id="gradCard1">
-    <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">4</span>毕业判定</span><span class="grad-pk-name" id="gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="gradTypeBadge"></span><span class="level-badge" id="gradLevelBadge"></span></span></h2>
+    <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">4</span>毕业判定<button type="button" class="grad-help-btn" aria-label="毕业标准">?</button></span><span class="grad-pk-name" id="gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="gradTypeBadge"></span><span class="level-badge" id="gradLevelBadge"></span></span></h2>
     <div id="gradBox"></div>
     <div id="panelSummaryBox"></div>
   </div>
@@ -2129,7 +2198,7 @@
   <div class="app-page" id="page2">
 
   <div class="card" id="p2gradCard">
-    <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定</span><span class="grad-pk-name" id="p2-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="p2-gradTypeBadge"></span><span class="level-badge" id="p2-gradLevelBadge"></span></span></h2>
+    <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定<button type="button" class="grad-help-btn" aria-label="毕业标准">?</button></span><span class="grad-pk-name" id="p2-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="p2-gradTypeBadge"></span><span class="level-badge" id="p2-gradLevelBadge"></span></span></h2>
     <div id="p2-gradBox"></div>
     <div id="p2-panelSummaryBox"></div>
   </div>
@@ -2454,7 +2523,7 @@
     </div>
     <div class="box-detail-scroll" id="boxDetailScroll">
       <div class="card" id="boxdet-gradCard">
-        <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定</span><span class="grad-pk-name" id="boxdet-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="boxdet-gradTypeBadge"></span><span class="level-badge" id="boxdet-gradLevelBadge"></span></span></h2>
+        <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定<button type="button" class="grad-help-btn" aria-label="毕业标准">?</button></span><span class="grad-pk-name" id="boxdet-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="boxdet-gradTypeBadge"></span><span class="level-badge" id="boxdet-gradLevelBadge"></span></span></h2>
         <div id="boxdet-gradBox"></div>
         <div id="boxdet-panelSummaryBox"></div>
       </div>
@@ -2693,6 +2762,16 @@
         <button type="button" class="confirmbtn-big dash-clear-btn" id="capPanelConfirmBtn">确认所选</button>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- 毕业标准说明浮窗：page1 / page2 / 盒子详情三处「毕业判定」标题旁的问号按钮共用这一个。
+     页签内容由 GRAD_STD_TABS 渲染，可点页签也可在正文区左右滑切换 -->
+<div class="dashboard-overlay" id="gradStdOverlay">
+  <div class="dashboard-panel dashboard-panel-flex" id="gradStdPanel">
+    <div class="dash-header dash-header-flex">毕业标准<span class="dash-close" id="gradStdCloseBtn">✕</span></div>
+    <div class="gstd-tabs" id="gradStdTabs"></div>
+    <div class="gstd-body" id="gradStdBody"></div>
   </div>
 </div>
 
@@ -6971,6 +7050,300 @@ function tierStyleOf(gradeName){ return TIER_STYLE[gradeName] || {color:'#333333
 const TIER70_COLOR = '#1291d6'; // 天蓝色，固定，与具体等级内容无关
 const TIER80_COLOR = '#1e3a8a'; // 深蓝色，固定，与具体等级内容无关
 
+/* ============ 毕业标准说明浮窗 ============
+   三处"毕业判定"标题旁的问号按钮共用同一个浮窗。说明正文全部集中在 GRAD_STD_TABS 里，
+   以后改文案只动那一处数据、不用碰渲染逻辑。所有档位名都经 gstdTable(...,true) 上色，
+   色值直接取 tierStyleOf()（即 TIER_STYLE），与毕业判定结果框同源——不另抄一份色表，
+   否则以后调色必定漏掉其中一边。 */
+function gstdH(t){ return '<div class="gstd-h">'+t+'</div>'; }
+function gstdP(t){ return '<p class="gstd-p">'+t+'</p>'; }
+function gstdNote(t){ return '<div class="gstd-note">'+t+'</div>'; }
+function gstdUl(items){ return '<ul class="gstd-ul">' + items.map(function(x){ return '<li>'+x+'</li>'; }).join('') + '</ul>'; }
+function gstdDiff(title, t){
+  return '<div class="gstd-diff"><span class="gstd-diff-tag">萌新版 ⇄ 通用版 差异</span>'
+    + (title ? '<span class="gstd-diff-title">'+title+'</span>' : '') + t + '</div>';
+}
+// 两列说明表：首列当小标题。colorFirst=true 时首列文字本身是档位名，按它自己的颜色上色
+function gstdTable(title, rows, colorFirst){
+  const head = title ? '<div class="gstd-tbl-title">'+title+'</div>' : '';
+  const body = rows.map(function(r){
+    const style = colorFirst ? ' style="color:'+tierStyleOf(r[0]).color+';"' : '';
+    return '<tr><th'+style+'>'+r[0]+'</th><td>'+r[1]+'</td></tr>';
+  }).join('');
+  return head + '<table class="gstd-tbl">' + body + '</table>';
+}
+// 带表头的多列表格。单元格写成 G('显示文字','档位名') 就按该档位的颜色上色，写普通字符串则不上色
+function G(text, gradeKey){ return {t:text, g:gradeKey||text}; }
+function gstdGradeTable(title, cols, rows){
+  const head = title ? '<div class="gstd-tbl-title">'+title+'</div>' : '';
+  const thead = '<thead><tr>' + cols.map(function(c){ return '<th>'+c+'</th>'; }).join('') + '</tr></thead>';
+  const tbody = '<tbody>' + rows.map(function(r){
+    return '<tr>' + r.map(function(cell){
+      if(cell && typeof cell === 'object'){
+        return '<td style="color:'+tierStyleOf(cell.g).color+'; font-weight:800;">'+cell.t+'</td>';
+      }
+      return '<td>'+cell+'</td>';
+    }).join('') + '</tr>';
+  }).join('') + '</tbody>';
+  return head + '<table class="gstd-tbl gstd-tbl-grade">' + thead + tbody + '</table>';
+}
+const GSTD_COLS = ['效率门槛','通用版显示','萌新版显示'];
+const GRAD_STD_TABS = [
+  {key:'common', label:'概览', tone:'neutral', html:function(){ return ''
+    + gstdH('「效率」是什么')
+    + gstdP('效率是<b>这套面板相对空白面板的产量倍率</b>，1.00 = 什么副技能和性格加成都没有。参与计算的只有四项：')
+    + gstdTable('', [
+        ['帮忙速度M / S', '帮忙间隔 −14% / −7%'],
+        ['帮手奖励', '帮忙间隔 −5%'],
+        ['食材几率M / S（食材型）', '食材产量 +36% / +18%'],
+        ['主技能几率M / S（功能型·能量型）', '技能触发 +36% / +18%'],
+        ['树果 S（树果·能量型）', '每次帮忙捡来的树果数量 +1'],
+        ['性格加成', '对应项 ±20%；帮忙速度性格另算（加速 帮忙间隔 −10%、减速 帮忙间隔 +7.5%）'],
+      ], false)
+    + gstdP('计算时只看<b>精确原始效率</b>，不含同队金帮加成、不含队伍数量加成。')
+    + gstdH('「金帮」和「非金帮」是两套完全不同的标准')
+    + gstdP('只要副技能窗口里<b>出现了「帮手奖励」</b>，这只宝可梦就走金帮那一套标准，门槛整体更低（因为帮手奖励本身挤占了一个宝贵的槽位）。两套标准之间不可互相比较。')
+    + gstdH('「和解」是什么意思')
+    + gstdP('档位从低到高是：<b>不合格 → 和解 → 毕业 → 大毕业 → 超级毕业</b>，每一档还分金帮 / 非金帮两个版本。')
+    + gstdUl([
+        '<b style="color:'+tierStyleOf('和解').color+';">和解</b>：数值勉强够用、但没到理想水平。留着不亏，遇到更好的就换掉，建议继续刷。',
+        '<b style="color:'+tierStyleOf('毕业').color+';">毕业</b>：可以定下来长期培养、不用再刷了。',
+        '<b style="color:'+tierStyleOf('大毕业').color+';">大毕业</b> / <b style="color:'+tierStyleOf('超级毕业').color+';">超级毕业</b>：越级的极品面板，属于运气好捡到的。',
+      ]);
+  }},
+  {key:'fruit', label:'树果', tone:'fruit', html:function(){ return ''
+    + gstdP('树果型是唯一<b>通用版和萌新版看到的档位名不一样</b>的类型，所以下面两张表把两版分开列。括号里是萌新版的字母评级。')
+    + gstdGradeTable('非金帮', GSTD_COLS, [
+        ['1.7 以下',   G('不合格'), G('不合格（F 级）','不合格')],
+        ['1.7 ~ 1.8',  G('和解'),   G('和解（C~D 级）','和解')],
+        ['1.8 ~ 2',    G('和解'),   G('毕业（C+ 级）','毕业')],
+        ['2 以上',     G('大毕业'), G('超级毕业（S 级）','超级毕业')],
+      ])
+    + gstdP('树果型非金帮<b>没有「大毕业」这一档</b>，从毕业直接跳到超级毕业。')
+    + gstdGradeTable('金帮', GSTD_COLS, [
+        ['1.55 以下',    G('金帮不合格'),   G('金帮不合格（F 级）','金帮不合格')],
+        ['1.55 ~ 1.75',  G('金帮和解'),     G('金帮毕业（B 级）','金帮毕业')],
+        ['1.75 ~ 2',     G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
+        ['2 以上',       G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
+      ])
+    + gstdP('树果型金帮<b>没有「金帮和解」这一档</b>，从金帮不合格直接跳到金帮毕业。')
+    + gstdDiff('树果型是唯一会「下调一档展示」的类型',
+        gstdP('<b>通用版</b>中因为 70 级版本的诞生，会收紧对于树果型的判断，鼓励老玩家严选树果型，所以把算出来的档位<b>下调一档</b>再显示给你：')
+        + gstdGradeTable('', ['内部算出来','通用版显示成','萌新版显示成'], [
+            [G('毕业'),     G('和解'),     G('毕业 / C+ 级','毕业')],
+            [G('超级毕业'), G('大毕业'),   G('超级毕业 / S 级','超级毕业')],
+            [G('金帮毕业'), G('金帮和解'), G('金帮毕业 / B 级','金帮毕业')],
+          ])
+        + gstdP('<b>没有被下调的两档：金帮大毕业、金帮超级毕业</b>，这两档通用版和萌新版显示的名字一样。空出来的档位不会有东西补上。<b>这条只对树果型生效</b>，食材型 / 功能型 / 能量型都不下调。'))
+    + gstdDiff('树果型的萌新版字母还要再降半档',
+        gstdP('萌新版给树果型的字母评级单独做了一次下调，比其他类型同档位低半格：')
+        + gstdGradeTable('', ['档位','其他类型的字母','树果型的字母'], [
+            [G('金帮毕业'), 'B+ 级', G('B 级','金帮毕业')],
+            [G('毕业'),     'B 级',  G('C+ 级','毕业')],
+          ]))
+    + gstdH('备注：一线树果主力')
+    + gstdP('以下 13 只（含其进化链，基本是每个属性一只）属于一线树果主力：皮卡丘（电）、雷丘（电）、冰九尾（冰）、火暴兽（火）、大力鳄（水）、天然鸟（超能力）、蜥蜴王（草）、巨沼怪（地面）、暴飞龙（龙）、烈焰猴（格斗）、帝王拿波（钢）、怪颚龙（岩石）、音波龙（龙）')
+    + gstdP('当它们判定结果落在 <b>和解 / 毕业 / 大毕业 / 金帮和解 / 金帮毕业</b> 这几档时，会额外提示：')
+    + gstdNote('○○为一线树果主力，建议严选 <b>金帮果 s + 至少一帮</b>');
+  }},
+  {key:'food', label:'食材', tone:'food', html:function(){ return ''
+    + gstdP('食材型的档位名通用版和萌新版一致，萌新版只是换成字母。')
+    + gstdGradeTable('效率门槛 · 非金帮', GSTD_COLS, [
+        ['1.58 以下',    G('不合格'),   G('不合格（F 级）','不合格')],
+        ['1.58 ~ 1.63',  G('和解'),     G('和解（C~D 级）','和解')],
+        ['1.63 ~ 1.75',  G('毕业'),     G('毕业（B 级）','毕业')],
+        ['1.75 ~ 2',     G('大毕业'),   G('大毕业（A 级）','大毕业')],
+        ['2 以上',       G('超级毕业'), G('超级毕业（S 级）','超级毕业')],
+      ])
+    + gstdGradeTable('效率门槛 · 金帮', GSTD_COLS, [
+        ['1.48 以下',    G('金帮不合格'),   G('金帮不合格（F 级）','金帮不合格')],
+        ['1.48 ~ 1.55',  G('金帮和解'),     G('金帮和解（C~D 级）','金帮和解')],
+        ['1.55 ~ 1.7',   G('金帮毕业'),     G('金帮毕业（B+ 级）','金帮毕业')],
+        ['1.7 ~ 1.9',    G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
+        ['1.9 以上',     G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
+      ])
+    + gstdH('食谱覆盖率会改写结论（食材型独有）')
+    + gstdP('食材型不是只看效率。「食谱覆盖率」= 这只宝可梦每天产出的某种食材数量 ÷ 该食材的每日需求量（每日需求量 = 食谱附表里这种食材的最高单次用量 × 3）。')
+    + gstdP('<b>升档规则：</b>判定结果是 <b>和解 / 金帮和解</b> 时，只要<b>任意一种</b>食材的覆盖率 <b>≥ 120%</b>，就升为 <b>毕业 / 金帮毕业</b>。此时会显示备注：')
+    + gstdNote('效率为和解，经由食谱覆盖率转化为毕业')
+    + gstdP('<b>降档规则（封顶）：</b>判定结果是<b>毕业及以上</b>时，如果<b>所有</b>食材的覆盖率都 <b>&lt; 105%</b>，不管效率算出来多高，一律压回 <b>和解 / 金帮和解</b>（评语也换成和解自己的评语）。此时会显示备注：')
+    + gstdNote('由于食谱覆盖率不足，只能转化为和解')
+    + gstdP('<b>50 级的特殊处理：</b>展示框里的覆盖率数字始终按你当前选的等级算，但<b>判定规则本身在 50 级时改用 60 级的覆盖率</b>来判断。触发时备注会写明「经由 <b>60 级</b>食谱覆盖率转化为○○」，并在下方额外补一行「60 级：」的覆盖率数据。60 / 70 / 80 级都用各自等级的覆盖率，不做这种换算。')
+    + gstdP('<b>不参与覆盖率转化的：</b>')
+    + gstdUl([
+        '<b>大器晚成型</b>：快龙、班基拉斯及其进化链（迷你龙、哈克龙、幼基拉斯、沙基拉斯）',
+        '<b>没有每日需求量的食材</b>（比如尾巴），覆盖率显示为空白，也不参与升降档判断',
+      ])
+    + gstdH('食材组合本身就不合格的几种情况')
+    + gstdP('食材组合指三个槽位选的食材字母（a = 一号食材，b = 二号，c = 三号）。以下几种直接盖章，不再看效率：')
+    + gstdGradeTable('', ['组合','标题','判定与评语'], [
+        ['abc', 'abc 逆贼', G('不合格 · 病入膏肓 神仙难救','不合格')],
+        ['aba', 'aba 滚粗', G('不合格 · 一把抓住 顷刻炼化','不合格')],
+        ['aab / aac，且该宝可梦 aaa 不可用', 'aax 报废', G('不合格 · 人为刀俎 我为鱼肉','不合格')],
+        ['aaa / abb，但该组合不在这只宝可梦的可用列表里', '○○不可用', '原判定加删除线、红字 · 差之毫厘 谬以千里'],
+      ])
+    + gstdP('<b>aab / aac 且该宝可梦 aaa 可用时</b>走一条单独的「打工」判定：')
+    + gstdUl([
+        '看<b>前两个槽位</b>算出来的效率是否 ≥ <b>1.63</b>'
+          + gstdUl([
+              '达到 → <b style="color:#7a4f9e;">aax 打工</b>（紫色）「昙花一现 盛筵易散」',
+              '没达到 → 再看 a 食材在当前等级下的食谱覆盖率是否 ≥ <b>120%</b>'
+                + gstdUl([
+                    '达到 → 仍判 <b style="color:#7a4f9e;">aax 打工</b>，并附备注「效率不足以打工，由食谱覆盖率转化为可打工」',
+                    '没达到 → <b>aax 报废</b>，不合格「人为刀俎 我为鱼肉」',
+                  ]),
+            ]),
+      ])
+    + gstdP('这几种被盖章的组合本身不参与食谱覆盖率毕业判定，但覆盖率数字仍会照常显示供你参考。');
+  }},
+  {key:'skill', label:'功能', tone:'skill', html:function(){ return ''
+    + gstdP('功能型的档位名通用版和萌新版一致，萌新版只是换成字母。')
+    + gstdGradeTable('一般宝可梦 · 非金帮', GSTD_COLS, [
+        ['1.6 以下',     G('不合格'),   G('不合格（F 级）','不合格')],
+        ['1.6 ~ 1.75',   G('和解'),     G('和解（C~D 级）','和解')],
+        ['1.75 ~ 1.84',  G('毕业'),     G('毕业（B 级）','毕业')],
+        ['1.84 ~ 2',     G('大毕业'),   G('大毕业（A 级）','大毕业')],
+        ['2 以上',       G('超级毕业'), G('超级毕业（S 级）','超级毕业')],
+      ])
+    + gstdGradeTable('一般宝可梦 · 金帮', GSTD_COLS, [
+        ['1.55 以下',   G('金帮不合格'),   G('金帮不合格（F 级）','金帮不合格')],
+        ['1.55 ~ 1.6',  G('金帮和解'),     G('金帮和解（C~D 级）','金帮和解')],
+        ['1.6 ~ 1.7',   G('金帮毕业'),     G('金帮毕业（B+ 级）','金帮毕业')],
+        ['1.7 ~ 1.9',   G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
+        ['1.9 以上',    G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
+      ])
+    + gstdH('五只特例宝可梦：门槛整体下移')
+    + gstdP('<b>咚咚鼠、雷公、炎帝、水君、克雷色利亚</b>这五只，原本的和解区间整体下移视为毕业，并在更低的位置重新划出和解区间。大毕业和超级毕业的门槛跟一般宝可梦一样，只有和解 / 毕业这两档被放宽了。')
+    + gstdGradeTable('特例 · 非金帮', GSTD_COLS, [
+        ['1.55 以下',   G('不合格'),   G('不合格（F 级）','不合格')],
+        ['1.55 ~ 1.6',  G('和解'),     G('和解（C~D 级）','和解')],
+        ['1.6 ~ 1.84',  G('毕业'),     G('毕业（B 级）','毕业')],
+        ['1.84 ~ 2',    G('大毕业'),   G('大毕业（A 级）','大毕业')],
+        ['2 以上',      G('超级毕业'), G('超级毕业（S 级）','超级毕业')],
+      ])
+    + gstdGradeTable('特例 · 金帮', GSTD_COLS, [
+        ['1.5 以下',    G('金帮不合格'),   G('金帮不合格（F 级）','金帮不合格')],
+        ['1.5 ~ 1.55',  G('金帮和解'),     G('金帮和解（C~D 级）','金帮和解')],
+        ['1.55 ~ 1.7',  G('金帮毕业'),     G('金帮毕业（B+ 级）','金帮毕业')],
+        ['1.7 ~ 1.9',   G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
+        ['1.9 以上',    G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
+      ]);
+  }},
+  {key:'energy', label:'能量', tone:'energy', html:function(){ return ''
+    + gstdP('能量型<b>不看效率门槛表，改看排名</b>，档位名通用版和萌新版一致。')
+    + gstdP('系统会把这只宝可梦<b>所有可能的副技能 + 性格组合</b>都算一遍能量值，去重后从高到低排序，然后看你这套面板排在第几名。')
+    + gstdGradeTable('50 级 · 非金帮', ['50 级名次','通用版显示','萌新版显示'], [
+        ['前 3 名',    G('超级毕业'), G('超级毕业（S 级）','超级毕业')],
+        ['前 10 名',   G('大毕业'),   G('大毕业（A 级）','大毕业')],
+        ['前 20 名',   G('毕业'),     G('毕业（B 级）','毕业')],
+        ['前 30 名',   G('和解'),     G('和解（C~D 级）','和解')],
+        ['30 名开外',  G('不合格'),   G('不合格（F 级）','不合格')],
+      ])
+    + gstdGradeTable('50 级 · 金帮', ['50 级名次','通用版显示','萌新版显示'], [
+        ['前 5 名',    G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
+        ['前 15 名',   G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
+        ['前 30 名',   G('金帮毕业'),     G('金帮毕业（B+ 级）','金帮毕业')],
+        ['前 50 名',   G('金帮和解'),     G('金帮和解（C~D 级）','金帮和解')],
+        ['50 名开外',  G('金帮不合格'),   G('金帮不合格（F 级）','金帮不合格')],
+      ])
+    + gstdH('70 / 80 级：拿 50 级榜单的效率值当门槛')
+    + gstdP('70 / 80 级<b>不看该等级内部的排名</b>，而是固定用 <b>50 级排行榜上对应名次的能量值</b>当分界线。举例：50 级榜单第 5 名的能量值，就是 70 / 80 级「金帮超级毕业」的门槛；你 70 级的能量值只要够到这个数，就算金帮超级毕业。')
+    + gstdP('这样设计是因为高等级面板本身数值就水涨船高，如果还看内部排名，等于永远只有固定比例的面板能毕业。')
+    + gstdH('备注：能量型必须严选果 S')
+    + gstdP('能量型如果副技能窗口里<b>没有树果 S</b>，判定结果会被打上删除线、变成红字，并提示：')
+    + gstdNote('<b>建议严选果 S</b> —— 买椟还珠 因小失大');
+  }},
+  {key:'notes', label:'备注', tone:'neutral', html:function(){ return ''
+    + gstdH('「不推荐使用」')
+    + gstdP('数据表里被标记为不推荐的宝可梦，判定结果会加删除线、变红字，并显示该宝可梦的专属短评，下方附一行：')
+    + gstdNote('*不推荐使用建议仅出于强度考量，真爱党请随意')
+    + gstdH('闪光')
+    + gstdP('勾选闪光后，档位名前面会加「闪光」二字，评语也换成另一套专为闪光准备的词（例如毕业的「中流砥柱 栋梁之材」→「鹰击长空 鱼翔浅底」）。')
+    + gstdH('50 级会额外预测 70 / 80 级')
+    + gstdP('当前选 50 级、且判定结果还没到超级毕业时，下方会追加显示这套面板在 70 级 / 80 级能达到的档位（只在比当前档位<b>更高</b>时才显示；同档但从非金帮变金帮也算更高）。')
+    + gstdUl([
+        '当前是<b>不合格 / 和解</b>时，用一套「未来可期」的评语（临渊羡鱼 退而结网 / 水滴石穿 绳锯木断 ……）',
+        '当前已经是<b>毕业 / 大毕业</b>时，用另一套「追高」的评语（百尺竿头 更进一步 / 柳暗花明 否极泰来 ……）',
+      ])
+    + gstdP('配色：未来可期用固定的 <b style="color:'+TIER70_COLOR+';">70 级天蓝</b> / <b style="color:'+TIER80_COLOR+';">80 级深蓝</b>；追高时则直接用目标档位自己的颜色。')
+    + gstdDiff('70 / 80 级预测块的评语，萌新版不显示', gstdP('只显示等级字母，避免信息过载。'))
+    + gstdDiff('萌新版会加三行红色提醒',
+        gstdP('只有萌新版会在 70 / 80 级相关内容出现时补上这几行大字提醒：')
+        + gstdNote('*70 级至少需要一年半才能到达<br>*80 级暂未开放<br>70/80 级极难到达，萌新谨慎/请勿培养')
+        + gstdP('通用版完全不显示这三行。'));
+  }},
+  {key:'versions', label:'版本差异', tone:'neutral', html:function(){ return ''
+    + gstdGradeTable('', ['项目','萌新版','通用版'], [
+        ['按钮文案', '回归通用版 · 以中后期成熟标准选育宝可梦', '进入萌新版 · 评分评语更易理解，标准更适合萌新'],
+        ['档位显示', 'SSS / S / A+ / A / B+ / B / C~D / F 字母级', '不合格 / 和解 / 毕业 / 大毕业 / 超级毕业（含金帮版）'],
+        ['评语', '直白建议（集中资源 全力培养 / 核心战力 必须培养 / 实力达标 可以培养 / 数值不足 建议再抓 / 非常糟糕 绝不培养）', '四字成语评语，闪光另有一套'],
+        ['<b>树果型档位下调</b>', '<b>不下调</b>，算什么显示什么', '<b>下调一档</b>（毕业→和解、超级毕业→大毕业、金帮毕业→金帮和解；金帮大毕业和金帮超级毕业不下调）'],
+        ['<b>树果型字母</b>', '金帮毕业 = <b>B 级</b>、毕业 = <b>C+ 级</b>（比其他类型低半档）', '不适用（通用版不显示字母）'],
+        ['70/80 级预测的评语', '不显示', '显示'],
+        ['70/80 级红色提醒三行', '显示', '不显示'],
+        ['门槛数值本身', '完全一样', '完全一样'],
+      ])
+    + gstdP('<b>一句话总结差异：</b>两版用的是<b>同一套效率门槛</b>，判定引擎一模一样。差别全在<b>怎么把结果说给你听</b>——萌新版说得直白、标准显得宽松（树果不下调）、并额外劝退 70/80 级；通用版说得含蓄、树果标准更严、默认你知道 70/80 级意味着什么。')
+    + gstdH('萌新版字母 ↔ 档位对照')
+    + gstdGradeTable('', ['档位','字母','评语'], [
+        [G('金帮超级毕业'), G('SSS 级','金帮超级毕业'), '集中资源 全力培养'],
+        [G('超级毕业'),     G('S 级','超级毕业'),       '集中资源 全力培养'],
+        [G('金帮大毕业'),   G('A+ 级','金帮大毕业'),    '核心战力 必须培养'],
+        [G('大毕业'),       G('A 级','大毕业'),         '核心战力 必须培养'],
+        [G('金帮毕业'),     G('B+ 级（树果型为 B 级）','金帮毕业'), '实力达标 可以培养'],
+        [G('毕业'),         G('B 级（树果型为 C+ 级）','毕业'),     '实力达标 可以培养'],
+        [G('金帮和解 / 和解','和解'),       G('C~D 级','和解'),     '数值不足 建议再抓'],
+        [G('金帮不合格 / 不合格','不合格'), G('F 级','不合格'),     '非常糟糕 绝不培养'],
+      ]);
+  }},
+];
+let gradStdIdx = 0;
+function renderGradStdTabs(){
+  const wrap = document.getElementById('gradStdTabs');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  GRAD_STD_TABS.forEach(function(t, i){
+    const b = document.createElement('div');
+    // tone 决定配色：四个类型走全站类型色，概览/备注/版本差异走中性米灰
+    b.className = 'gstd-tab gstd-tab-' + t.tone + (i===gradStdIdx ? ' on' : '');
+    b.textContent = t.label;
+    b.onclick = function(){ gradStdSwitch(i); };
+    wrap.appendChild(b);
+  });
+  // 七个页签在窄屏上排不下（页签条自己能横滚），滑动切页时必须把当前页签拉进可视区，
+  // 否则滑到最后一个"版本差异"时，高亮的那个还留在屏幕外，看着像没切过去
+  const active = wrap.children[gradStdIdx];
+  if(active && active.scrollIntoView) active.scrollIntoView({block:'nearest', inline:'nearest'});
+}
+function renderGradStdBody(step){
+  const body = document.getElementById('gradStdBody');
+  if(!body) return;
+  body.classList.remove('gstd-slide-r','gstd-slide-l');
+  body.innerHTML = GRAD_STD_TABS[gradStdIdx].html();
+  body.scrollTop = 0;
+  if(step){
+    void body.offsetWidth; // 强制重排，否则连着往同一个方向切时动画不会重播
+    body.classList.add(step>0 ? 'gstd-slide-r' : 'gstd-slide-l');
+  }
+}
+function gradStdSwitch(idx){
+  if(idx<0 || idx>=GRAD_STD_TABS.length || idx===gradStdIdx) return;
+  const step = idx > gradStdIdx ? 1 : -1;
+  gradStdIdx = idx;
+  renderGradStdTabs();
+  renderGradStdBody(step);
+}
+function openGradStd(){
+  // 默认落在当前面板类型那一页——问号是在看某一只的判定结果时点开的，
+  // 直接翻到对应类型比每次都从"通用"开始更省事
+  const want = GRAD_STD_TABS.findIndex(function(t){ return t.key === state.type; });
+  gradStdIdx = want >= 0 ? want : 0;
+  renderGradStdTabs();
+  renderGradStdBody(0);
+  document.getElementById('gradStdOverlay').style.display = 'flex';
+}
+function closeGradStd(){ document.getElementById('gradStdOverlay').style.display = 'none'; }
+
 function gradBlockHtml(cls, gradeText, commentText, baseGradeSize, baseCommentSize, color, strike, extraNote){
   const strikeStyle = strike ? 'text-decoration:line-through;' : '';
   const noteHtml = extraNote ? `<div class="grad-7080-note">${extraNote}</div>` : '';
@@ -10049,6 +10422,31 @@ document.getElementById('newbieModeBtn').onclick = ()=>{
   renderAll();
 };
 
+/* ---- 毕业标准浮窗的入口与手势：三个问号按钮是写死在 HTML 里的静态节点，直接一次性绑完 ---- */
+document.querySelectorAll('.grad-help-btn').forEach(function(b){ b.onclick = openGradStd; });
+document.getElementById('gradStdCloseBtn').onclick = closeGradStd;
+document.getElementById('gradStdOverlay').addEventListener('click', function(e){
+  if(e.target === this) closeGradStd(); // 只有点到遮罩本身才关，点面板内部不关
+});
+(function(){
+  // 正文区左右滑切页签。阈值照抄主页面翻页手势那一套（纵向位移过大/横向幅度不够/横向没明显
+  // 压过纵向都不算），否则上下滚这一大段说明文字时，手指稍微斜一点就会被误判成切页签
+  const body = document.getElementById('gradStdBody');
+  if(!body) return;
+  let sx=0, sy=0, tracking=false;
+  body.addEventListener('touchstart', function(e){
+    if(e.touches.length!==1){ tracking=false; return; }
+    sx=e.touches[0].clientX; sy=e.touches[0].clientY; tracking=true;
+  }, {passive:true});
+  body.addEventListener('touchend', function(e){
+    if(!tracking) return; tracking=false;
+    const t=e.changedTouches[0], dx=t.clientX-sx, dy=t.clientY-sy;
+    if(Math.abs(dy)>=60 || Math.abs(dx)<=70) return;
+    if(Math.abs(dx) < Math.abs(dy)*1.5) return;
+    gradStdSwitch(gradStdIdx + (dx<0 ? 1 : -1)); // 左滑=下一个，跟全站手势约定一致
+  }, {passive:true});
+})();
+
 
 
 /* ===== 捕捉推荐页数据（由宝睡百科+矩阵自动生成，请勿手改） ===== */
@@ -11326,7 +11724,7 @@ function pageSwipeBlocked(){
   if(boxOverlayOpen || dashboardOpen) return true;
   const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay'];
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
   return false;
 }
