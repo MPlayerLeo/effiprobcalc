@@ -1119,7 +1119,7 @@
   .gstd-body.gstd-slide-l{ animation:gstdSlideL .22s ease; }
   @keyframes gstdSlideR{ from{ opacity:0; transform:translateX(30px); } to{ opacity:1; transform:none; } }
   @keyframes gstdSlideL{ from{ opacity:0; transform:translateX(-30px); } to{ opacity:1; transform:none; } }
-  .gstd-h{ font-size:14px; font-weight:800; color:var(--accent-dk); margin:16px 0 6px; }
+  .gstd-h{ font-size:14px; font-weight:900; color:var(--accent-dk); margin:16px 0 6px; }
   .gstd-h:first-child{ margin-top:0; }
   .gstd-p{ font-size:12.5px; line-height:1.75; color:var(--ink); margin:6px 0; }
   .gstd-p b{ font-weight:800; }
@@ -1135,7 +1135,7 @@
   .gstd-ul{ margin:6px 0 6px 18px; padding:0; font-size:12.5px; line-height:1.75; color:var(--ink); }
   .gstd-ul li{ margin:3px 0; }
   .gstd-ul .gstd-ul{ margin-bottom:0; font-size:12px; }
-  .gstd-diff-title{ display:block; font-size:13px; font-weight:800; color:var(--accent-dk); margin-bottom:4px; }
+  .gstd-diff-title{ display:block; font-size:13px; font-weight:900; color:var(--accent-dk); margin-bottom:4px; }
   .gstd-note{
     font-size:12px; line-height:1.7; color:#8a6d3b; background:#f9f3e2;
     border-left:3px solid var(--gold-bd); border-radius:0 8px 8px 0; padding:7px 10px; margin:8px 0;
@@ -7101,15 +7101,15 @@ const GRAD_STD_TABS = [
         ['性格加成', '对应项 ±20%；帮忙速度性格另算（加速 帮忙间隔 −10%、减速 帮忙间隔 +7.5%）'],
       ], false)
     + gstdP('计算时只看<b>精确原始效率</b>，不含同队金帮加成、不含队伍数量加成。')
-    + gstdH('「金帮」和「非金帮」是两套完全不同的标准')
-    + gstdP('只要副技能窗口里<b>出现了「帮手奖励」</b>，这只宝可梦就走金帮那一套标准，门槛整体更低（因为帮手奖励本身挤占了一个宝贵的槽位）。两套标准之间不可互相比较。')
     + gstdH('「和解」是什么意思')
     + gstdP('档位从低到高是：<b>不合格 → 和解 → 毕业 → 大毕业 → 超级毕业</b>，每一档还分金帮 / 非金帮两个版本。')
     + gstdUl([
-        '<b style="color:'+tierStyleOf('和解').color+';">和解</b>：数值勉强够用、但没到理想水平。留着不亏，遇到更好的就换掉，建议继续刷。',
-        '<b style="color:'+tierStyleOf('毕业').color+';">毕业</b>：可以定下来长期培养、不用再刷了。',
-        '<b style="color:'+tierStyleOf('大毕业').color+';">大毕业</b> / <b style="color:'+tierStyleOf('超级毕业').color+';">超级毕业</b>：越级的极品面板，属于运气好捡到的。',
-      ]);
+        '<b style="color:'+tierStyleOf('和解').color+';">和解</b>：数值其实不够，勉强满足底线。可以留下但最好不要培养，建议继续多抓多选。只有「万事俱备只欠东风」，各类辅助手和其他食材都齐备了，就差这一只搭伙做饭好戏开幕的老玩家才考虑培养。',
+        '<b style="color:'+tierStyleOf('毕业').color+';">毕业</b>：队伍中的中流砥柱，可以定下来长期培养、不用再刷了。',
+        '<b style="color:'+tierStyleOf('大毕业').color+';">大毕业</b> / <b style="color:'+tierStyleOf('超级毕业').color+';">超级毕业</b>：越级的极品面板，欧皇吃我一矛。',
+      ])
+    + gstdH('「金帮」和「非金帮」是两套完全不同的标准')
+    + gstdP('只要副技能窗口里<b>出现了「帮手奖励」</b>，这只宝可梦就走金帮那一套标准，门槛整体更低（由于帮手奖励的稀缺性、高强度以及占据一个副技能位）。两套标准之间不可互相比较。');
   }},
   {key:'fruit', label:'树果', tone:'fruit', html:function(){ return ''
     + gstdP('树果型是唯一<b>通用版和萌新版看到的档位名不一样</b>的类型，所以下面两张表把两版分开列。括号里是萌新版的字母评级。')
@@ -7334,10 +7334,9 @@ function gradStdSwitch(idx){
   renderGradStdBody(step);
 }
 function openGradStd(){
-  // 默认落在当前面板类型那一页——问号是在看某一只的判定结果时点开的，
-  // 直接翻到对应类型比每次都从"通用"开始更省事
-  const want = GRAD_STD_TABS.findIndex(function(t){ return t.key === state.type; });
-  gradStdIdx = want >= 0 ? want : 0;
+  // 每次都从"概览"这一页开始，不跟着当前面板类型跳——概览里的效率定义、金帮分组、
+  // 档位含义是看懂后面四个类型页的前提，直接甩到类型页会让第一次点开的人没头没尾
+  gradStdIdx = 0;
   renderGradStdTabs();
   renderGradStdBody(0);
   document.getElementById('gradStdOverlay').style.display = 'flex';
