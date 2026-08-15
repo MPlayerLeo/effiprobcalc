@@ -7643,11 +7643,22 @@ function gradCoverageMergesSkillForGrade(){
   const rec = getSelectedPokemonRecord();
   return isFoodPickPanel() && !(rec && DEX_TYPE_MAP[rec[3]]==='food');
 }
+// 决策口径专用：临时把露营券开关按下(false)算一遍再复原。食谱覆盖率相关的"转化毕业"判定
+// （邪修/恐怖宝可梦/aax打工/主档位覆盖率升降档/盒子档位分类）统一用这个包一层，让判定结果
+// 不受当前面板露营券开关影响；展示框（毕业判定框/产能分析）不包这层，照旧受开关影响。
+// 只在同步调用链里生效，包裹的函数内部不能有 await/setTimeout 之类跨越事件循环的操作。
+function withNoCamping(fn){
+  const saved = userPrefs.campingTicket;
+  userPrefs.campingTicket = false;
+  try { return fn(); } finally { userPrefs.campingTicket = saved; }
+}
 // 毕业判定框/产能分析/邪修判定共用的覆盖率行：在 computeFoodCoverageRows 之上按需并入主技能产出的食材。
 // forDisplay=true 时（毕业判定框、产能分析的纯展示场景）食材型食材精选也一并显示技能产出，
 // 因为它们的主业本来就是产食材；但这只影响"显示"，档位升降判定固定走上面那条食材型排除规则，
 // 不然大嘴娃/蝶结萌虻的既有毕业档位会被技能那份产出悄悄改掉。
-function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay){
+// ignoreCamping=true 时无视当前露营券开关，一律按未开启算——毕业档位升降判定固定用这个口径，
+// 展示（forDisplay=true 那几处调用）不传，照旧受露营券开关影响
+function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay, ignoreCamping){
   const rec = getSelectedPokemonRecord();
   const isFoodTypePick = !!(rec && DEX_TYPE_MAP[rec[3]]==='food');
   const mergesSkill = isFoodPickPanel() && (forDisplay || !isFoodTypePick);
@@ -7656,7 +7667,7 @@ function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay)
   // 由食材面板本身保证选满，不需要也不应该套这道关卡
   let rows = (mergesSkill && !isFoodTypePick && (!state.ingChoice2 || !state.ingChoice3))
     ? null
-    : computeFoodCoverageRows(effFood, levelOverride, infiniteCarry);
+    : computeFoodCoverageRows(effFood, levelOverride, infiniteCarry, ignoreCamping);
   if(mergesSkill){
     const level = levelOverride || state.level;
     const skillBase = capPageBaseYield('skill', level);
@@ -7701,23 +7712,27 @@ function xiexiuInfoFromRows(rows){
   return null;
 }
 const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
-// 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率）
+// 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率，且固定忽略露营券开关）
 function computeXiexiuNow(labels, persona){
   if(!xiexiuEligibleNow()) return null;
-  const effFood = computeEfficiency(labels, 'food', state.level, persona);
-  return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true));
+  return withNoCamping(()=>{
+    const effFood = computeEfficiency(labels, 'food', state.level, persona);
+    return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true));
+  });
 }
 // 「恐怖宝可梦」（内部代号，页面上任何地方都不出现这四个字）：
-// abc/aac 组合、c 食材覆盖率 >120% 且效率值 >2 的食材型
+// abc/aac 组合、c 食材覆盖率 >120% 且效率值 >2 的食材型（判定固定忽略露营券开关）
 function isTerrorPanel(labels, persona){
   if(state.type!=='food') return false;
   const pattern = currentIngredientPattern();
   if(pattern!=='abc' && pattern!=='aac') return false;
-  const effFood = computeEfficiency(labels, 'food', state.level, persona);
-  if(ffloat(effFood) <= 2) return false;
-  const rows = computeFoodCoverageRows(effFood, undefined, true);
-  const cRow = rows && rows.find(r=>r.letter==='c');
-  return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
+  return withNoCamping(()=>{
+    const effFood = computeEfficiency(labels, 'food', state.level, persona);
+    if(ffloat(effFood) <= 2) return false;
+    const rows = computeFoodCoverageRows(effFood, undefined, true);
+    const cRow = rows && rows.find(r=>r.letter==='c');
+    return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
+  });
 }
 
 function getGradOverrideInfo(){
@@ -7755,10 +7770,12 @@ function getGradOverrideInfo(){
       if(fcmp(workEff, F(163,100)) < 0){
         // 效率没到打工门槛时，再看a食材当前（按用户实际选中的等级）的食谱覆盖率是否达标——
         // 跟"食材和解经食谱覆盖率转化为毕业"同一个思路、用的也是同一套食谱覆盖率算法：
-        // 效率不够也能靠食谱覆盖率转成够格，而不是直接判废
-        const fcEffForA = computeEfficiency(labels, 'food', state.level, persona);
-        const coverageRows = computeFoodCoverageRows(fcEffForA);
-        const aRow = coverageRows && coverageRows.find(r=>r.letter==='a');
+        // 效率不够也能靠食谱覆盖率转成够格，而不是直接判废（这条覆盖率判定固定忽略露营券开关）
+        const aRow = withNoCamping(()=>{
+          const fcEffForA = computeEfficiency(labels, 'food', state.level, persona);
+          const coverageRows = computeFoodCoverageRows(fcEffForA);
+          return coverageRows && coverageRows.find(r=>r.letter==='a');
+        });
         if(aRow && aRow.ratio >= 1.2){
           return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散', conversionNote:'效率不足以打工，由食谱覆盖率转化为可打工'};
         }
@@ -8126,13 +8143,14 @@ function renderGraduation(pfx){
   }
   if(state.type==='food' && row){
     // rawCoverageRows：档位升降判定专用，食材型食材精选固定不并技能产出，保证既有毕业档位不被悄悄改掉；
-    // foodCoverageRows：展示专用，食材精选（含食材型的大嘴娃/蝶结萌虻）一律并入技能产出
-    const rawCoverageRows = gradFoodCoverageRows(eff);
+    // 且固定忽略露营券开关（判定用单独一份 no-camping 效率复算，不复用上面带露营券加成的 eff）；
+    // foodCoverageRows：展示专用，食材精选（含食材型的大嘴娃/蝶结萌虻）一律并入技能产出，照旧受开关影响
+    const rawCoverageRows = withNoCamping(()=> gradFoodCoverageRows(computeEfficiency(labels, state.type, state.level, persona)));
     foodCoverageRows = gradFoodCoverageRows(eff, undefined, undefined, true);
     const isLateBloomer = LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(effectiveYieldDex());
     if(rawCoverageRows && !isLateBloomer){
       const usesLevel60Rule = state.level===50;
-      const decisionRows = usesLevel60Rule ? computeFoodCoverageRowsAtLevel60() : rawCoverageRows;
+      const decisionRows = usesLevel60Rule ? withNoCamping(computeFoodCoverageRowsAtLevel60) : rawCoverageRows;
       // 50级升档时下方附带展示的"60级："行，同样按展示口径并入技能产出
       const level60DisplayRows = usesLevel60Rule
         ? gradFoodCoverageRows(computeEfficiency(labels, state.type, 60, persona), 60, undefined, true)
@@ -10934,12 +10952,14 @@ const capState = {
 const CAP_TYPE_ORDER = ['berryEnergy','food','skill'];
 
 /* ---- 帮忙间隔/次数 ---- */
-function capInterval(base, level, medal){
+// ignoreCamping=true 时无视当前露营券开关，一律按未开启算（食谱覆盖率的毕业判定/邪修/aax/盒子档位
+// 这几处判定固定用这个口径，避免开着露营券时把不该转正的档位悄悄转正；展示框不传这个参数，照旧受开关影响）
+function capInterval(base, level, medal, ignoreCamping){
   let interval = base * 0.45 * CAP_LEVEL_FACTOR[level] * (medal ? 0.88 : 1);
-  if(userPrefs.campingTicket) interval /= CAMPING_SPEED_MULT;
+  if(userPrefs.campingTicket && !ignoreCamping) interval /= CAMPING_SPEED_MULT;
   return interval;
 }
-function capHelpsPerDay(base, level, medal){ return 86400 / capInterval(base, level, medal); }
+function capHelpsPerDay(base, level, medal, ignoreCamping){ return 86400 / capInterval(base, level, medal, ignoreCamping); }
 function capSkillRate(prob, base, level, medal, pity){
   if(!pity) return prob;
   const pityN = Math.ceil((40*3600)/base);
@@ -11043,7 +11063,8 @@ function capPatternIngredientAmount(x, letter, n){
 }
 // 毕业判定页"食谱覆盖率"：展示框按当前实际选择的等级+效率计算；levelOverride 仅供毕业判定规则内部按60级复算时使用
 // infiniteCarry=true 时无视当前持有上限模式，一律按"无限持有"算（邪修/恐怖宝可梦判定按需求固定用这个口径）
-function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry){
+// ignoreCamping=true 时无视当前露营券开关，一律按未开启算（毕业判定/邪修/aax 这几处决策口径固定用这个）
+function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry, ignoreCamping){
   if(typeof CAP_DEX==='undefined' || !state.selectedDex) return null;
   const pattern = currentIngredientPattern();
   if(!pattern) return null;
@@ -11055,7 +11076,7 @@ function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry){
   const letters = ['a'];
   if(state.ingChoice2 && !letters.includes(state.ingChoice2)) letters.push(state.ingChoice2);
   if(n>=3 && state.ingChoice3 && !letters.includes(state.ingChoice3)) letters.push(state.ingChoice3);
-  const helps = capHelpsPerDay(x.interval, level, medal);
+  const helps = capHelpsPerDay(x.interval, level, medal, ignoreCamping);
   const e = ffloat(effFrac);
   const rows = [];
   letters.forEach(letter=>{
@@ -11074,13 +11095,13 @@ function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry){
   return rows.length ? rows : null;
 }
 // 仅供"50级毕业判定改用60级食谱覆盖率"这条规则内部计算：不管当前展示等级是多少，
-// 用当前选中的副技能/性格假设面板是60级重新算一次效率+覆盖率（不用于展示框本身）
+// 用当前选中的副技能/性格假设面板是60级重新算一次效率+覆盖率（不用于展示框本身，固定忽略露营券）
 function computeFoodCoverageRowsAtLevel60(){
   if(state.type!=='food') return null;
   const labels = currentLabels();
   const persona = currentPersona();
   const eff60 = computeEfficiency(labels, state.type, 60, persona);
-  return computeFoodCoverageRows(eff60, 60);
+  return computeFoodCoverageRows(eff60, 60, undefined, true);
 }
 function foodCoverageColor(ratio){
   const pct = ratio * 100;
@@ -11201,13 +11222,15 @@ function capPatternIngredientAmountForBuild(x, letter, n, ing2, ing3){
   }
   return sum;
 }
+// 只供盒子记录的档位判定用（boxEntryGraduationGrade/boxAaxCategory/boxXiexiuInfo），不是展示框，
+// 固定忽略露营券——盒子记录本来就不知道当前面板的露营券开关状态，判定不该受它影响
 function computeFoodCoverageRowsForBuild(x, level, ing2, ing3, effFrac){
   const medal = x.stage==='徽章';
   const n = level===50 ? 2 : 3;
   const letters = ['a'];
   if(ing2 && !letters.includes(ing2)) letters.push(ing2);
   if(n>=3 && ing3 && !letters.includes(ing3)) letters.push(ing3);
-  const helps = capHelpsPerDay(x.interval, level, medal);
+  const helps = capHelpsPerDay(x.interval, level, medal, true);
   const e = ffloat(effFrac);
   const rows = [];
   letters.forEach(letter=>{
@@ -11254,9 +11277,9 @@ function boxEntryGraduationGrade(entry, x, dtype){
 
   if(dtype==='food' && !LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(x.dex)){
     const usesLevel60Rule = level===50;
-    const decisionRows = usesLevel60Rule
+    const decisionRows = withNoCamping(()=> usesLevel60Rule
       ? computeFoodCoverageRowsForBuild(x, 60, entry.ingChoice2, entry.ingChoice3, computeEfficiency(labels, dtype, 60, persona))
-      : computeFoodCoverageRowsForBuild(x, level, entry.ingChoice2, entry.ingChoice3, eff);
+      : computeFoodCoverageRowsForBuild(x, level, entry.ingChoice2, entry.ingChoice3, computeEfficiency(labels, dtype, level, persona)));
     if(decisionRows){
       const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
       const maxRatio = validRatios.length ? Math.max(...validRatios) : null;
@@ -14005,9 +14028,12 @@ function boxAaxCategory(entry, x, availItems){
   const build = boxEntryBuild(entry);
   const labels = buildLabels(build), persona = buildPersona(build);
   if(fcmp(computeEfficiencyFromSums(windowSums(labels,2), 'food', persona), F(163,100)) >= 0) return '打工';
-  const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3,
-    computeEfficiency(labels, 'food', entry.level, persona));
-  const aRow = rows && rows.find(r=>r.letter==='a');
+  // 效率没到打工门槛时的覆盖率兜底判定，固定忽略露营券开关
+  const aRow = withNoCamping(()=>{
+    const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3,
+      computeEfficiency(labels, 'food', entry.level, persona));
+    return rows && rows.find(r=>r.letter==='a');
+  });
   return (aRow && aRow.ratio!=null && aRow.ratio>=1.2) ? '打工' : '不合格';
 }
 function boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex){
@@ -14019,25 +14045,27 @@ function boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex){
   if(pattern==='aaa' || pattern==='abb') return !availItems.includes(pattern);
   return false;
 }
-// 邪修判定用的覆盖率（固定按无限持有；computeFoodCoverageRowsForBuild 本来就不缩放）
+// 邪修判定用的覆盖率（固定按无限持有；computeFoodCoverageRowsForBuild 本来就不缩放；固定忽略露营券开关）
 function boxXiexiuInfo(entry, x, dtype){
   if(!entry.selected || !entry.selected.some(v=>v!=null)) return null;
-  const build = boxEntryBuild(entry);
-  const labels = buildLabels(build), persona = buildPersona(build);
-  const effFood = computeEfficiency(labels, 'food', entry.level, persona);
-  const mergesSkill = (dtype!=='food') && isFoodPickDex(x.dex);
-  let rows = (mergesSkill && (!entry.ingChoice2 || !entry.ingChoice3))
-    ? null
-    : computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
-  if(mergesSkill){
-    const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
-    const medal = x.stage==='徽章';
-    const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? state.pityOn : false;
-    const count = capSkillCount(x, entry.level, medal, pityFlag);
-    const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
-    rows = mergeSpecialFoodRows(rows, spec.items.map(it=>({name:it.name, amt: it.amt*count})), eSkill);
-  }
-  return xiexiuInfoFromRows(rows);
+  return withNoCamping(()=>{
+    const build = boxEntryBuild(entry);
+    const labels = buildLabels(build), persona = buildPersona(build);
+    const effFood = computeEfficiency(labels, 'food', entry.level, persona);
+    const mergesSkill = (dtype!=='food') && isFoodPickDex(x.dex);
+    let rows = (mergesSkill && (!entry.ingChoice2 || !entry.ingChoice3))
+      ? null
+      : computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
+    if(mergesSkill){
+      const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+      const medal = x.stage==='徽章';
+      const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? state.pityOn : false;
+      const count = capSkillCount(x, entry.level, medal, pityFlag);
+      const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
+      rows = mergeSpecialFoodRows(rows, spec.items.map(it=>({name:it.name, amt: it.amt*count})), eSkill);
+    }
+    return xiexiuInfoFromRows(rows);
+  });
 }
 function boxEntryGradeCategory(entry){
   const rec = entry.dex ? POKEMON_DEX_DATA.find(r=>r[0]===entry.dex) : null;
