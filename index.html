@@ -693,17 +693,28 @@
     padding:6px 2px; font-size:11.5px; font-weight:700; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .box-filter-btn.box-filter-active{ border-color:var(--accent); background:var(--accent); color:#fff; }
-  .box-filter-reset-btn{
-    border:none; background:#c1443a; color:#fff; border-radius:8px;
-    font-size:11.5px; font-weight:800; cursor:pointer; flex:0 0 auto; align-self:stretch; padding:6px 12px;
+  /* 「毕业等级」在栅格外面，是筛选那一行的第三个 flex 子项：align-self:stretch 让它正好长满
+     筛选栅格两行按钮 + 中间那道 6px 间隔的总高（原来这块空着，是给旧版竖着的重置按钮留的） */
+  .box-filter-btn.box-grade-filter-btn{
+    flex:0 0 auto; width:56px; align-self:stretch; padding:6px 4px;
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    white-space:normal; word-break:keep-all; line-height:1.3;
   }
-  .box-filter-reset-btn:hover{ background:#a93a31; }
+  /* 重置降到排序那一行的最后一颗，高度跟排序按钮一致 */
+  .box-sort-reset-btn{
+    border:none; background:#c1443a; color:#fff; border-radius:8px;
+    font-size:11.5px; font-weight:800; cursor:pointer; flex:0 0 auto; padding:6px 9px; white-space:nowrap;
+  }
+  .box-sort-reset-btn:hover{ background:#a93a31; }
 
   /* 排序按钮区：点一次按默认方向排、再点一次倒序、第三次取消排序回到盒子原始顺序 */
   .box-sort-grid{ flex:1 1 auto; min-width:0; display:flex; gap:6px; }
+  /* 排序行现在多了一颗「重置」，每颗排序按钮比原来窄了一截：字号收一点、
+     并补上 overflow/ellipsis，免得最长的「睡饱饱奖章」在窄屏上把字顶到按钮外面去 */
   .box-sort-btn{
     flex:1 1 0; min-width:0; border:1.5px solid var(--line); background:#fff; color:var(--ink); border-radius:8px;
-    padding:6px 2px; font-size:11.5px; font-weight:700; cursor:pointer; white-space:nowrap;
+    padding:6px 2px; font-size:11px; font-weight:700; cursor:pointer;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
   .box-sort-btn.box-sort-active{ border-color:var(--accent); background:var(--accent); color:#fff; }
 
@@ -892,6 +903,12 @@
   .box-filter-opt-grid .cap-attr-pill{ padding:3px 5px; }
   .box-filter-opt-grid .segbtn{ padding:5px 12px; }
   .box-filter-opt-grid .typebtn{ padding:5px 12px; }
+  /* 毕业等级：每个档位用它自己在毕业判定里的颜色，选中填实 */
+  .box-grade-opt{
+    flex:0 0 auto; border:1.5px solid; border-radius:8px; padding:5px 10px;
+    font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap;
+  }
+  .box-filter-pop.for-grades{ width:250px; }
   /* 食材：图标 + 圆形紫色外框 */
   .box-filter-food-pill{
     flex:0 0 auto; width:30px; height:30px; border-radius:50%; box-sizing:border-box;
@@ -1113,6 +1130,8 @@
   .gstd-tab-skill{ background:var(--skill-bg); border-color:var(--skill-bd); color:var(--skill-tx); }
   .gstd-tab-energy{ background:#e8d5f0; border-color:#8a4fb0; color:#4a1f66; }
   .gstd-tab-neutral{ background:#e7e2d5; border-color:#9a9484; color:#4a4437; }
+  /* 食材精选/邪修：单独给一个红调色系，跟邪修的红字判定结论呼应，不占用四个主类型已有的配色 */
+  .gstd-tab-xiexiu{ background:#f6d9d4; border-color:#c0392b; color:#8f2a1f; }
   .gstd-body{ flex:1 1 auto; min-height:0; overflow-y:auto; padding:12px 16px 20px; }
   /* 切页签的横滑动画：跟捕捉推荐页 .cap-slide-r/l 同一套观感，方向也同一套约定 */
   .gstd-body.gstd-slide-r{ animation:gstdSlideR .22s ease; }
@@ -1356,6 +1375,59 @@
   .grad-food-cov-row .gfc-icon{ width:16px; height:16px; }
   .grad-food-cov-row .gfc-pct{ font-weight:800; }
   .grad-food-cov-note{ font-size:12.5px; color:var(--ink); text-align:center; margin:-2px 0 10px; opacity:.85; }
+  /* ---- 恐怖宝可梦（内部代号）专用展示 ---- */
+  /* 47 个问号要在 375px 窄屏上单行放得下：字号收到 14px，并且宁可直接裁掉也不要出省略号 */
+  .grad-quick-terror{ letter-spacing:0; font-size:14px; text-overflow:clip; }
+  .grad-terror-notes{ display:flex; flex-direction:column; align-items:center; gap:2px; margin:0 0 12px; }
+  /* 双删除线：line-through + decoration-style:double，老浏览器不认 double 时退化成普通删除线 */
+  .grad-terror-note{
+    text-align:center; color:#c0392b; font-size:13px; font-weight:800; line-height:1.5;
+    text-decoration:line-through; -webkit-text-decoration-line:line-through;
+    text-decoration-style:double; -webkit-text-decoration-style:double; text-decoration-color:#c0392b;
+  }
+  .grad-terror-grade{ text-align:center; }
+  .grad-terror-grade-line{
+    font-size:34px; font-weight:900; line-height:1.15; letter-spacing:.06em;
+    background-image:linear-gradient(90deg,#ff3b6b,#ff9f1c,#ffe14d,#3ddc84,#22c1e8,#7873f5,#ff3b6b);
+    background-size:300% 100%;
+    -webkit-background-clip:text; background-clip:text;
+    -webkit-text-fill-color:transparent; color:transparent;
+    animation:terrorRainbow 4s linear infinite;
+  }
+  @keyframes terrorRainbow{ 0%{background-position:0% 50%;} 100%{background-position:300% 50%;} }
+  .grad-terror-rule{ border-top:3px solid #7873f5; width:56%; margin:12px auto; }
+  .grad-terror-comment{ text-align:center; display:flex; flex-direction:column; gap:1px; }
+  .grad-terror-comment-line{ font-size:19px; font-weight:900; line-height:1.3; color:#c0392b; letter-spacing:.04em; }
+  /* 「养我好吗？」模态：不给点背景关闭，纯靠两颗按钮退出，期间整站不可操作 */
+  .terror-ask-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.62); z-index:2600;
+    align-items:center; justify-content:center; padding:20px;
+  }
+  .terror-ask-box{
+    background:var(--panel); border-radius:16px; padding:28px 26px 22px; width:100%; max-width:320px;
+    text-align:center; box-shadow:0 14px 48px rgba(0,0,0,.45);
+  }
+  .terror-ask-title{ font-size:30px; font-weight:900; color:#c0392b; letter-spacing:.08em; margin-bottom:22px; }
+  .terror-ask-btns{ display:flex; gap:12px; justify-content:center; }
+  .terror-ask-btn{
+    flex:1 1 0; border:none; border-radius:10px; padding:12px 0; font-size:17px; font-weight:900;
+    color:#fff; cursor:pointer; letter-spacing:.06em;
+  }
+  .terror-ask-no{ background:#c0392b; }
+  .terror-ask-yes{ background:#2e9e4f; }
+  /* 「不养」被点过之后原地变成第二颗「好的」：彩虹流彩 + 闪烁 */
+  .terror-ask-btn.terror-ask-turned{
+    background-image:linear-gradient(90deg,#ff3b6b,#ff9f1c,#ffe14d,#3ddc84,#22c1e8,#7873f5,#ff3b6b);
+    background-size:300% 100%;
+    animation:terrorRainbowBg 2.4s linear infinite, terrorBlink 1s ease-in-out infinite;
+  }
+  @keyframes terrorRainbowBg{ 0%{background-position:0% 50%;} 100%{background-position:300% 50%;} }
+  @keyframes terrorBlink{ 0%,100%{opacity:1;} 50%{opacity:.45;} }
+  .terror-shake{ animation:terrorShake .5s cubic-bezier(.36,.07,.19,.97) both; }
+  @keyframes terrorShake{
+    10%,90%{transform:translate3d(-2px,0,0);} 20%,80%{transform:translate3d(4px,0,0);}
+    30%,50%,70%{transform:translate3d(-8px,0,0);} 40%,60%{transform:translate3d(8px,0,0);}
+  }
   .grad-food-cov-box-inline{ display:flex; align-items:center; justify-content:center; gap:8px; }
   .grad-food-cov-title-inline{ font-size:12.5px; font-weight:800; color:var(--ink); letter-spacing:.03em; flex:0 0 auto; }
   .yield-section{ display:flex; align-items:stretch; border-radius:10px; overflow:hidden; margin-bottom:8px; background:var(--panel); }
@@ -2455,6 +2527,7 @@
               <div class="box-count-widget" id="boxCountWidget"></div>
             </div>
             <div class="box-filter-grid" id="boxFilterRow"></div>
+            <button type="button" class="box-filter-btn box-grade-filter-btn" id="boxGradeFilterBtn">毕业等级</button>
           </div>
           <div class="box-fs-divider"></div>
           <div class="box-toolbar-fs-line">
@@ -2462,7 +2535,6 @@
             <div class="box-sort-grid" id="boxSortRow"></div>
           </div>
         </div>
-        <button type="button" class="box-filter-reset-btn" id="boxFilterResetBtn">重置</button>
       </div>
     </div>
     <div class="box-grid-scroll" id="boxGridScroll">
@@ -3065,6 +3137,16 @@
     <div class="dash-header">选择最终宝可梦<span class="dash-close" id="finalPkCloseBtn">✕</span></div>
     <div class="final-pk-note">该幼体/中间体存在多个最终进化，请选择用于计算实际产量的最终宝可梦</div>
     <div class="final-pk-grid" id="finalPkGrid"></div>
+  </div>
+</div>
+
+<div class="terror-ask-overlay" id="terrorAskOverlay">
+  <div class="terror-ask-box">
+    <div class="terror-ask-title">养我好吗？</div>
+    <div class="terror-ask-btns">
+      <button type="button" class="terror-ask-btn terror-ask-no" id="terrorAskNoBtn">不养</button>
+      <button type="button" class="terror-ask-btn terror-ask-yes" id="terrorAskYesBtn">好的</button>
+    </div>
   </div>
 </div>
 
@@ -4728,6 +4810,96 @@ function maybeShowGradeEasterEgg(pfx, grade){
   state.gradeEasterEggShown = true;
   document.getElementById('sssEasterEggOverlay').style.display = 'flex';
 }
+
+/* ============ 恐怖宝可梦：滑到毕业判定区域 6 秒后弹「养我好吗？」 ============
+   可见性用 getBoundingClientRect + scroll/resize 监听判断，没用 IntersectionObserver：
+   盒子详情页是自己的滚动容器、几个 app-page 靠 display 切换，rect 这套在这些情形下都能直接测准。
+   弹窗期间整站不可操作（全屏遮罩挡住点击 + 锁住页面滚动），只能靠窗里那两颗按钮退出。 */
+const TERROR_PROMPT_DELAY = 6000;
+const terrorWatch = new Map(); // pfx -> {el, timer}
+let terrorScrollHooked = false;
+let terrorPromptShownFor = null; // 同一只宝可梦只弹一次，换一只再选到恐怖宝可梦可以再弹
+function terrorClearTimer(pfx){
+  const w = terrorWatch.get(pfx);
+  if(w && w.timer){ clearTimeout(w.timer); w.timer = null; }
+}
+function terrorStartTimer(pfx){
+  const w = terrorWatch.get(pfx);
+  if(!w || w.timer) return;
+  if(terrorPromptShownFor && terrorPromptShownFor===state.selectedDex) return;
+  w.timer = setTimeout(()=>{ w.timer = null; openTerrorAsk(); }, TERROR_PROMPT_DELAY);
+}
+// 所在页被 display:none 藏起来时 offsetParent 为 null，直接判成不可见，不会在后台偷偷计时
+function terrorElVisible(el){
+  if(!el.offsetParent) return false;
+  const r = el.getBoundingClientRect();
+  if(r.height <= 0) return false;
+  const vh = window.innerHeight || document.documentElement.clientHeight;
+  return r.top < vh*0.9 && r.bottom > vh*0.1;
+}
+function terrorSyncAll(){
+  terrorWatch.forEach((w, pfx)=>{ if(terrorElVisible(w.el)) terrorStartTimer(pfx); else terrorClearTimer(pfx); });
+}
+function terrorHookScroll(){
+  if(terrorScrollHooked) return;
+  terrorScrollHooked = true;
+  // capture:true：盒子详情页/网格是各自独立的滚动容器，它们的 scroll 事件不会冒泡到 window
+  document.addEventListener('scroll', terrorSyncAll, {passive:true, capture:true});
+  window.addEventListener('resize', terrorSyncAll, {passive:true});
+}
+function armTerrorPrompt(pfx){
+  const el = document.getElementById(pfx+'gradBox');
+  if(!el) return;
+  terrorHookScroll();
+  if(terrorWatch.has(pfx)){ // 已经在盯了，别把倒计时反复推倒重来
+    terrorWatch.get(pfx).el = el;
+    return;
+  }
+  terrorWatch.set(pfx, {el, timer:null});
+  // 渲染完这一帧布局还没稳定，等一拍再量
+  setTimeout(terrorSyncAll, 0);
+}
+function disarmTerrorPrompt(pfx){
+  if(!terrorWatch.has(pfx)) return;
+  terrorClearTimer(pfx);
+  terrorWatch.delete(pfx);
+}
+function openTerrorAsk(){
+  const ov = document.getElementById('terrorAskOverlay');
+  if(!ov || ov.style.display==='flex') return;
+  terrorPromptShownFor = state.selectedDex;
+  const noBtn = document.getElementById('terrorAskNoBtn');
+  noBtn.textContent = '不养';
+  noBtn.className = 'terror-ask-btn terror-ask-no';
+  ov.style.display = 'flex';
+  document.documentElement.style.overflow = 'hidden'; // 弹窗期间连滚动也一起冻住
+}
+function closeTerrorAsk(){
+  const ov = document.getElementById('terrorAskOverlay');
+  if(!ov) return;
+  ov.style.display = 'none';
+  document.documentElement.style.overflow = '';
+}
+// 抖的是 .wrap（页面内容）+ 弹窗本体，而不是 body：body 上一旦有 transform 就会变成
+// position:fixed 的包含块，遮罩会从"铺满视口"变成"铺满整篇文档"，弹窗直接飞到屏幕外
+function terrorShakeScreen(){
+  const targets = [document.querySelector('.wrap'), document.querySelector('.terror-ask-box')].filter(Boolean);
+  targets.forEach(t=>{
+    t.classList.remove('terror-shake');
+    void t.offsetWidth; // 强制回流，让同一个动画能连着放第二次
+    t.classList.add('terror-shake');
+  });
+  setTimeout(()=>targets.forEach(t=>t.classList.remove('terror-shake')), 600);
+  if(navigator.vibrate) { try{ navigator.vibrate([60,40,60]); }catch(e){} }
+}
+document.getElementById('terrorAskYesBtn').onclick = closeTerrorAsk;
+document.getElementById('terrorAskNoBtn').onclick = function(){
+  // 已经变成第二颗「好的」了：跟右边那颗一样直接关窗
+  if(this.classList.contains('terror-ask-turned')){ closeTerrorAsk(); return; }
+  terrorShakeScreen();
+  this.textContent = '好的';
+  this.className = 'terror-ask-btn terror-ask-yes terror-ask-turned';
+};
 
 /* ---- 排名对比页：多面板可放不同种类宝可梦时的"关键指标"分类 ----
    食材型关键指标=当前选定的关键食材（产量更高的那种）；树果型/能量型统一按"能量"为关键指标，二者可互相比较；
@@ -7199,6 +7371,36 @@ const GRAD_STD_TABS = [
       ])
     + gstdP('这几种被盖章的组合本身不参与食谱覆盖率毕业判定，但覆盖率数字仍会照常显示供你参考。');
   }},
+  {key:'xiexiu', label:'食材精选', tone:'xiexiu', html:function(){ return ''
+    + gstdH('什么是"食材精选"')
+    + gstdP('主技能本身就会附带产出食材的六只宝可梦：<b>穿山王、大嘴娃、乌鸦头头、岩殿居蟹、蝶结萌虻、摔角鹰人</b>（幼体统一按最终形态判断）。它们分两类：')
+    + gstdUl([
+        '<b>功能型</b>（穿山王 / 乌鸦头头 / 岩殿居蟹 / 摔角鹰人）：本身没有食材槽产出食材，「食谱覆盖率」框和下面的毕业判定都<b>直接用主技能产出的食材量</b>来算。',
+        '<b>食材型</b>（大嘴娃 / 蝶结萌虻）：本来就在正常的<b>食材型</b>毕业体系里（标准见「食材」页签），有自己完整的一套效率门槛和食谱覆盖率升降档规则。',
+      ])
+    + gstdH('食材型食材精选：展示会多一行，但不影响毕业判定')
+    + gstdP('大嘴娃 / 蝶结萌虻的「食谱覆盖率」展示框里，会<b>额外并入主技能产出的那部分食材</b>一起显示（毕业判定和产能分析都一样），因为它们的主业本来就是产食材，展示上应该看得见这部分产出。')
+    + gstdP('但这<b>只影响展示</b>：升档 / 降档判定（「食材」页签里「效率为和解，经由食谱覆盖率转化为毕业」那条规则）仍然只看它们<b>自身食材槽 a / b / c</b> 产出的部分，不把主技能那份算进去——不然会连带把它们既有的毕业档位悄悄改掉。')
+    + gstdH('邪修 / 极致邪修：主流食材标准之外的补充判定')
+    + gstdP('以下几种宝可梦本身<b>进不了正常的食材型毕业标准</b>（要么组合不可用，要么直接被标不推荐），但主业确实是产食材，所以单独给一档「邪修」：')
+    + gstdUl([
+        '食材型里"组合本身就不可用"的 <b>aaa / abb</b>（比如 aaa 耿鬼、abb 妙蛙花）',
+        '食材型的 <b>aba / abc</b> 组合',
+        '被数据表标为<b>不推荐使用</b>的食材型（比如地鼠）',
+        '所有<b>功能型</b>食材精选（穿山王 / 乌鸦头头 / 岩殿居蟹 / 摔角鹰人）',
+      ])
+    + gstdP('<b>大嘴娃 / 蝶结萌虻本身不算在这条规则里</b>——它们优先走正常食材型标准，只有落在"不推荐使用"或 aba / abc / aaa（abb）不可用 这几种情况时，才会触发邪修判定。<b>aab / aac</b> 不算：那条线已经有「aax 打工 / aax 报废」自己的判定（见「食材」页签）。')
+    + gstdP('判定口径：食谱覆盖率固定按<b>无限持有</b>计算，跟当前持有上限的设置无关。任意<b>一种</b>食材覆盖率达标就算数：')
+    + gstdGradeTable('', ['覆盖率门槛','判定结果','评语'], [
+        ['≥ 120%', '<b style="color:'+XIEXIU_COLOR+';">邪修</b>', '剑走偏锋 走火入魔'],
+        ['≥ 140%', '<b style="color:'+XIEXIU_COLOR+';">极致邪修</b>', '以身入局 未尝不可'],
+        ['都不满足', '维持原判定', '（不推荐使用 / 组合不可用 那几种红字删除线展示照旧）'],
+      ])
+    + gstdP('邪修 / 极致邪修展示为<b style="color:'+XIEXIU_COLOR+';">红字，不加删除线</b>，覆盖率框和等级之间会补一行小字：')
+    + gstdNote('自身素质较差，但由食谱覆盖率转化为邪修')
+    + gstdP('触发邪修时，50 级本该出现的 70 / 80 级追高提示会一并收起——那几块算的是"原判定"（不推荐使用 / 不可用等）追高之后的结果，跟已经改判成邪修的结论摆在一起只会互相打架；警示标题（不推荐使用 / ○○不可用等）本身照常保留。')
+    + gstdP('盒子的「毕业等级」筛选里，邪修和极致邪修合并成同一个选项。');
+  }},
   {key:'skill', label:'功能', tone:'skill', html:function(){ return ''
     + gstdP('功能型的档位名通用版和萌新版一致，萌新版只是换成字母。')
     + gstdGradeTable('一般宝可梦 · 非金帮', GSTD_COLS, [
@@ -7421,6 +7623,103 @@ function renderGradeText(el){
   el.innerHTML = lastCandidate.map(l=>`<span class="gline">${l}</span>`).join('');
 }
 const GRAD_WARN_COLOR = '#c0392b';
+
+/* ============ 食材精选 / 邪修 / 恐怖宝可梦 ============ */
+// 「食材精选」= 主技能本身就在产食材的那批宝可梦（穿山王 / 大嘴娃 / 乌鸦头头 / 岩殿居蟹 /
+// 蝶结萌虻 / 摔角鹰人）。判定直接认 CAP_SKILL_SPECIAL_OUTPUT 里 kind==='ingredients' 的条目，
+// 不另抄一份名单；幼体在 effectiveDexFor 里已统一解析到最终形态，所以只会拿到最终形态的图鉴号。
+function isFoodPickDex(dex){
+  if(typeof CAP_SKILL_SPECIAL_OUTPUT==='undefined' || !dex) return false;
+  const spec = CAP_SKILL_SPECIAL_OUTPUT[dex];
+  return !!(spec && spec.kind==='ingredients');
+}
+function isFoodPickPanel(){ return isFoodPickDex(effectiveYieldDex()); }
+// 食材精选宝可梦的主技能产出要不要并进"档位升降判定"用的覆盖率，只看它自己是不是食材型：
+//   · 功能型（岩殿居蟹/穿山王/摔角鹰人/乌鸦头头）：不并进来，覆盖率就只剩自然出食材那一点，
+//     这个框和下面的邪修判定都没有意义，必须并；
+//   · 食材型（大嘴娃/蝶结萌虻）：它们本来就有一整套"按自身 a/b/c 覆盖率上调/下调档位"的规则，
+//     把技能产出塞进去会连带改掉它们既有的毕业档位，不在本次需求范围内，判定口径保持原样。
+function gradCoverageMergesSkillForGrade(){
+  const rec = getSelectedPokemonRecord();
+  return isFoodPickPanel() && !(rec && DEX_TYPE_MAP[rec[3]]==='food');
+}
+// 毕业判定框/产能分析/邪修判定共用的覆盖率行：在 computeFoodCoverageRows 之上按需并入主技能产出的食材。
+// forDisplay=true 时（毕业判定框、产能分析的纯展示场景）食材型食材精选也一并显示技能产出，
+// 因为它们的主业本来就是产食材；但这只影响"显示"，档位升降判定固定走上面那条食材型排除规则，
+// 不然大嘴娃/蝶结萌虻的既有毕业档位会被技能那份产出悄悄改掉。
+function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay){
+  const rec = getSelectedPokemonRecord();
+  const isFoodTypePick = !!(rec && DEX_TYPE_MAP[rec[3]]==='food');
+  const mergesSkill = isFoodPickPanel() && (forDisplay || !isFoodTypePick);
+  // 功能型食材精选不走食材型那道"必须先选满食材槽"的关卡，槽没选全时自身那几行的数量算不准，
+  // 干脆只留主技能产出的部分（那部分是固定产出，跟食材槽怎么选无关）；食材型本身的食材槽
+  // 由食材面板本身保证选满，不需要也不应该套这道关卡
+  let rows = (mergesSkill && !isFoodTypePick && (!state.ingChoice2 || !state.ingChoice3))
+    ? null
+    : computeFoodCoverageRows(effFood, levelOverride, infiniteCarry);
+  if(mergesSkill){
+    const level = levelOverride || state.level;
+    const skillBase = capPageBaseYield('skill', level);
+    if(skillBase && skillBase.specialIngredients){
+      const eSkill = ffloat(computeEfficiency(currentLabels(), 'skill', level, currentPersona()));
+      rows = mergeSpecialFoodRows(rows, skillBase.specialIngredients, eSkill);
+    }
+  }
+  return rows;
+}
+// 毕业判定里要不要出"食谱覆盖率"框：食材型一直都有；食材精选是本次新加的（它们的主业也是产食材）
+function gradShowsFoodCoverage(){ return state.type==='food' || isFoodPickPanel(); }
+
+const XIEXIU_COLOR = '#c0392b'; // 邪修/极致邪修统一红色，且不加删除线
+const XIEXIU_GRADES = ['邪修','极致邪修'];
+// 邪修：主流食材评价体系根本没纳入考量、但主业确实是产食材的那批宝可梦
+//   · 食材型里"这个组合压根不可用"的 aaa/abb（aaa耿鬼、abb妙蛙花…）
+//   · 食材型的 aba / abc
+//   · 被标为"不推荐使用"的食材型（地鼠、大嘴娃…）
+//   · 所有功能型的食材精选（岩殿居蟹等；食材型的萌虻/大嘴娃不按这一条算，它们本来就在食材体系里）
+// aab/aac 不算：那条线已经有"aax打工/aax报废"自己的判定
+function xiexiuEligibleNow(){
+  const rec = getSelectedPokemonRecord();
+  if(!rec) return false;
+  const mappedType = DEX_TYPE_MAP[rec[3]];
+  if(mappedType==='skill' && isFoodPickPanel()) return true;
+  if(mappedType!=='food' || state.type!=='food') return false;
+  if(rec[4]) return true; // 不推荐使用
+  const pattern = currentIngredientPattern();
+  if(!pattern) return false;
+  if(pattern==='aba' || pattern==='abc') return true;
+  if(pattern==='aaa' || pattern==='abb') return !String(rec[6]||'').includes(pattern);
+  return false;
+}
+// 覆盖率门槛：任意一种食材 ≥120% 判邪修，≥140% 判极致邪修
+function xiexiuInfoFromRows(rows){
+  const ratios = (rows||[]).map(r=>r.ratio).filter(r=>r!=null);
+  if(!ratios.length) return null;
+  const max = Math.max(...ratios);
+  if(max >= 1.4) return {grade:'极致邪修', comment:'以身入局 未尝不可'};
+  if(max >= 1.2) return {grade:'邪修',   comment:'剑走偏锋 走火入魔'};
+  return null;
+}
+const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
+// 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率）
+function computeXiexiuNow(labels, persona){
+  if(!xiexiuEligibleNow()) return null;
+  const effFood = computeEfficiency(labels, 'food', state.level, persona);
+  return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true));
+}
+// 「恐怖宝可梦」（内部代号，页面上任何地方都不出现这四个字）：
+// abc/aac 组合、c 食材覆盖率 >120% 且效率值 >2 的食材型
+function isTerrorPanel(labels, persona){
+  if(state.type!=='food') return false;
+  const pattern = currentIngredientPattern();
+  if(pattern!=='abc' && pattern!=='aac') return false;
+  const effFood = computeEfficiency(labels, 'food', state.level, persona);
+  if(ffloat(effFood) <= 2) return false;
+  const rows = computeFoodCoverageRows(effFood, undefined, true);
+  const cRow = rows && rows.find(r=>r.letter==='c');
+  return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
+}
+
 function getGradOverrideInfo(){
   const rec = getSelectedPokemonRecord();
   if(!rec) return null;
@@ -7486,43 +7785,87 @@ function getGradOverrideInfo(){
   }
   return null;
 }
-function renderForcedGradeBox(el, borderClass, overrideInfo){
+function renderForcedGradeBox(el, borderClass, overrideInfo, xiexiu){
   const isSpecialGrade = overrideInfo.gradeName==='aax打工';
-  const color = isSpecialGrade ? (overrideInfo.gradeColor||'#7a4f9e') : tierStyleOf(overrideInfo.gradeName).color;
+  // 邪修接管时，档位名/评语/颜色整套换掉（红色、不加删除线），警示标题照旧保留——
+  // "这个组合本身走不通"这条信息对用户仍然有用，只是结论从判废改成了"靠覆盖率邪修"
+  const gradeName = xiexiu ? xiexiu.grade : overrideInfo.gradeName;
+  const commentText = xiexiu ? xiexiu.comment : overrideInfo.comment;
+  const color = xiexiu ? XIEXIU_COLOR
+    : (isSpecialGrade ? (overrideInfo.gradeColor||'#7a4f9e') : tierStyleOf(overrideInfo.gradeName).color);
   const headingHtml = overrideInfo.heading ? `<div class="grad-warning-heading">${overrideInfo.heading}</div>` : '';
   // aax/aba/abc 这类不可用组合本身不参与食谱覆盖率毕业判定，但仍展示当前等级的食谱覆盖率信息供参考
   let foodCoverageHtml = '';
-  if(state.type==='food'){
+  if(gradShowsFoodCoverage()){
     const fcLabels = currentLabels();
     const fcPersona = currentPersona();
-    const fcEff = computeEfficiency(fcLabels, state.type, state.level, fcPersona);
-    foodCoverageHtml = foodCoverageBoxHtml(computeFoodCoverageRows(fcEff));
+    const fcEff = computeEfficiency(fcLabels, 'food', state.level, fcPersona);
+    foodCoverageHtml = foodCoverageBoxHtml(gradFoodCoverageRows(fcEff, undefined, undefined, true));
   }
   // aax效率不够、但由a食材覆盖率转成"aax打工"时附带说明这次是怎么转的，跟毕业判定里
-  // "食材和解经食谱覆盖率转化为毕业"的备注是同一个展示套路
-  const conversionNoteHtml = overrideInfo.conversionNote ? `<div class="grad-food-cov-note">${overrideInfo.conversionNote}</div>` : '';
-  const strikeStyle = overrideInfo.strike ? 'text-decoration:line-through;' : '';
+  // "食材和解经食谱覆盖率转化为毕业"的备注是同一个展示套路；邪修也复用这条备注样式
+  const noteText = xiexiu ? XIEXIU_NOTE : overrideInfo.conversionNote;
+  const conversionNoteHtml = noteText ? `<div class="grad-food-cov-note">${noteText}</div>` : '';
+  const strikeStyle = (!xiexiu && overrideInfo.strike) ? 'text-decoration:line-through;' : '';
   el.innerHTML = `${foodCoverageHtml}${conversionNoteHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
       <div class="grad-primary">
         ${headingHtml}
-        <div class="grad-grade" data-text="${overrideInfo.gradeName}" style="color:${color}; font-size:36px; ${strikeStyle}"></div>
+        <div class="grad-grade" data-text="${gradeName}" style="color:${color}; font-size:36px; ${strikeStyle}"></div>
         <div class="grad-rule" style="border-top:3px solid ${color}; width:56%; margin:10px auto;"></div>
-        <div class="grad-comment" style="color:${color}; font-size:28px;">${overrideInfo.comment}</div>
+        <div class="grad-comment" style="color:${color}; font-size:28px;">${commentText}</div>
       </div>
     </div></div>`;
   el.querySelectorAll('.grad-grade').forEach(renderGradeText);
 }
+// 恐怖宝可梦专用展示：食谱覆盖率框照常 → 红色双删除线备注 → 彩虹毕业等级 → "必须培养"评语
+const TERROR_NOTE_LINES = ['为什么？','为什么不养我？','为什么我这么努力还是不养我？','为什么不爱我？','为什么我不是aaa？','为什么我不是abb？','为什么你不选我？','为什么你偏爱的不是我？','为什么要养那些不如我的？','为什么要抛弃我？','为什么要把我送走？','为什么我不配？','为什么不要我了？','为什么要靠近我？','为什么又丢下我？','为什么只剩我困在这里？','为什么不肯回头看我一眼？','为什么要打碎我的期待？','为什么连告别都不肯给我？','为什么痛苦的只有我？','为什么把我丢进黑暗？','为什么毁掉一切？','为什么不肯回来？','为什么不再看我一眼？','为什么忘了我？','为什么你走了？','为什么把我丢下？','为什么叫我逆贼？','为什么让我滚粗?','为什么我是abc?','为什么再也没¢q#7ß‰？','为什么你不ãÅ“ã‚Œ？','为什么y要¬∆ø¨¥†¶¢?','为什么@z¥†8j¶？','为什么øßð?','为什么æ？','为什么?','为什么？','为什么?','为什么？','为什么?','为什么？','为什么?'];
+const TERROR_GRADE_LINES = ['極致完美','閃 G 金幫','超級畢業'];
+const TERROR_COMMENT_LINES = ['必须培养 必须培养','必须培养 必须培养','必须培养 必须培养','必须培养 必须培养','必须培养 必须培养','必须培养 必须培养','必须培养 必须培养','必须培养 必须培养'];
+function renderTerrorGradeBox(el, borderClass){
+  const fcLabels = currentLabels();
+  const fcPersona = currentPersona();
+  const fcEff = computeEfficiency(fcLabels, 'food', state.level, fcPersona);
+  const foodCoverageHtml = foodCoverageBoxHtml(gradFoodCoverageRows(fcEff, undefined, undefined, true));
+  const notesHtml = `<div class="grad-terror-notes">` + TERROR_NOTE_LINES.map(t=>`<div class="grad-terror-note">${t}</div>`).join('') + `</div>`;
+  const gradeHtml = TERROR_GRADE_LINES.map(t=>`<div class="grad-terror-grade-line">${t}</div>`).join('');
+  const commentHtml = TERROR_COMMENT_LINES.map(t=>`<div class="grad-terror-comment-line">${t}</div>`).join('');
+  el.innerHTML = `${foodCoverageHtml}${notesHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
+      <div class="grad-primary">
+        <div class="grad-terror-grade">${gradeHtml}</div>
+        <div class="grad-rule grad-terror-rule"></div>
+        <div class="grad-terror-comment">${commentHtml}</div>
+      </div>
+    </div></div>`;
+}
 
 // 毕业判定页面"选择宝可梦"模块下方的独立横向展示窗：简要展示当前面板毕业等级（SABCD+毕业等级），
 // 展示框边框和字体颜色跟随毕业等级对应颜色；闪光时边框换成彩虹流光特效（复用 grad-shiny-border 同款渐变动画）
-function updateGradQuickBar(pfx, gradeName){
+const TERROR_QUICK_TEXT = '???????????????????????????????????????????????';
+function updateGradQuickBar(pfx, gradeName, terror){
   const bar = document.getElementById(pfx+'gradQuickBar');
   if(!bar) return;
+  bar.classList.toggle('grad-quick-terror', !!terror);
+  if(terror){
+    // 恐怖宝可梦：只显示一行红色问号，不换行（超出部分靠 .grad-quick-terror 自己裁掉）
+    bar.textContent = TERROR_QUICK_TEXT;
+    bar.style.color = GRAD_WARN_COLOR;
+    bar.style.borderColor = GRAD_WARN_COLOR;
+    bar.classList.remove('grad-quick-shiny');
+    return;
+  }
   if(!gradeName){
     bar.innerHTML = '<span class="grad-quick-idle-line"></span>';
     bar.style.color = '';
     bar.style.borderColor = '#adb2ba';
     bar.classList.remove('grad-quick-shiny');
+    return;
+  }
+  // 邪修/极致邪修不在 SABCD/金帮那套体系里，短字母和 TIER_STYLE 都对不上，直接红字原样显示
+  if(XIEXIU_GRADES.indexOf(gradeName) >= 0){
+    bar.textContent = gradeName;
+    bar.style.color = XIEXIU_COLOR;
+    bar.style.borderColor = state.shiny ? '' : XIEXIU_COLOR;
+    bar.classList.toggle('grad-quick-shiny', !!state.shiny);
     return;
   }
   const dispG = dispGradeName(gradeName);
@@ -7543,6 +7886,8 @@ function renderGraduation(pfx){
   pfx = pfx || '';
   const el = document.getElementById(pfx+'gradBox');
   if(!el) return;
+  // 每次重画都先撤掉恐怖宝可梦的倒计时，只有下面真判成恐怖宝可梦时才重新挂上
+  disarmTerrorPrompt(pfx);
   const borderClass = state.shiny? 'grad-shiny-border' : '';
   const badgeEl = document.getElementById(pfx+'gradLevelBadge');
   if(badgeEl) badgeEl.textContent = state.level+'级';
@@ -7615,9 +7960,20 @@ function renderGraduation(pfx){
 
   const labels = currentLabels();
   const persona = currentPersona();
+
+  // 恐怖宝可梦优先级最高：连 aax/aba/abc 那套强制档位都要让位给它
+  if(isTerrorPanel(labels, persona)){
+    renderTerrorGradeBox(el, borderClass);
+    updateGradQuickBar(pfx, null, true);
+    armTerrorPrompt(pfx);
+    return;
+  }
+  // 邪修：本身进不了主流食材评价体系，但覆盖率够高就单独给一个档位（红字、不加删除线）
+  const xiexiu = computeXiexiuNow(labels, persona);
+
   if(gradOverride && gradOverride.kind==='forceGrade'){
-    renderForcedGradeBox(el, borderClass, gradOverride);
-    updateGradQuickBar(pfx, null);
+    renderForcedGradeBox(el, borderClass, gradOverride, xiexiu);
+    updateGradQuickBar(pfx, xiexiu ? xiexiu.grade : null);
     return;
   }
   if(gradOverride && gradOverride.kind==='needIngredient'){
@@ -7764,12 +8120,23 @@ function renderGraduation(pfx){
   let foodCoverageRows = null;
   let foodCoverageUpgradeNote = '';
   let foodCoverageLevel60Rows = null;
+  // 食材精选（功能型）本身 state.type 不是 food，eff 算的是技能效率，覆盖率得单独按食材效率算一次
+  if(state.type!=='food' && gradShowsFoodCoverage()){
+    foodCoverageRows = gradFoodCoverageRows(computeEfficiency(labels, 'food', state.level, persona), undefined, undefined, true);
+  }
   if(state.type==='food' && row){
-    foodCoverageRows = computeFoodCoverageRows(eff);
+    // rawCoverageRows：档位升降判定专用，食材型食材精选固定不并技能产出，保证既有毕业档位不被悄悄改掉；
+    // foodCoverageRows：展示专用，食材精选（含食材型的大嘴娃/蝶结萌虻）一律并入技能产出
+    const rawCoverageRows = gradFoodCoverageRows(eff);
+    foodCoverageRows = gradFoodCoverageRows(eff, undefined, undefined, true);
     const isLateBloomer = LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(effectiveYieldDex());
-    if(foodCoverageRows && !isLateBloomer){
+    if(rawCoverageRows && !isLateBloomer){
       const usesLevel60Rule = state.level===50;
-      const decisionRows = usesLevel60Rule ? computeFoodCoverageRowsAtLevel60() : foodCoverageRows;
+      const decisionRows = usesLevel60Rule ? computeFoodCoverageRowsAtLevel60() : rawCoverageRows;
+      // 50级升档时下方附带展示的"60级："行，同样按展示口径并入技能产出
+      const level60DisplayRows = usesLevel60Rule
+        ? gradFoodCoverageRows(computeEfficiency(labels, state.type, 60, persona), 60, undefined, true)
+        : null;
       if(decisionRows){
         // 尾巴这类没有食谱覆盖率概念的食材，ratio 是 null，不能拿来参与"是否达标转正/降级"的判断
         const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
@@ -7779,7 +8146,7 @@ function renderGraduation(pfx){
           if(upgraded){
             if(usesLevel60Rule){
               foodCoverageUpgradeNote = `效率为${row.grade}，经由60级食谱覆盖率转化为${upgraded.grade}`;
-              foodCoverageLevel60Rows = decisionRows;
+              foodCoverageLevel60Rows = level60DisplayRows;
             } else {
               foodCoverageUpgradeNote = `效率为${row.grade}，经由食谱覆盖率转化为${upgraded.grade}`;
             }
@@ -7789,15 +8156,15 @@ function renderGraduation(pfx){
           const downgraded = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===1);
           if(downgraded){
             foodCoverageUpgradeNote = '由于食谱覆盖率不足，只能转化为和解';
-            if(usesLevel60Rule) foodCoverageLevel60Rows = decisionRows;
+            if(usesLevel60Rule) foodCoverageLevel60Rows = level60DisplayRows;
             row = downgraded;
           }
         }
       }
     }
   }
-  updateGradQuickBar(pfx, row ? row.grade : null);
-  if(row) maybeShowGradeEasterEgg(pfx, row.grade);
+  updateGradQuickBar(pfx, xiexiu ? xiexiu.grade : (row ? row.grade : null));
+  if(row && !xiexiu) maybeShowGradeEasterEgg(pfx, row.grade);
 
   let extraHtml = '';
   let show70Flag = false, show80Flag = false;
@@ -7840,7 +8207,7 @@ function renderGraduation(pfx){
 
   const newbieLabel = row ? newbieGradeLabel(state.type, row.grade) : null;
   const dispRowF = row ? dispGradeRow(row.grade) : null;
-  const gradeText = row ? ((state.shiny?'闪光':'') + (state.newbieMode && newbieLabel ? newbieLabel : dispGradeName(row.grade))) : '暂无匹配等级';
+  let gradeText = row ? ((state.shiny?'闪光':'') + (state.newbieMode && newbieLabel ? newbieLabel : dispGradeName(row.grade))) : '暂无匹配等级';
   let commentText = row
     ? (state.newbieMode && newbieLabel ? NEWBIE_COMMENT_MAP[newbieLabel] : (state.shiny? dispRowF.shiny : dispRowF.normal))
     : '（当前效率值未落在评分表任何区间内）';
@@ -7858,6 +8225,17 @@ function renderGraduation(pfx){
       unavailNoteHtml = `<div class="grad-unavail-note">*不推荐使用建议仅出于强度考量，真爱党请随意</div>`;
     }
   }
+  // 邪修接管：档位名/评语/颜色整套换掉，删除线撤掉；50级的70/80追高块一并收起——
+  // 那几块算的是"原判定"的追高结果，跟已经改判成邪修的结论摆在一起只会互相打架
+  let xiexiuNoteHtml = '';
+  if(xiexiu){
+    gradeText = xiexiu.grade;
+    commentText = xiexiu.comment;
+    primaryStyle = {...primaryStyle, color: XIEXIU_COLOR};
+    strikeStyle = '';
+    extraHtml = '';
+    xiexiuNoteHtml = `<div class="grad-food-cov-note">${XIEXIU_NOTE}</div>`;
+  }
   let mainstreamNoteHtml = '';
   if(row && !(gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable'))){
     const mainstreamInfo = mainstreamFruitFinalInfo(state.selectedDex);
@@ -7866,11 +8244,12 @@ function renderGraduation(pfx){
     }
   }
 
-  const foodCoverageHtml = state.type==='food'
+  const foodCoverageHtml = gradShowsFoodCoverage()
     ? foodCoverageBoxHtml(foodCoverageRows)
       + (foodCoverageUpgradeNote ? `<div class="grad-food-cov-note">${foodCoverageUpgradeNote}</div>` : '')
       + (foodCoverageLevel60Rows ? foodCoverageBoxHtmlInline(foodCoverageLevel60Rows, '60级：') : '')
-    : '';
+      + xiexiuNoteHtml
+    : xiexiuNoteHtml;
 
   el.innerHTML = `${foodCoverageHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
       <div class="grad-primary">
@@ -10663,7 +11042,8 @@ function capPatternIngredientAmount(x, letter, n){
   return sum;
 }
 // 毕业判定页"食谱覆盖率"：展示框按当前实际选择的等级+效率计算；levelOverride 仅供毕业判定规则内部按60级复算时使用
-function computeFoodCoverageRows(effFrac, levelOverride){
+// infiniteCarry=true 时无视当前持有上限模式，一律按"无限持有"算（邪修/恐怖宝可梦判定按需求固定用这个口径）
+function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry){
   if(typeof CAP_DEX==='undefined' || !state.selectedDex) return null;
   const pattern = currentIngredientPattern();
   if(!pattern) return null;
@@ -10685,7 +11065,7 @@ function computeFoodCoverageRows(effFrac, levelOverride){
     const amtSum = capPatternIngredientAmount(x, letter, n);
     // v3.16：仅"有限持有"会按满包模型缩放（"持续满包"下覆盖率/毕业判定仍按无限持有算，
     // 否则食材产量恒为0会把"和解经覆盖率转毕业""aax转打工"两条路径整个封死）
-    const actual = helps * (x.ingProb||0) * (amtSum / n) * e * carryIngScale(levelOverride);
+    const actual = helps * (x.ingProb||0) * (amtSum / n) * e * (infiniteCarry ? 1 : carryIngScale(levelOverride));
     // 尾巴（百变怪专属食材）不在 FOOD_DAILY_DEMAND 里，没有"每日食谱需求量"这个概念、算不出
     // 覆盖率，但产量本身照样要展示——demand 缺失时 ratio 留 null，交给展示层判断是否显示百分比，
     // 不能像之前那样直接 return 把整行（连同产量数字）都吞掉
@@ -11726,7 +12106,7 @@ function pageSwipeBlocked(){
   if(boxOverlayOpen || dashboardOpen) return true;
   const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay'];
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
   return false;
 }
@@ -13591,7 +13971,7 @@ document.getElementById('boxBatchDeleteConfirmBtn').onclick = ()=>{
 };
 
 /* ============ 宝可梦盒：筛选器 ============ */
-let boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), effMin:null, effMax:null };
+let boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null };
 const BOX_PRIORITY_SKILL_TYPES = ['奶妈','暴击','开锅','帮手加速','梦碎'];
 function boxAllSkillTypes(){
   const set = new Set();
@@ -13606,7 +13986,96 @@ function boxAllFoods(){
   return (typeof ING_ICONS!=='undefined') ? Object.keys(ING_ICONS) : [];
 }
 function boxAnyFilterActive(){
-  return BOX_FILTER_DEFS.some(d=>boxFilterIsActive(d.key));
+  return BOX_FILTER_DEFS.some(d=>boxFilterIsActive(d.key)) || boxFilterIsActive('grades');
+}
+
+/* ---- 盒子「毕业等级」筛选：把一条记录归到十个档位 / 邪修 / 打工 / 其他 之一 ----
+   口径跟毕业判定页完全一致，只是不读 state、改吃盒子记录：
+   凡是页面上带删除线显示的（不推荐使用 / aaa·abb 组合不可用 / 能量型没果S）都不算它划掉的那个
+   档位，一律归"其他"；aax打工归"打工"；覆盖率够高的邪修/极致邪修归"邪修"；算不出来的也归"其他"。 */
+const BOX_GRADE_CATS = ['不合格','和解','毕业','大毕业','超级毕业',
+  '金帮不合格','金帮和解','金帮毕业','金帮大毕业','金帮超级毕业','邪修','打工','其他'];
+const BOX_GRADE_CAT_COLOR = {'邪修':XIEXIU_COLOR, '打工':'#7a4f9e', '其他':'#8a8f98'};
+function boxGradeCatColor(cat){ return BOX_GRADE_CAT_COLOR[cat] || tierStyleOf(cat).color; }
+function boxEntryBuild(entry){ return {selected:entry.selected, incAttr:entry.incAttr, decAttr:entry.decAttr}; }
+// aab/aac：照搬 getGradOverrideInfo 里那一段——有 aaa 可用且 2 槽效率≥1.63 判打工；
+// 效率不够但 a 食材覆盖率≥120% 也算打工；其余都是 aax报废（不合格）
+function boxAaxCategory(entry, x, availItems){
+  if(!availItems.includes('aaa')) return '不合格';
+  const build = boxEntryBuild(entry);
+  const labels = buildLabels(build), persona = buildPersona(build);
+  if(fcmp(computeEfficiencyFromSums(windowSums(labels,2), 'food', persona), F(163,100)) >= 0) return '打工';
+  const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3,
+    computeEfficiency(labels, 'food', entry.level, persona));
+  const aRow = rows && rows.find(r=>r.letter==='a');
+  return (aRow && aRow.ratio!=null && aRow.ratio>=1.2) ? '打工' : '不合格';
+}
+function boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex){
+  if(dtype==='skill') return isFoodPickDex(finalDex);
+  if(dtype!=='food') return false;
+  if(rec[4]) return true;
+  if(!pattern || pattern.length!==3) return false;
+  if(pattern==='aba' || pattern==='abc') return true;
+  if(pattern==='aaa' || pattern==='abb') return !availItems.includes(pattern);
+  return false;
+}
+// 邪修判定用的覆盖率（固定按无限持有；computeFoodCoverageRowsForBuild 本来就不缩放）
+function boxXiexiuInfo(entry, x, dtype){
+  if(!entry.selected || !entry.selected.some(v=>v!=null)) return null;
+  const build = boxEntryBuild(entry);
+  const labels = buildLabels(build), persona = buildPersona(build);
+  const effFood = computeEfficiency(labels, 'food', entry.level, persona);
+  const mergesSkill = (dtype!=='food') && isFoodPickDex(x.dex);
+  let rows = (mergesSkill && (!entry.ingChoice2 || !entry.ingChoice3))
+    ? null
+    : computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
+  if(mergesSkill){
+    const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+    const medal = x.stage==='徽章';
+    const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? state.pityOn : false;
+    const count = capSkillCount(x, entry.level, medal, pityFlag);
+    const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
+    rows = mergeSpecialFoodRows(rows, spec.items.map(it=>({name:it.name, amt: it.amt*count})), eSkill);
+  }
+  return xiexiuInfoFromRows(rows);
+}
+function boxEntryGradeCategory(entry){
+  const rec = entry.dex ? POKEMON_DEX_DATA.find(r=>r[0]===entry.dex) : null;
+  if(!rec) return '其他';
+  const dtype = DEX_TYPE_MAP[rec[3]];
+  const finalDex = boxEffectiveFinalDex(entry.dex);
+  const x = capFindDex(finalDex);
+  if(!dtype || !x) return '其他';
+  const availItems = String(rec[6]||'');
+  const pattern = (dtype==='food') ? ('a'+(entry.ingChoice2||'')+(entry.ingChoice3||'')) : null;
+
+  let struck = false, forced = null;
+  if(rec[4]){
+    struck = true; // 不推荐使用：红字删除线
+  } else if(dtype==='food'){
+    if(pattern.length!==3) return '其他'; // 食材槽没选全，判不出档位
+    if(pattern==='abc' || pattern==='aba') forced = '不合格';
+    else if(pattern==='aab' || pattern==='aac') forced = boxAaxCategory(entry, x, availItems);
+    else if(!availItems.includes(pattern)) struck = true; // aaa/abb 这个组合不可用
+  } else if(dtype==='energy'){
+    const labels = buildLabels(boxEntryBuild(entry));
+    const ws = windowSizeOf(entry.level);
+    let hasFruitS = false;
+    for(let i=0;i<ws;i++){ if(labels[i]==='G1'){ hasFruitS = true; break; } }
+    if(!hasFruitS) struck = true; // 建议严选果S：同样是删除线显示
+  }
+
+  // 邪修凌驾于上面所有结论之上（它本来就是"这些判废结论 + 覆盖率够高"才成立的）
+  if(boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex)){
+    let info = null;
+    try{ info = boxXiexiuInfo(entry, x, dtype); }catch(e){ info = null; }
+    if(info) return '邪修';
+  }
+  if(struck) return '其他';
+  if(forced) return forced;
+  let grade = null;
+  try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
+  return grade || '其他';
 }
 function boxEntryMatchesFilters(entry){
   const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
@@ -13627,6 +14096,11 @@ function boxEntryMatchesFilters(entry){
   if(boxFilters.skillTypes.size){
     const capRow = boxCapRowFor(entry.dex);
     if(!capRow || !capRow.skillCat || !boxFilters.skillTypes.has(capRow.skillCat)) return false;
+  }
+  if(boxFilters.grades.size){
+    let cat = '其他';
+    try{ cat = boxEntryGradeCategory(entry); }catch(e){ cat = '其他'; }
+    if(!boxFilters.grades.has(cat)) return false;
   }
   if(boxFilters.effMin!=null || boxFilters.effMax!=null){
     const eff = boxEntryEfficiency(entry);
@@ -13672,13 +14146,23 @@ function renderBoxFilterRow(){
     };
     row.appendChild(btn);
   });
-  // 「重置」不在栅格里，它是 .box-toolbar-fs-row 的第二个 flex 子项，靠 align-self:stretch 竖着占满筛选两行＋分隔线＋排序一行
-  const resetBtn = document.getElementById('boxFilterResetBtn');
-  if(resetBtn) resetBtn.onclick = ()=>{
-    boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), effMin:null, effMax:null };
-    boxSort = { key:null, dir:0 };
-    renderBoxPage();
-  };
+  // 「毕业等级」不在 4×2 栅格里（栅格已经被 8 颗按钮占满），它是筛选那一行右侧独立的一颗，竖着占两行高
+  const gradeBtn = document.getElementById('boxGradeFilterBtn');
+  if(gradeBtn){
+    gradeBtn.className = 'box-filter-btn box-grade-filter-btn'+(boxFilterIsActive('grades')?' box-filter-active':'');
+    gradeBtn.onclick = (e)=>{
+      e.stopPropagation();
+      const overlay = document.getElementById('boxFilterPopupOverlay');
+      const panel = document.getElementById('boxFilterPopupPanel');
+      if(overlay.classList.contains('open') && panel.classList.contains('for-grades')){ closeBoxFilterPop(); return; }
+      openBoxFilterPopup('grades', gradeBtn);
+    };
+  }
+}
+function boxResetAllFilters(){
+  boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null };
+  boxSort = { key:null, dir:0 };
+  renderBoxPage();
 }
 
 /* ============ 宝可梦盒：排序 ============ */
@@ -13750,7 +14234,8 @@ function renderBoxSortRow(){
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'box-sort-btn'+(on?' box-sort-active':'');
-    btn.textContent = d.label + (on ? (boxSort.dir>0 ? ' ▲' : ' ▼') : '');
+    btn.dataset.sortkey = d.key;
+    btn.textContent = d.label + (on ? (boxSort.dir>0 ? '▲' : '▼') : '');
     btn.onclick = ()=>{
       if(!on) boxSort = {key:d.key, dir:d.firstDir};            // 第一次点：默认方向
       else if(boxSort.dir===d.firstDir) boxSort.dir = -d.firstDir; // 第二次点：倒序
@@ -13759,6 +14244,13 @@ function renderBoxSortRow(){
     };
     row.appendChild(btn);
   });
+  // 「重置」排在排序区最后一颗，跟排序按钮同高；它清的是筛选+排序全部状态
+  const resetBtn = document.createElement('button');
+  resetBtn.type = 'button';
+  resetBtn.className = 'box-sort-reset-btn';
+  resetBtn.textContent = '重置';
+  resetBtn.onclick = boxResetAllFilters;
+  row.appendChild(resetBtn);
 }
 // 通用：把内容塞进气泡浮窗，锚定在筛选按钮下方，尾巴对准按钮中心
 let boxFilterPopAnchor = null;
@@ -13828,6 +14320,7 @@ const BOX_FILTER_DEFS = [
 ];
 // 每次改选项都会重画筛选按钮行，旧的锚点节点已经被丢弃，得按位置重新拿一次
 function boxFilterAnchorFor(key){
+  if(key==='grades') return document.getElementById('boxGradeFilterBtn'); // 这颗不在栅格里
   const idx = BOX_FILTER_DEFS.findIndex(d=>d.key===key);
   const row = document.getElementById('boxFilterRow');
   return (idx>=0 && row) ? row.children[idx] : null;
@@ -13896,6 +14389,12 @@ function openBoxFilterPopup(key, anchorEl){
       const iconHtml = iconKind ? capSkillIcon(iconKind) : '';
       const full = (typeof CAP_SKILL_FULL!=='undefined' && CAP_SKILL_FULL[o.value]) ? '<small>\uff08'+CAP_SKILL_FULL[o.value]+'\uff09</small>' : '';
       return '<div class="cap-skill-pill'+(sel?' active':'')+'" data-val="'+o.value+'">'+iconHtml+'<span>'+o.label+full+'</span></div>';
+    });
+  } else if(key==='grades'){
+    boxMultiOptPopup(key, anchorEl, '毕业等级', BOX_GRADE_CATS.map(g=>({value:g,label:g})), boxFilters.grades, (o,sel)=>{
+      const c = boxGradeCatColor(o.value);
+      const style = sel ? ('border-color:'+c+'; background:'+c+'; color:#fff;') : ('border-color:'+c+'; background:'+c+'1f; color:'+c+';');
+      return '<div class="box-grade-opt'+(sel?' selected':'')+'" data-val="'+o.value+'" style="'+style+'">'+o.label+'</div>';
     });
   } else if(key==='eff'){
     boxFilterPopAnchor = anchorEl;
