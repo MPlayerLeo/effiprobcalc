@@ -4644,10 +4644,29 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     const ingChoice2 = build ? build.ingChoice2 : state.ingChoice2;
     const ingChoice3 = build ? build.ingChoice3 : state.ingChoice3;
     if(!ingChoice2 || !ingChoice3) return null;
+    // 之前这里固定只算 ingChoice3 那一个字母，且用的是 capFoodProd/capFoodAmountSum——那套函数是
+    // 按"这个字母占满所有它能出现的槽位"的假设算的（给页4"哪只最能产某种食材"的跨物种排名用），
+    // 不看当前面板 aba/aac/abc 这类真实选择，非 aaa 组合套进来就会把 a 食材的量算成 aaa 的量。
+    // 这里改用跟毕业判定食谱覆盖率同一套 capPatternIngredientAmountForBuild，严格按真实选择的
+    // ingChoice2/ingChoice3 计算；并且把组合里出现的每个字母（最多3个：a + ingChoice2 + ingChoice3）
+    // 都算出来、一起返回，供排名对比/面板天梯把这只吃到的所有食材产量都显示出来，不再只挑一个。
+    const n = level===50 ? 2 : 3;
+    const letters = ['a'];
+    if(ingChoice2 && !letters.includes(ingChoice2)) letters.push(ingChoice2);
+    if(n>=3 && ingChoice3 && !letters.includes(ingChoice3)) letters.push(ingChoice3);
     const letterIng = {a:x.ingA, b:x.ingB, c:x.ingC};
-    const ingName = letterIng[ingChoice3];
-    if(!ingName) return null;
-    return {kind:'food', ing:ingName, value: capFoodProd(x, ingName, level, medal)};
+    const helpsPerDay = capHelpsPerDay(x.interval, level, medal);
+    const items = letters.map(letter=>{
+      const ingName = letterIng[letter];
+      if(!ingName) return null;
+      const amtSum = capPatternIngredientAmountForBuild(x, letter, n, ingChoice2, ingChoice3);
+      return {letter, ing: ingName, value: helpsPerDay * (x.ingProb||0) * (amtSum / n)};
+    }).filter(Boolean);
+    if(!items.length) return null;
+    // primary：跟"关键指标"(panelKeyMetric，用 ingChoice3 那个字母)保持同一个比较口径，
+    // >/< 号和 1/2/3 名次徽章都还是按这一个数值比大小，只是展示框改成把全部食材都列出来
+    const primary = items.find(it=>it.letter===ingChoice3) || items[items.length-1];
+    return {kind:'food', items, primary};
   }
   if(type==='skill'){
     const count = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
@@ -4717,7 +4736,7 @@ function capPageActualYieldValue(base, eff, build){
     else if(base.kind==='skill') e *= cm.skillScale;
   }
   if(base.kind==='flame') return base.value*e;
-  if(base.kind==='food') return base.value*e;
+  if(base.kind==='food') return base.primary.value*e;
   if(base.kind==='skill') return base.byEffect ? base.effect*e : base.count*e;
   return null;
 }
@@ -4737,8 +4756,11 @@ function capPageActualYieldHtml(base, eff, build){
     return html;
   }
   if(base.kind==='food'){
-    const icon = ING_ICONS[base.ing];
-    return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(base.value*e,1)}</b></span>`;
+    // aba/aac/abc 这类非 aaa 组合会产多种食材，全部列出来，不再只显示 ingChoice3 那一个
+    return base.items.map(it=>{
+      const icon = ING_ICONS[it.ing];
+      return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(it.value*e,1)}</b></span>`;
+    }).join('');
   }
   if(base.kind==='skill') return capSkillYieldHtml(base, e);
   return '';
