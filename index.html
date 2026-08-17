@@ -434,6 +434,12 @@
   .grad-sub{ margin-top:18px; }
   .grad-sub .grad-grade{font-weight:800;}
   .grad-sub .grad-comment{font-weight:600; margin-top:3px;}
+  /* 评语只允许在空格处换行，不可以把一个词拆成单字分两行；word-break/overflow-wrap 都是可继承属性，
+     gradCommentHtml() 拆出来的 .grad-comment-line 子行不用重复声明 */
+  .grad-comment{ word-break:keep-all; overflow-wrap:normal; }
+  .grad-comment-line + .grad-comment-line{ margin-top:2px; }
+  .grad-warning-heading{ word-break:keep-all; overflow-wrap:normal; }
+  .grad-terror-comment-line{ word-break:keep-all; overflow-wrap:normal; }
 
   @media (max-width: 420px){
     body{ padding:calc(14px + env(safe-area-inset-top, 0px)) 10px 136px; }
@@ -787,10 +793,39 @@
   }
 
   .box-batch-bar{ flex:0 0 auto; display:flex; gap:10px; padding:10px; background:var(--panel); border-top:1px solid var(--line); }
-  .box-batch-cancel-btn, .box-batch-selectall-btn, .box-batch-delete-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
+  .box-batch-cancel-btn, .box-batch-selectall-btn, .box-batch-delete-btn, .box-batch-level-btn, .box-batch-species-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
   .box-batch-cancel-btn{ background:#e5e0d2; color:var(--ink); }
   .box-batch-selectall-btn{ background:#3a8fae; color:#fff; }
   .box-batch-delete-btn{ background:#c1443a; color:#fff; }
+  .box-batch-level-btn{ background:var(--accent); color:#fff; }
+  .box-batch-species-btn{ background:#3f9a52; color:#fff; }
+
+  /* ============ 宝可梦盒：批量修改种族浮窗 ============ */
+  .box-spedit-overlay{
+    display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:1300;
+    align-items:center; justify-content:center; padding:16px;
+  }
+  .box-spedit-panel{
+    background:var(--panel); border-radius:14px; max-width:640px; width:100%; max-height:86vh;
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 10px 40px rgba(0,0,0,.35);
+  }
+  .box-spedit-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(148px, 1fr)); gap:14px 10px;
+    overflow-y:auto; padding:14px 18px;
+  }
+  .box-spedit-cell{ display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .box-spedit-bubble{
+    background:var(--paper); border:1px solid var(--line); border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,.12);
+    padding:10px; width:max-content; max-width:100%;
+  }
+  .box-spedit-input-wrap{ width:100%; }
+  .box-spedit-input-wrap .pk-search-input-underline{ font-size:13px; text-align:center; padding:4px 2px; }
+  .box-spedit-btn-row{ flex:0 0 auto; display:flex; gap:10px; padding:12px 18px; border-top:1px solid var(--line); }
+  .box-spedit-cancel-btn, .box-spedit-confirm-btn{ flex:1 1 0; border:none; border-radius:9px; padding:12px 4px; font-size:14px; font-weight:800; cursor:pointer; }
+  .box-spedit-cancel-btn{ background:#c1443a; color:#fff; }
+  .box-spedit-confirm-btn{ background:#3f9a52; color:#fff; }
+
+  .mf-io-row{ display:flex; gap:8px; margin-bottom:16px; }
 
   .box-info-bubble-overlay{ display:none; position:fixed; inset:0; z-index:1200; pointer-events:none; }
   .box-info-bubble-overlay.open{ display:block; }
@@ -2514,8 +2549,8 @@
   <div class="box-bubble-panel" id="boxBubblePanel">
     <div class="box-top-bar">
       <div class="box-toolbar-row1">
-        <button type="button" class="box-tool-btn box-tool-blue" id="boxImportBtn">导入盒子</button>
-        <button type="button" class="box-tool-btn box-tool-yellow" id="boxExportBtn">导出盒子</button>
+        <button type="button" class="box-tool-btn box-tool-blue" id="boxLevelEditBtn">修改等级</button>
+        <button type="button" class="box-tool-btn box-tool-yellow" id="boxSpeciesEditBtn">修改种族</button>
         <button type="button" class="box-tool-btn box-tool-green" id="boxBatchUploadBtn">批量上传</button>
         <button type="button" class="box-tool-btn box-tool-red" id="boxBatchDeleteBtn">批量删除</button>
       </div>
@@ -2545,6 +2580,17 @@
       <button type="button" class="box-batch-cancel-btn" id="boxBatchCancelBtn">取消</button>
       <button type="button" class="box-batch-selectall-btn" id="boxBatchSelectAllBtn">全选</button>
       <button type="button" class="box-batch-delete-btn" id="boxBatchDeleteConfirmBtn">删除</button>
+    </div>
+    <div class="box-batch-bar" id="boxLevelBar" style="display:none;">
+      <button type="button" class="box-batch-level-btn" data-lv="50">50级</button>
+      <button type="button" class="box-batch-level-btn" data-lv="60">60级</button>
+      <button type="button" class="box-batch-level-btn" data-lv="70">70级</button>
+      <button type="button" class="box-batch-level-btn" data-lv="80">80级</button>
+      <button type="button" class="box-batch-cancel-btn" id="boxLevelCancelBtn">取消</button>
+    </div>
+    <div class="box-batch-bar" id="boxSpeciesBar" style="display:none;">
+      <button type="button" class="box-batch-species-btn" id="boxSpeciesModifyBtn">修改</button>
+      <button type="button" class="box-batch-cancel-btn" id="boxSpeciesCancelBtn">取消</button>
     </div>
     <!-- v3.18：原来的注册/登录吸底条 + 右下角「修改面板」「+」/左下角「奖章」「账号设置」四颗小圆浮窗，
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
@@ -2653,6 +2699,18 @@
 
 <div class="box-filter-pop-overlay" id="boxFilterPopupOverlay">
   <div class="box-filter-pop" id="boxFilterPopupPanel"></div>
+</div>
+
+<!-- v3.18 批量修改种族浮窗：网格里每只选中的宝可梦一个气泡+种族输入框，只有点绿色「确认修改」才写入盒子 -->
+<div class="box-spedit-overlay" id="boxSpeciesEditOverlay">
+  <div class="box-spedit-panel">
+    <div class="dash-header dash-header-flex">修改种族<span class="dash-close" id="boxSpeditCloseBtn">✕</span></div>
+    <div class="box-spedit-grid" id="boxSpeditGrid"></div>
+    <div class="box-spedit-btn-row">
+      <button type="button" class="box-spedit-cancel-btn" id="boxSpeditCancelBtn">取消修改</button>
+      <button type="button" class="box-spedit-confirm-btn" id="boxSpeditConfirmBtn">确认修改</button>
+    </div>
+  </div>
 </div>
 
 <div class="dashboard-overlay" id="boxUploadProgressOverlay">
@@ -2982,6 +3040,10 @@
     </div>
     <div class="auth-brand-title">土王智商高</div>
     <div class="account-info" id="moreFuncAccountInfo"></div>
+    <div class="mf-io-row">
+      <button type="button" class="box-tool-btn box-tool-blue" id="boxImportBtn">导入盒子</button>
+      <button type="button" class="box-tool-btn box-tool-yellow" id="boxExportBtn">导出盒子</button>
+    </div>
     <div class="mf-section">
       <div class="mf-toggle-row">
         <div>
@@ -6567,7 +6629,7 @@ function updateBoxActionBar(){
   if(!bar) return;
   const open = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   const inDetail = (typeof boxDetailEntryId!=='undefined') && !!boxDetailEntryId;
-  const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
+  const inBatch = (typeof boxSelectMode!=='undefined') && !!boxSelectMode;
   const shouldShow = open && !inDetail && !inBatch;
   const logged = (typeof authLoggedIn==='function') && authLoggedIn();
   const circleMode = !!userPrefs.fabCircleModeOn;
@@ -7574,10 +7636,24 @@ function openGradStd(){
 }
 function closeGradStd(){ document.getElementById('gradStdOverlay').style.display = 'none'; }
 
+// 评语拆行规则：默认整段原样输出，换行只交给 CSS 的 word-break:keep-all 在空格处断——
+// 4+4 惯用语（"中流砥柱 栋梁之材"）够宽就一行显示，挤不下也只会整词换行，不会拆单字。
+// 唯独"弱评语"数据（宝睡百科表里第6列，形如"电果推荐 皮卡丘"/"油推荐 小猫怪 不良蛙"）第一段
+// 是以"推荐"收尾的固定标签，这种要强制拆成两行：标签单独一行，后面的推荐名单单独占一行，
+// 名单本身再长也只在名字之间的空格处换，不会把某个名字拆成单字
+function gradCommentHtml(text){
+  if(!text) return '';
+  const sp = text.indexOf(' ');
+  if(sp===-1) return text;
+  const first = text.slice(0, sp);
+  if(!first.endsWith('推荐')) return text;
+  const rest = text.slice(sp+1);
+  return '<div class="grad-comment-line">'+first+'</div><div class="grad-comment-line">'+rest+'</div>';
+}
 function gradBlockHtml(cls, gradeText, commentText, baseGradeSize, baseCommentSize, color, strike, extraNote){
   const strikeStyle = strike ? 'text-decoration:line-through;' : '';
   const noteHtml = extraNote ? `<div class="grad-7080-note">${extraNote}</div>` : '';
-  const commentHtml = commentText ? `<div class="grad-comment" style="color:${color}; font-size:${baseCommentSize}px;">${commentText}</div>` : '';
+  const commentHtml = commentText ? `<div class="grad-comment" style="color:${color}; font-size:${baseCommentSize}px;">${gradCommentHtml(commentText)}</div>` : '';
   return `<div class="grad-sub ${cls}">
     <div class="grad-grade" data-text="${gradeText}" style="color:${color}; font-size:${baseGradeSize}px; ${strikeStyle}"></div>
     <div class="grad-rule" style="border-top:2px solid ${color}; width:${cls==='tier70'?'46%':'38%'}; margin:6px auto;"></div>
@@ -7855,7 +7931,7 @@ function renderForcedGradeBox(el, borderClass, overrideInfo, xiexiu){
         ${headingHtml}
         <div class="grad-grade" data-text="${gradeName}" style="color:${color}; font-size:36px; ${strikeStyle}"></div>
         <div class="grad-rule" style="border-top:3px solid ${color}; width:56%; margin:10px auto;"></div>
-        <div class="grad-comment" style="color:${color}; font-size:28px;">${commentText}</div>
+        <div class="grad-comment" style="color:${color}; font-size:28px;">${gradCommentHtml(commentText)}</div>
       </div>
     </div></div>`;
   el.querySelectorAll('.grad-grade').forEach(renderGradeText);
@@ -7972,7 +8048,7 @@ function renderGraduation(pfx){
           <div class="grad-warning-heading">${overrideInfo.heading}</div>
           <div class="grad-grade" data-text="不推荐" style="color:${GRAD_WARN_COLOR}; font-size:34px;"></div>
           <div class="grad-rule" style="border-top:3px solid ${GRAD_WARN_COLOR}; width:56%; margin:10px auto;"></div>
-          <div class="grad-comment" style="color:${GRAD_WARN_COLOR}; font-size:26px;">${overrideInfo.comment}</div>
+          <div class="grad-comment" style="color:${GRAD_WARN_COLOR}; font-size:26px;">${gradCommentHtml(overrideInfo.comment)}</div>
           <div class="grad-unavail-note">*不推荐使用建议仅出于强度考量，真爱党请随意</div>
         </div>
       </div></div>`;
@@ -8130,12 +8206,12 @@ function renderGraduation(pfx){
           ${warnHeadingHtml}
           <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px; ${strikeStyle}"></div>
           <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
-          <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${commentText}</div>`
+          <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${gradCommentHtml(commentText)}</div>`
       : `${warnHeadingHtml}
           <div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;">${rankText}</div>
           <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px; ${strikeStyle}"></div>
           <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
-          <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${commentText}</div>`;
+          <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${gradCommentHtml(commentText)}</div>`;
 
     el.innerHTML = `<div class="grad-outer ${borderClass}"><div class="grad-inner">
         <div class="grad-primary">
@@ -8300,7 +8376,7 @@ function renderGraduation(pfx){
         ${warnHeadingHtml}
         <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px; ${strikeStyle}"></div>
         <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
-        <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${commentText}</div>
+        <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${gradCommentHtml(commentText)}</div>
       </div>
       ${extraHtml}
       ${unavailNoteHtml}
@@ -12155,7 +12231,7 @@ function pageSwipeBlocked(){
   if(boxOverlayOpen || dashboardOpen) return true;
   const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay'];
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
   return false;
 }
@@ -12692,7 +12768,7 @@ function updateFabCircles(){
   let inDetail = false, inBox = false;
   try{ inDetail = !!boxDetailEntryId; }catch(e){}
   try{ inBox = !!boxOverlayOpen; }catch(e){}
-  const inBatch = (typeof boxBatchDeleteMode!=='undefined') && boxBatchDeleteMode;
+  const inBatch = (typeof boxSelectMode!=='undefined') && !!boxSelectMode;
   if(inBox){
     // 盒子浮层内：更多功能/+新建/修改面板三颗圆，控制参数不出现（盒子里本来就没有它）
     const show = !inDetail && !inBatch;
@@ -13055,7 +13131,7 @@ function boxDrawFrozenFrame(canvas, src){
   tmp.onerror = ()=> boxGifImageCache.delete(src);
   tmp.src = src;
 }
-let boxBatchDeleteMode = false;
+let boxSelectMode = null; // null | 'delete' | 'level' | 'species' —— 三种多选态复用同一套点选/滑选机制
 let boxSelectedIds = new Set();
 let boxActiveBubbleEntryId = null;
 let boxDragSelectMode = null;
@@ -13108,7 +13184,7 @@ function boxCancelLongPress(){
 }
 function boxGridItemLongPressStart(e, id){
   boxLongPressFired = false;
-  if(boxBatchDeleteMode) return;               // 批量删除态下按住是拖选，长按不抢
+  if(boxSelectMode) return;                    // 多选态下按住是拖选，长按不抢
   if(e.button!=null && e.button!==0) return;   // 只认左键/主触点
   boxCancelLongPress();
   boxLongPressStart = {x:e.clientX, y:e.clientY};
@@ -13140,8 +13216,8 @@ function openBoxRenamePrompt(id){
 function boxGridItemClick(id, itemEl){
   if(boxLongPressFired){ boxLongPressFired = false; return; }
   // 选中/取消已经在 pointerdown 里做过一次了（拖选需要它）；这里再切换一次等于原地切回去，
-  // 单点必须"滑一下"才会生效的怪现象就是这么来的——批量删除态下点击不再重复处理
-  if(boxBatchDeleteMode) return;
+  // 单点必须"滑一下"才会生效的怪现象就是这么来的——多选态下点击不再重复处理
+  if(boxSelectMode) return;
   if(boxActiveBubbleEntryId === id){
     closeBoxInfoBubble();
     if(boxPickTargetPanel!=null){ boxCommitPickToPanel(id); } else { openBoxDetail(id); }
@@ -13188,7 +13264,7 @@ function boxApplySelectVerdict(id, itemEl){
   if(cb) cb.classList.toggle('checked', boxSelectedIds.has(id));
 }
 function boxGridItemPointerDown(e, id, itemEl){
-  if(!boxBatchDeleteMode) return;
+  if(!boxSelectMode) return;
   boxDragActive = true;
   boxDragSelectMode = boxSelectedIds.has(id) ? 'deselect' : 'select';
   boxApplySelectVerdict(id, itemEl);
@@ -13197,7 +13273,7 @@ function boxGridItemPointerDown(e, id, itemEl){
 // pointerenter——触屏在 pointerdown 命中的元素上会隐式发生 pointer capture，导致手指划过的其余
 // 格子永远收不到 pointerenter，滑动多选此前实际上只有鼠标能用，触屏完全无效
 function boxGridDragMove(e){
-  if(!boxBatchDeleteMode || !boxDragActive || !boxDragSelectMode) return;
+  if(!boxSelectMode || !boxDragActive || !boxDragSelectMode) return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const itemEl = el && el.closest ? el.closest('.box-grid-item') : null;
   if(!itemEl) return;
@@ -13300,7 +13376,7 @@ function renderBoxPage(){
       q.textContent = '?';
       imgWrap.appendChild(q);
     }
-    if(boxBatchDeleteMode){
+    if(boxSelectMode){
       const cb = document.createElement('div');
       cb.className = 'box-grid-checkbox'+(boxSelectedIds.has(entry.id)?' checked':'');
       imgWrap.appendChild(cb);
@@ -13374,7 +13450,7 @@ function boxIngredientRowsHtml(entry){
   html += '</div>';
   return html;
 }
-function boxInfoBubbleHtml(entry){
+function boxInfoBubbleHtml(entry, noActions){
   const portraitPair = POKEMON_PORTRAITS[entry.name];
   // 每次打开气泡都重新抽一次伪装，跟详情页/修改面板的行为一致（那两处经 selectPokemon 也是每次重抽）
   const dexRec = POKEMON_DEX_DATA.find(function(r){ return r[0] === entry.dex; });
@@ -13402,12 +13478,13 @@ function boxInfoBubbleHtml(entry){
     '</div>'+
     '<div class="box-bub-name">'+(entry.nickname||entry.name)+'</div>'+
     skillsHtml+
+    (noActions ? '' :
     '<div class="box-bub-actions">'+
       '<button type="button" class="box-bub-act-btn box-bub-act-detail" data-act="detail">详情</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-edit" data-act="edit">修改</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-output" data-act="output">输出</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-delete" data-act="delete">删除</button>'+
-    '</div>';
+    '</div>');
 }
 function wireBoxInfoBubbleActions(entry){
   document.getElementById('boxInfoBubble').querySelectorAll('.box-bub-act-btn').forEach(btn=>{
@@ -13827,7 +13904,7 @@ function boxDetailSwitchBy(step){
     if(typeof dashboardOpen!=='undefined' && dashboardOpen) return true;
     const classIds = ['boxFilterPopupOverlay','boxInfoBubbleOverlay'];
     if(classIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-    const dispIds = ['boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','finalPkOverlay','creditModal'];
+    const dispIds = ['boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','finalPkOverlay','creditModal','boxSpeciesEditOverlay'];
     if(dispIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
     return false;
   }
@@ -13975,24 +14052,48 @@ document.getElementById('boxImportFileInput').addEventListener('change', (e)=>{
 
 /* ============ 宝可梦盒：批量删除 ============ */
 // 批量条出现时气泡底部换成 --panel 底色，小尾巴要跟着换，否则会有一道色差
-function boxSetBatchBarVisible(on){
-  document.getElementById('boxBatchBar').style.display = on ? 'flex' : 'none';
+const BOX_SELECT_MODE_BAR = {delete:'boxBatchBar', level:'boxLevelBar', species:'boxSpeciesBar'};
+const BOX_SELECT_MODE_BTN = {delete:'boxBatchDeleteBtn', level:'boxLevelEditBtn', species:'boxSpeciesEditBtn'};
+function boxSetSelectBarVisible(){
+  Object.entries(BOX_SELECT_MODE_BAR).forEach(([mode,id])=>{
+    const el = document.getElementById(id);
+    if(el) el.style.display = (boxSelectMode===mode) ? 'flex' : 'none';
+  });
+  Object.entries(BOX_SELECT_MODE_BTN).forEach(([mode,id])=>{
+    const el = document.getElementById(id);
+    if(el) el.classList.toggle('box-tool-active', boxSelectMode===mode);
+  });
+  const on = !!boxSelectMode;
   const g = document.getElementById('boxGrid');
-  if(g) g.classList.toggle('box-batch-mode', !!on);
+  if(g) g.classList.toggle('box-batch-mode', on);
   const t = document.getElementById('boxBubbleTail');
-  if(t) t.classList.toggle('on-panel', !!on);
-  // v3.18：批量删除条和吸底按钮条都钉在盒子浮窗底边，同时出现会互相压住甚至挡住"删除"。
-  // 两者的显隐现在都由 updateBoxActionBar 里的 inBatch 分支统一裁决，这里只要触发一次重算即可
+  if(t) t.classList.toggle('on-panel', on);
+  // v3.18：这几条吸底条和吸底按钮条都钉在盒子浮窗底边，同时出现会互相压住。
+  // 显隐统一由 updateBoxActionBar 里的 inBatch 分支裁决，这里只要触发一次重算即可
   // （四颗小圆浮窗已撤除，不再需要逐个 display 开关）
   updateBoxActionBar();
 }
-document.getElementById('boxBatchDeleteBtn').onclick = ()=>{
-  boxBatchDeleteMode = !boxBatchDeleteMode;
+function boxEnterSelectMode(mode){
+  boxSelectMode = mode;
   boxSelectedIds = new Set();
-  boxSetBatchBarVisible(boxBatchDeleteMode);
-  document.getElementById('boxBatchDeleteBtn').classList.toggle('box-tool-active', boxBatchDeleteMode);
-  if(boxBatchDeleteMode) closeBoxInfoBubble();
+  boxSetSelectBarVisible();
+  closeBoxInfoBubble();
   renderBoxPage();
+}
+function boxExitSelectMode(){
+  boxSelectMode = null;
+  boxSelectedIds = new Set();
+  boxSetSelectBarVisible();
+  renderBoxPage();
+}
+document.getElementById('boxBatchDeleteBtn').onclick = ()=>{
+  boxSelectMode==='delete' ? boxExitSelectMode() : boxEnterSelectMode('delete');
+};
+document.getElementById('boxLevelEditBtn').onclick = ()=>{
+  boxSelectMode==='level' ? boxExitSelectMode() : boxEnterSelectMode('level');
+};
+document.getElementById('boxSpeciesEditBtn').onclick = ()=>{
+  boxSelectMode==='species' ? boxExitSelectMode() : boxEnterSelectMode('species');
 };
 document.getElementById('boxBatchSelectAllBtn').onclick = ()=>{
   const entries = boxFilteredEntries();
@@ -14001,23 +14102,171 @@ document.getElementById('boxBatchSelectAllBtn').onclick = ()=>{
   else { entries.forEach(e=>boxSelectedIds.add(e.id)); }
   renderBoxPage();
 };
-document.getElementById('boxBatchCancelBtn').onclick = ()=>{
-  boxBatchDeleteMode = false;
-  boxSelectedIds = new Set();
-  boxSetBatchBarVisible(false);
-  document.getElementById('boxBatchDeleteBtn').classList.remove('box-tool-active');
-  renderBoxPage();
-};
+document.getElementById('boxBatchCancelBtn').onclick = ()=> boxExitSelectMode();
 document.getElementById('boxBatchDeleteConfirmBtn').onclick = ()=>{
   if(boxSelectedIds.size===0) return;
-  openBoxDeleteWarn([...boxSelectedIds], ()=>{
-    boxBatchDeleteMode = false;
-    boxSelectedIds = new Set();
-    boxSetBatchBarVisible(false);
-    document.getElementById('boxBatchDeleteBtn').classList.remove('box-tool-active');
-    renderBoxPage();
+  openBoxDeleteWarn([...boxSelectedIds], ()=> boxExitSelectMode());
+};
+
+/* ---- 修改等级：选中的宝可梦点一个等级按钮就批量改掉，改完不退出多选态，方便连续再选再改 ---- */
+function boxApplyLevelToSelected(lv){
+  if(boxSelectedIds.size===0) return;
+  let count = 0;
+  boxSelectedIds.forEach(id=>{
+    const e = boxGetEntry(id);
+    if(e){ e.level = lv; count++; }
+  });
+  if(count){ saveBoxData(); renderBoxPage(); }
+  alert('已将 '+count+' 只宝可梦修改为 '+lv+' 级。');
+}
+document.getElementById('boxLevelBar').querySelectorAll('.box-batch-level-btn').forEach(btn=>{
+  btn.onclick = ()=> boxApplyLevelToSelected(parseInt(btn.dataset.lv, 10));
+});
+document.getElementById('boxLevelCancelBtn').onclick = ()=> boxExitSelectMode();
+
+/* ---- 修改种族：选中后点「修改」弹出批量修改种族浮窗，浮窗自己的确认/取消见下方定义 ---- */
+document.getElementById('boxSpeciesCancelBtn').onclick = ()=> boxExitSelectMode();
+document.getElementById('boxSpeciesModifyBtn').onclick = ()=>{
+  if(boxSelectedIds.size===0) return;
+  openBoxSpeciesEditModal([...boxSelectedIds], {
+    onDone: ({confirmed})=>{ if(confirmed) boxExitSelectMode(); }
   });
 };
+
+/* ============ 宝可梦盒：批量修改种族浮窗 ============
+   每只选中的宝可梦一格：气泡（复用信息气泡的展示内容，只是去掉详情/修改/输出/删除四个动作按钮，
+   保持跟单击气泡一致的视觉大小）+下方一个种族输入框。输入框选中的物种先临时"暂存"在
+   boxSpeciesEditStaged 里，只有点绿色「确认修改」才会真正写回 boxData——红色「取消修改」
+   或点右上角✕只是关掉浮窗，暂存的内容直接丢弃，盒子数据完全不受影响。 */
+let boxSpeciesEditIds = [];
+let boxSpeciesEditStaged = {};   // id -> {dex, name, ingChoice2, ingChoice3}
+let boxSpeciesEditOnDone = null;
+// 预览用：把暂存的新种族叠在原条目上，不改动 boxData 本身
+function boxSpeditVirtualEntry(id){
+  const entry = boxGetEntry(id);
+  if(!entry) return null;
+  const staged = boxSpeciesEditStaged[id];
+  if(!staged) return entry;
+  const wasDefaultNick = !entry.nickname || entry.nickname===entry.name;
+  return Object.assign({}, entry, {
+    dex: staged.dex, name: staged.name,
+    ingChoice2: staged.ingChoice2, ingChoice3: staged.ingChoice3,
+    nickname: wasDefaultNick ? staged.name : entry.nickname,
+  });
+}
+function boxSpeditCellBubbleHtml(id){
+  const ve = boxSpeditVirtualEntry(id);
+  return ve ? boxInfoBubbleHtml(ve, true) : '';
+}
+function renderBoxSpeditCellBubble(id){
+  const cell = document.querySelector('.box-spedit-cell[data-id="'+id+'"]');
+  if(!cell) return;
+  const bub = cell.querySelector('.box-spedit-bubble');
+  if(bub) bub.innerHTML = boxSpeditCellBubbleHtml(id);
+}
+function boxSpeditCloseAllDropdowns(exceptId){
+  document.querySelectorAll('.box-spedit-dropdown.open').forEach(dd=>{
+    if(dd.dataset.id !== exceptId){ dd.classList.remove('open'); dd.innerHTML=''; }
+  });
+}
+function boxSpeditRenderDropdown(id, query){
+  const dd = document.querySelector('.box-spedit-dropdown[data-id="'+id+'"]');
+  if(!dd) return;
+  const q = (query||'').trim();
+  if(!q){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+  let matches = POKEMON_DEX_DATA.filter(r=>r[1].includes(q));
+  if(matches.length===0){
+    const byNum = findPokemonByDexQuery(q);
+    if(byNum) matches = [byNum];
+  }
+  if(matches.length===0){
+    dd.innerHTML = '<div class="pk-dropdown-empty">没有找到匹配的宝可梦</div>';
+  } else {
+    dd.innerHTML = matches.map(r=>'<div class="pk-dropdown-item" data-dex="'+r[0]+'"><span class="dex">'+r[0]+'</span><span>'+r[1]+'</span></div>').join('');
+    dd.querySelectorAll('.pk-dropdown-item').forEach(el=>{
+      el.onclick = ()=>{
+        const dex = el.getAttribute('data-dex');
+        const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
+        if(!rec) return;
+        const entry = boxGetEntry(id);
+        // 跟盒子详情页种族输入框同一套口径：新种族不是食材型就清空 ingChoice2/3，
+        // 是食材型则沿用条目原来的选择（新种族下这两个字母未必还对得上，交给用户自己再核对）
+        const capRow = boxCapRowFor(dex);
+        const isFoodMon = capRow && (capRow.ingA||capRow.ingB||capRow.ingC);
+        boxSpeciesEditStaged[id] = {
+          dex, name: rec[1],
+          ingChoice2: isFoodMon ? (entry?entry.ingChoice2:null) : null,
+          ingChoice3: isFoodMon ? (entry?entry.ingChoice3:null) : null,
+        };
+        const input = document.querySelector('.box-spedit-input[data-id="'+id+'"]');
+        if(input) input.value = rec[1];
+        dd.classList.remove('open'); dd.innerHTML='';
+        renderBoxSpeditCellBubble(id);
+      };
+    });
+  }
+  dd.classList.add('open');
+}
+function boxSpeditCellHtml(id){
+  return ''+
+    '<div class="box-spedit-cell" data-id="'+id+'">'+
+      '<div class="box-spedit-bubble">'+boxSpeditCellBubbleHtml(id)+'</div>'+
+      '<div class="pk-search-wrap box-spedit-input-wrap">'+
+        '<input type="text" class="pk-search-input-underline box-spedit-input" data-id="'+id+'" placeholder="宝可梦种族" autocomplete="off">'+
+        '<div class="pk-dropdown pk-dropdown-wide box-spedit-dropdown" data-id="'+id+'"></div>'+
+      '</div>'+
+    '</div>';
+}
+function renderBoxSpeciesEditModal(){
+  const grid = document.getElementById('boxSpeditGrid');
+  grid.innerHTML = boxSpeciesEditIds.map(id=> boxSpeditCellHtml(id)).join('');
+  grid.querySelectorAll('.box-spedit-input').forEach(input=>{
+    const id = input.dataset.id;
+    input.addEventListener('input', ()=> boxSpeditRenderDropdown(id, input.value));
+    input.addEventListener('focus', ()=>{ boxSpeditCloseAllDropdowns(id); boxSpeditRenderDropdown(id, input.value); });
+  });
+}
+document.addEventListener('click', (e)=>{
+  if(e.target.closest('.box-spedit-input-wrap')) return;
+  boxSpeditCloseAllDropdowns(null);
+});
+function openBoxSpeciesEditModal(ids, opts){
+  opts = opts || {};
+  const liveIds = ids.filter(id=> !!boxGetEntry(id));
+  if(!liveIds.length) return;
+  boxSpeciesEditIds = liveIds;
+  boxSpeciesEditStaged = {};
+  boxSpeciesEditOnDone = opts.onDone || null;
+  renderBoxSpeciesEditModal();
+  document.getElementById('boxSpeciesEditOverlay').style.display = 'flex';
+}
+function closeBoxSpeciesEditModal(confirmed, changedCount){
+  document.getElementById('boxSpeciesEditOverlay').style.display = 'none';
+  document.getElementById('boxSpeditGrid').innerHTML = '';
+  boxSpeciesEditIds = []; boxSpeciesEditStaged = {};
+  const cb = boxSpeciesEditOnDone; boxSpeciesEditOnDone = null;
+  if(cb) cb({confirmed:!!confirmed, changedCount:changedCount||0});
+}
+document.getElementById('boxSpeditConfirmBtn').onclick = ()=>{
+  let changed = 0;
+  boxSpeciesEditIds.forEach(id=>{
+    const staged = boxSpeciesEditStaged[id];
+    if(!staged) return;
+    const live = boxGetEntry(id);
+    if(!live) return;
+    const wasDefaultNick = !live.nickname || live.nickname===live.name;
+    live.dex = staged.dex; live.name = staged.name;
+    live.ingChoice2 = staged.ingChoice2; live.ingChoice3 = staged.ingChoice3;
+    if(wasDefaultNick) live.nickname = live.name;
+    live.flagged = false; // 用户已经确认过这只的种族，摘掉红标
+    changed++;
+  });
+  if(changed) saveBoxData();
+  renderBoxPage();
+  closeBoxSpeciesEditModal(true, changed);
+};
+document.getElementById('boxSpeditCancelBtn').onclick = ()=> closeBoxSpeciesEditModal(false, 0);
+document.getElementById('boxSpeditCloseBtn').onclick = ()=> closeBoxSpeciesEditModal(false, 0);
 
 /* ============ 宝可梦盒：筛选器 ============ */
 let boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null };
@@ -14662,35 +14911,31 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     renderAll(); renderBoxPage();
     return;
   }
-  // 有问题的面板：存入盒子并标红。3 只以内逐个弹修改面板复查；超过 3 只就不打断了，
-  // 全部留在盒子里用红底＋红昵称标出来，让用户自己挨个点进去改
+  // 有问题的面板：存入盒子并标红。其中没认出种族的那些自动弹批量修改种族浮窗，改完（或点了取消）
+  // 关掉浮窗后，若还有别的问题（技能/性格/食材没认全，但种族认出来了）留在盒子里没处理，再提示一次
   const flaggedIds = [];
+  const speciesUndetectedIds = [];
   problems.forEach(p=>{
     if(boxData.length>=BOX_MAX_COUNT) return;
     const entry = Object.assign({id:genBoxId(), nickname:p.nickname||p.snap.name||'', addedAt:Date.now(), flagged:true}, p.snap);
     boxData.push(entry);
     flaggedIds.push(entry.id);
+    if(!p.speciesMatched) speciesUndetectedIds.push(entry.id);
   });
   saveBoxData();
   renderAll();
   renderBoxPage();
-  if(problems.length <= 3){
-    boxReviewQueue(flaggedIds.slice());
+  const remindRemainingIssues = ()=>{
+    const stillFlagged = flaggedIds.filter(id=>{ const e=boxGetEntry(id); return e && e.flagged; }).length;
+    if(stillFlagged>0) alert('本次上传中有 '+stillFlagged+' 只宝可梦识别可能有问题，已用红色底色标记在盒子里，请逐个检查修改。');
+  };
+  if(speciesUndetectedIds.length){
+    openBoxSpeciesEditModal(speciesUndetectedIds, {onDone: remindRemainingIssues});
   } else {
-    alert('本次上传中有 '+problems.length+' 只宝可梦识别可能有问题，已用红色底色标记在盒子里，请逐个检查修改。');
+    remindRemainingIssues();
   }
 });
 let dashboardCloseCallback = null;
-function boxReviewQueue(ids){
-  if(!ids.length) return;
-  const id = ids.shift();
-  const entry = boxGetEntry(id);
-  if(!entry){ boxReviewQueue(ids); return; }
-  entry.flagged = false; // 即将进入手动修改，先摘掉红标，改完由用户自行判断
-  saveBoxData();
-  openDashboardForBoxEntry(id);
-  dashboardCloseCallback = ()=>{ renderBoxPage(); boxReviewQueue(ids); };
-}
 
 /* ============ 单图 OCR：wooper 进度条 retrofit ============ */
 document.getElementById('pkOcrInput').addEventListener('change', ()=>{
