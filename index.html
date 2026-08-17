@@ -1657,6 +1657,14 @@
   /* v3.18"标记已毕业"：整条淡绿底，推荐程度框改实心绿底白字，居中显示"已毕业" */
   .cap-row-graduated{ background:#eaf7ec; }
   .cap-reco-graduated{ background:#1f8a3d; border-color:#1f8a3d; color:#fff; font-size:12px; }
+  /* 邪修(仅极致邪修)/恐怖宝可梦标记：跟已毕业系列一一对应，邪修红色、恐怖彩虹流光 */
+  .cap-row-xiexiu{ background:#fbe4e2; }
+  .cap-reco-xiexiu{ background:#c0392b; border-color:#c0392b; color:#fff; font-size:12px; }
+  .cap-reco-terror{
+    background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%; animation:shinyMove 2s ease infinite;
+    border-color:transparent; color:#fff; font-size:12px; text-shadow:0 0 4px rgba(0,0,0,.4);
+  }
   .cap-info{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; }
   .cap-line1{ display:flex; align-items:center; gap:6px; }
   .cap-name{ flex:0 1 auto; font-size:13px; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -1712,6 +1720,14 @@
   .cap-cav-grad-check svg{ width:62%; height:62%; filter:drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff); }
   /* 已毕业头像框再叠一圈绿色外框，粗细跟自身2px边框一致，紧贴在外侧 */
   .cap-cav-grad{ box-shadow:0 0 0 2px #1f8a3d; }
+  /* 邪修：同样叠一圈外框，改红色；恐怖：头像自身2px边框换成彩虹流光渐变边框（复用grad-quick-bar同款双层背景裁切技巧） */
+  .cap-cav-xiexiu{ box-shadow:0 0 0 2px #c0392b; }
+  .cap-cav.cap-cav-terror{
+    border:2px solid transparent;
+    background-image: linear-gradient(#f4effa,#f4effa), linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-origin:border-box; background-clip:padding-box, border-box;
+    background-size:100% 100%, 400% 400%; animation:shinyBarMove 2s linear infinite;
+  }
   .cap-ctop{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
   .cap-cmark-line{ position:absolute; left:-2px; right:-2px; height:2.5px; background:#3a3a3a; transform:translateY(50%); z-index:3; }
   .cap-cmark-av{ position:absolute; left:50%; transform:translateX(-50%); z-index:4; }
@@ -1725,6 +1741,24 @@
      导致各列柱子底边(0刻度线)对不齐 */
   .cap-ccol-grad-check{ display:flex; align-items:center; justify-content:center; height:11px; }
   .cap-ccol-grad-check svg{ width:11px; height:11px; }
+  /* 邪修：图标浅红底+红框；恐怖：图标底色直接换成彩虹流光渐变（食材图片盖在上面，只露出边缘） */
+  .cap-ccol-ic-xiexiu{ border:2px solid #c0392b; background:#fbe4e2; }
+  .cap-ccol-ic-terror{
+    border:2px solid transparent;
+    background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%; animation:shinyMove 2s ease infinite;
+  }
+  /* 恐怖宝可梦专用的彩虹流光对勾：用CSS mask把动画渐变裁成对勾形状，比给svg描边加渐变简单可靠 */
+  .cap-ccol-check-rainbow{
+    display:inline-block; width:11px; height:11px;
+    background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%; animation:shinyMove 2s ease infinite;
+    -webkit-mask-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 13l5 6L20 6" fill="none" stroke="black" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>');
+    mask-image:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M4 13l5 6L20 6" fill="none" stroke="black" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"/></svg>');
+    -webkit-mask-size:contain; mask-size:contain;
+    -webkit-mask-repeat:no-repeat; mask-repeat:no-repeat;
+    -webkit-mask-position:center; mask-position:center;
+  }
   .cap-combo-cap{ display:flex; justify-content:center; align-items:center; gap:0; padding:1px 3px; border-radius:7px; border:1.5px solid; margin-top:1px; }
   .cap-combo-cap img{ width:11px; height:11px; }
   .cap-combo-cap.rec-green{ border-color:#1f8a3d; background:#e9f7ec; } .cap-combo-cap.rec-yellow{ border-color:#b5651d; background:#fdf3e0; } .cap-combo-cap.rec-red{ border-color:#c0392b; background:#fbe9e7; }
@@ -11479,8 +11513,16 @@ function capComboUsable(x, combo){
   return capParseCombos(x.reco).has(combo) || capParseCombos(x.avail).has(combo);
 }
 let capGradSpecies = new Set(), capGradFoodAAA = new Set(), capGradFoodABB = new Set();
+// 邪修(仅极致邪修)/恐怖宝可梦：跟"标记已毕业"共用同一个开关和同一次扫盒子过程，只是分别记到独立的集合里，
+// 三者互斥优先级 恐怖 > 毕业 > 邪修（恐怖/毕业的判定条件本身跟邪修互斥，这里的优先级主要是防御性的）
+let capXiexiuFoodByCombo = {aaa:new Set(), abb:new Set(), aac:new Set(), abc:new Set()};
+let capXiexiuSkillSpecies = new Set(); // 功能型食材精选(isFoodPickDex)整只按种族标记，跟毕业标记里的 capGradSpecies 同口径
+let capTerrorFoodByCombo = {aac:new Set(), abc:new Set()};
 function computeCapGraduationSets(){
   capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set();
+  capXiexiuFoodByCombo = {aaa:new Set(), abb:new Set(), aac:new Set(), abc:new Set()};
+  capXiexiuSkillSpecies = new Set();
+  capTerrorFoodByCombo = {aac:new Set(), abc:new Set()};
   if(typeof boxData==='undefined' || typeof CAP_DEX==='undefined') return;
   for(const entry of boxData){
     if(!entry.dex) continue;
@@ -11489,16 +11531,39 @@ function computeCapGraduationSets(){
     if(!x) continue;
     const dtype = DEX_TYPE_MAP[x.dtype];
     if(!dtype) continue;
+    const pattern = (dtype==='food') ? ('a' + (entry.ingChoice2||'') + (entry.ingChoice3||'')) : null;
+
     let grade;
     try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
-    if(!grade || GRAD_RANK[grade] < 2) continue;
+    if(grade && GRAD_RANK[grade] >= 2){
+      if(dtype==='food'){
+        // 组合本身不可用的（推荐程度=不宜使用，如耿鬼aaa/毒骷蛙abb）一律不记毕业，见 capComboUsable
+        if(pattern==='aaa' && capComboUsable(x,'aaa')) capGradFoodAAA.add(finalDex);
+        else if(pattern==='abb' && capComboUsable(x,'abb')) capGradFoodABB.add(finalDex);
+      } else {
+        capGradSpecies.add(finalDex);
+      }
+    }
+
+    // 恐怖宝可梦优先级最高：命中后这条记录不再参与邪修判定
+    if(dtype==='food' && (pattern==='abc' || pattern==='aac')){
+      let terror = false;
+      try{ terror = boxTerrorInfo(entry, x); }catch(e){ terror = false; }
+      if(terror){ capTerrorFoodByCombo[pattern].add(finalDex); continue; }
+    }
+
+    // 邪修：只有极致邪修计入捕捉推荐标记（普通邪修不算，见需求）
+    const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+    if(!rec) continue;
+    const availItems = String(rec[6]||'');
+    if(!boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex)) continue;
+    let info = null;
+    try{ info = boxXiexiuInfo(entry, x, dtype); }catch(e){ info = null; }
+    if(!info || info.grade!=='极致邪修') continue;
     if(dtype==='food'){
-      const pattern = 'a' + (entry.ingChoice2||'') + (entry.ingChoice3||'');
-      // 组合本身不可用的（推荐程度=不宜使用，如耿鬼aaa/毒骷蛙abb）一律不记毕业，见 capComboUsable
-      if(pattern==='aaa' && capComboUsable(x,'aaa')) capGradFoodAAA.add(finalDex);
-      else if(pattern==='abb' && capComboUsable(x,'abb')) capGradFoodABB.add(finalDex);
-    } else {
-      capGradSpecies.add(finalDex);
+      if(capXiexiuFoodByCombo[pattern]) capXiexiuFoodByCombo[pattern].add(finalDex);
+    } else if(dtype==='skill'){
+      capXiexiuSkillSpecies.add(finalDex);
     }
   }
 }
@@ -11507,6 +11572,29 @@ function capFoodComboGraduated(x, ingName){
   if(x.ingA===ingName) return capGradFoodAAA.has(x.dex);
   if(x.ingB===ingName) return capGradFoodABB.has(x.dex);
   return false;
+}
+// 食材型条目/头像用：给定种族+这个格子对应的食材，返回该组合是否已邪修（仅极致邪修）——
+// aaa/abb 走跟已毕业一样的格位对应，aac/abc（C位食材）也参与，因为邪修/恐怖恰好就是靠这两种组合触发的
+function capFoodComboXiexiu(x, ingName){
+  if(!userPrefs.capGradMarkOn) return false;
+  if(x.ingA===ingName) return capXiexiuFoodByCombo.aaa.has(x.dex);
+  if(x.ingB===ingName) return capXiexiuFoodByCombo.abb.has(x.dex);
+  if(x.ingC===ingName) return capXiexiuFoodByCombo.aac.has(x.dex) || capXiexiuFoodByCombo.abc.has(x.dex);
+  return false;
+}
+function capFoodComboTerror(x, ingName){
+  if(!userPrefs.capGradMarkOn) return false;
+  if(x.ingC!==ingName) return false;
+  return capTerrorFoodByCombo.aac.has(x.dex) || capTerrorFoodByCombo.abc.has(x.dex);
+}
+// 食材总览柱状图轴用：这个食材下只要存在至少一只邪修/恐怖的种族就点亮，跟 capFoodPillGraduated 同一个思路
+function capFoodAxisXiexiu(food){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> capFoodComboXiexiu(x, food));
+}
+function capFoodAxisTerror(food){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> capFoodComboTerror(x, food));
 }
 // 次级选择区域（属性/岛屿/食材/功能）标记：只要该选项下存在至少一只已毕业的种族就点亮
 function capAttrGraduated(attr){
@@ -11609,10 +11697,22 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   const graduated = userPrefs.capGradMarkOn && (capState.type==='food'
     ? ((reco.combo==='aaa' && capGradFoodAAA.has(x.dex)) || (reco.combo==='abb' && capGradFoodABB.has(x.dex)))
     : capGradSpecies.has(x.dex));
-  const recoColHtml = graduated
+  // 恐怖：只有食材型的 aac/abc 组合行才可能命中；邪修：食材型认 aaa/abb/aac/abc 四种组合，功能型食材精选按种族整体判定。
+  // 优先级 恐怖 > 毕业 > 邪修（跟计算优先级一致，见 computeCapGraduationSets 的注释）
+  const terror = !graduated && userPrefs.capGradMarkOn && capState.type==='food'
+    && (reco.combo==='aac' || reco.combo==='abc') && capTerrorFoodByCombo[reco.combo].has(x.dex);
+  const xiexiu = !graduated && !terror && userPrefs.capGradMarkOn && (capState.type==='food'
+    ? (capXiexiuFoodByCombo[reco.combo] && capXiexiuFoodByCombo[reco.combo].has(x.dex))
+    : (capState.type==='skill' && capXiexiuSkillSpecies.has(x.dex)));
+  const recoColHtml = terror
+    ? `<span class="cap-reco cap-reco-terror">完美</span>`
+    : graduated
     ? `<span class="cap-reco cap-reco-graduated">已毕业</span>`
+    : xiexiu
+    ? `<span class="cap-reco cap-reco-xiexiu">已邪修</span>`
     : `<span class="cap-reco rec-${reco.level}">${capRecoLinesHtml(reco.text)}</span>`;
-  return `<div class="cap-row${graduated?' cap-row-graduated':''}" data-dex="${x.dex}">
+  const rowMarkCls = graduated ? ' cap-row-graduated' : (xiexiu ? ' cap-row-xiexiu' : '');
+  return `<div class="cap-row${rowMarkCls}" data-dex="${x.dex}">
     <div class="cap-rank ${sleepInfo.cls}"><div class="cap-rank-num">${rank}</div><div class="cap-sleep-lab">${sleepInfo.labHtml}</div></div>
     <div class="cap-avatars">
       <div class="cap-av cap-av-main">${capB64Img(x.name)}${medalBadge}</div>
@@ -11679,9 +11779,18 @@ function capAvatarComboHtml(rec, food){
   const x = rec.x;
   const lvl = rec.reco ? rec.reco.level : 'red';
   const graduated = userPrefs.capGradMarkOn && capFoodComboGraduated(x, food);
-  const checkHtml = graduated ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>` : '';
+  // 恐怖优先级最高（跟毕业/邪修各自的触发组合本来就不重叠，这里的互斥判断是防御性的）；
+  // 恐怖只加彩虹外框，不叠对勾（需求只要求"用彩虹流光框标明"）；邪修跟已毕业一样叠外框+对勾，改红色
+  const terror = !graduated && capFoodComboTerror(x, food);
+  const xiexiu = !graduated && !terror && capFoodComboXiexiu(x, food);
+  const checkHtml = graduated
+    ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>`
+    : xiexiu
+    ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>`
+    : '';
+  const frameCls = graduated ? ' cap-cav-grad' : (terror ? ' cap-cav-terror' : (xiexiu ? ' cap-cav-xiexiu' : ''));
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
-    <span class="cap-cav rec-${lvl}${graduated?' cap-cav-grad':''}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
+    <span class="cap-cav rec-${lvl}${frameCls}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
   </div>`;
 }
 const CAP_BAR_W = 26; // 柱子宽度=宝可梦头像框宽度(px)
@@ -11791,6 +11900,9 @@ function capRenderFoodChart(container){
     const isTallest = topLen >= chartH - 0.5;
     const c = CAP_ING_COLOR[b.food] || '#c9a24a';
     const foodGrad = capFoodPillGraduated(b.food);
+    // 恐怖 > 毕业 > 邪修：这个食材列下只要存在对应的种族就点亮，跟 foodGrad 同一个思路
+    const foodTerror = !foodGrad && capFoodAxisTerror(b.food);
+    const foodXiexiu = !foodGrad && !foodTerror && capFoodAxisXiexiu(b.food);
     // 并列冠军：食材产量与冠军（b.top）差距在1%以内的全部视为并列冠军（而不是只留一个），按精确食材产量从高到低排列（产量高的显示在最上面）
     const champGroup = b.recs.filter(r=> r.totalE >= b.top*0.99)
       .sort((r1,r2)=> r2.totalE - r1.totalE);
@@ -11832,7 +11944,7 @@ function capRenderFoodChart(container){
         ${lineHtml}
         ${markers}
       </div>
-      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':''}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?'<svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':''}</span></div>
+      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':(foodTerror?' cap-ccol-ic-terror':(foodXiexiu?' cap-ccol-ic-xiexiu':''))}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?'<svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':(foodTerror?'<span class="cap-ccol-check-rainbow"></span>':(foodXiexiu?'<svg viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':''))}</span></div>
     </div>`;
   }).join('');
   container.innerHTML = `<div class="cap-chart-outer">
@@ -11943,7 +12055,12 @@ function renderCapturePage(){
   tabsEl.innerHTML = CAP_TYPE_TABS.map(t=> `<div class="cap-type-tab cap-tab-${t.color}${capState.type===t.id?' active':''}" data-ctype="${t.id}">${t.label}</div>`).join('');
   tabsEl.querySelectorAll('.cap-type-tab').forEach(el=> el.onclick=()=> capSwitchType(el.getAttribute('data-ctype')));
   if(userPrefs.capGradMarkOn) computeCapGraduationSets();
-  else { capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set(); }
+  else {
+    capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set();
+    capXiexiuFoodByCombo = {aaa:new Set(), abb:new Set(), aac:new Set(), abc:new Set()};
+    capXiexiuSkillSpecies = new Set();
+    capTerrorFoodByCombo = {aac:new Set(), abc:new Set()};
+  }
   renderCapLevel();
   renderCaptureSubtype();
   renderCaptureBody();
@@ -14423,6 +14540,20 @@ function boxXiexiuInfo(entry, x, dtype){
       rows = mergeSpecialFoodRows(rows, capSkillIngredientItems(spec).map(it=>({name:it.name, amt: it.amt*count})), eSkill);
     }
     return xiexiuInfoFromRows(rows);
+  });
+}
+// 恐怖宝可梦判定的盒子记录版本：跟 isTerrorPanel 逻辑一致（abc/aac 组合、c 食材覆盖率>120%、效率>2），
+// 只是不读 state 改吃盒子记录，固定忽略露营券开关，口径跟邪修判定一致
+function boxTerrorInfo(entry, x){
+  if(!entry.selected || !entry.selected.some(v=>v!=null)) return false;
+  const build = boxEntryBuild(entry);
+  const labels = buildLabels(build), persona = buildPersona(build);
+  return withNoCamping(()=>{
+    const effFood = computeEfficiency(labels, 'food', entry.level, persona);
+    if(ffloat(effFood) <= 2) return false;
+    const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
+    const cRow = rows && rows.find(r=>r.letter==='c');
+    return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
   });
 }
 function boxEntryGradeCategory(entry){
