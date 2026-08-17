@@ -2286,6 +2286,13 @@
           <div class="note inline-note">开启后帮忙速度变为1.2倍（实际帮忙间隔÷1.2），实际持有上限也变为1.2倍。</div>
         </div>
       </div>
+      <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
+        <div class="lab">主技能满级</div>
+        <div class="inline-row">
+          <div class="btnrow" id="mainSkillMaxSel"></div>
+          <div class="note inline-note">仅影响大嘴娃/蝶结萌虻的主技能产出数值，不影响它们的毕业判定档位。</div>
+        </div>
+      </div>
     </div>
     </div>
   </div>
@@ -2366,6 +2373,13 @@
           <div class="note inline-note">开启后帮忙速度变为1.2倍（实际帮忙间隔÷1.2），实际持有上限也变为1.2倍。</div>
         </div>
       </div>
+      <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
+        <div class="lab">主技能满级</div>
+        <div class="inline-row">
+          <div class="btnrow" id="p2-mainSkillMaxSel"></div>
+          <div class="note inline-note">仅影响大嘴娃/蝶结萌虻的主技能产出数值，不影响它们的毕业判定档位。</div>
+        </div>
+      </div>
     </div>
     </div>
   </div>
@@ -2442,6 +2456,13 @@
       <div class="ctrl-block" id="p3-finalPkBlock" style="flex:1 1 100%; display:none;">
         <div class="lab">最终宝可梦</div>
         <div class="btnrow final-pk-btnrow" id="p3-finalPkSel"></div>
+      </div>
+      <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
+        <div class="lab">主技能满级</div>
+        <div class="inline-row">
+          <div class="btnrow" id="p3-mainSkillMaxSel"></div>
+          <div class="note inline-note">仅影响大嘴娃/蝶结萌虻的主技能产出数值，不影响它们的毕业判定档位。</div>
+        </div>
       </div>
     </div>
     </div>
@@ -2667,6 +2688,13 @@
           <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
           <div class="sleep-axis" id="boxdet-sleepAxis"></div>
         </div>
+        <div class="ctrl-block ctrl-inline" style="flex:1 1 100%; margin-top:12px;">
+          <div class="lab">主技能满级</div>
+          <div class="inline-row">
+            <div class="btnrow" id="boxdet-mainSkillMaxSel"></div>
+            <div class="note inline-note">仅影响大嘴娃/蝶结萌虻的主技能产出数值，不影响它们的毕业判定档位。</div>
+          </div>
+        </div>
       </div>
       <div style="display:none;">
         <div class="btnrow" id="boxdet-typeSel"></div>
@@ -2843,6 +2871,8 @@
         <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
         <div class="sleep-axis" id="dash-sleepAxis"></div>
       </div>
+      <div class="dash-group-label">主技能满级</div>
+      <div class="btnrow" id="dash-mainSkillMaxSel"></div>
     </div>
     <div class="dash-sticky-footer">
       <button type="button" class="confirmbtn-big" id="controlsConfirmBtn">确认所选</button>
@@ -2870,6 +2900,13 @@
           <div class="mf-toggle-hint" id="capGradNewbieHint">萌新版</div>
         </div>
         <div class="mf-switch" id="capGradNewbieSwitch"></div>
+      </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">主技能满级</div>
+          <div class="mf-toggle-hint" id="capMainSkillMaxHint">关闭</div>
+        </div>
+        <div class="mf-switch" id="capMainSkillMaxSwitch"></div>
       </div>
     </div>
   </div>
@@ -4722,11 +4759,21 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     if(n>=3 && ingChoice3 && !letters.includes(ingChoice3)) letters.push(ingChoice3);
     const letterIng = {a:x.ingA, b:x.ingB, c:x.ingC};
     const helpsPerDay = capHelpsPerDay(x.interval, level, medal);
+    // 食材精选宝可梦（大嘴娃/蝶结萌虻）主技能触发也会额外固定产出食材，按食材名匹配叠加进对应字母的产量，
+    // 并单独记一份 skillValue 供展示时括号标注技能贡献的那部分（*号标记）
+    const specItems = (spec && spec.kind==='ingredients') ? capSkillIngredientItems(spec) : null;
+    const specTriggerCount = specItems ? capSkillCount(x, level, medal, pityEligible ? state.pityOn : false) : 0;
     const items = letters.map(letter=>{
       const ingName = letterIng[letter];
       if(!ingName) return null;
       const amtSum = capPatternIngredientAmountForBuild(x, letter, n, ingChoice2, ingChoice3);
-      return {letter, ing: ingName, value: helpsPerDay * (x.ingProb||0) * (amtSum / n)};
+      const naturalValue = helpsPerDay * (x.ingProb||0) * (amtSum / n);
+      let skillValue = 0;
+      if(specItems){
+        const match = specItems.find(it=>it.name===ingName);
+        if(match) skillValue = match.amt * specTriggerCount;
+      }
+      return {letter, ing: ingName, value: naturalValue + skillValue, skillValue: skillValue || null};
     }).filter(Boolean);
     if(!items.length) return null;
     // primary：跟"关键指标"(panelKeyMetric，用 ingChoice3 那个字母)保持同一个比较口径，
@@ -4739,7 +4786,7 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     const byEffect = !!CAP_SKILL_BY_EFFECT[x.skillCat];
     let specialIngredients = null, specialDream = null;
     if(spec && spec.kind==='ingredients'){ // 穿山王/大嘴娃/乌鸦头头/岩殿居蟹/蝶结萌虻：技能额外固定产出食材（乌鸦头头另加梦碎）
-      specialIngredients = spec.items.map(it=>({name:it.name, amt: it.amt*count}));
+      specialIngredients = capSkillIngredientItems(spec).map(it=>({name:it.name, amt: it.amt*count}));
       if(spec.dream) specialDream = spec.dream*count;
     }
     // 能量型宝可梦的技能不属于"奶妈/梦碎/暴击/帮手加速/开锅"这五类功能型技能（CAP_SKILL_BY_EFFECT
@@ -4825,7 +4872,7 @@ function capPageActualYieldHtml(base, eff, build){
     // aba/aac/abc 这类非 aaa 组合会产多种食材，全部列出来，不再只显示 ingChoice3 那一个
     return base.items.map(it=>{
       const icon = ING_ICONS[it.ing];
-      return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(it.value*e,1)}</b></span>`;
+      return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(it.value*e,1)}${capSkillSuffix(it.skillValue*e||null,1)}</b></span>`;
     }).join('');
   }
   if(base.kind==='skill') return capSkillYieldHtml(base, e);
@@ -6328,6 +6375,15 @@ function renderControlsGeneric(pfx, compact){
     cb.textContent = userPrefs.campingTicket ? '露营券：开启' : '露营券：关闭';
     cb.onclick = ()=>{ userPrefs.campingTicket = !userPrefs.campingTicket; saveUserPrefs(); renderAll(); };
     campEl.appendChild(cb);
+  }
+  const mainSkillMaxEl = document.getElementById(pfx+'mainSkillMaxSel');
+  if(mainSkillMaxEl){
+    mainSkillMaxEl.innerHTML='';
+    const mb = document.createElement('div');
+    mb.className = 'campbtn'+(userPrefs.mainSkillMaxOn?' on':'');
+    mb.textContent = userPrefs.mainSkillMaxOn ? '主技能满级：开启' : '主技能满级：关闭';
+    mb.onclick = ()=>{ userPrefs.mainSkillMaxOn = !userPrefs.mainSkillMaxOn; saveUserPrefs(); renderAll(); };
+    mainSkillMaxEl.appendChild(mb);
   }
   renderCarryBlock(pfx);
 }
@@ -8402,8 +8458,9 @@ function mergeSpecialFoodRows(rows, specialIngredients, eSkillFloat){
     const demand = FOOD_DAILY_DEMAND[it.name];
     if(!demand) return;
     const existing = result.find(r=>r.ingName===it.name);
-    if(existing){ existing.actual += realAmt; existing.ratio = existing.actual/demand; }
-    else result.push({letter:null, ingName:it.name, actual: realAmt, ratio: realAmt/demand});
+    // skillActual 单独记一份技能贡献的量，供展示时括号标注（*号），不影响 actual/ratio 本身的合计口径
+    if(existing){ existing.actual += realAmt; existing.ratio = existing.actual/demand; existing.skillActual = (existing.skillActual||0) + realAmt; }
+    else result.push({letter:null, ingName:it.name, actual: realAmt, ratio: realAmt/demand, skillActual: realAmt});
   });
   return result.length ? result : null;
 }
@@ -8440,7 +8497,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false}; // 26格=6.5h，8格=2h
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -8478,6 +8535,7 @@ function loadUserPrefs(){
       if(typeof o.capGradMarkOn==='boolean') userPrefs.capGradMarkOn = o.capGradMarkOn;
       if(typeof o.capGradNewbieOn==='boolean') userPrefs.capGradNewbieOn = o.capGradNewbieOn;
       if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
+      if(typeof o.mainSkillMaxOn==='boolean') userPrefs.mainSkillMaxOn = o.mainSkillMaxOn;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
           const b = o.capPanelBuild[t];
@@ -11000,14 +11058,19 @@ const CAP_SKILL_BY_EFFECT = {'奶妈':true,'梦碎':true,'暴击':true,'帮手�
 // kind:'ingredients' 技能额外产出食材（items数组，可选dream=梦碎数量）；kind:'energy' 技能产生能量并扣除活力（达克莱伊专属）
 const CAP_SKILL_SPECIAL_OUTPUT = {
   "#028": { kind:'ingredients', items:[{name:'玉米',amt:6},{name:'土豆',amt:6},{name:'南瓜',amt:6}] }, // 穿山王
-  "#303": { kind:'ingredients', items:[{name:'土豆',amt:5.2506},{name:'油',amt:5.2506},{name:'番茄',amt:5.2506},{name:'玉米',amt:5.2506}] }, // 大嘴娃
+  "#303": { kind:'ingredients', items:[{name:'土豆',amt:5.2506},{name:'油',amt:5.2506},{name:'番茄',amt:5.2506},{name:'玉米',amt:5.2506}], itemsDefault:[{name:'土豆',amt:1.4585},{name:'油',amt:1.4585},{name:'番茄',amt:1.4585},{name:'玉米',amt:1.4585}] }, // 大嘴娃：满级5.2506，默认按宝睡百科给的 5.2506*5/18 折算
   "#430": { kind:'ingredients', items:[{name:'蘑菇',amt:3.87},{name:'肠',amt:3.87},{name:'豆',amt:3.87},{name:'咖啡',amt:3.87}], dream:1008 }, // 乌鸦头头
   "#491": { kind:'energy', energyPerTrigger:18515, staminaDeduct:12 }, // 达克莱伊
   "#558": { kind:'ingredients', items:[{name:'牛油果',amt:6},{name:'土豆',amt:6},{name:'油',amt:6}] }, // 岩殿居蟹
-  "#743": { kind:'ingredients', items:[{name:'蜜',amt:6},{name:'油',amt:6},{name:'玉米',amt:6}] }, // 蝶结萌虻
+  "#743": { kind:'ingredients', items:[{name:'蜜',amt:6},{name:'油',amt:6},{name:'玉米',amt:6}], itemsDefault:[{name:'蜜',amt:2},{name:'油',amt:2},{name:'玉米',amt:2}] }, // 蝶结萌虻：满级6，默认2
   "#701": { kind:'ingredients', items:[{name:'叶子',amt:6},{name:'肠',amt:6},{name:'姜',amt:6}] }, // 摔角鹰人
   "#959": { kind:'energy', energyPerTrigger:6858 }, // 巨锻匠：树果型，技能额外固定产出能量，不扣活力，无技能保底（同达克莱伊套路，但dtype是树果不是能量/功能，pityEligible天然为false）
 };
+// 主技能满级开关(userPrefs.mainSkillMaxOn)关闭时，有 itemsDefault 的条目（目前仅大嘴娃/蝶结萌虻）改用默认（非满级）产出；
+// 其余条目没有 itemsDefault，说明它们的主技能效果不随满级/默认变化，始终用 items
+function capSkillIngredientItems(spec){
+  return (spec.itemsDefault && !userPrefs.mainSkillMaxOn) ? spec.itemsDefault : spec.items;
+}
 const CAP_FOOD_RECLASSIFY = new Set(["#558","#028","#701"]); // 岩殿居蟹/穿山王/摔角鹰人主技能产食材，并入捕捉推荐食材tab排名（蝶结萌虻dtype本身已是食材，无需加入）
 const CAP_ATTRS = ['一般','火','水','电','草','冰','格斗','毒','地面','飞行','超能力','虫','岩石','幽灵','龙','恶','钢','妖精']
   .sort((a,b)=> capBerryPerBerry(b,50) - capBerryPerBerry(a,50));
@@ -11218,7 +11281,7 @@ function foodCoverageRowsHtml(rows){
     const icon = ING_ICONS[r.ingName];
     // 尾巴这类没有每日需求量的食材，ratio 是 null：覆盖率百分比留空，产量数字照常显示
     const pctHtml = r.ratio==null ? '' : `<span class="gfc-pct" style="color:${foodCoverageColor(r.ratio)};">${Math.round(r.ratio*100)}%</span>`;
-    return `<div class="grad-food-cov-row"><span class="gfc-val">${r.actual.toFixed(1)}</span>${icon?`<img class="gfc-icon" src="${icon}">`:''}${pctHtml}</div>`;
+    return `<div class="grad-food-cov-row"><span class="gfc-val">${r.actual.toFixed(1)}${capSkillSuffix(r.skillActual,1)}</span>${icon?`<img class="gfc-icon" src="${icon}">`:''}${pctHtml}</div>`;
   }).join('');
 }
 function foodCoverageBoxHtml(rows, title){
@@ -11277,18 +11340,20 @@ function capBuildFood(ingName){
       let value = (x.ingA===ingName||x.ingB===ingName||x.ingC===ingName)
         ? (real ? capFoodProdReal(x,ingName,capState.level,medal,real) : capFoodProd(x,ingName,capState.level,medal))
         : 0;
+      let skillValue = 0;
       if(spec && spec.kind==='ingredients'){
-        const match = spec.items.find(it=>it.name===ingName);
+        const match = capSkillIngredientItems(spec).find(it=>it.name===ingName);
         if(match){
           // 保底仅对能量/功能dtype生效
           const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? capState.ctrl.pity : false;
           const helps = real ? capRealHelpsPerDay(x, capState.level, medal, real.sums, real.persona) : capHelpsPerDay(x.interval, capState.level, medal);
           const baseSkillProb = real ? energySkillProb(x.skillProb, real.sums.s, real.persona.s) : x.skillProb;
           const rate = capSkillRate(baseSkillProb, x.interval, capState.level, medal, pityFlag);
-          value += helps * rate * match.amt;
+          skillValue = helps * rate * match.amt;
+          value += skillValue;
         }
       }
-      return {x, medal, value, reco:capFoodReco(x,ingName)};
+      return {x, medal, value, skillValue: skillValue||null, reco:capFoodReco(x,ingName)};
     };
     recs.push(mk(false)); if(x.stage==='徽章') recs.push(mk(true));
   });
@@ -11477,6 +11542,9 @@ function capIslandsHtml(x){
   return html;
 }
 function capFmt(n, dec){ const v = dec!=null ? Number(n).toFixed(dec) : String(Math.round(n)); return v.replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+// 食材精选宝可梦（穿山王/大嘴娃/乌鸦头头/岩殿居蟹/蝶结萌虻/摔角鹰人）食材产量后面统一挂的
+// "(技能贡献*)"括号标注：skillValue 为 falsy（0/null）时不显示括号
+function capSkillSuffix(skillValue, dec){ return skillValue ? '('+capFmt(skillValue,dec)+'*)' : ''; }
 function capRecoLinesHtml(text){
   let line1, line2;
   if(text.startsWith('不宜')){ line1='不宜'; line2=text.slice(2); }
@@ -11568,7 +11636,7 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   </div>`;
 }
 function capBerryEnergyLine2(rec){ return `<span class="cap-val">${capFlameImg()}<b>${capFmt(rec.value,0)}</b></span>`; }
-function capFoodLine2(rec, ingName){ const icon = ING_ICONS[ingName]; return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(rec.value,1)}</b></span>`; }
+function capFoodLine2(rec, ingName){ const icon = ING_ICONS[ingName]; return `<span class="cap-val">${icon?`<img class="cap-food-ic" src="${icon}">`:''}<b>${capFmt(rec.value,1)}${capSkillSuffix(rec.skillValue,1)}</b></span>`; }
 function capSkillLine2(rec, sub){
   const byEffect = CAP_SKILL_BY_EFFECT[sub]; const iconKind = CAP_SKILL_ICON[sub]; let effHtml='';
   if(byEffect){ effHtml = `<span class="cap-val cap-eff">${capSkillIcon(iconKind)}<b>${capFmt(Math.round(rec.effect),0)}</b></span>`; }
@@ -11890,6 +11958,10 @@ function syncCapGradModalSwitch(){
   const on2 = !!userPrefs.capGradNewbieOn;
   if(sw2) sw2.classList.toggle('on', on2);
   if(hint2) hint2.textContent = on2 ? '萌新版' : '通用版';
+  const sw3 = document.getElementById('capMainSkillMaxSwitch'), hint3 = document.getElementById('capMainSkillMaxHint');
+  const on3 = !!userPrefs.mainSkillMaxOn;
+  if(sw3) sw3.classList.toggle('on', on3);
+  if(hint3) hint3.textContent = on3 ? '满级' : '关闭';
 }
 function openCapGradModal(){
   syncCapGradModalSwitch();
@@ -11907,6 +11979,15 @@ function toggleCapGradNewbie(){
   saveUserPrefs();
   syncCapGradModalSwitch();
   renderCapturePage();
+}
+// 全局开关：只影响大嘴娃/蝶结萌虻的主技能产出数值（食材精选括号标注+产能分析等），
+// 不影响它们的毕业判定档位（沿用食材型排除技能产出计入毕业判定的既有规则），所以要 renderAll()
+// 而不是只 renderCapturePage()，让页1/2/3的产能分析、食谱覆盖率、排名对比一起联动刷新
+function toggleCapMainSkillMax(){
+  userPrefs.mainSkillMaxOn = !userPrefs.mainSkillMaxOn;
+  saveUserPrefs();
+  syncCapGradModalSwitch();
+  renderAll();
 }
 
 /* ================= 捕捉推荐页"加入面板" =================
@@ -13010,6 +13091,7 @@ document.getElementById('capGradModalPanel').onclick = (e)=> e.stopPropagation()
 document.getElementById('capGradModalCloseBtn').onclick = closeCapGradModal;
 document.getElementById('capGradMarkSwitch').onclick = toggleCapGradMark;
 document.getElementById('capGradNewbieSwitch').onclick = toggleCapGradNewbie;
+document.getElementById('capMainSkillMaxSwitch').onclick = toggleCapMainSkillMax;
 document.getElementById('capPanelModalOverlay').onclick = (e)=>{ if(e.target.id==='capPanelModalOverlay') closeCapPanelModal(); };
 document.getElementById('capPanelModalPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('capPanelModalCloseBtn').onclick = closeCapPanelModal;
@@ -14338,7 +14420,7 @@ function boxXiexiuInfo(entry, x, dtype){
       const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? state.pityOn : false;
       const count = capSkillCount(x, entry.level, medal, pityFlag);
       const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
-      rows = mergeSpecialFoodRows(rows, spec.items.map(it=>({name:it.name, amt: it.amt*count})), eSkill);
+      rows = mergeSpecialFoodRows(rows, capSkillIngredientItems(spec).map(it=>({name:it.name, amt: it.amt*count})), eSkill);
     }
     return xiexiuInfoFromRows(rows);
   });
