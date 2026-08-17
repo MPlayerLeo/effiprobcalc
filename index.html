@@ -1566,6 +1566,12 @@
   .cap-skill-pill.cap-pill-grad-fill:not(.active){ background:#bdeccb; }
   .cap-attr-pill.cap-pill-grad-outline{ box-shadow:0 0 0 2px #1f8a3d inset; }
   .cap-isl-btn.cap-pill-grad-outline:not(.active){ box-shadow:0 0 0 2px #1f8a3d inset; }
+  /* 食材次级选择区域的食材按钮：邪修/恐怖跟食材轴标签用同一套颜色 */
+  .cap-food-pill.cap-pill-xiexiu-fill:not(.active){ background:#fbe4e2; }
+  .cap-food-pill.cap-pill-terror-fill:not(.active){
+    background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+    background-size:400% 400%; animation:shinyMove 2s ease infinite;
+  }
   .cap-food-bubble{ position:absolute; z-index:5; background:var(--accent-dk); color:#fff; font-size:11px; font-weight:700; padding:4px 9px; border-radius:8px; white-space:nowrap; box-shadow:0 3px 10px rgba(0,0,0,.3); }
   .cap-food-bubble::after{ content:''; position:absolute; left:50%; bottom:-5px; transform:translateX(-50%); border:5px solid transparent; border-top-color:var(--accent-dk); border-bottom:none; }
   .cap-skill-pill{ flex:0 0 auto; display:inline-flex; align-items:center; gap:4px; padding:5px 9px; border-radius:14px; border:1.5px solid var(--skill-bd); color:var(--skill-tx); background:var(--panel); font-size:12px; font-weight:800; cursor:pointer; white-space:nowrap; }
@@ -12241,7 +12247,11 @@ function renderCaptureSubtype(){
   } else if(capState.type==='food'){
     const foods = Object.keys(CAP_ING_ENERGY).filter(f=>f!=='尾巴').concat(['尾巴']);
     subHtml = `<div class="cap-sub-foods">`+foods.map(f=>{ const active=capState.subFood===f; const icon=ING_ICONS[f];
-      return `<div class="cap-food-pill${active?' active':''}${capFoodPillGraduated(f)?' cap-pill-grad-fill':''}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
+      const foodGradFill = capFoodPillGraduated(f);
+      const foodTerrorFill = !foodGradFill && capFoodAxisTerror(f);
+      const foodXiexiuFill = !foodGradFill && !foodTerrorFill && capFoodAxisXiexiu(f);
+      const foodFillCls = foodGradFill ? ' cap-pill-grad-fill' : (foodTerrorFill ? ' cap-pill-terror-fill' : (foodXiexiuFill ? ' cap-pill-xiexiu-fill' : ''));
+      return `<div class="cap-food-pill${active?' active':''}${foodFillCls}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
     noteHtml = `<div class="cap-sub-note" style="color:#d9333f;">＊默认主技能满级导致技能型食材精选产量虚高，注意请勿培养！</div>`;
   } else {
     subHtml = `<div class="cap-sub-skills">`+CAP_SKILL_SUBS.map(s=>{ const active=capState.subSkill===s;
