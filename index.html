@@ -7106,10 +7106,18 @@ function applyMergedData(cloud){
     }
     clampSleepPrefs();
     try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
+    // 岛屿标签走自己独立的 localStorage、不挂在 userPrefs 下（见 islandSaveState），
+    // 云端也是单独一个 island 字段存的，融合逻辑得单独跑一遍，且用并集不是整体覆盖——
+    // 避免这台设备手动打的标签被另一台设备的旧数据盖掉
+    if(cloud.prefs.island && typeof cloud.prefs.island==='object'){
+      applyIslandCloudSnapshot(cloud.prefs.island);
+    }
   }
   return overflow;
 }
-function cloudPayload(){ return {box: boxData, prefs: userPrefs}; }
+function cloudPayload(){
+  return {box: boxData, prefs: Object.assign({}, userPrefs, {island: islandCloudSnapshot()})};
+}
 async function pushCloudData(){
   if(!authLoggedIn()) return;
   await authApi('/api/data', {method:'PUT', body:cloudPayload(), auth:true});
@@ -7186,6 +7194,7 @@ async function authSubmit(){
     closeAuthModal();
     if(typeof renderBoxPage==='function') renderBoxPage();
     renderAll();
+    if(typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandRenderAll==='function') islandRenderAll();
     updateBoxActionBar();
     alert(overflow > 0
       ? `${isReg?'注册':'登录'}成功，数据已融合。\n注意：合并后超出了 ${BOX_MAX_COUNT} 只的上限，多出的 ${overflow} 只没有保留。`
@@ -7593,6 +7602,7 @@ if(authLoggedIn()){
     await pushCloudData();
     if(typeof renderBoxPage==='function' && typeof boxOverlayOpen!=='undefined' && boxOverlayOpen) renderBoxPage();
     renderAll();
+    if(typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandRenderAll==='function') islandRenderAll();
   }).catch(()=>{}); // 拉不到就照常用本地数据，不打断使用
 }
 
@@ -15550,6 +15560,47 @@ function islandSaveState(){
     localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(islandTags));
     localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(islandPokeTags));
   }catch(e){}
+  scheduleCloudPush(); // 标签定义/打标改动也跟着上云，跟 saveUserPrefs() 一个套路（未登录时是空操作）
+}
+/* ---- 岛屿标签跟账号走：直接复用已有的 prefs_json 云端字段，塞一个 island 子字段进去，
+   不用另开数据库列、不用改后端。合并策略跟盒子一样走并集、不整体覆盖——
+   避免这台设备手动打的标签被另一台设备的旧数据盖掉。
+   tag 定义按 id 去重、pokeId→tagId 映射按 key 去重，都是云端优先、本地独有的保留 ---- */
+function islandCloudSnapshot(){
+  try{
+    const t = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
+    const m = JSON.parse(localStorage.getItem(ISLAND_POKETAGS_KEY));
+    return {
+      tags: Array.isArray(t) ? t : null,
+      pokeTags: (m && typeof m==='object' && !Array.isArray(m)) ? m : null,
+    };
+  }catch(e){ return null; }
+}
+function mergeIslandTagDefs(cloudList, localList){
+  const out = [], seen = new Set();
+  (Array.isArray(cloudList) ? cloudList : []).forEach(t=>{
+    if(t && typeof t.id==='string' && !seen.has(t.id)){ seen.add(t.id); out.push(t); }
+  });
+  (Array.isArray(localList) ? localList : []).forEach(t=>{
+    if(t && typeof t.id==='string' && !seen.has(t.id)){ seen.add(t.id); out.push(t); }
+  });
+  return out.length ? out : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
+}
+function mergeIslandPokeTags(cloudMap, localMap){
+  return Object.assign(
+    {},
+    (localMap && typeof localMap==='object') ? localMap : {},
+    (cloudMap && typeof cloudMap==='object') ? cloudMap : {}
+  );
+}
+function applyIslandCloudSnapshot(snap){
+  try{
+    const localTags = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
+    const localPoke = JSON.parse(localStorage.getItem(ISLAND_POKETAGS_KEY));
+    localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(mergeIslandTagDefs(snap.tags, localTags)));
+    localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(mergeIslandPokeTags(snap.pokeTags, localPoke)));
+  }catch(e){}
+  islandLoadState(); // 把合并结果刷进内存变量，跟正常打开子页时的初始化路径一致
 }
 function islandTagOf(pokeId){
   return islandTags.find(t=>t.id === islandPokeTags[pokeId]) || null;
