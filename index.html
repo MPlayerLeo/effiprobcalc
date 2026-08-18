@@ -2089,6 +2089,166 @@
 }
 #bootOldsiteExportBtn:active{ transform:translateY(1px); }
 #bootOldsiteExportBtn.done{ background:#3f9d5a; }
+
+/* ============ v3.19 更多功能页（原效率概率页）============ */
+/* 页2 拆成 hub + 若干子页：hub 是满宽大按钮列表，子页各自带一条返回栏。
+   子页的显隐只切 display，DOM 常驻，效率概率那套渲染函数不用管自己在不在屏上 */
+.mf-hub-list{ display:flex; flex-direction:column; gap:12px; }
+.mf-hub-btn{
+  display:flex; align-items:center; gap:13px; width:100%; text-align:left;
+  font-family:inherit; cursor:pointer;
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:15px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.mf-hub-btn:active{ transform:translateY(1px); }
+.mf-hub-ic{
+  flex:0 0 auto; width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:21px; font-weight:900; color:#fff; background:var(--accent);
+}
+.mf-hub-ic-island{ background:#2f8f8a; }
+.mf-hub-body{ flex:1 1 auto; min-width:0; }
+.mf-hub-t{ font-size:15.5px; font-weight:900; color:var(--ink); }
+.mf-hub-d{ font-size:11.5px; color:#8a8375; font-weight:700; margin-top:3px; line-height:1.5; }
+.mf-hub-arrow{ flex:0 0 auto; color:var(--accent); font-size:18px; font-weight:900; }
+.mf-sub-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:14px;
+}
+.mf-back-btn{
+  font-family:inherit; cursor:pointer; flex:0 0 auto;
+  background:var(--panel); border:1px solid var(--line); border-radius:9px;
+  padding:7px 13px; font-size:13px; font-weight:800; color:var(--accent-dk);
+}
+.mf-sub-title{ font-size:16px; font-weight:900; color:var(--ink); }
+
+/* ============ v3.19 岛屿评分 ============ */
+.isl-tabs{ display:flex; gap:6px; margin-bottom:12px; }
+.isl-tab{
+  flex:1 1 0; text-align:center; cursor:pointer; user-select:none;
+  padding:8px 4px; border-radius:9px; font-size:13px; font-weight:800;
+  background:var(--panel); border:1px solid var(--line); color:#8a8375;
+}
+.isl-tab.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.isl-hint{ font-size:11.5px; color:#8a8375; font-weight:700; line-height:1.6; margin-bottom:12px; }
+
+.isl-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.isl-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  overflow:hidden; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.isl-card.active{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(122,79,158,.25); }
+.isl-card-pic{ width:100%; height:82px; object-fit:cover; display:block; background:#e7e0cc; }
+.isl-card-body{ padding:9px 10px 10px; }
+.isl-card-name{ font-size:13.5px; font-weight:900; color:var(--ink); }
+.isl-card-score{
+  display:inline-block; margin-top:5px; padding:2px 9px; border-radius:9px;
+  background:var(--accent); color:#fff; font-size:12px; font-weight:900;
+}
+/* 标签占比色条：每段宽度按占比，段内不放字，图例在下面单独一行行列出 */
+.isl-bar{ display:flex; height:8px; border-radius:4px; overflow:hidden; margin-top:8px; background:#eee9dc; }
+.isl-bar > i{ display:block; min-width:2px; }
+.isl-bar-tall{ height:20px; }
+.isl-bar-tall > i{ display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; color:#fff; }
+.isl-legend{ display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:7px; font-size:10.5px; color:#7a7568; font-weight:700; }
+.isl-legend span{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
+.isl-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+
+.isl-detail{ margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 14px 6px; }
+.isl-detail-h{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
+.isl-detail-name{ font-size:16px; font-weight:900; color:var(--ink); }
+.isl-detail-sub{ font-size:11.5px; color:#8a8375; font-weight:700; }
+.isl-detail-score{ font-size:26px; font-weight:900; color:var(--accent); margin:6px 0 10px; }
+.isl-lv{ border:1px solid var(--line); border-radius:9px; overflow:hidden; margin-bottom:8px; }
+.isl-lv-h{
+  display:flex; align-items:center; justify-content:space-between; gap:8px;
+  padding:8px 11px; background:var(--paper); cursor:pointer; user-select:none;
+}
+.isl-lv-n{ font-size:13px; font-weight:800; color:var(--ink); }
+.isl-lv-c{ font-size:11px; color:#8a8375; font-weight:700; margin-left:5px; }
+.isl-lv-e{ font-size:11px; font-weight:800; color:var(--accent-dk); }
+.isl-lv-body{ display:none; padding:9px; grid-template-columns:repeat(auto-fill,minmax(76px,1fr)); gap:7px; }
+.isl-lv-body.open{ display:grid; }
+.isl-mon{
+  background:#fbfaf6; border:1px solid var(--line); border-radius:9px;
+  padding:6px 3px 5px; text-align:center; min-width:0;
+}
+/* 头像是 256×256 的方形平涂图，按方形等比缩放（不加 pixelated，那是给盒子像素图用的） */
+.isl-mon-img{ width:46px; height:46px; object-fit:contain; display:block; margin:0 auto; }
+/* POKEMON_PORTRAITS 里查不到时的占位，跟捕捉推荐页的 .cap-portrait-q 一个意思 */
+.isl-mon-img.isl-avatar-none{ display:flex; align-items:center; justify-content:center;
+  color:#b8b2a2; font-size:20px; font-weight:900; }
+.isl-mon-n{ font-size:10.5px; font-weight:800; color:var(--ink); margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.isl-mon-star{ font-size:9.5px; color:#c99a2e; font-weight:900; letter-spacing:-.5px; }
+.isl-mon-tag{
+  display:inline-block; margin-top:2px; padding:1px 6px; border-radius:7px;
+  font-size:9.5px; font-weight:800; color:#fff; max-width:100%;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+/* 标签管理 */
+.isl-tag-list{ display:flex; flex-direction:column; gap:9px; }
+.isl-tag-row{
+  display:flex; align-items:center; gap:10px;
+  background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 12px;
+}
+.isl-tag-sw{ width:18px; height:18px; border-radius:50%; flex:0 0 auto; }
+.isl-tag-name{ flex:1 1 auto; min-width:0; font-size:14px; font-weight:800; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.isl-tag-score{ flex:0 0 auto; font-size:13px; font-weight:900; color:var(--accent-dk); }
+.isl-tag-edit{
+  flex:0 0 auto; font-family:inherit; cursor:pointer; border:1px solid var(--line);
+  background:var(--paper); border-radius:8px; padding:5px 11px; font-size:12px; font-weight:800; color:var(--ink);
+}
+.isl-add-btn{
+  display:block; width:100%; margin-top:12px; font-family:inherit; cursor:pointer;
+  border:none; border-radius:10px; padding:12px; font-size:14px; font-weight:800;
+  background:var(--accent); color:#fff;
+}
+
+/* 宝可梦盒 */
+.isl-search{
+  width:100%; font-family:inherit; font-size:13.5px; padding:9px 12px; margin-bottom:10px;
+  border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink);
+}
+.isl-chips{ display:flex; flex-wrap:wrap; gap:5px; }
+.isl-chip{
+  padding:4px 11px; border-radius:12px; font-size:11.5px; font-weight:800; color:#fff;
+  cursor:pointer; user-select:none; border:2px solid transparent;
+}
+.isl-chip.active{ border-color:var(--ink); }
+.isl-chip.dim{ opacity:.35; }
+.isl-tool-row{ display:flex; gap:6px; align-items:center; margin:9px 0 12px; flex-wrap:wrap; }
+.isl-tool-cap{ font-size:11.5px; color:#8a8375; font-weight:800; }
+.isl-tool-btn{
+  font-family:inherit; cursor:pointer; border:1px solid var(--line); background:var(--panel);
+  border-radius:8px; padding:5px 11px; font-size:12px; font-weight:800; color:var(--ink);
+}
+.isl-tool-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+.isl-box{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
+.isl-box-item{
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  padding:7px 3px 6px; text-align:center; cursor:pointer; min-width:0;
+}
+.isl-box-item:active{ transform:translateY(1px); }
+.isl-box-num{ font-size:9.5px; color:#9a9484; font-weight:800; }
+
+/* 标签编辑弹窗：沿用站内 .cap-ctrl-pop 那套遮罩，这里只定义内部版式 */
+.isl-modal-field{ margin-bottom:10px; }
+.isl-modal-lab{ font-size:11.5px; color:#8a8375; font-weight:800; margin-bottom:4px; }
+.isl-modal-in{
+  width:100%; font-family:inherit; font-size:14px; padding:9px 11px;
+  border:1px solid var(--line); border-radius:9px; background:var(--paper); color:var(--ink);
+}
+.isl-modal-color{ width:64px; height:38px; padding:2px; }
+.isl-modal-acts{ display:flex; gap:8px; margin-top:14px; }
+.isl-modal-btn{
+  flex:1 1 0; font-family:inherit; cursor:pointer; border:none; border-radius:10px;
+  padding:11px 4px; font-size:14px; font-weight:800;
+}
+.isl-modal-cancel{ background:var(--paper); border:1px solid var(--line); color:var(--ink); }
+.isl-modal-del{ flex:0 0 30%; background:#c1443a; color:#fff; }
+.isl-modal-save{ background:var(--accent); color:#fff; }
 </style>
 
 </head>
@@ -2358,6 +2518,35 @@
 
   <div class="app-page" id="page2">
 
+  <!-- v3.19：页2 从「效率概率」升格成「更多功能」入口页。hub 是满宽大按钮列表，
+       每颗按钮进一个子页；原来的效率概率整页内容原封不动搬进 #mfSubEffi 里。 -->
+  <div id="mfHubView">
+    <div class="mf-hub-list" id="mfHubList">
+      <button type="button" class="mf-hub-btn" data-mfsub="effi">
+        <span class="mf-hub-ic">%</span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">效率概率</span>
+          <span class="mf-hub-d">按锁金/强求金帮条件算出面板出现概率与效率值排名</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="island">
+        <span class="mf-hub-ic mf-hub-ic-island">🏝</span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">岛屿评分</span>
+          <span class="mf-hub-d">给宝可梦打标签，算出每座岛屿睡姿池的含金量得分</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="mf-sub" id="mfSubEffi" style="display:none;">
+  <div class="mf-sub-head">
+    <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+    <span class="mf-sub-title">效率概率</span>
+  </div>
+
   <div class="card" id="p2gradCard">
     <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定<button type="button" class="grad-help-btn" aria-label="毕业标准">?</button></span><span class="grad-pk-name" id="p2-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="p2-gradTypeBadge"></span><span class="level-badge" id="p2-gradLevelBadge"></span></span></h2>
     <div id="p2-gradBox"></div>
@@ -2460,6 +2649,38 @@
     <div class="note">概率倒数即"期望捕捉次数"，四舍五入取整。效率值排名仅在当前锁金/强求金帮筛选条件下的面板集合中排序（同一效率值只占一个名次），以"排名 / 总数"格式显示。效率值显示四舍五入到小数点后 3 位；概率显示四舍五入到百分比小数点后 3 位，但当概率 ≤ 0.5% 时改为显示未经四舍五入的精确展开值。</div>
     </div>
   </div>
+
+  </div><!-- /#mfSubEffi -->
+
+  <div class="mf-sub" id="mfSubIsland" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">岛屿评分</span>
+    </div>
+    <div class="isl-tabs" id="islTabs"></div>
+    <div id="islPaneIslands">
+      <div class="isl-hint">得分＝该岛全部睡姿对应宝可梦标签分值的平均值 × 1000。点岛屿卡片展开各等级睡姿明细。</div>
+      <div class="isl-grid" id="islGrid"></div>
+      <div id="islDetail"></div>
+    </div>
+    <div id="islPaneTags" style="display:none;">
+      <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。数据保存在本机浏览器里。</div>
+      <div class="isl-tag-list" id="islTagList"></div>
+      <button type="button" class="isl-add-btn" id="islAddTagBtn">＋ 新增标签</button>
+    </div>
+    <div id="islPaneBox" style="display:none;">
+      <div class="isl-hint">点宝可梦可切换它的标签，切换后各岛屿得分同步更新。</div>
+      <input type="text" class="isl-search" id="islSearch" placeholder="搜索宝可梦名称或编号…">
+      <div class="isl-chips" id="islChips"></div>
+      <div class="isl-tool-row">
+        <span class="isl-tool-cap">排序</span>
+        <button type="button" class="isl-tool-btn" data-islsort="id">编号</button>
+        <button type="button" class="isl-tool-btn" data-islsort="tag">标签</button>
+        <button type="button" class="isl-tool-btn" id="islClearBtn">清除筛选</button>
+      </div>
+      <div class="isl-box" id="islBox"></div>
+    </div>
+  </div><!-- /#mfSubIsland -->
 
   </div><!-- /#page2 -->
 
@@ -2597,8 +2818,8 @@
     <span class="tab-label">宝可梦盒</span>
   </div>
   <div class="tab-item" id="tabBtn2" data-page="page2">
-    <span class="tab-icon tab-icon-percent">%</span>
-    <span class="tab-label">效率概率</span>
+    <span class="tab-icon"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="3.5" y="3.5" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.6" fill="none" stroke="currentColor" stroke-width="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.6" fill="currentColor"/></svg></span>
+    <span class="tab-label">更多功能</span>
   </div>
   <div class="tab-item" id="tabBtn3" data-page="page3">
     <span class="tab-icon"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="13" width="5" height="8" rx="1" fill="currentColor"/><rect x="9.5" y="7" width="5" height="14" rx="1" fill="currentColor"/><rect x="16" y="10" width="5" height="11" rx="1" fill="currentColor"/></svg></span>
@@ -7388,10 +7609,12 @@ function renderControls(){ renderControlsGeneric('', false); }
 function renderControlsDash(){
   renderControlsGeneric('dash-', true);
   renderDashPanelShinyLevel();
-  // 锁金数量/强求金帮只对"效率概率"页(page2)的计算有意义，毕业判定/排名对比页共用的这个浮窗里要隐掉整行
+  // 锁金数量/强求金帮只对"效率概率"的计算有意义，毕业判定/排名对比页共用的这个浮窗里要隐掉整行。
+  // v3.19：page2 升格成更多功能页后，还得落在效率概率那个子页上才算数
   const page2 = document.getElementById('page2');
+  const onEffi = !!(page2 && page2.classList.contains('active-page')) && mfSubView === 'effi';
   const lockForceRow = document.getElementById('dash-lockSel').closest('.dash-level-camp-row');
-  if(lockForceRow) lockForceRow.style.display = (page2 && page2.classList.contains('active-page')) ? '' : 'none';
+  if(lockForceRow) lockForceRow.style.display = onEffi ? '' : 'none';
 }
 function renderControlsP2(){ renderControlsGeneric('p2-', false); }
 function renderControlsP3(){ renderControlsGeneric('p3-', false); }
@@ -12057,6 +12280,8 @@ function capOpenJumpBubble(rowEl, dex){
 // 滑动跳到目标页、落地后再打开修改面板（面板种族预选好、其余留空）；
 // 若跳转前面板里正编辑着盒子里的某只，openDashboardForDexPreset 内部会先把改动存回盒子
 function capJumpToPage(pageId, dex){
+  // v3.19：效率概率现在是更多功能页里的一个子页，跳过去得直接落在那个子页上
+  if(pageId==='page2') mfShowSub('effi');
   pageSwitchAnimateTo(pageId).then(ok=>{ if(ok) openDashboardForDexPreset(dex); });
 }
 
@@ -12434,7 +12659,12 @@ function applyCapHeaderStickyOffset(){
   document.documentElement.style.setProperty('--cap-view-h', h+'px');
 }
 document.querySelectorAll('.tab-item').forEach(t=>{
-  t.onclick = ()=> switchPage(t.dataset.page);
+  t.onclick = ()=>{
+    // v3.19：已经停在更多功能页时再点它自己的页签＝退回子页列表
+    const onPage2 = document.getElementById('page2').classList.contains('active-page');
+    if(t.dataset.page==='page2' && onPage2 && mfSubView){ mfShowSub(null); return; }
+    switchPage(t.dataset.page);
+  };
 });
 window.addEventListener('load', ()=> setTimeout(positionTabIndicator, 60));
 window.addEventListener('resize', positionTabIndicator);
@@ -12451,7 +12681,7 @@ function pageSwipeBlocked(){
   if(boxOverlayOpen || dashboardOpen) return true;
   const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay'];
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
   return false;
 }
@@ -12953,6 +13183,11 @@ function updatePageActionBar(){
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
   const tabbar = document.getElementById('tabBar');
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
+  // v3.19：更多功能页的 hub 和岛屿评分子页都没有可调的计算参数，"控制参数"那颗按钮在这两处收起
+  const page2El = document.getElementById('page2');
+  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi';
+  const ctrlBtn = document.getElementById('pageActControlsBtn');
+  if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
   updateFabCircles();
   updatePanelBtnLabel(inBox);
@@ -13008,8 +13243,11 @@ function updateFabCircles(){
     fabCreate.style.display = 'none';
     fabMore.style.display = 'none';
     const show = !inDetail;
+    // 与按钮条一致：更多功能页的 hub / 岛屿评分子页没有可调参数，控制参数那颗圆也收起
+    const page2El = document.getElementById('page2');
+    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi';
     fabPanel.style.display = show ? 'flex' : 'none';
-    fabControls.style.display = show ? 'flex' : 'none';
+    fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
   }
 }
 function openDashboard(){
@@ -15216,10 +15454,405 @@ function boxShowSingleOcrProgress(){
   sync();
 }
 
+/* ============ v3.19 更多功能页：hub 与子页切换 ============ */
+/* 页2 由「效率概率」升格成入口页。子页只切 display，DOM 常驻——效率概率那一整套
+   渲染函数（renderAll 里那些）照旧往自己的容器里写，不用关心当前是不是在屏上。 */
+// 用 var 不用 let：本模块整体挂在脚本靠后的位置，而 renderDashControls /
+// updatePageActionBar 这些更早定义的函数会读它，开场那几次调用得躲开 let 的暂时性死区
+var mfSubView = null; // null=hub，'effi' / 'island'
+function mfShowSub(sub){
+  mfSubView = sub || null;
+  const hub = document.getElementById('mfHubView');
+  const effi = document.getElementById('mfSubEffi');
+  const island = document.getElementById('mfSubIsland');
+  if(!hub || !effi || !island) return;
+  hub.style.display = mfSubView ? 'none' : '';
+  effi.style.display = mfSubView === 'effi' ? '' : 'none';
+  island.style.display = mfSubView === 'island' ? '' : 'none';
+  if(mfSubView === 'island') islandRenderAll();
+  window.scrollTo(0,0);
+  // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
+  updatePageActionBar();
+}
+document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
+  btn.onclick = ()=> mfShowSub(btn.getAttribute('data-mfsub'));
+});
+document.querySelectorAll('#page2 [data-mfback]').forEach(btn=>{
+  btn.onclick = ()=> mfShowSub(null);
+});
+
+/* ============ v3.19 岛屿评分 ============ */
+/* 数据来自朋友整理的 bbx 打分表 + pokeSleepCalc 的 gameMap 睡姿池。
+   ISLAND_POKES 每项 [睡眠计算器内部id, 本站dex键, 名称, 默认标签]；
+   ISLAND_MAPS 每项 {id, n:岛名, p:图片名, lv:[{n:等级名, e:所需睡意能量, s:"pokeId-星数,…"}]}。
+   睡姿串没展开成对象是为了省体积——展开在 islandLevelStyles() 里按需做并缓存。 */
+const ISLAND_POKES=[[1,"#001","妙蛙种子","好糖不拒"],[2,"#002","妙蛙草","好糖不拒"],[3,"#003","妙蛙花","好糖不拒"],[4,"#004","小火龙","爱你多来"],[5,"#005","火恐龙","好糖不拒"],[6,"#006","喷火龙","好糖不拒"],[7,"#007","杰尼龟","急需来糖"],[8,"#008","卡咪龟","急需来糖"],[9,"#009","水箭龟","急需来糖"],[10,"#010","绿毛虫","重在参与"],[11,"#011","铁甲蛹","重在参与"],[12,"#012","巴大蝶","重在参与"],[19,"#019","小拉达","看到就烦"],[20,"#020","拉达","看到就烦"],[23,"#023","阿柏蛇","看到就烦"],[24,"#024","阿柏怪","看到就烦"],[25,"#025","皮卡丘","好糖不拒"],[26,"#026","雷丘","好糖不拒"],[27,"#027","穿山鼠","重在参与"],[28,"#028","穿山王","重在参与"],[35,"#035","皮皮","重在参与"],[36,"#036","皮可西","重在参与"],[37,"#037","六尾","好糖不拒"],[38,"#038","九尾","好糖不拒"],[39,"#039","胖丁","看到就烦"],[40,"#040","胖可丁","看到就烦"],[50,"#050","地鼠","重在参与"],[51,"#051","三地鼠","重在参与"],[52,"#052","喵喵","看到就烦"],[53,"#053","猫老大","看到就烦"],[54,"#054","可达鸭","重在参与"],[55,"#055","哥达鸭","重在参与"],[56,"#056","猴怪","重在参与"],[57,"#057","火爆猴","重在参与"],[58,"#058","卡蒂狗","重在参与"],[59,"#059","风速狗","重在参与"],[69,"#069","喇叭芽","好糖不拒"],[70,"#070","口呆花","好糖不拒"],[71,"#071","大食花","好糖不拒"],[74,"#074","小拳石","好糖不拒"],[75,"#075","隆隆石","好糖不拒"],[76,"#076","隆隆岩","好糖不拒"],[79,"#079","呆呆兽","看到就烦"],[80,"#080","呆壳兽","看到就烦"],[81,"#081","小磁怪","好糖不拒"],[82,"#082","三合一磁怪","好糖不拒"],[83,"#083","大葱鸭","好糖不拒"],[84,"#084","嘟嘟","重在参与"],[85,"#085","嘟嘟利","重在参与"],[92,"#092","鬼斯","好糖不拒"],[93,"#093","鬼斯通","好糖不拒"],[94,"#094","耿鬼","好糖不拒"],[95,"#095","大岩蛇","急需来糖"],[104,"#104","卡拉卡拉","重在参与"],[105,"#105","嘎啦嘎啦","重在参与"],[113,"#113","吉利蛋","好糖不拒"],[115,"#115","袋兽","重在参与"],[122,"#122","魔墙人偶","重在参与"],[127,"#127","凯罗斯","重在参与"],[132,"#132","百变怪","重在参与"],[133,"#133","伊布","重在参与"],[134,"#134","水伊布","重在参与"],[135,"#135","雷伊布","重在参与"],[136,"#136","火伊布","重在参与"],[147,"#147","迷你龙","爱你多来"],[148,"#148","哈克龙","急需来糖"],[149,"#149","快龙","急需来糖"],[152,"#152","菊草叶","好糖不拒"],[153,"#153","月桂叶","好糖不拒"],[154,"#154","大竺葵","好糖不拒"],[155,"#155","火球鼠","急需来糖"],[156,"#156","火岩鼠","急需来糖"],[157,"#157","火暴兽","急需来糖"],[158,"#158","小锯鳄","爱你多来"],[159,"#159","蓝鳄","急需来糖"],[160,"#160","大力鳄","急需来糖"],[172,"#172","皮丘","好糖不拒"],[173,"#173","皮宝宝","重在参与"],[174,"#174","宝宝丁","看到就烦"],[175,"#175","波克比","看到就烦"],[176,"#176","波克基古","看到就烦"],[177,"#177","天然雀","爱你多来"],[178,"#178","天然鸟","好糖不拒"],[179,"#179","咩利羊","重在参与"],[180,"#180","茸茸羊","重在参与"],[181,"#181","电龙","重在参与"],[185,"#185","树才怪","看到就烦"],[194,"#194","乌波","好糖不拒"],[195,"#195","沼王","好糖不拒"],[196,"#196","太阳伊布","重在参与"],[197,"#197","月亮伊布","重在参与"],[198,"#198","黑暗鸦","看到就烦"],[199,"#199","呆呆王","看到就烦"],[202,"#202","果然翁","看到就烦"],[208,"#208","大钢蛇","急需来糖"],[213,"#213","壶壶","好糖不拒"],[214,"#214","赫拉克罗斯","重在参与"],[215,"#215","狃拉","爱你多来"],[225,"#225","信使鸟","好糖不拒"],[228,"#228","戴鲁比","重在参与"],[229,"#229","黑鲁加","重在参与"],[242,"#242","幸福蛋","好糖不拒"],[243,"#243","雷公","好糖不拒"],[244,"#244","炎帝","好糖不拒"],[245,"#245","水君","好糖不拒"],[246,"#246","幼基拉斯","爱你多来"],[247,"#247","沙基拉斯","好糖不拒"],[248,"#248","班基拉斯","好糖不拒"],[252,"#252","木守宫","急需来糖"],[253,"#253","森林蜥蜴","急需来糖"],[254,"#254","蜥蜴王","急需来糖"],[255,"#255","火稚鸡","爱你多来"],[256,"#256","力壮鸡","好糖不拒"],[257,"#257","火焰鸡","好糖不拒"],[258,"#258","水跃鱼","好糖不拒"],[259,"#259","沼跃鱼","好糖不拒"],[260,"#260","巨沼怪","好糖不拒"],[280,"#280","拉鲁拉丝","好糖不拒"],[281,"#281","奇鲁莉安","好糖不拒"],[282,"#282","沙奈朵","好糖不拒"],[287,"#287","懒人獭","重在参与"],[288,"#288","过动猿","重在参与"],[289,"#289","请假王","重在参与"],[302,"#302","勾魂眼","看到就烦"],[303,"#303","大嘴娃","重在参与"],[304,"#304","可可多拉","爱你多来"],[305,"#305","可多拉","急需来糖"],[306,"#306","波士可多拉","急需来糖"],[311,"#311","正电拍拍","好糖不拒"],[312,"#312","负电拍拍","好糖不拒"],[316,"#316","溶食兽","爱你多来"],[317,"#317","吞食兽","好糖不拒"],[328,"#328","大颚蚁","爱你多来"],[329,"#329","超音波幼虫","好糖不拒"],[330,"#330","沙漠蜻蜓","好糖不拒"],[333,"#333","青绵鸟","好糖不拒"],[334,"#334","七夕青鸟","好糖不拒"],[353,"#353","怨影娃娃","好糖不拒"],[354,"#354","诅咒娃娃","好糖不拒"],[359,"#359","阿勃梭鲁","好糖不拒"],[360,"#360","小果然","看到就烦"],[363,"#363","海豹球","好糖不拒"],[364,"#364","海魔狮","好糖不拒"],[365,"#365","帝牙海狮","好糖不拒"],[371,"#371","宝贝龙","好糖不拒"],[372,"#372","甲壳龙","好糖不拒"],[373,"#373","暴飞龙","好糖不拒"],[380,"#380","拉帝亚斯","好糖不拒"],[381,"#381","拉帝欧斯","好糖不拒"],[387,"#387","草苗龟","爱你多来"],[388,"#388","树林龟","好糖不拒"],[389,"#389","土台龟","好糖不拒"],[390,"#390","小火焰猴","爱你多来"],[391,"#391","猛火猴","好糖不拒"],[392,"#392","烈焰猴","好糖不拒"],[393,"#393","波加曼","爱你多来"],[394,"#394","波皇子","好糖不拒"],[395,"#395","帝王拿波","好糖不拒"],[403,"#403","小猫怪","好糖不拒"],[404,"#404","勒克猫","好糖不拒"],[405,"#405","伦琴猫","好糖不拒"],[425,"#425","飘飘球","重在参与"],[426,"#426","随风球","重在参与"],[430,"#430","乌鸦头头","看到就烦"],[438,"#438","盆才怪","看到就烦"],[439,"#439","魔尼尼","看到就烦"],[440,"#440","小福蛋","好糖不拒"],[442,"#442","花岩怪","好糖不拒"],[447,"#447","利欧路","急需来糖"],[448,"#448","路卡利欧","急需来糖"],[453,"#453","不良蛙","好糖不拒"],[454,"#454","毒骷蛙","好糖不拒"],[459,"#459","雪笠怪","好糖不拒"],[460,"#460","暴雪王","好糖不拒"],[461,"#461","玛狃拉","好糖不拒"],[462,"#462","自爆磁怪","好糖不拒"],[468,"#468","波克基斯","看到就烦"],[470,"#470","叶伊布","重在参与"],[471,"#471","冰伊布","重在参与"],[475,"#475","艾路雷朵","好糖不拒"],[488,"#488","克雷色利亚","好糖不拒"],[517,"#517","食梦梦","重在参与"],[518,"#518","梦梦蚀","重在参与"],[557,"#557","石居蟹","急需来糖"],[558,"#558","岩殿居蟹","急需来糖"],[627,"#627","毛头小鹰","好糖不拒"],[628,"#628","勇士雄鹰","急需来糖"],[696,"#696","宝宝暴龙","爱你多来"],[697,"#697","怪颚龙","好糖不拒"],[700,"#700","仙子伊布","重在参与"],[701,"#701","摔角鹰人","好糖不拒"],[702,"#702","咚咚鼠","爱你多来"],[710,"#710","南瓜精(中)","爱你多来"],[711,"#711","南瓜怪人(中)","好糖不拒"],[714,"#714","嗡蝠","爱你多来"],[715,"#715","音波龙","好糖不拒"],[736,"#736","强颚鸡母虫","好糖不拒"],[737,"#737","虫电宝","好糖不拒"],[738,"#738","锹农炮虫","好糖不拒"],[742,"#742","萌虻","重在参与"],[743,"#743","蝶结萌虻","重在参与"],[759,"#759","童偶熊","急需来糖"],[760,"#760","穿着熊","急需来糖"],[764,"#764","花疗环环","看到就烦"],[777,"#777","托戈德玛尔","重在参与"],[778,"#778","谜拟Q","好糖不拒"],[780,"#780","老翁龙","好糖不拒"],[845,"#845","古月鸟","好糖不拒"],[848,"#848","毒电婴","重在参与"],[849,"#849","颤弦蝾螈(高调)","重在参与"],[906,"#906","新叶喵","爱你多来"],[907,"#907","蒂蕾喵","急需来糖"],[908,"#908","魔幻假面喵","急需来糖"],[909,"#909","呆火鳄","重在参与"],[910,"#910","炙烫鳄","重在参与"],[911,"#911","骨纹巨声鳄","重在参与"],[912,"#912","润水鸭","好糖不拒"],[913,"#913","涌跃鸭","好糖不拒"],[914,"#914","狂欢浪舞鸭","好糖不拒"],[921,"#921","布拨","好糖不拒"],[922,"#922","布土拨","好糖不拒"],[923,"#923","巴布土拨","好糖不拒"],[974,"#974","走鲸","爱你多来"],[975,"#975","浩大鲸","好糖不拒"],[980,"#980","土王","好糖不拒"],[7006,"#037-1","冰六尾","爱你多来"],[7007,"#038-1","冰九尾","好糖不拒"],[7054,"#194-1","毒乌波","爱你多来"],[8001,"#849","颤弦蝾螈(低调)","重在参与"]];
+const ISLAND_MAPS=[{"id":1,"n":"萌绿之岛","p":"map1","lv":[{"n":"普通1","e":0,"s":"19-1,172-1,10-1,50-1,175-1,74-1,23-1,104-1,56-1,69-1,174-1,179-1,84-1,92-1,333-1,360-1,438-1,453-1,81-1,363-1"},{"n":"普通2","e":3118,"s":"52-1,1-1,7-1,4-1,79-1,158-1,155-1,58-1,54-1,152-1,316-1,287-1,228-1,173-1"},{"n":"普通3","e":7171,"s":"25-1,185-1,447-1"},{"n":"普通4","e":11693,"s":"133-1,39-1,202-1,246-1,35-1"},{"n":"普通5","e":17149,"s":"19-2,172-2,10-2,50-2,175-2,74-2,23-2,104-2,56-2,69-2,174-2,179-2,84-2,92-2,333-2,360-2,438-2,453-2,81-2,363-2"},{"n":"超级1","e":23385,"s":"19-4,52-2,172-4,1-2,10-4,11-1,7-2,4-2,79-2,158-2,175-4,74-4,23-4,104-4,155-2,58-2,56-4,69-4,174-4,179-4,54-2,84-4,152-2,316-2,333-4,360-4,438-4,453-4,287-2,363-4,228-2,173-2,353-1,37-1,906-1,909-1,912-1,194-1,921-1,627-1,517-1,440-1,252-1,255-1,258-1,848-1,177-1,710-1,974-1,742-1,714-1,27-1,696-1,387-1,390-1,393-1"},{"n":"超级2","e":31492,"s":"25-2,52-4,1-4,7-4,4-4,158-4,155-4,58-4,70-1,185-2,54-4,105-1,152-4,180-1,316-4,317-1,454-1,82-1,447-2,228-4,7054-1"},{"n":"超级3","e":41314,"s":"25-4,133-2,39-2,75-1,202-2,246-2,288-1,447-4,35-2,425-1"},{"n":"超级4","e":53006,"s":"133-4,2-1,39-4,8-1,5-1,24-1,20-1,93-1,57-1,176-1,246-4,153-1,156-1,159-1"},{"n":"超级5","e":65634,"s":"11-2,51-1,85-1,132-1,353-2,37-2,906-2,909-2,912-2,194-2,921-2,627-2,517-2,440-2,252-2,255-2,258-2,848-2,177-2,710-2,974-2,742-2,714-2,27-2,696-2,387-2,390-2,393-2"},{"n":"高级1","e":79197,"s":"11-4,79-4,70-2,185-4,80-1,105-2,180-2,202-4,317-2,454-2,53-1,81-3,82-2,287-4,363-3,173-4,35-4,906-4,909-4,912-4,440-4,215-1,921-4,627-4,7054-2,198-1,252-4,255-4,258-4,848-4,177-4,742-4,714-4,27-4,696-4,194-4,387-4,390-4,393-4"},{"n":"高级2","e":93540,"s":"52-3,75-2,70-4,105-4,180-4,317-4,454-4,115-1,127-1,214-1,359-1,288-2,702-1,907-1,253-1,256-1,259-1,425-2,388-1,391-1,394-1"},{"n":"高级3","e":109130,"s":"2-2,8-2,5-2,75-4,24-2,20-2,93-2,57-2,176-2,288-4,225-1,764-1,153-2,156-2,159-2"},{"n":"高级4","e":125032,"s":"2-4,8-4,5-4,51-2,24-4,20-4,57-4,85-2,132-2,176-4,153-4,156-4,159-4,628-1,178-1,743-1,715-1,28-1"},{"n":"高级5","e":156121,"s":"12-1,80-2,53-2,85-4,132-4,132-4,354-1,215-2,113-1,198-2,311-1,312-1,132-4"},{"n":"大师1","e":187832,"s":"11-3,80-4,53-4,115-2,127-2,214-2,359-2,702-2,37-4,38-1,845-1,907-2,195-1,215-4,7054-4,198-4,253-2,256-2,259-2,710-4,974-4,388-2,391-2,394-2"},{"n":"大师2","e":220177,"s":"40-1,71-1,82-3,115-4,127-4,214-4,359-4,225-2,702-4,764-2,907-4,778-1,980-1,253-4,256-4,259-4,388-4,391-4,394-4"},{"n":"大师3","e":253169,"s":"700-1,36-1,225-4,764-4,628-2,303-1,83-1,178-2,743-2,715-2,28-2"},{"n":"大师4","e":286821,"s":"12-2,26-1,354-2,628-4,113-2,311-2,312-2,178-4,442-1,777-1,213-1,743-4,715-4,28-4,780-1"},{"n":"大师5","e":321146,"s":"12-4,3-1,9-1,6-1,132-3,135-1,470-1,354-4,154-1,157-1,160-1,134-1,136-1,196-1,197-1,471-1,38-2,845-2,195-2,113-4,311-4,312-4,701-1"},{"n":"大师6","e":356158,"s":"40-2,53-3,71-2,468-1,38-4,845-4,195-4,778-2,980-2"},{"n":"大师7","e":391870,"s":"40-4,71-4,700-2,289-1,462-1,36-2,908-1,115-3,127-3,214-3,778-4,980-4,518-1,242-1,430-1,303-2,83-2,254-1,257-1,260-1,849-1,8001-1,711-1,697-1,461-1,389-1,392-1,395-1"},{"n":"大师8","e":428296,"s":"26-2,700-4,36-4,303-4,225-3,764-3,83-4,442-2,777-2,213-2,780-2"},{"n":"大师9","e":465451,"s":"3-2,9-2,6-2,26-4,135-2,243-1,154-2,157-2,160-2,134-2,136-2,196-2,197-2,470-2,471-2,244-1,245-1,488-1,628-3,442-4,777-4,213-4,380-1,780-4,381-1,701-2"},{"n":"大师10","e":532707,"s":"12-3,3-4,9-4,6-4,135-4,468-2,154-4,157-4,160-4,134-4,136-4,196-4,197-4,470-4,471-4,701-4"},{"n":"大师11","e":601308,"s":"468-4,289-2,462-2,908-2,845-3,461-2,518-2,242-2,430-2,254-2,257-2,260-2,849-2,8001-2,711-2,697-2,389-2,392-2,395-2"},{"n":"大师12","e":742056,"s":"289-4,908-4,461-4,242-4,430-4,254-4,257-4,260-4,849-4,8001-4,711-4,392-4,395-4"},{"n":"大师13","e":885619,"s":"700-3,243-2,244-2,245-2,488-2,380-2,381-2"},{"n":"大师14","e":1029700,"s":"26-3"},{"n":"大师15","e":1199506,"s":"135-3,3-3,6-3,9-3,154-3,157-3,160-3"},{"n":"大师16","e":1486800,"s":"468-3"},{"n":"大师17","e":1795052,"s":"462-3,289-3"},{"n":"大师19","e":2604280,"s":"243-3,244-3,245-3,488-3,380-3,381-3"}]},{"id":2,"n":"天青沙滩","p":"map2","lv":[{"n":"普通1","e":0,"s":"25-1,133-1,10-1,39-1,7-1,79-1,158-1,69-1,174-1,185-1,54-1,316-1,438-1,453-1,439-1,173-1,35-1"},{"n":"普通2","e":4822,"s":"10-2,69-2,174-2,438-2,453-2"},{"n":"普通3","e":11090,"s":"7-2,79-2,158-2,54-2,316-2,439-2,173-2,909-1,194-1,627-1,252-1,742-1,393-1"},{"n":"普通4","e":18082,"s":"25-2,185-2,454-1"},{"n":"普通5","e":26520,"s":"133-2,39-2,122-1,35-2"},{"n":"超级1","e":36164,"s":"25-4,133-4,10-4,39-4,7-4,8-1,158-4,159-1,69-4,174-4,54-4,316-4,438-4,453-4"},{"n":"超级2","e":48700,"s":"55-1,132-1,909-2,194-2,627-2,252-2,742-2,393-2"},{"n":"超级3","e":63889,"s":"10-3,69-3,174-3,80-1,438-3,453-3,454-2,627-4,252-4,742-4,393-4"},{"n":"超级4","e":81971,"s":"7-3,79-3,158-3,54-3,316-3,454-4,115-1,127-1,214-1,439-3,122-2,173-3,910-1,253-1,394-1"},{"n":"超级5","e":101499,"s":"25-3,8-2,159-2,185-3,764-1"},{"n":"高级1","e":122474,"s":"133-3,39-3,8-4,79-4,159-4,185-4,55-2,132-2,439-4,173-4,35-3,35-4,909-4,743-1,194-4"},{"n":"高级2","e":144654,"s":"80-2,55-4,132-4,132-4,132-4"},{"n":"高级3","e":168763,"s":"80-4,115-2,127-2,214-2,845-1,909-3,910-2,194-3,195-1,627-3,252-3,253-2,742-3,393-3,394-2"},{"n":"高级4","e":195283,"s":"40-1,454-3,127-4,214-4,764-2,253-4,394-4"},{"n":"高级5","e":224455,"s":"122-3,36-1,83-1,743-2"},{"n":"大师1","e":256544,"s":"8-3,159-3,115-4,122-4,764-4,910-4,213-1,743-4"},{"n":"大师2","e":291842,"s":"9-1,55-3,132-3,134-1,160-1,199-1,845-2,195-2,701-1"},{"n":"大师3","e":330670,"s":"40-2,80-3,845-4,195-4"},{"n":"大师4","e":373381,"s":"40-4,115-3,127-3,214-3,36-2,910-3,911-1,83-2,253-3,254-1,394-3,395-1"},{"n":"大师5","e":420363,"s":"764-3,83-4,213-2"},{"n":"大师6","e":472043,"s":"9-2,134-2,160-2,199-2,36-4,245-1,213-4,743-3,701-2"},{"n":"大师7","e":528891,"s":"9-4,134-4,160-4,199-4,701-4"},{"n":"大师8","e":591424,"s":"845-3,911-2,195-3,254-2,395-2"},{"n":"大师9","e":660210,"s":"40-3,911-4,254-4,395-4"},{"n":"大师10","e":735875,"s":"36-3,245-2,83-3"},{"n":"大师11","e":819107,"s":"213-3"},{"n":"大师12","e":910662,"s":"9-3,134-3,160-3,199-3,701-3"},{"n":"大师14","e":1184155,"s":"911-3,254-3,395-3"},{"n":"大师16","e":1709820,"s":"245-3"}]},{"id":3,"n":"灰褐洞窟","p":"map3","lv":[{"n":"普通1","e":0,"s":"4-1,50-1,50-2,74-1,74-2,104-1,104-2,155-1,58-1,92-1,92-2,246-1,447-1,228-1,173-1,35-1"},{"n":"普通2","e":6885,"s":"4-2,155-2,58-2,228-2,173-2,37-1,909-1,258-1,714-1,27-1,696-1,387-1,390-1"},{"n":"普通3","e":15835,"s":"105-1,447-2,7054-1,328-1"},{"n":"普通4","e":25817,"s":"75-1,246-2,35-2,229-1"},{"n":"普通5","e":37865,"s":"5-1,93-1,156-1"},{"n":"超级1","e":51635,"s":"4-4,51-1,74-4,104-4,155-4,58-4,132-1,246-4,247-1,447-4,228-4,37-2,909-2,258-2,714-4,714-2,27-2,27-4,696-2,387-2,390-2"},{"n":"超级2","e":69534,"s":"50-3,74-3,104-3,92-3,105-2,302-1,95-1,7054-2,258-4,328-2,387-4,390-4"},{"n":"超级3","e":91221,"s":"4-3,75-2,155-3,58-3,105-4,228-3,173-3,229-2,910-1,7054-4,259-1,328-4,388-1,391-1"},{"n":"超级4","e":117038,"s":"5-2,93-2,447-3,156-2,329-1"},{"n":"超级5","e":144921,"s":"5-4,51-2,132-2,246-3,247-2,35-3,156-4,715-1,28-1"},{"n":"高级1","e":174869,"s":"75-4,132-4,132-4,247-4,302-2,173-4,35-4,95-2,229-4,909-4,132-4,696-4"},{"n":"高级2","e":206538,"s":"302-4,37-3,38-1,909-3,910-2,258-3,259-2,714-3,27-3,696-3,387-3,388-2,390-3,391-2"},{"n":"高级3","e":240961,"s":"105-3,7054-3,980-1,259-4,328-3,329-2,388-4,391-4"},{"n":"高级4","e":278826,"s":"75-3,36-1,229-3,329-4,715-2,28-2"},{"n":"高级5","e":320478,"s":"5-3,93-3,76-1,94-1,156-3,213-1"},{"n":"大师1","e":366295,"s":"51-3,6-1,136-1,197-1,247-3,37-4,38-2,157-1,910-4,715-4,28-4"},{"n":"大师2","e":416694,"s":"302-3,95-3,208-1,59-1,980-2"},{"n":"大师3","e":472133,"s":"36-2,910-3,911-1,980-4,259-3,260-1,697-1,388-3,389-1,391-3,392-1"},{"n":"大师4","e":533116,"s":"76-2,94-2,329-3,213-2"},{"n":"大师5","e":600197,"s":"6-2,76-4,94-4,197-2,136-2,157-2,244-1,213-4,715-3,28-3"},{"n":"大师6","e":673986,"s":"6-4,197-4,248-1,36-4,208-2,136-4,38-4,157-4,59-2,330-1"},{"n":"大师7","e":755154,"s":"38-3,59-4,911-2,260-2,697-2,389-2,392-2"},{"n":"大师8","e":844439,"s":"911-4,980-3,260-4,392-4"},{"n":"大师9","e":942653,"s":"36-3,244-2"},{"n":"大师10","e":1050688,"s":"76-3,94-3,248-2,330-2,213-3"},{"n":"大师11","e":1169527,"s":"6-3,197-3,248-4,136-3,157-3,330-4"},{"n":"大师12","e":1300250,"s":"208-3,59-3"},{"n":"大师13","e":1444045,"s":"911-3,260-3,697-3,389-3,392-3"},{"n":"大师15","e":1776213,"s":"244-3"},{"n":"大师16","e":1967605,"s":"248-3,330-3"}]},{"id":4,"n":"白花雪原","p":"map4","lv":[{"n":"普通1","e":0,"s":"19-1,19-2,56-1,56-2,179-1,179-2,316-1,316-2,333-1,333-2,287-1,287-2,447-1,363-1,363-2,173-1,173-2,35-1,459-1,459-2,921-1,440-1,974-1,393-1"},{"n":"普通2","e":10486,"s":"180-1,317-1,447-2,364-1,7006-1"},{"n":"普通3","e":24118,"s":"288-1,35-2"},{"n":"普通4","e":39323,"s":"20-1,57-1"},{"n":"普通5","e":57673,"s":"132-1,921-2,440-2,974-2,393-2"},{"n":"超级1","e":78645,"s":"19-3,19-4,56-3,56-4,179-3,179-4,180-2,316-4,317-2,333-3,333-4,447-4,363-3,363-4,364-2,215-1,921-4,7006-2,440-4,198-1,393-4"},{"n":"超级2","e":105909,"s":"180-4,316-3,359-1,287-3,288-2,334-1,173-3,459-3,922-1,7006-4,394-1"},{"n":"超级3","e":138940,"s":"20-2,57-2,447-3,225-1"},{"n":"超级4","e":178262,"s":"20-4,132-2,35-3"},{"n":"超级5","e":220730,"s":"132-4,132-4,215-2,113-1,198-2,132-4"},{"n":"高级1","e":266344,"s":"317-4,57-4,359-2,287-4,288-4,334-2,364-4,173-4,35-4,459-4,845-1,215-4,921-3,922-2,440-3,198-4,974-3,393-3,394-2"},{"n":"高级2","e":314580,"s":"180-3,317-3,181-1,359-4,334-4,448-1,364-3,365-1,225-2,460-1,922-4,7006-3,394-4"},{"n":"高级3","e":367010,"s":"288-3,36-1,225-4"},{"n":"高级4","e":424683,"s":"20-3,57-3,113-2,442-1"},{"n":"高级5","e":488123,"s":"471-1,845-2,113-4"},{"n":"大师1","e":557907,"s":"181-2,448-2,365-2,460-2,845-4,215-3,198-3,974-4"},{"n":"大师2","e":634669,"s":"181-4,359-3,289-1,334-3,448-4,365-4,36-2,461-1,922-3,7007-1,242-1,430-1,975-1,394-3,395-1"},{"n":"大师3","e":719107,"s":"225-3,442-2"},{"n":"大师4","e":811989,"s":"471-2,923-1,488-1,442-4"},{"n":"大师5","e":914159,"s":"471-4,113-3"},{"n":"大师6","e":1026546,"s":"289-2,36-4,845-3,461-2,7007-2,242-2,430-2,975-2,395-2"},{"n":"大师7","e":1150172,"s":"181-3,289-4,448-3,365-3,460-3,461-4,7007-4,242-4,430-4,395-4"},{"n":"大师8","e":1286161,"s":"36-3,923-2,488-2"},{"n":"大师9","e":1435749,"s":"923-4,442-3"},{"n":"大师10","e":1600296,"s":"471-3"},{"n":"大师12","e":1980400,"s":"289-3,461-3,7007-3,242-3,430-3,975-3,395-3"},{"n":"大师14","e":2440325,"s":"923-3,488-3"}]},{"id":5,"n":"宝蓝湖畔","p":"map5","lv":[{"n":"普通1","e":0,"s":"52-1,52-2,1-1,1-2,175-1,175-2,69-1,69-2,70-1,84-1,84-2,152-1,152-2,202-1,360-1,360-2,173-1,173-2,35-1,147-1,280-1,759-1,906-1,912-1,517-1,252-1,255-1,177-1,387-1"},{"n":"普通2","e":12938,"s":"202-2,35-2,280-2"},{"n":"普通3","e":29756,"s":"2-1,153-1,176-1,147-2"},{"n":"普通4","e":48515,"s":"85-1,132-1,906-2,912-2,517-2,252-2,255-2,177-2,387-2"},{"n":"普通5","e":71156,"s":"175-3,69-3,70-2,84-3,360-3,53-1,281-1,759-2,252-4,255-4,177-4,387-4"},{"n":"超级1","e":97031,"s":"52-3,52-4,1-3,1-4,175-4,69-4,70-4,84-4,152-3,152-4,360-4,173-3,148-1,280-4,702-1,907-1,913-1,253-1,256-1,388-1"},{"n":"超级2","e":130668,"s":"2-2,153-2,176-2"},{"n":"超级3","e":171420,"s":"153-4,202-3,85-2,132-2,176-4,35-3,280-3"},{"n":"超级4","e":219936,"s":"53-2,85-4,132-4,132-4,147-3,281-2,132-4"},{"n":"超级5","e":272333,"s":"148-2,760-1,702-2,906-3,907-2,912-3,913-2,517-3,252-3,253-2,255-3,256-2,177-3,387-3,388-2"},{"n":"高级1","e":328610,"s":"2-4,70-3,202-4,53-4,71-1,173-4,35-4,147-4,281-4,759-3,759-4,702-4,906-4,912-4,253-4,256-4,388-4"},{"n":"高级2","e":388122,"s":"36-1"},{"n":"高级3","e":452809,"s":"2-3,153-3,176-3,780-1"},{"n":"高级4","e":522025,"s":"3-1,85-3,154-1,196-1,470-1,760-2,701-1"},{"n":"高级5","e":596086,"s":"53-3,71-2,281-3"},{"n":"大师1","e":675330,"s":"71-4,36-2,148-3,148-4,282-1,702-3,907-3,907-4,908-1,913-3,913-4,914-1,518-1,253-3,254-1,256-3,257-1,388-3,389-1"},{"n":"大师2","e":760123,"s":"780-2"},{"n":"大师3","e":850851,"s":"3-2,154-2,196-2,470-2,475-1,245-1,488-1,380-1,780-4,381-1,701-2"},{"n":"大师4","e":958702,"s":"3-4,154-4,196-4,470-4,701-4"},{"n":"大师5","e":1075709,"s":"282-2,760-3,908-2,914-2,518-2,254-2,257-2,389-2"},{"n":"大师6","e":1202596,"s":"71-3,36-4,149-1,282-4,760-4,908-4,914-4,254-4,257-4"},{"n":"大师7","e":1340143,"s":"36-3,475-2,245-2,488-2,380-2,381-2"},{"n":"大师8","e":1489190,"s":"475-4,780-3"},{"n":"大师9","e":1650645,"s":"3-3,154-3,196-3,470-3,701-3"},{"n":"大师10","e":1825483,"s":"149-2"},{"n":"大师11","e":2014758,"s":"149-4,282-3,908-3,914-3,518-3,254-3,257-3,389-3"},{"n":"大师13","e":2441243,"s":"475-3,245-3,488-3,380-3,381-3"},{"n":"大师16","e":3188730,"s":"149-3"}]},{"id":6,"n":"黄金旧发电厂","p":"map6","lv":[{"n":"普通1","e":0,"s":"25-1,25-2,172-1,172-2,10-1,10-2,11-1,92-1,92-2,81-1,81-2,82-1,173-1,173-2,35-1,35-2,353-1,736-1,403-1,304-1,425-1,921-1,848-1,710-1"},{"n":"普通2","e":20142,"s":"93-1"},{"n":"普通3","e":46326,"s":"11-2,132-1,353-2,921-2,848-2,710-2"},{"n":"普通4","e":75531,"s":"172-3,10-3,92-3,81-3,82-2,736-2,403-2,304-2,921-4,198-1,848-4"},{"n":"普通5","e":110779,"s":"173-3,702-1,736-4,403-4,304-4,425-2,922-1"},{"n":"超级1","e":151061,"s":"25-3,93-2,10-4,11-4,25-4,172-4,737-1,404-1,305-1"},{"n":"超级2","e":203429,"s":"132-2,35-3"},{"n":"超级3","e":266875,"s":"12-1,132-4,354-1,132-4,198-2,311-1,312-1,132-4"},{"n":"超级4","e":342406,"s":"11-3,353-3,702-2,921-3,922-2,198-4,848-3,710-3"},{"n":"超级5","e":423979,"s":"82-3,736-3,737-2,403-3,404-2,304-3,305-2,778-1,922-4"},{"n":"高级1","e":511595,"s":"173-4,35-4,36-1,702-4,737-4,404-4,305-4,425-3,303-1,83-1"},{"n":"高级2","e":604246,"s":"12-2,93-3,26-1,94-1,354-2,426-1,311-2,312-2,777-1"},{"n":"高级3","e":704953,"s":"132-3,135-1,12-4,311-4,312-4"},{"n":"高级4","e":810696,"s":"208-1,778-2,198-3"},{"n":"高级5","e":921725,"s":"462-1,36-2,702-3,778-4,922-3,430-1,303-2,83-2,711-1"},{"n":"大师1","e":1038306,"s":"26-2,94-2,354-4,737-3,404-3,405-1,305-3,426-2,303-4,83-4,710-4,777-2"},{"n":"大师2","e":1160717,"s":"135-2,26-4,94-4,243-1,923-1,777-4"},{"n":"大师3","e":1289248,"s":"12-3,135-4,354-3,208-2,306-1,311-3,312-3"},{"n":"大师4","e":1431702,"s":"462-2,738-1,430-2,711-2"},{"n":"大师5","e":1582395,"s":"405-2,778-3,430-4,711-4"},{"n":"大师6","e":1741777,"s":"36-3,36-4,243-2,405-4,923-2,303-3,83-3"},{"n":"大师7","e":1910321,"s":"26-3,94-3,306-2,426-3,923-4,777-3"},{"n":"大师8","e":2088527,"s":"135-3,738-2,306-4"},{"n":"大师9","e":2276921,"s":"738-4"},{"n":"大师10","e":2476059,"s":"462-3,430-3,711-3"},{"n":"大师11","e":2686523,"s":"405-3"},{"n":"大师12","e":2908932,"s":"243-3,923-3"},{"n":"大师13","e":3143935,"s":"306-3"},{"n":"大师14","e":3442846,"s":"738-3"}]},{"id":7,"n":"琥褐溪谷","p":"map7","lv":[{"n":"普通1","e":0,"s":"133-1,133-2,23-1,23-2,24-1,246-1,246-2,173-1,173-2,35-1,35-2,37-1,627-1,440-1,848-1,177-1,371-1,328-1,557-1,714-1,27-1,696-1,390-1"},{"n":"普通2","e":26478,"s":"132-1,37-2,627-2,440-2,848-2,177-2,714-2,27-2,696-2,390-2"},{"n":"普通3","e":60899,"s":"23-3,371-2,328-2,557-2"},{"n":"普通4","e":99293,"s":"127-1,214-1,173-3,391-1"},{"n":"普通5","e":145629,"s":"24-2,372-1,329-1"},{"n":"超级1","e":198585,"s":"133-3,132-2,246-3,23-4,133-4,246-4,173-4,35-3,35-4,627-4,628-1,440-4,848-4,177-4,178-1,371-4,328-4,557-4,714-4,715-1,27-4,28-1,390-4"},{"n":"超级2","e":264456,"s":"132-4,132-4,113-1,312-1,311-1,132-4"},{"n":"超级3","e":344986,"s":"127-2,214-2,37-3,38-1,627-3,440-3,848-3,177-3,714-3,27-3,696-3,390-3,391-2"},{"n":"超级4","e":440123,"s":"371-3,372-2,328-3,329-2,557-3,391-4"},{"n":"超级5","e":541880,"s":"36-1,628-2,303-1,178-2,372-4,329-4,715-2,28-2"},{"n":"高级1","e":654607,"s":"24-3,24-4,127-4,214-4,37-4,628-4,113-2,312-2,311-2,178-4,442-1,777-1,696-4,780-1"},{"n":"高级2","e":774923,"s":"38-2,113-4,312-4,311-4"},{"n":"高级3","e":900988,"s":"558-1"},{"n":"高级4","e":1033561,"s":"127-3,214-3,36-2,242-1,303-2,849-1,8001-1,697-1,391-3,392-1"},{"n":"高级5","e":1176798,"s":"303-4,372-3,329-3,442-2,777-2,780-2"},{"n":"大师1","e":1325740,"s":"36-4,38-4,244-1,628-3,178-3,442-4,777-4,715-3,715-4,380-1,28-3,28-4,780-4,381-1"},{"n":"大师2","e":1485571,"s":"113-3,312-3,311-3,330-1,558-2"},{"n":"大师3","e":1650692,"s":"38-3,242-2,849-2,8001-2,558-4,697-2,392-2"},{"n":"大师4","e":1828870,"s":"242-4,849-4,8001-4,392-4"},{"n":"大师5","e":2015408,"s":"36-3,244-2,303-3,380-2,381-2"},{"n":"大师6","e":2215366,"s":"373-1,330-2,442-3,777-3,780-3"},{"n":"大师7","e":2427642,"s":"330-4"},{"n":"大师8","e":2655957,"s":"558-3"},{"n":"大师9","e":2904897,"s":"242-3,849-3,8001-3,697-3,392-3"},{"n":"大师10","e":3179971,"s":"373-2"},{"n":"大师11","e":3470704,"s":"244-3,373-4,380-3,381-3"},{"n":"大师12","e":3774089,"s":"330-3"},{"n":"大师16","e":5236414,"s":"373-3"}]},{"id":10001,"n":"萌绿之岛EX","p":"map10001","lv":[{"n":"普通1","e":0,"s":"25-1,133-1,52-1,172-1,172-2,1-1,10-1,10-2,11-1,7-1,4-1,158-1,104-1,104-2,155-1,58-1,179-1,179-2,185-1,84-1,84-2,152-1,180-1,333-1,333-2,438-1,438-2,81-1,81-2,85-1,246-1,287-1,287-2,363-1,363-2,228-1,173-1,35-1,353-1,353-2,459-1,280-1,37-1,906-1,909-1,912-1,304-1,921-1,7006-1,627-1,517-1,440-1,252-1,255-1,258-1,848-1,177-1,710-1,974-1,742-1,714-1,27-1,696-1,387-1,390-1,393-1"},{"n":"普通5","e":228205,"s":"25-2,133-2,52-2,1-2,2-1,11-2,7-2,8-1,4-2,5-1,158-2,159-1,155-2,156-1,58-2,185-2,105-1,152-2,153-1,53-1,82-1,246-2,247-1,288-1,334-1,364-1,228-2,229-1,173-2,35-2,459-2,281-1,907-1,910-1,913-1,425-1,7054-1,253-1,256-1,259-1,388-1,391-1,394-1"},{"n":"超级1","e":309675,"s":"172-3,10-3,179-3,84-3,105-2,180-2,438-3,85-2,132-1,302-1,354-1,37-2,38-1,305-1,215-1,921-2,922-1,517-2,440-2,198-1,848-2"},{"n":"超级2","e":414995,"s":"25-3,133-3,52-3,1-3,2-2,12-1,7-3,8-2,4-3,5-2,158-3,159-2,104-3,155-3,156-2,58-3,152-3,153-2,333-3,26-1,53-2,81-3,82-2,115-1,127-1,181-1,214-1,247-2,359-1,287-3,288-2,334-2,363-3,364-2,365-1,228-3,229-2,10-4,84-4,172-4,179-4,333-4,438-4,173-3,353-3,95-1,459-3,460-1,702-1,764-1,845-1,304-2,7006-2,627-2,7054-2,177-2,710-2,974-2,742-2,714-2,27-2,696-2"},{"n":"超级3","e":539088,"s":"11-3,185-3,132-2,134-1,135-1,136-1,196-1,197-1,246-3,470-1,700-1,471-1,302-2,1-4,4-4,7-4,25-4,52-4,58-4,104-4,133-4,152-4,155-4,158-4,228-4,363-4,173-4,35-3,354-2,225-1,459-4,280-2,906-2,909-2,912-2,425-2,778-1,628-1,980-1,113-1,303-1,83-1,252-2,255-2,258-2,178-1,442-1,777-1,213-1,743-1,715-1,28-1,780-1,387-2,390-2,393-2,701-1"},{"n":"超级4","e":684812,"s":"3-1,9-1,6-1,180-3,59-1,85-3,115-2,127-2,154-1,157-1,160-1,214-2,359-2,462-1,11-4,246-4,35-4,36-1,95-2,460-2,280-3,281-2,305-2,922-2,517-3"},{"n":"超级5","e":839478,"s":"2-3,12-2,8-3,5-3,159-3,156-3,105-3,153-3,26-2,53-3,82-3,181-2,288-3,364-3,365-2,85-4,180-4,280-4,282-1,37-3,38-2,907-2,910-2,913-2,7006-3,518-1,253-2,256-2,259-2,388-2,391-2,394-2"},{"n":"高级1","e":997610,"s":"3-2,9-2,6-2,134-2,135-2,136-2,154-2,157-2,160-2,196-2,197-2,247-3,470-2,471-2,700-2,334-3,229-3,2-4,5-4,8-4,53-4,105-4,153-4,156-4,159-4,185-4,287-4,288-4,364-4,36-2,225-2,702-2,764-2,37-4,845-2,908-1,911-1,914-1,215-2,7006-4,980-2,198-2,311-1,312-1,849-1,8001-1,711-1,975-1,697-1"},{"n":"高级2","e":1178280,"s":"59-2,132-3,248-1,462-2,302-3,229-4,247-4,334-4,354-3,208-1,475-1,906-3,909-3,912-3,306-1,461-1,921-3,923-1,7007-1,627-3,628-2,7054-3,440-3,242-1,430-1,252-3,254-1,255-3,257-1,258-3,260-1,848-3,177-3,178-2,974-3,742-3,743-2,715-2,714-3,28-2,389-1,392-1,395-1"},{"n":"高级3","e":1374658,"s":"127-3,214-3,359-3,289-2,132-4,132-4,132-4,132-4,132-4,302-4,354-4,460-3,281-3,282-2,243-1,906-4,909-4,912-4,304-3,778-2,921-4,7054-4,440-4,252-4,255-4,258-4,848-4,710-3,132-4,27-3,696-3,387-3,390-3,393-3"},{"n":"高级4","e":1580857,"s":"12-3,26-3,115-3,181-3,365-3,127-4,214-4,359-4,95-3,281-4,38-3,244-1,245-1,304-4,627-4,488-1,113-2,303-2,83-2,311-2,312-2,177-4,442-2,777-2,213-2,742-4,714-4,380-1,27-4,696-4,780-2,381-1,387-4,390-4,393-4"},{"n":"高级5","e":1797364,"s":"134-3,135-3,136-3,196-3,197-3,470-3,700-3,471-3,12-4,26-4,181-4,365-4,208-2,225-3,475-2,702-3,764-3,907-3,908-2,910-3,911-2,913-3,914-2,305-3,425-3,215-3,922-3,518-2,198-3,253-3,256-3,259-3,711-2,388-3,391-3,394-3,701-2"},{"n":"大师1","e":2014314,"s":"3-3,9-3,6-3,59-3,154-3,157-3,160-3,248-2,462-3,115-4,36-3,225-4,702-4,38-4,845-3,907-4,910-4,913-4,426-1,253-4,254-2,256-4,257-2,259-4,260-2,849-2,8001-2,710-4,975-2,974-4,697-2,389-2,392-2,395-2"},{"n":"大师2","e":2251791,"s":"3-4,6-4,9-4,134-4,135-4,136-4,154-4,157-4,160-4,196-4,197-4,470-4,471-4,700-4,36-4,764-4,305-4,306-2,426-2,461-2,922-4,923-2,7007-2,242-2,430-2,388-4,391-4,394-4"},{"n":"大师3","e":2501141,"s":"289-3,59-4,282-3,845-4,628-3,980-3,178-3,743-3,715-3,28-3"},{"n":"大师4","e":2760321,"s":"282-4,215-4,980-4,113-3,198-4,311-3,312-3"},{"n":"大师5","e":3057187,"s":"289-4,311-4,312-4"},{"n":"大师6","e":3361630,"s":"208-3,475-3,243-2,743-4,715-4,132-4"},{"n":"大师7","e":3667816,"s":"248-3,244-2,245-2,628-4,178-4,711-3,380-2,28-4,381-2"},{"n":"大师8","e":4014149,"s":"475-4,908-3,911-3,914-3,778-3,518-3,488-2,113-4,303-3,83-3,780-3"},{"n":"大师9","e":4378519,"s":"248-4,426-3,778-4,849-3,8001-3,711-4,442-3,975-3,777-3,213-3"},{"n":"大师10","e":4778794,"s":"908-4,911-4,914-4,306-3,461-3,923-3,7007-3,242-3,430-3,303-4,83-4,254-3,257-3,260-3,442-4,777-4,213-4,697-3,389-3,392-3,395-3,701-3"},{"n":"大师11","e":5184989,"s":"252-4,257-4,260-4,849-4,8001-4,780-4,392-4,395-4,701-4"},{"n":"大师12","e":5614239,"s":"242-4"},{"n":"大师13","e":6067795,"s":"306-4,461-4,7007-4,430-4,923-4"},{"n":"大师14","e":6541407,"s":"243-3"},{"n":"大师15","e":7152862,"s":"244-3,245-3"},{"n":"大师16","e":7780648,"s":"488-3,380-3,381-3"}]},{"id":10002,"n":"天青沙滩EX","p":"map10002","lv":[{"n":"普通1","e":0,"s":"133-1,39-1,7-1,158-1,174-1,174-2,54-1,54-2,453-1,453-2,173-1,35-1,736-1,440-1,252-1,258-1,742-1,393-1"},{"n":"普通5","e":228205,"s":"133-2,39-2,7-2,8-1,158-2,159-1,454-1,55-1,173-2,35-2,148-1,253-1,259-1,394-1"},{"n":"超级1","e":309675,"s":"40-1,174-3,54-3,132-1,440-2"},{"n":"超级2","e":418230,"s":"133-3,39-3,7-3,8-2,158-3,159-2,453-3,454-2,55-2,127-1,214-1,54-4,174-4,173-3,764-1,845-1,736-2,737-1,627-2,742-2"},{"n":"超级3","e":548434,"s":"40-2,132-2,700-1,7-4,39-4,133-4,158-4,453-4,173-4,35-3,628-1,113-1,83-1,252-2,258-2,213-1,743-1,780-1,393-2,701-1"},{"n":"超级4","e":698799,"s":"9-1,127-2,160-1,214-2,468-1,35-4,36-1,148-2"},{"n":"超级5","e":860468,"s":"8-3,159-3,454-3,55-3,147-3,253-2,259-2,394-2"},{"n":"高级1","e":1037612,"s":"40-3,9-2,160-2,700-2,8-4,55-4,159-4,454-4,36-2,147-4,764-2,845-2,737-2,242-1"},{"n":"高级2","e":1235275,"s":"468-2,736-3,627-3,628-2,440-3,252-3,254-1,258-3,260-1,742-3,743-2,395-1"},{"n":"高级3","e":1444644,"s":"127-3,214-3,132-4,132-4,40-4,132-4,147-1,147-2,148-3,149-1,245-1,736-4,738-1,627-4,440-4,113-2,252-4,258-4,742-4,393-3,393-4"},{"n":"高级4","e":1665846,"s":"127-4,214-4,148-4,83-2,253-3,259-3,213-2,780-2"},{"n":"高级5","e":1907355,"s":"9-3,160-3,700-3,36-3,764-3,254-2,260-2,394-3,395-2,701-2"},{"n":"大师1","e":2194292,"s":"468-3,9-4,160-4,700-4,36-4,149-2,764-4,845-3,242-2,253-4,259-4,394-4"},{"n":"大师2","e":2495790,"s":"468-4,845-4,737-3,738-2,628-3,743-3"},{"n":"大师3","e":2813784,"s":"737-4,113-3"},{"n":"大师4","e":3141221,"s":"132-4"},{"n":"大师5","e":3489192,"s":"245-2,628-4,743-4"},{"n":"大师6","e":3851643,"s":"113-4,83-3"},{"n":"大师7","e":4237798,"s":"149-3,83-4,213-3,780-3"},{"n":"大师8","e":4654094,"s":"149-4,242-3,254-3,260-3,213-4,395-3,701-3"},{"n":"大师9","e":5118523,"s":"738-3,242-4,254-4,260-4,780-4,395-4"},{"n":"大师10","e":5609891,"s":"627-1,701-4"},{"n":"大师11","e":6124856,"s":"738-4"},{"n":"大师12","e":6656321,"s":"245-3"}]}];
+
+const ISLAND_TAGS_KEY = 'effiprobcalc_island_tags_v1';
+const ISLAND_POKETAGS_KEY = 'effiprobcalc_island_poketags_v1';
+const ISLAND_DEFAULT_TAGS = [
+  {id:'tag_3',    name:'爱你多来', score:3,   color:'#d9534f'},
+  {id:'tag_2',    name:'急需来糖', score:2,   color:'#e08a2e'},
+  {id:'tag_1',    name:'好糖不拒', score:1,   color:'#3f9a52'},
+  {id:'tag_02',   name:'重在参与', score:0.2, color:'#3a7fd5'},
+  {id:'tag_0',    name:'佳节活动', score:0,   color:'#7a4f9e'},
+  {id:'tag_neg1', name:'看到就烦', score:-1,  color:'#9aa3ad'},
+];
+const ISLAND_NO_TAG_COLOR = '#b8b2a2';
+// 标签名是用户自己敲进 localStorage 的，拼进 innerHTML 前得转义
+function islEsc(s){
+  return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+let islandTags = [];
+let islandPokeTags = {};       // pscId -> tagId
+let islandPane = 'islands';    // 'islands' / 'tags' / 'box'
+let islandSelId = null;        // 展开中的岛屿
+let islandFilterTag = null;    // null=不筛选，'__none__'=未标记，其余=tagId
+let islandSortBy = 'id';
+const islandPokeById = {};
+ISLAND_POKES.forEach(p=>{ islandPokeById[p[0]] = p; });
+const islandStyleCache = {};   // 'mapId:lvIdx' -> [[pokeId, star], …]
+
+function islandLevelStyles(mapId, lvIdx){
+  const key = mapId + ':' + lvIdx;
+  if(!islandStyleCache[key]){
+    const raw = ISLAND_MAPS.find(m=>m.id===mapId).lv[lvIdx].s;
+    islandStyleCache[key] = raw.split(',').map(t=>{
+      const p = t.split('-');
+      return [Number(p[0]), Number(p[1])];
+    });
+  }
+  return islandStyleCache[key];
+}
+
+function islandLoadState(){
+  try{
+    const t = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
+    islandTags = (Array.isArray(t) && t.length) ? t : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
+  }catch(e){ islandTags = JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS)); }
+  try{
+    const m = JSON.parse(localStorage.getItem(ISLAND_POKETAGS_KEY));
+    islandPokeTags = (m && typeof m === 'object') ? m : {};
+  }catch(e){ islandPokeTags = {}; }
+  // 首次进来（或新增了宝可梦）按 bbx 的默认标签补齐，已经手动改过的不覆盖
+  let filled = false;
+  ISLAND_POKES.forEach(p=>{
+    if(islandPokeTags[p[0]]) return;
+    const tag = islandTags.find(t=>t.name === p[3]);
+    if(tag){ islandPokeTags[p[0]] = tag.id; filled = true; }
+  });
+  if(filled) islandSaveState();
+}
+function islandSaveState(){
+  try{
+    localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(islandTags));
+    localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(islandPokeTags));
+  }catch(e){}
+}
+function islandTagOf(pokeId){
+  return islandTags.find(t=>t.id === islandPokeTags[pokeId]) || null;
+}
+function islandScoreOf(pokeId){
+  const t = islandTagOf(pokeId);
+  return t ? Number(t.score) || 0 : 0;
+}
+/* 头像直接用站内已经内嵌的 POKEMON_PORTRAITS（捕捉推荐页那套，按中文名索引，
+   值是 [普通, 闪光] 两张 base64 webp），不另外加外部图片文件。
+   只有两处对不上名：颤弦蝾螈高调/低调在本站图鉴同属 #849，我给它俩加了后缀区分，
+   高调回落到原名那张，低调站内原本没有、单独补在 ISLAND_EXTRA_PORTRAIT 里。 */
+// 颤弦螈螺低调型：站内 POKEMON_PORTRAITS 里只有高调那张，这张单独补在这里
+const ISLAND_EXTRA_PORTRAIT = { 8001: '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' };
+const ISLAND_PORTRAIT_KEY = { 849: '颤弦蝾螈' };
+function islandPortraitB64(pokeId){
+  const p = islandPokeById[pokeId];
+  if(!p) return '';
+  const extra = ISLAND_EXTRA_PORTRAIT[pokeId];
+  if(extra) return extra;
+  const pair = POKEMON_PORTRAITS[ISLAND_PORTRAIT_KEY[pokeId] || p[2]];
+  return (pair && pair[0]) || '';
+}
+function islandAvatarImg(pokeId, cls){
+  const b64 = islandPortraitB64(pokeId);
+  if(!b64) return `<span class="${cls} isl-avatar-none">?</span>`;
+  return `<img class="${cls}" src="data:image/webp;base64,${b64}" alt="" loading="lazy">`;
+}
+function islandNameOf(pokeId){
+  const p = islandPokeById[pokeId];
+  return p ? p[2] : '#' + pokeId;
+}
+
+// 得分 = 全岛睡姿标签分值的平均数 × 1000，保留一位小数（沿用朋友那版的美化算法）
+function islandMapScore(map){
+  let sum = 0, n = 0;
+  map.lv.forEach((lv, i)=>{
+    islandLevelStyles(map.id, i).forEach(st=>{ sum += islandScoreOf(st[0]); n++; });
+  });
+  if(!n) return 0;
+  return Math.round((sum / n) * 10000) / 10;
+}
+function islandMapDist(map){
+  const cnt = {}; let total = 0;
+  map.lv.forEach((lv, i)=>{
+    islandLevelStyles(map.id, i).forEach(st=>{
+      const t = islandTagOf(st[0]);
+      const name = t ? t.name : '未标记';
+      cnt[name] = (cnt[name] || 0) + 1;
+      total++;
+    });
+  });
+  const rows = Object.keys(cnt).map(name=>{
+    const t = islandTags.find(x=>x.name === name);
+    return {name, count:cnt[name], pct:Math.round(cnt[name]/total*1000)/10, color:t ? t.color : ISLAND_NO_TAG_COLOR};
+  });
+  rows.sort((a,b)=> b.count - a.count);
+  return rows;
+}
+function islandBarHtml(dist, tall){
+  const seg = dist.map(d=>`<i style="width:${d.pct}%;background:${d.color}" title="${islEsc(d.name)} ${d.pct}%">${tall && d.pct>=9 ? d.pct+'%' : ''}</i>`).join('');
+  return `<div class="isl-bar${tall?' isl-bar-tall':''}">${seg}</div>`;
+}
+function islandLegendHtml(dist){
+  return `<div class="isl-legend">${dist.map(d=>
+    `<span><i class="isl-dot" style="background:${d.color}"></i>${islEsc(d.name)} ${d.pct}%</span>`
+  ).join('')}</div>`;
+}
+
+/* ---- 岛屿浏览 ---- */
+function islandRenderGrid(){
+  const grid = document.getElementById('islGrid'); if(!grid) return;
+  grid.innerHTML = ISLAND_MAPS.map(m=>{
+    const dist = islandMapDist(m);
+    return `<div class="isl-card${islandSelId===m.id?' active':''}" data-islmap="${m.id}">
+      <img class="isl-card-pic" src="island_assets/${m.p}.png" alt="" loading="lazy">
+      <div class="isl-card-body">
+        <div class="isl-card-name">${islEsc(m.n)}</div>
+        <span class="isl-card-score">${islandMapScore(m).toFixed(1)}</span>
+        ${islandBarHtml(dist,false)}
+        ${islandLegendHtml(dist)}
+      </div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('[data-islmap]').forEach(el=>{
+    el.onclick = ()=>{
+      const id = Number(el.getAttribute('data-islmap'));
+      islandSelId = (islandSelId === id) ? null : id;
+      islandRenderGrid();
+      islandRenderDetail();
+    };
+  });
+}
+function islandRenderDetail(){
+  const box = document.getElementById('islDetail'); if(!box) return;
+  const map = ISLAND_MAPS.find(m=>m.id === islandSelId);
+  if(!map){ box.innerHTML = ''; return; }
+  const dist = islandMapDist(map);
+  let total = 0;
+  map.lv.forEach((lv,i)=> total += islandLevelStyles(map.id,i).length);
+  // 等级里的宝可梦格子等展开时再填（一座岛最多六百多个睡姿，一次性铺出来光头像就够呛）
+  const lvHtml = map.lv.map((lv,i)=>`
+    <div class="isl-lv">
+      <div class="isl-lv-h" data-isllv="${i}">
+        <span><span class="isl-lv-n">${islEsc(lv.n)}</span><span class="isl-lv-c">${islandLevelStyles(map.id,i).length}只</span></span>
+        <span class="isl-lv-e">睡意 ${lv.e.toLocaleString()}</span>
+      </div>
+      <div class="isl-lv-body" data-isllvbody="${i}"></div>
+    </div>`).join('');
+  box.innerHTML = `<div class="isl-detail">
+    <div class="isl-detail-h"><span class="isl-detail-name">${islEsc(map.n)}</span><span class="isl-detail-sub">共 ${total} 个睡姿</span></div>
+    <div class="isl-detail-score">${islandMapScore(map).toFixed(1)}</div>
+    ${islandBarHtml(dist,true)}
+    ${islandLegendHtml(dist)}
+    <div style="margin-top:12px">${lvHtml}</div>
+  </div>`;
+  box.querySelectorAll('[data-isllv]').forEach(h=>{
+    h.onclick = ()=>{
+      const i = Number(h.getAttribute('data-isllv'));
+      const body = box.querySelector(`[data-isllvbody="${i}"]`);
+      if(!body) return;
+      if(body.classList.contains('open')){ body.classList.remove('open'); return; }
+      if(!body.innerHTML) body.innerHTML = islandMonGridHtml(map.id, i);
+      body.classList.add('open');
+    };
+  });
+}
+function islandMonGridHtml(mapId, lvIdx){
+  return islandLevelStyles(mapId, lvIdx).map(st=>{
+    const t = islandTagOf(st[0]);
+    return `<div class="isl-mon">
+      ${islandAvatarImg(st[0], 'isl-mon-img')}
+      <div class="isl-mon-n">${islEsc(islandNameOf(st[0]))}</div>
+      <div class="isl-mon-star">${'★'.repeat(st[1])}</div>
+      <span class="isl-mon-tag" style="background:${t?t.color:ISLAND_NO_TAG_COLOR}">${islEsc(t?t.name:'未标记')}</span>
+    </div>`;
+  }).join('');
+}
+
+/* ---- 标签管理 ---- */
+function islandRenderTags(){
+  const list = document.getElementById('islTagList'); if(!list) return;
+  list.innerHTML = islandTags.map(t=>`
+    <div class="isl-tag-row">
+      <span class="isl-tag-sw" style="background:${t.color}"></span>
+      <span class="isl-tag-name">${islEsc(t.name)}</span>
+      <span class="isl-tag-score">${t.score} 分</span>
+      <button type="button" class="isl-tag-edit" data-isltag="${t.id}">编辑</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-isltag]').forEach(b=>{
+    b.onclick = ()=> islandOpenTagModal(b.getAttribute('data-isltag'));
+  });
+}
+function islandOpenTagModal(tagId){
+  const tag = tagId ? islandTags.find(t=>t.id===tagId) : null;
+  let pop = document.getElementById('islTagModal');
+  if(!pop){ pop = document.createElement('div'); pop.id='islTagModal'; pop.className='cap-ctrl-overlay'; document.body.appendChild(pop); }
+  pop.style.display = 'flex';
+  pop.innerHTML = `<div class="cap-ctrl-box" style="width:min(340px,100%)">
+    <div class="cap-ctrl-head">${tag ? '编辑标签' : '新增标签'}<span class="cap-ctrl-close" id="islTagClose">✕</span></div>
+    <div class="isl-modal-field"><div class="isl-modal-lab">名称</div>
+      <input type="text" class="isl-modal-in" id="islTagName" value="${tag?islEsc(tag.name):''}" placeholder="标签名称"></div>
+    <div class="isl-modal-field"><div class="isl-modal-lab">分值</div>
+      <input type="number" step="0.1" class="isl-modal-in" id="islTagScore" value="${tag?tag.score:1}"></div>
+    <div class="isl-modal-field"><div class="isl-modal-lab">颜色</div>
+      <input type="color" class="isl-modal-in isl-modal-color" id="islTagColor" value="${tag?tag.color:'#3a7fd5'}"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="islTagCancel">取消</button>
+      ${tag ? '<button type="button" class="isl-modal-btn isl-modal-del" id="islTagDel">删除</button>' : ''}
+      <button type="button" class="isl-modal-btn isl-modal-save" id="islTagSave">保存</button>
+    </div>
+  </div>`;
+  const close = ()=>{ pop.style.display='none'; };
+  pop.onclick = e=>{ if(e.target===pop) close(); };
+  document.getElementById('islTagClose').onclick = close;
+  document.getElementById('islTagCancel').onclick = close;
+  document.getElementById('islTagSave').onclick = ()=>{
+    const name = document.getElementById('islTagName').value.trim();
+    const score = parseFloat(document.getElementById('islTagScore').value);
+    const color = document.getElementById('islTagColor').value;
+    if(!name || isNaN(score)) return;
+    if(tag){ tag.name = name; tag.score = score; tag.color = color; }
+    else islandTags.push({id:'tag_'+Date.now(), name, score, color});
+    islandSaveState(); close(); islandRenderAll();
+  };
+  const delBtn = document.getElementById('islTagDel');
+  if(delBtn) delBtn.onclick = ()=>{
+    islandTags = islandTags.filter(t=>t.id !== tag.id);
+    Object.keys(islandPokeTags).forEach(k=>{ if(islandPokeTags[k]===tag.id) delete islandPokeTags[k]; });
+    if(islandFilterTag === tag.id) islandFilterTag = null;
+    islandSaveState(); close(); islandRenderAll();
+  };
+}
+
+/* ---- 宝可梦盒 ---- */
+function islandRenderChips(){
+  const el = document.getElementById('islChips'); if(!el) return;
+  const chip = (id, name, color)=>{
+    const active = islandFilterTag === id;
+    const dim = islandFilterTag && !active;
+    return `<span class="isl-chip${active?' active':''}${dim?' dim':''}" style="background:${color}" data-islchip="${id}">${islEsc(name)}</span>`;
+  };
+  el.innerHTML = chip('__none__','未标记',ISLAND_NO_TAG_COLOR) + islandTags.map(t=>chip(t.id,t.name,t.color)).join('');
+  el.querySelectorAll('[data-islchip]').forEach(c=>{
+    c.onclick = ()=>{
+      const id = c.getAttribute('data-islchip');
+      islandFilterTag = (islandFilterTag === id) ? null : id;
+      islandRenderChips(); islandRenderBox();
+    };
+  });
+}
+function islandRenderBox(){
+  const el = document.getElementById('islBox'); if(!el) return;
+  const q = (document.getElementById('islSearch').value || '').trim().toLowerCase();
+  let list = ISLAND_POKES.slice();
+  if(q) list = list.filter(p=> p[2].toLowerCase().includes(q) || String(p[0]).includes(q) || p[1].toLowerCase().includes(q));
+  if(islandFilterTag === '__none__') list = list.filter(p=> !islandTagOf(p[0]));
+  else if(islandFilterTag) list = list.filter(p=> islandPokeTags[p[0]] === islandFilterTag);
+  if(islandSortBy === 'tag'){
+    list.sort((a,b)=>{
+      const ta = islandTagOf(a[0]), tb = islandTagOf(b[0]);
+      const sa = ta ? -ta.score : 999, sb = tb ? -tb.score : 999;
+      return sa - sb || a[0] - b[0];
+    });
+  } else list.sort((a,b)=> a[0] - b[0]);
+  el.innerHTML = list.map(p=>{
+    const t = islandTagOf(p[0]);
+    return `<div class="isl-box-item" data-islpoke="${p[0]}">
+      ${islandAvatarImg(p[0], 'isl-mon-img')}
+      <div class="isl-box-num">${islEsc(p[1])}</div>
+      <div class="isl-mon-n">${islEsc(p[2])}</div>
+      <span class="isl-mon-tag" style="background:${t?t.color:ISLAND_NO_TAG_COLOR}">${islEsc(t?t.name:'未标记')}</span>
+    </div>`;
+  }).join('');
+  el.querySelectorAll('[data-islpoke]').forEach(item=>{
+    item.onclick = ()=> islandCyclePokeTag(Number(item.getAttribute('data-islpoke')), item);
+  });
+  document.querySelectorAll('#mfSubIsland [data-islsort]').forEach(b=>{
+    b.classList.toggle('active', b.getAttribute('data-islsort') === islandSortBy);
+  });
+}
+// 点一下换下一个标签。只改这一格的徽章、不重排，否则手指底下的格子会跑掉
+function islandCyclePokeTag(pokeId, itemEl){
+  if(!islandTags.length) return;
+  let idx = islandTags.findIndex(t=>t.id === islandPokeTags[pokeId]);
+  idx = (idx + 1) % islandTags.length;
+  islandPokeTags[pokeId] = islandTags[idx].id;
+  islandSaveState();
+  const t = islandTags[idx];
+  const badge = itemEl.querySelector('.isl-mon-tag');
+  if(badge){ badge.textContent = t.name; badge.style.background = t.color; }
+  islandRenderGrid();
+  islandRenderDetail();
+}
+
+/* ---- 子标签页与整体渲染 ---- */
+const ISLAND_PANES = [
+  {id:'islands', label:'岛屿浏览'},
+  {id:'tags',    label:'标签管理'},
+  {id:'box',     label:'宝可梦'},
+];
+function islandRenderTabs(){
+  const el = document.getElementById('islTabs'); if(!el) return;
+  el.innerHTML = ISLAND_PANES.map(p=>
+    `<div class="isl-tab${islandPane===p.id?' active':''}" data-islpane="${p.id}">${p.label}</div>`).join('');
+  el.querySelectorAll('[data-islpane]').forEach(t=>{
+    t.onclick = ()=>{ islandPane = t.getAttribute('data-islpane'); islandRenderAll(); };
+  });
+}
+let islandInited = false;
+function islandRenderAll(){
+  if(!islandInited){
+    islandLoadState();
+    const search = document.getElementById('islSearch');
+    if(search) search.oninput = islandRenderBox;
+    document.querySelectorAll('#mfSubIsland [data-islsort]').forEach(b=>{
+      b.onclick = ()=>{ islandSortBy = b.getAttribute('data-islsort'); islandRenderBox(); };
+    });
+    const clear = document.getElementById('islClearBtn');
+    if(clear) clear.onclick = ()=>{
+      islandFilterTag = null; islandSortBy = 'id';
+      const s = document.getElementById('islSearch'); if(s) s.value = '';
+      islandRenderChips(); islandRenderBox();
+    };
+    const add = document.getElementById('islAddTagBtn');
+    if(add) add.onclick = ()=> islandOpenTagModal(null);
+    islandInited = true;
+  }
+  islandRenderTabs();
+  document.getElementById('islPaneIslands').style.display = islandPane==='islands' ? '' : 'none';
+  document.getElementById('islPaneTags').style.display    = islandPane==='tags'    ? '' : 'none';
+  document.getElementById('islPaneBox').style.display     = islandPane==='box'     ? '' : 'none';
+  if(islandPane === 'islands'){ islandRenderGrid(); islandRenderDetail(); }
+  else if(islandPane === 'tags') islandRenderTags();
+  else { islandRenderChips(); islandRenderBox(); }
+}
+
+
 /* ============ 宝可梦盒：首次渲染 ============ */
 renderBoxFilterRow();
 
 renderAll();
+mfShowSub(null);
 updatePageActionBar(); // v3.18：开场同步一次吸底按钮条（原来这里是 updateFabDocking()）
 </script>
 </body>
