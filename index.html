@@ -502,6 +502,10 @@
   /* 颜色沿用改造前那两颗小圆浮窗 */
   #pageActControlsBtn{ background:#3a8fae; }
   #pageActPanelBtn{ background:var(--accent); }
+  /* 岛屿评分子页借用这两颗按钮做"批量选择/取消"：未进入批量模式时"取消"是灰的，
+     跟圆形浮窗模式下 .ui-fab-off 是同一个灰色，保持两套 UI 视觉一致 */
+  .page-act-btn.page-act-btn-off{ background:#c7c1af !important; cursor:default; }
+  .page-act-btn.page-act-btn-off:hover{ filter:none; }
   /* 「修改面板」头像气泡：与盒子里那颗同源，挂在按钮内部（position:relative 就是按钮自己），
      贴着屏幕右边缘上方，常驻不交替。点击气泡的事件会冒泡到按钮本身，不用再单独绑一次 */
   .page-panel-mon-bubble{
@@ -544,6 +548,9 @@
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
   #fabPanel.fab-lifted{ bottom:212px; }
   #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
+  /* 岛屿评分子页圆形浮窗模式下同样借用这两颗做"批量选择/取消"，跟按钮条版本共用同一个灰色 */
+  .ui-fab.ui-fab-off{ background:#c7c1af !important; cursor:default; }
+  .ui-fab.ui-fab-off:hover{ filter:none; }
   @media print{ .ui-fab{ display:none !important; } }
 
   /* ============ 三页签导航 ============ */
@@ -2139,9 +2146,16 @@
 .isl-card.active{ border-color:var(--accent); box-shadow:0 0 0 2px rgba(122,79,158,.25); }
 .isl-card-pic{ width:100%; height:82px; object-fit:cover; display:block; background:#e7e0cc; }
 .isl-card-body{ padding:9px 10px 10px; }
-.isl-card-name{ font-size:13.5px; font-weight:900; color:var(--ink); }
+/* 名称+分数同一行：分数紧跟在名称后面，不换行——名字长时名字自己截断成省略号，
+   不能让分数被挤到下一行去（早期版本用 flex-wrap:wrap 试过，"黄金旧发电厂"这种四字以上
+   的岛名在窄卡片里就会把分数挤下去，改成 nowrap + 名称自己截断） */
+.isl-card-head{ display:flex; align-items:baseline; gap:6px; flex-wrap:nowrap; }
+.isl-card-name{
+  font-size:13.5px; font-weight:900; color:var(--ink);
+  flex:1 1 auto; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
 .isl-card-score{
-  display:inline-block; margin-top:5px; padding:2px 9px; border-radius:9px;
+  display:inline-block; padding:2px 9px; border-radius:9px; flex:0 0 auto;
   background:var(--accent); color:#fff; font-size:12px; font-weight:900;
 }
 /* 标签占比色条：每段宽度按占比，段内不放字，图例在下面单独一行行列出 */
@@ -2149,7 +2163,9 @@
 .isl-bar > i{ display:block; min-width:2px; }
 .isl-bar-tall{ height:20px; }
 .isl-bar-tall > i{ display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:900; color:#fff; }
-.isl-legend{ display:flex; flex-wrap:wrap; gap:4px 10px; margin-top:7px; font-size:10.5px; color:#7a7568; font-weight:700; }
+/* 固定单列纵向列表：换成 flex-direction:column 而不是 flex-wrap，
+   卡片变窄时不会出现"两个标签挤在同一行"这种看起来像两列的错位 */
+.isl-legend{ display:flex; flex-direction:column; gap:3px; margin-top:7px; font-size:10.5px; color:#7a7568; font-weight:700; }
 .isl-legend span{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
 .isl-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
 
@@ -2218,6 +2234,9 @@
 }
 .isl-chip.active{ border-color:var(--ink); }
 .isl-chip.dim{ opacity:.35; }
+/* "批量选择"气泡：复用 .isl-chip 同一套配色，横向铺开、超宽就换行 */
+.isl-batch-bubble{ display:flex; flex-wrap:wrap; gap:6px; max-width:220px; pointer-events:auto; }
+.isl-batch-bubble .isl-chip{ border:2px solid transparent; }
 .isl-tool-row{ display:flex; gap:6px; align-items:center; margin:9px 0 12px; flex-wrap:wrap; }
 .isl-tool-cap{ font-size:11.5px; color:#8a8375; font-weight:800; }
 .isl-tool-btn{
@@ -2794,7 +2813,7 @@
   </div>
 </div>
 <div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
-<div class="ui-fab" id="fabControls">控制<br>参数</div>
+<div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
 <div class="ui-fab" id="fabMore">更多<br>功能</div>
 <div class="box-toast" id="boxToast"></div>
@@ -12637,6 +12656,8 @@ function positionTabIndicator(){
   ind.style.width = (ar.width - pad*2)+'px';
 }
 function switchPage(pageId){
+  // 切去别的主页面时，如果正停在岛屿评分子页的批量选择模式里，顺带退出（同 mfShowSub 离开岛屿评分时的处理）
+  if(pageId!=='page2' && typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandExitBatchMode==='function') islandExitBatchMode();
   if(boxOverlayOpen) closeBoxOverlay();
   document.querySelectorAll('.app-page').forEach(p=>p.classList.toggle('active-page', p.id===pageId));
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active', t.dataset.page===pageId));
@@ -13193,9 +13214,11 @@ function updatePageActionBar(){
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
   const tabbar = document.getElementById('tabBar');
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
-  // v3.19：更多功能页的 hub 和岛屿评分子页都没有可调的计算参数，"控制参数"那颗按钮在这两处收起
+  // v3.19：更多功能页的 hub 没有可调的计算参数，"控制参数"那颗按钮收起；
+  // 岛屿评分子页把这颗按钮借来做"批量选择"入口，不收起（updatePanelBtnLabel 里换文字/行为）
   const page2El = document.getElementById('page2');
-  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi';
+  const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland;
   const ctrlBtn = document.getElementById('pageActControlsBtn');
   if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
@@ -13204,15 +13227,21 @@ function updatePageActionBar(){
 }
 function updateFabVisibility(){ updatePageActionBar(); }
 // 页4(捕捉推荐)里"修改面板"改叫"加入面板"（点开的是选副技能+性格的轻量浮窗，不是完整修改面板）；
-// 盒子里那颗同名按钮/圆形浮窗跟页4无关，不受这里影响
+// 岛屿评分子页把这两颗按钮借去做"批量选择/取消"；盒子里那颗同名按钮/圆形浮窗跟这两处都无关，不受这里影响
 function updatePanelBtnLabel(inBox){
   const page4 = document.getElementById('page4');
   const onPage4 = !inBox && !!(page4 && page4.classList.contains('active-page'));
-  const text = onPage4 ? '加入面板' : '修改面板';
+  const page2El = document.getElementById('page2');
+  const onIsland = !inBox && !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  const ctrlBtn = document.getElementById('pageActControlsBtn');
+  if(ctrlBtn) ctrlBtn.textContent = onIsland ? '批量选择' : '控制参数';
+  const text = onIsland ? '取消' : (onPage4 ? '加入面板' : '修改面板');
   const pageLabel = document.getElementById('pageActPanelLabel');
   if(pageLabel) pageLabel.textContent = text;
+  const panelBtn = document.getElementById('pageActPanelBtn');
+  if(panelBtn) panelBtn.classList.toggle('page-act-btn-off', onIsland && islandBatchTag===null);
   const fabLabel = document.getElementById('fabPanelLabel');
-  if(fabLabel) fabLabel.innerHTML = onPage4 ? '加入<br>面板' : '修改<br>面板';
+  fabLabel && (fabLabel.innerHTML = onIsland ? '取消' : (onPage4 ? '加入<br>面板' : '修改<br>面板'));
 }
 /* 圆形浮窗模式的显隐/位置统一在这里算，updatePageActionBar 与 updateBoxActionBar
    各自改动后都会调一次，两套按钮条切页面/开关盒子/开关模式时都能保持同步。
@@ -13253,11 +13282,16 @@ function updateFabCircles(){
     fabCreate.style.display = 'none';
     fabMore.style.display = 'none';
     const show = !inDetail;
-    // 与按钮条一致：更多功能页的 hub / 岛屿评分子页没有可调参数，控制参数那颗圆也收起
+    // 与按钮条一致：更多功能页的 hub 没有可调参数，控制参数那颗圆收起；
+    // 岛屿评分子页借这颗圆做"批量选择"，不收起
     const page2El = document.getElementById('page2');
-    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi';
+    const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland;
     fabPanel.style.display = show ? 'flex' : 'none';
     fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
+    fabPanel.classList.toggle('ui-fab-off', onIsland && islandBatchTag===null);
+    const fcLabel = document.getElementById('fabControlsLabel');
+    if(fcLabel) fcLabel.innerHTML = onIsland ? '批量<br>选择' : '控制<br>参数';
   }
 }
 function openDashboard(){
@@ -13354,6 +13388,8 @@ function closeDashboard(){
 // （之前气泡是按钮的旁支兄弟节点，各自绑一份同样的 toggle 逻辑，点气泡会因为事件冒泡到
 // 按钮再触发一次，一开一关刚好抵消，界面上看起来毫无反应）
 document.getElementById('pageActPanelBtn').onclick = ()=>{
+  const page2El = document.getElementById('page2');
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -13366,6 +13402,8 @@ document.getElementById('boxActPanelBtn').onclick = ()=>{
 document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEntry();
 // 圆形浮窗模式下的四颗按钮：跟对应吸底按钮条上那颗行为完全一致，只是外观换成圆
 document.getElementById('fabPanel').onclick = ()=>{
+  const page2El = document.getElementById('page2');
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -13399,6 +13437,11 @@ function updatePanelFabFace(){
 function updatePagePanelMonBubble(){
   const bubble = document.getElementById('pagePanelMonBubble');
   if(!bubble) return;
+  // 岛屿评分子页这颗按钮被借去做"取消"，头像气泡跟它语义不搭，强制收起
+  const page2El = document.getElementById('page2');
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){
+    bubble.classList.remove('on'); bubble.innerHTML = ''; return;
+  }
   let rec = null;
   try{ rec = (typeof getSelectedPokemonRecord==='function') ? getSelectedPokemonRecord() : null; }catch(e){ rec = null; }
   const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
@@ -13454,14 +13497,18 @@ function closeControlsDashboard(){
   document.getElementById('controlsDashboardOverlay').style.display = 'none';
   updateControlsFabVisibility();
 }
-document.getElementById('pageActControlsBtn').onclick = ()=>{
+document.getElementById('pageActControlsBtn').onclick = (e)=>{
+  const page2El = document.getElementById('page2');
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandOpenBatchBubble(e.currentTarget); return; }
   // 捕捉推荐页(page4)跟其他三页共用一颗"控制参数"按钮，但内容风马牛不相及——
   // 那三页开的是等级/持有上限那套共享浮窗，这里换成页4专用的"标记已毕业"小浮窗
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
 };
-document.getElementById('fabControls').onclick = ()=>{
+document.getElementById('fabControls').onclick = (e)=>{
+  const page2El = document.getElementById('page2');
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandOpenBatchBubble(e.currentTarget); return; }
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
@@ -15471,6 +15518,8 @@ function boxShowSingleOcrProgress(){
 // updatePageActionBar 这些更早定义的函数会读它，开场那几次调用得躲开 let 的暂时性死区
 var mfSubView = null; // null=hub，'effi' / 'island'
 function mfShowSub(sub){
+  // 离开岛屿评分子页时顺带退出批量选择模式，免得回来时"取消"按钮还亮着但用户早忘了自己在批量模式里
+  if(mfSubView === 'island' && sub !== 'island' && typeof islandExitBatchMode==='function') islandExitBatchMode();
   mfSubView = sub || null;
   const hub = document.getElementById('mfHubView');
   const effi = document.getElementById('mfSubEffi');
@@ -15521,6 +15570,7 @@ let islandPane = 'islands';    // 'islands' / 'tags' / 'box'
 let islandSelId = null;        // 展开中的岛屿
 let islandFilterTag = null;    // null=不筛选，'__none__'=未标记，其余=tagId
 let islandSortBy = 'id';
+let islandBatchTag = null;     // null=未进入批量选择模式，'__none__'=批量清除标签，其余=批量打这个tagId
 const islandPokeById = {};
 ISLAND_POKES.forEach(p=>{ islandPokeById[p[0]] = p; });
 const islandStyleCache = {};   // 'mapId:lvIdx' -> [[pokeId, star], …]
@@ -15673,13 +15723,17 @@ function islandLegendHtml(dist){
 /* ---- 岛屿浏览 ---- */
 function islandRenderGrid(){
   const grid = document.getElementById('islGrid'); if(!grid) return;
-  grid.innerHTML = ISLAND_MAPS.map(m=>{
+  // 按分数从高到低排：分数是动态算出来的（跟着标签走），排序前先各算一次、跟着卡片一起复用，不重复算
+  const items = ISLAND_MAPS.map(m=> ({m, score: islandMapScore(m)})).sort((a,b)=> b.score - a.score);
+  grid.innerHTML = items.map(({m, score})=>{
     const dist = islandMapDist(m);
     return `<div class="isl-card${islandSelId===m.id?' active':''}" data-islmap="${m.id}">
       <img class="isl-card-pic" src="island_assets/${m.p}.png" alt="" loading="lazy">
       <div class="isl-card-body">
-        <div class="isl-card-name">${islEsc(m.n)}</div>
-        <span class="isl-card-score">${islandMapScore(m).toFixed(1)}</span>
+        <div class="isl-card-head">
+          <span class="isl-card-name">${islEsc(m.n)}</span>
+          <span class="isl-card-score">${score.toFixed(1)}</span>
+        </div>
         ${islandBarHtml(dist,false)}
         ${islandLegendHtml(dist)}
       </div>
@@ -15836,7 +15890,10 @@ function islandRenderBox(){
     </div>`;
   }).join('');
   el.querySelectorAll('[data-islpoke]').forEach(item=>{
-    item.onclick = ()=> islandCyclePokeTag(Number(item.getAttribute('data-islpoke')), item);
+    // 批量选择模式下点格子＝直接打成批量目标标签，不再是循环切换
+    item.onclick = islandBatchTag!=null
+      ? ()=> islandApplyBatchTag(Number(item.getAttribute('data-islpoke')), item)
+      : ()=> islandCyclePokeTag(Number(item.getAttribute('data-islpoke')), item);
   });
   document.querySelectorAll('#mfSubIsland [data-islsort]').forEach(b=>{
     b.classList.toggle('active', b.getAttribute('data-islsort') === islandSortBy);
@@ -15852,6 +15909,44 @@ function islandCyclePokeTag(pokeId, itemEl){
   const t = islandTags[idx];
   const badge = itemEl.querySelector('.isl-mon-tag');
   if(badge){ badge.textContent = t.name; badge.style.background = t.color; }
+  islandRenderGrid();
+  islandRenderDetail();
+}
+/* ---- 批量选择：点"批量选择"先弹气泡选目标标签，气泡一关就进入批量模式；
+   批量模式下点格子直接套用这个目标标签（不再循环），跟"取消"配对，逻辑集中放这里 ---- */
+function islandBatchBubbleHtml(){
+  const chip = (id, name, color)=>
+    `<span class="isl-chip" style="background:${color}" data-islbatch="${id}">${islEsc(name)}</span>`;
+  return `<div class="isl-batch-bubble">${chip('__none__','未标记',ISLAND_NO_TAG_COLOR)}${
+    islandTags.map(t=>chip(t.id,t.name,t.color)).join('')}</div>`;
+}
+function islandOpenBatchBubble(anchorEl){
+  capShowBubble(anchorEl, islandBatchBubbleHtml());
+  document.querySelectorAll('#capBubble [data-islbatch]').forEach(c=>{
+    c.onclick = ()=>{
+      islandBatchTag = c.getAttribute('data-islbatch');
+      capHideBubble();
+      updatePageActionBar(); // 刷新按钮条/圆形浮窗上"取消"按钮的灰→亮
+      // 格子的点击行为要从"循环"切到"套用批量标签"——islandRenderBox 绑定 onclick 时是按
+      // 那一刻的 islandBatchTag 值二选一分支的，不重新画一次格子还是走的旧闭包（循环）
+      if(islandPane==='box') islandRenderBox();
+    };
+  });
+}
+function islandExitBatchMode(){
+  if(islandBatchTag === null) return;
+  islandBatchTag = null;
+  capHideBubble();
+  updatePageActionBar();
+  if(islandPane==='box') islandRenderBox(); // 格子的点击行为要切回"循环"，重新绑一次
+}
+function islandApplyBatchTag(pokeId, itemEl){
+  if(islandBatchTag === '__none__') delete islandPokeTags[pokeId];
+  else islandPokeTags[pokeId] = islandBatchTag;
+  islandSaveState();
+  const t = islandTagOf(pokeId);
+  const badge = itemEl.querySelector('.isl-mon-tag');
+  if(badge){ badge.textContent = t?t.name:'未标记'; badge.style.background = t?t.color:ISLAND_NO_TAG_COLOR; }
   islandRenderGrid();
   islandRenderDetail();
 }
