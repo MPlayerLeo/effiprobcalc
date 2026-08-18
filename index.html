@@ -1773,6 +1773,10 @@
   .cap-cchart .rec-red, .cap-cchart .cap-combo-cap.rec-red{ background:#f6c6c0; border-color:#a52818; color:#7a1c10; }
   .cap-av-baby-col .cap-combo-cap{ margin-top:0; background:transparent; border-color:transparent; }
   .cap-av-baby-col .cap-combo-cap img{ width:10px; height:10px; flex-shrink:0; transform:scale(1.2); }
+  /* aac/abc统一按恐怖/邪修的C位组合处理后，中间(30级解锁槽)到底是哪个食材已经不重要，扁平"？"占位替代具体图标 */
+  .cap-combo-mid-unknown{ display:inline-flex; align-items:center; justify-content:center; width:11px; height:11px; font-size:9px; font-weight:900; line-height:1; color:#6a6555; background:#e2ddce; border-radius:3px; flex-shrink:0; }
+  .cap-row-ing-seq .cap-combo-mid-unknown{ width:10px; height:10px; font-size:8px; transform:scale(1.2); }
+  .cap-av-baby-col .cap-combo-mid-unknown{ width:10px; height:10px; font-size:8px; transform:scale(1.2); }
   .cap-bubble{ position:absolute; z-index:1000; background:var(--panel); color:var(--ink); border:2px solid var(--accent); font-size:12px; font-weight:700; line-height:1.5; padding:7px 11px; border-radius:10px; box-shadow:0 4px 16px rgba(0,0,0,.28); pointer-events:none; text-align:center; }
   /* 跳转气泡要能点，覆盖外层 .cap-bubble 的 pointer-events:none（子元素显式设置会盖过继承值） */
   .cap-jump-bubble{ display:flex; flex-direction:column; gap:6px; pointer-events:auto; min-width:96px; }
@@ -11705,10 +11709,11 @@ function capRowHtml(rec, rank, maxVal, line2Html){
     : capGradSpecies.has(x.dex));
   // 恐怖：只有食材型的 aac/abc 组合行才可能命中；邪修：食材型认 aaa/abb/aac/abc 四种组合，功能型食材精选按种族整体判定。
   // 优先级 恐怖 > 毕业 > 邪修（跟计算优先级一致，见 computeCapGraduationSets 的注释）
-  const terror = !graduated && userPrefs.capGradMarkOn && capState.type==='food'
-    && (reco.combo==='aac' || reco.combo==='abc') && capTerrorFoodByCombo[reco.combo].has(x.dex);
+  // 这里改用 capFoodComboTerror/capFoodComboXiexiu（内部已把 aac/abc 合并判定），不再直接按 reco.combo
+  // 精确匹配——reco.combo 对没进官方推荐/可用表的C位组合会固定回落成'aac'，会把真实是abc组合的记录漏掉
+  const terror = !graduated && userPrefs.capGradMarkOn && capState.type==='food' && capFoodComboTerror(x, capState.subFood);
   const xiexiu = !graduated && !terror && userPrefs.capGradMarkOn && (capState.type==='food'
-    ? (capXiexiuFoodByCombo[reco.combo] && capXiexiuFoodByCombo[reco.combo].has(x.dex))
+    ? capFoodComboXiexiu(x, capState.subFood)
     : (capState.type==='skill' && capXiexiuSkillSpecies.has(x.dex)));
   const recoColHtml = terror
     ? `<span class="cap-reco cap-reco-terror">完美</span>`
@@ -11766,8 +11771,14 @@ function capBuildFoodChart(){
 function capComboIconsHtml(x, ingName){
   const reco = capFoodReco(x, ingName);
   const letterIng = {a:x.ingA, b:x.ingB, c:x.ingC};
+  // 邪修/恐怖统一按C位食材(aac/abc二选一)判定后，中间那格(30级解锁的第二个食材栏)到底是a还是b已经不重要
+  // （两种组合共用同一份标记），具体食材图标改用扁平"？"占位，避免显示成某个具体食材图标反而误导
+  const ambiguousMid = ingName===x.ingC && userPrefs.capGradMarkOn && (capFoodComboTerror(x, ingName) || capFoodComboXiexiu(x, ingName));
   let icons='';
-  reco.combo.split('').forEach(ltr=>{ const ing=letterIng[ltr]; const ic=ing?ING_ICONS[ing]:null; icons += ic?`<img src="${ic}">`:''; });
+  reco.combo.split('').forEach((ltr, i)=>{
+    if(ambiguousMid && i===1){ icons += '<span class="cap-combo-mid-unknown">？</span>'; return; }
+    const ing=letterIng[ltr]; const ic=ing?ING_ICONS[ing]:null; icons += ic?`<img src="${ic}">`:'';
+  });
   return `<span class="cap-combo-cap rec-${reco.level}">${icons}</span>`;
 }
 // 排名行头像区的食材序列胶囊：食材型显示当前参与排名用的那个字母序列（复用 capComboIconsHtml），
