@@ -7123,10 +7123,10 @@ async function pushCloudData(){
   await authApi('/api/data', {method:'PUT', body:cloudPayload(), auth:true});
 }
 let cloudPushTimer = null;
-function scheduleCloudPush(){
+function scheduleCloudPush(delayMs){
   if(!authState || !authState.token) return;
   clearTimeout(cloudPushTimer);
-  cloudPushTimer = setTimeout(()=>{ pushCloudData().catch(()=>{}); }, 1500);
+  cloudPushTimer = setTimeout(()=>{ pushCloudData().catch(()=>{}); }, delayMs || 1500);
 }
 
 /* v3.18：v3.17 的 updateBoxAuthUI / updateBoxFabAuthOffset 一并撤掉。
@@ -15560,7 +15560,7 @@ function islandSaveState(){
     localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(islandTags));
     localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(islandPokeTags));
   }catch(e){}
-  scheduleCloudPush(); // 标签定义/打标改动也跟着上云，跟 saveUserPrefs() 一个套路（未登录时是空操作）
+  scheduleCloudPush(5000); // 标签定义/打标改动也跟着上云；delay 拉长到 5s——这里经常是连续快速点几十只，防抖窗口比盒子/设置项（1.5s）更长一些（未登录时是空操作）
 }
 /* ---- 岛屿标签跟账号走：直接复用已有的 prefs_json 云端字段，塞一个 island 子字段进去，
    不用另开数据库列、不用改后端。合并策略跟盒子一样走并集、不整体覆盖——
