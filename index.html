@@ -770,8 +770,11 @@
      昵称 white-space:nowrap 的最小内容宽度就是整行文字的宽度，之前没写这条，
      长昵称会把格子（进而整行）撑爆，下面 .box-grid-label 的省略号截断因此从没真正生效过 */
   .box-grid-item{ position:relative; display:flex; flex-direction:column; align-items:center; min-width:0; cursor:pointer; user-select:none; -webkit-touch-callout:none; }
-  /* 批量删除态下按住格子起手是"滑动多选"手势，不能让触屏把这次按住识别成页面滚动 */
-  .box-grid.box-batch-mode .box-grid-item{ touch-action:none; }
+  /* 多选态下按住格子 0.25s 之后才算"滑动多选"，头 0.25s 里页面必须还能正常上下滚
+     （原来这里是 touch-action:none，等于多选态一开整页就滑不动了，想往下翻看看还剩哪几只，
+     手一划就把沿途的全勾上）。所以这里只挡横向，纵向交给浏览器；真正进入拖选之后
+     由 JS 那个非被动的 touchmove preventDefault 接管，滑过格子时页面就不跟着滚了 */
+  .box-grid.box-batch-mode .box-grid-item{ touch-action:pan-y; }
   /* 每格的画面区是一个固定比例的框（按素材里最大的那张 gif braviary 102×110 定的 51:55），
      宽度随屏幕走、高度由比例算出，所以同一行里每个格子的下沿一定在同一条水平线上。
      gif/png 一律绝对定位贴着这个框的下沿居中——绝对定位不参与父级布局，
@@ -2323,11 +2326,6 @@
 
 .plan-list{ display:flex; flex-direction:column; gap:8px; }
 .plan-empty{ text-align:center; color:#9a9484; font-size:12.5px; font-weight:700; padding:26px 10px; line-height:1.7; }
-.plan-row{
-  display:flex; align-items:stretch; gap:0; background:var(--panel); border:1px solid var(--line);
-  border-radius:11px; overflow:hidden; cursor:pointer;
-}
-.plan-row.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
 /* 标签位：默认空白的一条窄竖条，点它弹标签气泡（点条目其余部分是展开编辑弹窗，两个热区分开） */
 .plan-tagslot{
   flex:0 0 30px; display:flex; align-items:center; justify-content:center;
@@ -2346,23 +2344,26 @@
   overflow:hidden;
 }
 .plan-tagslot-empty{ font-size:15px; font-weight:900; color:#b8b2a2; }
-.plan-body{ flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:9px; padding:8px 10px; }
-.plan-av{ flex:0 0 42px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
-.plan-av img{ width:100%; height:100%; object-fit:contain; }
+.plan-body{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:2px; padding:8px 8px 6px; }
+/* 标题行：昵称 + 种族，压在箭头图上方。箭头图本身是左右对称的，标题左对齐会显得整条偏一边，
+   所以跟着一起居中。 */
+.plan-head{ display:flex; align-items:baseline; justify-content:center; gap:5px; min-width:0; }
 .plan-av-q{ font-size:17px; font-weight:900; color:#c3bdae; }
-.plan-names{ flex:1 1 auto; min-width:0; }
-.plan-nick{ font-size:13.5px; font-weight:900; color:var(--accent-dk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.plan-species{ font-size:10.5px; font-weight:700; color:#7a7568; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
+.plan-nick{ font-size:13.5px; font-weight:900; color:var(--accent-dk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
+.plan-species{ font-size:10.5px; font-weight:700; color:#7a7568; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 .plan-dup{
-  display:inline-block; margin-left:5px; padding:0 5px; border-radius:6px; vertical-align:1px;
+  flex:0 0 auto; padding:0 5px; border-radius:6px;
   background:#e2ddcd; color:#7a7568; font-size:9px; font-weight:900;
 }
-.plan-lv{ flex:0 0 auto; font-size:12px; font-weight:900; color:var(--accent); white-space:nowrap; }
+/* 勾选圈绝对定位在整条右上角：标题是居中的，把圈当普通 flex 项塞进标题行会把标题挤偏 */
 .plan-check{
-  flex:0 0 20px; width:20px; height:20px; border-radius:50%; border:2px solid var(--line);
+  position:absolute; right:7px; top:7px; z-index:2;
+  width:20px; height:20px; border-radius:50%; border:2px solid var(--line); background:var(--panel);
   display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; color:#fff;
 }
 .plan-check.on{ background:var(--accent); border-color:var(--accent); }
+/* 多选态下给标题两边同样留出圈的位置：只留右边会把居中的标题抹歪 */
+.plan-rowwrap.plan-picking .plan-head{ padding:0 22px; }
 
 /* 标签选择气泡：贴着标签位弹出 */
 .plan-tagpop{
@@ -2397,12 +2398,7 @@
   font-size:11px; font-weight:800; color:var(--accent-dk); background:#efe9f6;
   border-radius:8px; padding:6px 10px; margin:-4px 0 10px;
 }
-/* 条目上的结果条：糖果 / 万能糖 / 碎片，图标当单位（阶段4 换成真图标）
-   整条居中——三组数字长度差很多（碎片能到 7 位），左对齐时每条参差不齐，居中更整齐 */
-.plan-res{
-  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
-  border-top:1px dashed var(--line); padding:5px 10px 7px 10px; font-size:11.5px; font-weight:800;
-}
+/* 资源数字：糖果 / 万能糖 / 碎片，图标当单位。列表条目和编辑弹窗共用这一套 class */
 .plan-res-item{ display:inline-flex; align-items:center; gap:3px; color:var(--ink); }
 .plan-res-ic{ width:14px; height:14px; flex:0 0 auto; object-fit:contain; vertical-align:-2px; }
 /* 万能糖裁完透明边后图案仍只占画布的 0.84（另外两张是宝可梦糖果 1.0 / 梦碎 0.82×0.71），
@@ -2414,10 +2410,12 @@
    （auto 边距优先级高于对齐），所以改成跟着一起居中排 */
 .plan-res-boost{ display:inline-flex; align-items:center; gap:2px; color:var(--accent); font-weight:900; }
 .plan-up-ic{ width:10px; height:10px; flex:0 0 auto; fill:currentColor; }
-.plan-rowwrap{ display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line);
-  border-radius:11px; overflow:hidden; }
+/* 一条 = 左边一根通高的标签竖条 + 右边「标题 + 箭头图」。箭头图原本只在编辑弹窗里出现，
+   现在直接当条目本体，列表和弹窗共用 planArrowHtml() / .plan-arrow-wrap 一套东西。
+   position:relative 是给多选态的勾选圈做定位参系用的。 */
+.plan-rowwrap{ position:relative; display:flex; align-items:stretch; background:var(--panel);
+  border:1px solid var(--line); border-radius:11px; overflow:hidden; cursor:pointer; }
 .plan-rowwrap.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
-.plan-rowwrap .plan-row{ border:none; border-radius:0; background:transparent; }
 
 /* 编辑弹窗 */
 .plan-modal-box{ width:min(560px, 94vw); max-height:88vh; overflow:auto; }
@@ -2441,12 +2439,14 @@
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .plan-evo-opt-cost{ font-size:8.5px; font-weight:800; color:var(--accent); }
 
-/* 结果区：左现状 → 箭头 → 右目标 */
+/* 结果区：左现状 → 箭头 → 右目标。列表条目和编辑弹窗用的是同一块，差别只在 .plan-arrow-mini。
+   #planArrowWrap 是弹窗里的外壳，本身原来就长这样，现在内容自带一层，外壳退成纯容器。 */
 .plan-arrow-wrap{ display:flex; align-items:center; gap:8px; background:var(--paper);
   border:1px solid var(--line); border-radius:11px; padding:11px 10px; }
+#planArrowWrap{ display:block; background:transparent; border:none; border-radius:0; padding:0; }
 .plan-side{ flex:0 0 76px; text-align:center; }
 .plan-side img{ width:52px; height:52px; object-fit:contain; }
-.plan-side-q{ font-size:20px; font-weight:900; color:#c3bdae; line-height:52px; }
+.plan-side .plan-av-q{ display:block; font-size:20px; line-height:52px; }
 .plan-side-lv{ font-size:11.5px; font-weight:900; color:var(--accent-dk); }
 .plan-mid{ flex:1 1 auto; min-width:0; text-align:center; }
 .plan-mid-top, .plan-mid-bot{ display:flex; align-items:center; justify-content:center; gap:10px;
@@ -2457,6 +2457,13 @@
 .plan-arrow-line::after{ content:''; position:absolute; right:0; top:1px;
   border-left:9px solid var(--accent); border-top:5px solid transparent; border-bottom:5px solid transparent; }
 .plan-modal-note{ font-size:10.5px; color:#7a7568; font-weight:700; margin-top:8px; line-height:1.6; }
+/* 列表里的那份要窄一号：手机上一条不能太高，两侧头像和内边距都收一档；
+   卡片本身已经有框了，再套一层底色+边框会变成「框套框」，所以这里透明无边。 */
+.plan-arrow-mini{ padding:2px 2px 0; gap:4px; background:transparent; border:none; border-radius:0; }
+.plan-arrow-mini .plan-side{ flex:0 0 56px; }
+.plan-arrow-mini .plan-side img{ width:42px; height:42px; }
+.plan-arrow-mini .plan-side .plan-av-q{ line-height:42px; }
+.plan-arrow-mini .plan-mid-top, .plan-arrow-mini .plan-mid-bot{ font-size:12px; gap:8px; }
 </style>
 
 </head>
@@ -14103,6 +14110,12 @@ let boxSelectedIds = new Set();
 let boxActiveBubbleEntryId = null;
 let boxDragSelectMode = null;
 let boxDragActive = false;
+/* 滑动多选的"起手门槛"：按下去不立刻开拖，先按住 BOX_DRAG_HOLD_MS，这段时间里页面照常滚。
+   按满了才 armed（boxDragActive=true），之后手指划过哪个格子就勾哪个；
+   没按满就抬手 = 普通点一下，照样切换这一只。 */
+const BOX_DRAG_HOLD_MS = 250;
+const BOX_DRAG_MOVE_TOL = 10;   // 等待期间手指挪动超过这个距离，就当用户是要滚页面，直接撤掉待触发的拖选
+let boxDragArmTimer = null, boxDragPending = null;
 
 function boxFilteredEntries(){
   return boxApplySort(boxApplyFilters(boxData));
@@ -14230,17 +14243,39 @@ function boxApplySelectVerdict(id, itemEl){
   const cb = itemEl.querySelector('.box-grid-checkbox');
   if(cb) cb.classList.toggle('checked', boxSelectedIds.has(id));
 }
-function boxGridItemPointerDown(e, id, itemEl){
-  if(!boxSelectMode) return;
-  boxDragActive = true;
+function boxCancelDragArm(){
+  if(boxDragArmTimer){ clearTimeout(boxDragArmTimer); boxDragArmTimer = null; }
+  boxDragPending = null;
+}
+function boxToggleOne(id, itemEl){
   boxDragSelectMode = boxSelectedIds.has(id) ? 'deselect' : 'select';
   boxApplySelectVerdict(id, itemEl);
+}
+function boxGridItemPointerDown(e, id, itemEl){
+  if(!boxSelectMode) return;
+  boxCancelDragArm();
+  boxDragPending = {id, itemEl, x:e.clientX, y:e.clientY};
+  boxDragArmTimer = setTimeout(()=>{
+    boxDragArmTimer = null;
+    const p = boxDragPending; boxDragPending = null;
+    // 这 0.25s 里格子可能已经被重渲染掉了（比如筛选变了），isConnected 挡一下
+    if(!p || !boxSelectMode || !p.itemEl.isConnected) return;
+    boxDragActive = true;                    // armed：从这一刻起 touchmove 被吃掉，页面不再滚
+    boxToggleOne(p.id, p.itemEl);
+  }, BOX_DRAG_HOLD_MS);
 }
 // v3.18：改用 elementFromPoint 在 window 级 pointermove 上做命中测试，而不是依赖每个格子自己的
 // pointerenter——触屏在 pointerdown 命中的元素上会隐式发生 pointer capture，导致手指划过的其余
 // 格子永远收不到 pointerenter，滑动多选此前实际上只有鼠标能用，触屏完全无效
 function boxGridDragMove(e){
-  if(!boxSelectMode || !boxDragActive || !boxDragSelectMode) return;
+  if(!boxSelectMode) return;
+  if(boxDragPending){
+    // 还在等那 0.25s：手指挪开说明这一下是在滚页面，不是要拖选
+    if(Math.abs(e.clientX - boxDragPending.x) > BOX_DRAG_MOVE_TOL ||
+       Math.abs(e.clientY - boxDragPending.y) > BOX_DRAG_MOVE_TOL) boxCancelDragArm();
+    return;
+  }
+  if(!boxDragActive || !boxDragSelectMode) return;
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const itemEl = el && el.closest ? el.closest('.box-grid-item') : null;
   if(!itemEl) return;
@@ -14249,7 +14284,23 @@ function boxGridDragMove(e){
   boxApplySelectVerdict(id, itemEl);
 }
 window.addEventListener('pointermove', boxGridDragMove);
-window.addEventListener('pointerup', ()=>{ boxDragActive = false; boxDragSelectMode = null; });
+window.addEventListener('pointerup', ()=>{
+  // 没按满 0.25s 就抬手 = 普通点一下。多选态下的"单点选中"现在走的就是这条路
+  // （以前是 pointerdown 里直接选的），所以 boxGridItemClick 那边照旧什么都不做
+  const p = boxDragPending;
+  boxCancelDragArm();
+  if(p && boxSelectMode && p.itemEl.isConnected) boxToggleOne(p.id, p.itemEl);
+  boxDragActive = false; boxDragSelectMode = null;
+});
+// 浏览器判定这一下是滚动时会发 pointercancel 并停发 pointermove：这种情况纯粹撤销，不能当成点击
+window.addEventListener('pointercancel', ()=>{
+  boxCancelDragArm();
+  boxDragActive = false; boxDragSelectMode = null;
+});
+/* armed 之后才吃 touchmove。格子的 touch-action 已经放开成 pan-y，
+   头 0.25s 页面能正常滚；armed 时手指还没动过，所以这里 preventDefault 一定赶得上，
+   浏览器不会已经开始滚了 */
+window.addEventListener('touchmove', (e)=>{ if(boxDragActive) e.preventDefault(); }, {passive:false});
 
 // 无筛选时只显示盒子总数；有筛选时从上到下显示"当前筛出的个数－短横线－盒子总数"，
 // 让用户一眼看出筛选前后差了多少，不用去数网格里的格子
@@ -15049,6 +15100,8 @@ function boxEnterSelectMode(mode){
   renderBoxPage();
 }
 function boxExitSelectMode(){
+  boxCancelDragArm();          // 手还按着就点了「取消」的话，别让计时器过一会儿再补勾一只
+  boxDragActive = false; boxDragSelectMode = null;
   boxSelectMode = null;
   boxSelectedIds = new Set();
   boxSetSelectBarVisible();
@@ -16939,22 +16992,37 @@ function planPortraitHtml(entry, dexOverride){
   const b64 = pair ? (entry.shiny ? pair[1] : pair[0]) : null;
   return b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<span class="plan-av-q">?</span>`;
 }
-function planResHtml(r, e){
-  if(!r) return '';
+/* 「现状 → 目标」箭头图。原来只有编辑弹窗用，现在列表条目本体也是它，两边共用同一份，
+   免得同一张图在两处慢慢长歪。mini = 列表版（窄一号）。 */
+function planArrowHtml(r, e, mini){
+  const curLv = levelRealOf(e);
   // 「还没填目标等级」和「填了但已经达成」是两回事，提示语不能混用
-  if(e && (e.targetLevel === null || e.targetLevel === undefined || e.targetLevel === '')){
-    return `<div class="plan-res"><span class="plan-res-todo">点开填写目标等级后显示所需资源</span></div>`;
+  const noTgt = (e.targetLevel === null || e.targetLevel === undefined || e.targetLevel === '');
+  const tgtLv = noTgt ? curLv : planClampLevel(e.targetLevel);
+  const rightDex = e.evoDex || e.dex;
+  const done = !!r && r.needCandy === 0 && r.shards === 0;
+  let top = '', bot = '';
+  if(noTgt)      top = `<span class="plan-res-todo">未设目标等级</span>`;
+  else if(done)  top = `<span class="plan-res-done">已达成</span>`;
+  else if(r){
+    top = `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
+          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`;
+    // 增强额度只挂在列表上；弹窗底下的 planModalNote 已经拿文字说过一遍了
+    bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
+          (mini && r.boosted > 0 ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '');
   }
-  if(r.needCandy === 0 && r.shards === 0){
-    return `<div class="plan-res"><span class="plan-res-done">已达成</span></div>`;
-  }
-  const boostTag = r.boosted > 0
-    ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '';
-  return `<div class="plan-res">`+
-    `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
-    `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`+
-    `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
-    boostTag+
+  return `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
+    `<div class="plan-side">`+
+      `<div>${planPortraitHtml(e)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
+    `</div>`+
+    `<div class="plan-mid">`+
+      `<div class="plan-mid-top">${top}</div>`+
+      `<div class="plan-arrow-line"></div>`+
+      `<div class="plan-mid-bot">${bot}</div>`+
+    `</div>`+
+    `<div class="plan-side">`+
+      `<div>${planPortraitHtml(e, rightDex)}</div><div class="plan-side-lv">Lv.${tgtLv}</div>`+
+    `</div>`+
   `</div>`;
 }
 function planRenderBoostBar(){
@@ -17003,30 +17071,30 @@ function planRenderList(){
     const r = all[entry.id];
     const wrap = document.createElement('div');
     const picking = planRemoveMode || planSumMode;
-    wrap.className = 'plan-rowwrap' + (picking && planPickedIds.has(entry.id) ? ' plan-row-picked' : '');
+    wrap.className = 'plan-rowwrap' + (picking ? ' plan-picking' : '') +
+      (picking && planPickedIds.has(entry.id) ? ' plan-row-picked' : '');
     wrap.innerHTML =
-      `<div class="plan-row">`+
-        `<div class="plan-tagslot" style="background:${t?planEsc(t.color):'#e9e4d6'}">`+
-          (t ? `<span class="plan-tagslot-txt">${planEsc(t.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
-        `</div>`+
-        `<div class="plan-body">`+
-          `<div class="plan-av">${planPortraitHtml(entry)}</div>`+
-          `<div class="plan-names">`+
-            `<div class="plan-nick">${planEsc(entry.nickname)}${dup.has(entry.id)?'<span class="plan-dup">重复</span>':''}</div>`+
-            `<div class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></div>`+
-          `</div>`+
-          `<div class="plan-lv">Lv.${levelRealOf(entry)}${(entry.targetLevel && planClampLevel(entry.targetLevel) > levelRealOf(entry)) ? (' → '+planClampLevel(entry.targetLevel)) : ''}</div>`+
-          (picking ? `<div class="plan-check${planPickedIds.has(entry.id)?' on':''}">${planPickedIds.has(entry.id)?'✓':''}</div>` : '')+
-        `</div>`+
+      `<div class="plan-tagslot" style="background:${t?planEsc(t.color):'#e9e4d6'}">`+
+        (t ? `<span class="plan-tagslot-txt">${planEsc(t.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
       `</div>`+
-      planResHtml(r, entry);
-    // 两个热区分开：标签位弹标签气泡，其余部分是勾选/展开编辑
+      `<div class="plan-body">`+
+        `<div class="plan-head">`+
+          `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
+          (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
+          `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+        `</div>`+
+        planArrowHtml(r, entry, true)+
+      `</div>`+
+      (picking ? `<div class="plan-check${planPickedIds.has(entry.id)?' on':''}">${planPickedIds.has(entry.id)?'✓':''}</div>` : '');
+    /* 两个热区：正常态下标签竖条弹标签气泡、其余部分开编辑弹窗；多选态下标签条不拦截，
+       让它冒泡上去跟整条一样当勾选用。勾选圈现在是 wrap 的直接子节点（绝对定位），
+       所以点击挂在 wrap 上而不是 .plan-body，否则点圈本身不生效。 */
     wrap.querySelector('.plan-tagslot').onclick = (ev)=>{
+      if(picking) return;
       ev.stopPropagation();
-      if(picking) return;                     // 多选态下整行只做勾选，别让标签气泡插一脚
       planOpenTagPop(entry, ev.currentTarget);
     };
-    wrap.querySelector('.plan-body').onclick = ()=>{
+    wrap.onclick = ()=>{
       if(picking){
         planPickedIds.has(entry.id) ? planPickedIds.delete(entry.id) : planPickedIds.add(entry.id);
         planRenderList();
@@ -17122,28 +17190,7 @@ function planEditRefresh(e){
   // 弹窗里这一只按"全表顺序算到它为止"的口径取增强额度，跟列表卡片上的数字保持一致
   const all = planComputeAll();
   const r = all[e.id] || planComputeEntry(e, planBoostCtx(), 0);
-  const curLv = levelRealOf(e);
-  const tgtLv = e.targetLevel ? planClampLevel(e.targetLevel) : curLv;
-  const rightDex = e.evoDex || e.dex;
-  const nothing = r.needCandy===0 && r.shards===0;
-  wrap.innerHTML =
-    `<div class="plan-side">`+
-      `<div>${planPortraitHtml(e)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
-    `</div>`+
-    `<div class="plan-mid">`+
-      `<div class="plan-mid-top">`+
-        (nothing ? `<span class="plan-res-done">已达成</span>` :
-          `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
-          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`)+
-      `</div>`+
-      `<div class="plan-arrow-line"></div>`+
-      `<div class="plan-mid-bot">`+
-        (nothing ? '' : `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`)+
-      `</div>`+
-    `</div>`+
-    `<div class="plan-side">`+
-      `<div>${planPortraitHtml(e, rightDex)}</div><div class="plan-side-lv">Lv.${tgtLv}</div>`+
-    `</div>`;
+  wrap.innerHTML = planArrowHtml(r, e, false);
   const note = document.getElementById('planModalNote');
   if(note){
     const bits = [];
