@@ -281,6 +281,17 @@
   .segbtn{border:1.5px solid var(--accent); background:#fff; color:var(--accent); padding:6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:600;}
   .segbtn.selected{background:var(--accent); color:#fff;}
   .segbtn.dashed{border-style:dashed;}
+  /* v3.20 自定义等级：平时是一颗写着「—」的虚线档位按钮，点开就地变成输入框。
+     min-width 跟两位数字的档位按钮对齐，免得点开/收起时整排按钮左右跳动 */
+  .segbtn.seg-lv-custom{ border-style:dashed; box-sizing:border-box; width:34px; text-align:center; padding-left:6px; padding-right:6px; }
+  .segbtn.seg-lv-custom.selected{ border-style:solid; }
+  /* 输入态：按钮自身的 padding 一点不动，输入框零内边距、宽度正好补满「—」的位置，
+     这样点开/收起时整排按钮宽高纹丝不动（之前输入框自带 padding 会把整排顶宽 10px、顶高 1px） */
+  .segbtn.seg-lv-custom.seg-lv-editing{ display:inline-flex; align-items:center; justify-content:center; }
+  .seg-lv-input{
+    width:100%; min-width:0; flex:1 1 auto; border:none; outline:none; background:transparent; text-align:center;
+    font-size:12.5px; font-weight:600; font-family:inherit; color:inherit; padding:0; line-height:1.2; -moz-appearance:textfield;
+  }
 
   .lockbtn{border:1.5px solid var(--gold-bd); background:var(--gold-bg); color:var(--gold-tx); padding:6px 12px; border-radius:7px; font-size:12.5px; cursor:pointer; font-weight:700;}
   .lockbtn.selected{outline:3px solid var(--accent-dk); outline-offset:1px;}
@@ -505,6 +516,20 @@
   /* 岛屿评分子页借用这两颗按钮做"批量选择/取消"：未进入批量模式时"取消"是灰的，
      跟圆形浮窗模式下 .ui-fab-off 是同一个灰色，保持两套 UI 视觉一致 */
   .page-act-btn.page-act-btn-off{ background:#c7c1af !important; cursor:default; }
+  /* v3.20 培养计划：移出培养多选态下页脚两颗变红/灰 */
+  .page-act-btn.page-act-btn-danger{ background:#c1443a !important; }
+  .page-act-btn.page-act-btn-plain{ background:#8d8776 !important; }
+  /* 资源总计浮层：贴在页脚按钮条正上方 */
+  .plan-sum-bar{
+    display:none; position:fixed; left:0; right:0; bottom:110px; z-index:1089;
+    justify-content:center; gap:14px; flex-wrap:wrap;
+    padding:8px 12px; background:var(--panel); border-top:1px solid var(--line);
+    box-shadow:0 -4px 14px rgba(0,0,0,.07);
+    font-size:13.5px; font-weight:900; color:var(--ink);
+  }
+  .plan-sum-bar.on{ display:flex; }
+  .plan-sum-item{ display:inline-flex; align-items:center; gap:4px; }
+  .plan-sum-n{ font-size:11px; font-weight:800; color:#7a7568; }
   .page-act-btn.page-act-btn-off:hover{ filter:none; }
   /* 「修改面板」头像气泡：与盒子里那颗同源，挂在按钮内部（position:relative 就是按钮自己），
      贴着屏幕右边缘上方，常驻不交替。点击气泡的事件会冒泡到按钮本身，不用再单独绑一次 */
@@ -805,6 +830,10 @@
   .box-batch-selectall-btn{ background:#3a8fae; color:#fff; }
   .box-batch-delete-btn{ background:#c1443a; color:#fff; }
   .box-batch-level-btn{ background:var(--accent); color:#fff; }
+  /* v3.20 批量改等级的自定义档：底色留白+虚线边，跟四颗实心档位按钮区分开 */
+  .box-batch-level-custom{ background:#fff; color:var(--accent); border:1.5px dashed var(--accent) !important; flex:0 0 44px; }
+  .box-batch-level-input{ width:100%; border:none; outline:none; background:transparent; text-align:center;
+    font-size:14px; font-weight:800; font-family:inherit; color:var(--accent); padding:0; }
   .box-batch-species-btn{ background:#3f9a52; color:#fff; }
 
   /* ============ 宝可梦盒：批量修改种族浮窗 ============ */
@@ -924,6 +953,7 @@
   .box-bub-act-edit{ background:#3f9a52; }
   .box-bub-act-output{ background:var(--gold-bg); color:var(--gold-tx); }
   .box-bub-act-delete{ background:#c1443a; }
+  .box-bub-act-plan{ background:var(--accent); }
 
   /* ============ 宝可梦盒：筛选器气泡浮窗 ============ */
   /* 挂在 body 上的固定层：盒子面板自己有 overflow:hidden，气泡放里面会被裁掉 */
@@ -2268,6 +2298,142 @@
 .isl-modal-cancel{ background:var(--paper); border:1px solid var(--line); color:var(--ink); }
 .isl-modal-del{ flex:0 0 30%; background:#c1443a; color:#fff; }
 .isl-modal-save{ background:var(--accent); color:#fff; }
+
+/* ============ v3.20 培养计划 ============
+   分栏/标签管理/弹窗整体沿用岛屿评分那套观感（.isl-tabs / .isl-modal-* 直接复用），
+   只有"条目列表"是本功能独有的版式：左边一列标签位，右边头像+昵称+种族+等级 */
+.plan-hint{ font-size:11.5px; color:#7a7568; font-weight:700; line-height:1.55; margin:2px 2px 10px; }
+.plan-tool-row{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; margin-bottom:10px; }
+.plan-tool-btn{
+  font-family:inherit; cursor:pointer; border:1.5px solid var(--accent); background:#fff; color:var(--accent);
+  border-radius:8px; padding:6px 11px; font-size:12.5px; font-weight:800;
+}
+.plan-tool-btn.on{ background:var(--accent); color:#fff; }
+.plan-tool-btn.plan-tool-danger{ border-color:#c1443a; color:#c1443a; }
+.plan-tool-btn.plan-tool-danger.on{ background:#c1443a; color:#fff; }
+.plan-count{ margin-left:auto; font-size:11px; font-weight:800; color:#7a7568; }
+
+.plan-list{ display:flex; flex-direction:column; gap:8px; }
+.plan-empty{ text-align:center; color:#9a9484; font-size:12.5px; font-weight:700; padding:26px 10px; line-height:1.7; }
+.plan-row{
+  display:flex; align-items:stretch; gap:0; background:var(--panel); border:1px solid var(--line);
+  border-radius:11px; overflow:hidden; cursor:pointer;
+}
+.plan-row.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
+/* 标签位：默认空白的一条窄竖条，点它弹标签气泡（点条目其余部分是展开编辑弹窗，两个热区分开） */
+.plan-tagslot{
+  flex:0 0 30px; display:flex; align-items:center; justify-content:center;
+  background:#e9e4d6; border-right:1px solid var(--line); position:relative;
+}
+.plan-tagslot-txt{
+  font-size:10px; font-weight:900; color:#fff; writing-mode:vertical-rl; text-orientation:upright;
+  letter-spacing:1px; max-height:100%; overflow:hidden; padding:4px 0;
+}
+.plan-tagslot-empty{ font-size:15px; font-weight:900; color:#b8b2a2; }
+.plan-body{ flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:9px; padding:8px 10px; }
+.plan-av{ flex:0 0 42px; width:42px; height:42px; display:flex; align-items:center; justify-content:center; }
+.plan-av img{ width:100%; height:100%; object-fit:contain; }
+.plan-av-q{ font-size:17px; font-weight:900; color:#c3bdae; }
+.plan-names{ flex:1 1 auto; min-width:0; }
+.plan-nick{ font-size:13.5px; font-weight:900; color:var(--accent-dk); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.plan-species{ font-size:10.5px; font-weight:700; color:#7a7568; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; margin-top:1px; }
+.plan-dup{
+  display:inline-block; margin-left:5px; padding:0 5px; border-radius:6px; vertical-align:1px;
+  background:#e2ddcd; color:#7a7568; font-size:9px; font-weight:900;
+}
+.plan-lv{ flex:0 0 auto; font-size:12px; font-weight:900; color:var(--accent); white-space:nowrap; }
+.plan-check{
+  flex:0 0 20px; width:20px; height:20px; border-radius:50%; border:2px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:900; color:#fff;
+}
+.plan-check.on{ background:var(--accent); border-color:var(--accent); }
+
+/* 标签选择气泡：贴着标签位弹出 */
+.plan-tagpop{
+  position:fixed; z-index:1400; background:var(--panel); border:1px solid var(--line); border-radius:11px;
+  box-shadow:0 10px 26px rgba(0,0,0,.18); padding:9px; display:flex; flex-direction:column; gap:6px;
+  max-height:56vh; overflow:auto; min-width:132px;
+}
+.plan-tagpop-chip{
+  display:flex; align-items:center; gap:7px; cursor:pointer; border-radius:8px; padding:5px 7px;
+  font-size:12.5px; font-weight:800; color:var(--ink);
+}
+.plan-tagpop-chip:hover{ background:rgba(0,0,0,.04); }
+.plan-tagpop-sw{ width:14px; height:14px; border-radius:50%; flex:0 0 auto; border:1px solid rgba(0,0,0,.12); }
+.plan-tagpop-prio{ margin-left:auto; font-size:10px; font-weight:900; color:#9a9484; }
+
+/* 标签管理分栏：一行一个标签，右边显示优先级 */
+.plan-tag-row{
+  display:flex; align-items:center; gap:9px; background:var(--panel); border:1px solid var(--line);
+  border-radius:10px; padding:9px 11px;
+}
+.plan-tag-sw{ width:18px; height:18px; border-radius:50%; flex:0 0 auto; }
+.plan-tag-name{ flex:1 1 auto; min-width:0; font-size:14px; font-weight:800; color:var(--ink);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.plan-tag-prio{ flex:0 0 auto; font-size:13px; font-weight:900; color:var(--accent-dk); }
+.plan-tag-edit{
+  flex:0 0 auto; font-family:inherit; cursor:pointer; border:1px solid var(--line); background:var(--paper);
+  color:var(--ink); border-radius:8px; padding:5px 10px; font-size:12px; font-weight:800;
+}
+
+/* 增强剩余提示条 */
+.plan-boost-note{
+  font-size:11px; font-weight:800; color:var(--accent-dk); background:#efe9f6;
+  border-radius:8px; padding:6px 10px; margin:-4px 0 10px;
+}
+/* 条目上的结果条：糖果 / 万能糖 / 碎片，图标当单位（阶段4 换成真图标） */
+.plan-res{
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  border-top:1px dashed var(--line); padding:5px 10px 7px 10px; font-size:11.5px; font-weight:800;
+}
+.plan-res-item{ display:inline-flex; align-items:center; gap:3px; color:var(--ink); }
+.plan-res-ic{ width:14px; height:14px; flex:0 0 auto; object-fit:contain; vertical-align:-2px; }
+.plan-res-done{ color:#3f9a52; }
+.plan-res-todo{ color:#9a9484; font-weight:700; }
+.plan-res-boost{ margin-left:auto; color:var(--accent); font-weight:900; }
+.plan-rowwrap{ display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line);
+  border-radius:11px; overflow:hidden; }
+.plan-rowwrap.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
+.plan-rowwrap .plan-row{ border:none; border-radius:0; background:transparent; }
+
+/* 编辑弹窗 */
+.plan-modal-box{ width:min(560px, 94vw); max-height:88vh; overflow:auto; }
+.plan-field-grid{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:9px; margin-bottom:12px; }
+.plan-field{ display:flex; flex-direction:column; gap:3px; }
+.plan-field-lab{ font-size:11px; font-weight:800; color:#7a7568; }
+.plan-field-in{
+  border:1.5px solid var(--line); border-radius:8px; padding:7px 9px; font-size:14px;
+  font-weight:800; font-family:inherit; color:var(--ink); background:#fff; width:100%; box-sizing:border-box;
+}
+.plan-evo-lab{ font-size:11px; font-weight:800; color:#7a7568; margin-bottom:5px; }
+.plan-evo-pick{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:13px; }
+.plan-evo-opt{
+  width:56px; padding:4px 2px 5px; border:1.5px solid var(--line); border-radius:10px; background:#fff;
+  cursor:pointer; text-align:center; font-family:inherit;
+}
+.plan-evo-opt.on{ border-color:var(--accent); background:#f3edf9; }
+.plan-evo-opt img{ width:38px; height:38px; object-fit:contain; display:block; margin:0 auto; }
+.plan-evo-opt-none{ display:flex; align-items:center; justify-content:center; height:38px; font-size:11px; font-weight:900; color:#b8b2a2; }
+.plan-evo-opt-nm{ font-size:9px; font-weight:800; color:var(--ink); margin-top:2px; line-height:1.15;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.plan-evo-opt-cost{ font-size:8.5px; font-weight:800; color:var(--accent); }
+
+/* 结果区：左现状 → 箭头 → 右目标 */
+.plan-arrow-wrap{ display:flex; align-items:center; gap:8px; background:var(--paper);
+  border:1px solid var(--line); border-radius:11px; padding:11px 10px; }
+.plan-side{ flex:0 0 76px; text-align:center; }
+.plan-side img{ width:52px; height:52px; object-fit:contain; }
+.plan-side-q{ font-size:20px; font-weight:900; color:#c3bdae; line-height:52px; }
+.plan-side-lv{ font-size:11.5px; font-weight:900; color:var(--accent-dk); }
+.plan-mid{ flex:1 1 auto; min-width:0; text-align:center; }
+.plan-mid-top, .plan-mid-bot{ display:flex; align-items:center; justify-content:center; gap:10px;
+  font-size:12.5px; font-weight:900; color:var(--ink); flex-wrap:wrap; min-height:17px; }
+.plan-mid-bot{ color:var(--accent-dk); }
+.plan-arrow-line{ position:relative; height:12px; margin:3px 0; }
+.plan-arrow-line::before{ content:''; position:absolute; left:2px; right:9px; top:5px; height:2px; background:var(--accent); }
+.plan-arrow-line::after{ content:''; position:absolute; right:0; top:1px;
+  border-left:9px solid var(--accent); border-top:5px solid transparent; border-bottom:5px solid transparent; }
+.plan-modal-note{ font-size:10.5px; color:#7a7568; font-weight:700; margin-top:8px; line-height:1.6; }
 </style>
 
 </head>
@@ -2558,6 +2724,14 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="plan">
+        <span class="mf-hub-ic mf-hub-ic-plan">🍬</span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">培养计划</span>
+          <span class="mf-hub-d">排出要练的宝可梦，算清升到目标等级要多少糖果和梦之碎片</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
     </div>
   </div>
 
@@ -2684,7 +2858,7 @@
       <div id="islDetail"></div>
     </div>
     <div id="islPaneTags" style="display:none;">
-      <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。数据保存在本机浏览器里。</div>
+      <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。最多 20 个标签，名称最长 20 字。登录后跟着账号走。</div>
       <div class="isl-tag-list" id="islTagList"></div>
       <button type="button" class="isl-add-btn" id="islAddTagBtn">＋ 新增标签</button>
     </div>
@@ -2701,6 +2875,34 @@
       <div class="isl-box" id="islBox"></div>
     </div>
   </div><!-- /#mfSubIsland -->
+
+  <!-- v3.20 培养计划：分栏结构跟岛屿评分一致（列表 / 标签管理），
+       「加入培养」在页脚按钮条上（updatePanelBtnLabel 里把「修改面板」换掉），
+       「移出培养」和两个增强开关在本页自己的工具条上 -->
+  <div class="mf-sub" id="mfSubPlan" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">培养计划</span>
+    </div>
+    <div class="isl-tabs" id="planTabs"></div>
+    <div id="planPaneList">
+      <div class="plan-hint">点右下角「加入培养」从盒子里挑宝可梦。点条目左侧的标签位打标签，点条目其余部分展开编辑。优先级数字越小排得越靠上。</div>
+      <div class="plan-tool-row" id="planToolRow">
+        <button type="button" class="plan-tool-btn plan-tool-danger" id="planRemoveBtn">移出培养</button>
+        <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
+        <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
+        <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
+        <span class="plan-count" id="planCount"></span>
+      </div>
+      <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
+      <div class="plan-list" id="planList"></div>
+    </div>
+    <div id="planPaneTags" style="display:none;">
+      <div class="plan-hint">优先级为 1~20 的整数，越小排得越靠上；改完立刻重排。最多 20 个标签，名称最长 20 字。</div>
+      <div class="isl-tag-list" id="planTagList"></div>
+      <button type="button" class="isl-add-btn" id="planAddTagBtn">＋ 新增标签</button>
+    </div>
+  </div><!-- /#mfSubPlan -->
 
   </div><!-- /#page2 -->
 
@@ -2813,6 +3015,7 @@
     </button>
   </div>
 </div>
+<div class="plan-sum-bar" id="planSumBar"></div>
 <div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
 <div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
@@ -2892,11 +3095,18 @@
       <button type="button" class="box-batch-level-btn" data-lv="60">60级</button>
       <button type="button" class="box-batch-level-btn" data-lv="70">70级</button>
       <button type="button" class="box-batch-level-btn" data-lv="80">80级</button>
+      <button type="button" class="box-batch-level-btn box-batch-level-custom" id="boxLevelCustomBtn">—</button>
       <button type="button" class="box-batch-cancel-btn" id="boxLevelCancelBtn">取消</button>
     </div>
     <div class="box-batch-bar" id="boxSpeciesBar" style="display:none;">
       <button type="button" class="box-batch-species-btn" id="boxSpeciesModifyBtn">修改</button>
       <button type="button" class="box-batch-cancel-btn" id="boxSpeciesCancelBtn">取消</button>
+    </div>
+    <!-- v3.20：培养计划从盒子挑宝可梦时借用同一套多选机制，模式名 'plan' -->
+    <div class="box-batch-bar" id="boxPlanBar" style="display:none;">
+      <button type="button" class="box-batch-selectall-btn" id="boxPlanSelectAllBtn">全选</button>
+      <button type="button" class="box-batch-species-btn" id="boxPlanConfirmBtn">加入培养</button>
+      <button type="button" class="box-batch-cancel-btn" id="boxPlanCancelBtn">取消</button>
     </div>
     <!-- v3.18：原来的注册/登录吸底条 + 右下角「修改面板」「+」/左下角「奖章」「账号设置」四颗小圆浮窗，
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
@@ -3785,9 +3995,16 @@ function pscMapSatiety(hours){
   if(h>=200) return 200;
   return 0;
 }
-// 我方等级只有 50/60/70/80 四档（见 levelOptionsForCtrlPfx），对方是连续等级，按区间归档
+// v3.20 起我方等级已放开成任意值（levelReal + 计算档位 level 分离），对方的连续等级原样保留，见 pscKeepLevel
 // 同步专用去重签名：只看种族（含形态）+性格+副技能+食材组合这四项，昵称/等级/闪光/睡饱饱不参与比较——
 // 这四项完全一致就判定为同一只，哪怕来源、昵称、等级不一样也跳过，用户明确要求过这个口径
+// v3.20：对方给的等级原样保留（本站已放开任意等级）。对方没给/给了非法值时回落到本站按种族类型的默认等级。
+// rowDef 是我方 POKEMON_DEX_DATA 的那一行，rowDef[3] 是类型名
+function pscKeepLevel(raw, rowDef){
+  const n = Math.floor(Number(raw));
+  if(Number.isFinite(n) && n >= LEVEL_REAL_MIN) return Math.min(LEVEL_REAL_MAX, n);
+  return TYPE_LEVEL_DEFAULT[DEX_TYPE_MAP[rowDef[3]]] || 50;
+}
 function pscEntrySignature(dex, incAttr, decAttr, selected, c2, c3){
   const subs = (selected||[]).filter(Boolean).slice().sort().join(',');
   return [dex, incAttr||'', decAttr||'', subs, c2||'', c3||''].join('|');
@@ -3879,6 +4096,91 @@ function windowSums(labels, windowSize){
   return {h,f,s,hasFruit};
 }
 // 60级与50级槽位数相同（尚未解锁下一档副技能槽），面板天梯/排名对比才会开放选择60级
+/* ============ v3.20 等级自由化：真实等级 levelReal ⇄ 计算档位 level ============
+   全站几十处计算是直接拿 level 当档位用的（CAP_LEVEL_IDX[level]、CAP_LEVEL_FACTOR[level]、
+   windowSizeOf(level)、各种排名缓存 key…），这些表本来就只有 50/60/70/80 四列。
+   所以这里的做法是：level 字段【继续存档位值】，一行计算代码都不用改；真实等级另存 levelReal，
+   只影响显示和培养计划。旧存档/旧盒子条目没有 levelReal，levelRealOf() 回落到 level 本身，天然兼容。
+   刻意不对树果能量/帮忙间隔做逐级插值——站内没有逐级数据，插出来是假精度，
+   而且全站的排名/毕业判定都建立在这四个锚点上，插值会让效率值和排名对不上。 */
+const LEVEL_TIERS = [50,60,70,80];
+const LEVEL_REAL_MIN = 1, LEVEL_REAL_MAX = 99;   // 自定义输入限「最多两位整数」
+function levelTierOf(real){
+  const n = Math.floor(Number(real));
+  if(!Number.isFinite(n)) return 50;
+  if(n >= 80) return 80;
+  if(n >= 70) return 70;
+  if(n >= 60) return 60;
+  return 50;                                      // 50 以下一律按 50 档算
+}
+function clampLevelReal(v){
+  const n = Math.floor(Number(v));
+  if(!Number.isFinite(n)) return 50;
+  return Math.min(LEVEL_REAL_MAX, Math.max(LEVEL_REAL_MIN, n));
+}
+// 取一条记录（盒子条目/存档 build/state）的真实等级
+function levelRealOf(o){
+  if(!o) return 50;
+  const r = Math.floor(Number(o.levelReal));
+  if(Number.isFinite(r) && r >= LEVEL_REAL_MIN) return Math.min(LEVEL_REAL_MAX, r);
+  return clampLevelReal(o.level);
+}
+// 徽标文字：真实等级正好压在档位上就是「65级」，否则补一句实际采用的档位，免得用户以为算错了
+function levelBadgeText(real){
+  const r = clampLevelReal(real), t = levelTierOf(r);
+  return r === t ? (r+'级') : (r+'级(按'+t+'档)');
+}
+/* 四档 + 一颗自定义按钮。自定义平时显示「—」，点一下就地变输入框；
+   真实等级不等于任何档位时，自定义按钮显示该等级，并与它所属的档位按钮【同时】高亮。
+   onPick 拿到的永远是真实等级（1~99），档位由调用方自己 levelTierOf 换算。 */
+function renderLevelSegRow(el, curReal, onPick){
+  if(!el) return;
+  const real = clampLevelReal(curReal), tier = levelTierOf(real);
+  const isCustom = !LEVEL_TIERS.includes(real);
+  el.innerHTML = '';
+  LEVEL_TIERS.forEach(lv=>{
+    const b = document.createElement('div');
+    b.className = 'segbtn'+(tier===lv?' selected':'');
+    b.textContent = lv;
+    // 点整档 = 真实等级就是这个整档，自定义位下次重画自然复位成「—」
+    b.onclick = ()=>{ onPick(lv); };
+    el.appendChild(b);
+  });
+  const cb = document.createElement('div');
+  cb.className = 'segbtn seg-lv-custom'+(isCustom?' selected':'');
+  cb.textContent = isCustom ? String(real) : '—';
+  cb.onclick = ()=>{ startLevelCustomInput(cb, real, onPick); };
+  el.appendChild(cb);
+}
+function startLevelCustomInput(cb, real, onPick){
+  if(cb.querySelector('input')) return;           // 已经在输入态，别把用户打了一半的内容冲掉
+  const prevText = cb.textContent;
+  cb.textContent = '';
+  cb.classList.add('seg-lv-editing');
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.inputMode = 'numeric'; inp.maxLength = 2;
+  inp.className = 'seg-lv-input';
+  inp.value = LEVEL_TIERS.includes(real) ? '' : String(real);
+  let done = false;
+  const finish = ()=>{
+    if(done) return; done = true;                 // blur 和 Enter 会连着触发两次，这里挡掉第二次
+    const raw = inp.value.trim();
+    cb.classList.remove('seg-lv-editing');
+    // 空值/非法一律视为放弃修改回到原样，不弹错误提示；越界由 clampLevelReal 钳到 1/99
+    if(/^\d{1,2}$/.test(raw) && Number(raw) >= LEVEL_REAL_MIN) onPick(clampLevelReal(raw));
+    else cb.textContent = prevText;
+  };
+  inp.oninput = ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); };
+  // Enter/Esc 直接调 finish()，不走 inp.blur()——focus() 在页面失焦或部分移动端浏览器里可能没生效，
+  // 那时 blur() 是空操作，输入框会永远关不掉、按钮停在空白态。finish 自带 done 锁，重复触发无害
+  inp.onkeydown = (e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); finish(); }
+    else if(e.key==='Escape'){ e.preventDefault(); inp.value=''; finish(); }
+  };
+  inp.onblur = finish;
+  cb.appendChild(inp);
+  inp.focus(); inp.select();
+}
 function windowSizeOf(level){ if(level===50||level===60) return 3; return level===70?4:5; }
 // f 字段是这次给捕捉推荐页"加入面板"新加的（食材概率副技能实际影响食材产量要用到）；
 // 老调用点都不读 .f，加这个字段不影响它们
@@ -3975,7 +4277,8 @@ function boxSnapshotFromState(){
     dex: state.selectedDex,
     name: rec ? rec[1] : '',
     shiny: !!state.shiny,
-    level: state.level,
+    level: state.level,           // 档位值，全站计算直接吃这个
+    levelReal: state.levelReal,   // v3.20 真实等级，只影响显示/培养计划
     selected: state.selected.slice(),
     incAttr: state.incAttr,
     decAttr: state.decAttr,
@@ -4015,7 +4318,7 @@ function boxApplyEntryToState(id){
   state.pkSearchText = '';
   state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
-  state.level = e.level;
+  state.levelReal = levelRealOf(e);   // v3.20：旧条目没有 levelReal，回落到 level 本身
   state.selected = e.selected.slice();
   state.incAttr = e.incAttr;
   state.decAttr = e.decAttr;
@@ -5462,7 +5765,7 @@ function renderPkDispWindow(){
       const nameHtml = `${rec[1]}<span class="dex">${rec[0]}</span>`;
       const typeCls = activeBuild.type==='energy' ? 'energy' : activeBuild.type;
       const typeLabelText = activeBuild.type==='energy' ? '能量型' : (activeBuild.type==='skill'?'功能型':typeLabel(activeBuild.type));
-      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${activeBuild.level}级</span>`;
+      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${levelBadgeText(levelRealOf(activeBuild))}</span>`;
       titleEl.innerHTML = `<div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${nameHtml}</div></div><div class="pk-disp-badges">${badgesHtml}</div>`;
     }
   }
@@ -5498,7 +5801,7 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
     const typeCls = build.type==='energy' ? 'energy' : build.type;
     const typeLabelText = build.type==='energy' ? '能量型' : (build.type==='skill'?'功能型':typeLabel(build.type));
     const nickHtml = build.boxNickname ? `<div class="pk-disp-nickname">${build.boxNickname}</div>` : '';
-    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${build.level}级</span></div></div>`;
+    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${levelBadgeText(levelRealOf(build))}</span></div></div>`;
   }
 
   let skillsHtml;
@@ -6053,6 +6356,18 @@ const state = {
   gradeEasterEggShown: false,
 };
 
+/* v3.20：把 state.level 做成 levelReal 之上的访问器——读到的永远是【计算档位】(50/60/70/80)，
+   写进去的按【真实等级】存。全站原有的 state.level=xx 赋值和 state.level 读取一个字都不用改，
+   自动就变成"存真实值、算按档位"。要拿真实等级的地方用 state.levelReal / levelRealOf(state)。
+   注意 enumerable:true 是必须的：saveBuild 这类地方按字段名显式读 state.level，
+   不可枚举不影响它们，但保持可枚举跟原来的普通属性行为最接近，少一处将来踩坑的地方。 */
+state.levelReal = TYPE_LEVEL_DEFAULT.fruit;
+Object.defineProperty(state, 'level', {
+  get(){ return levelTierOf(state.levelReal); },
+  set(v){ state.levelReal = clampLevelReal(v); },
+  enumerable: true, configurable: true,
+});
+
 /* ============ 排名对比页：多面板（1号/2号/3号）管理 ============ */
 let panel1Snap = null; // 编辑2号/3号期间，暂存1号面板真实数据；不在编辑2/3号时始终为 null
 function snapshotBuild(){
@@ -6060,7 +6375,7 @@ function snapshotBuild(){
     selected: state.selected.slice(), incAttr: state.incAttr, decAttr: state.decAttr,
     selectedDex: state.selectedDex, pkSearchText: state.pkSearchText,
     ingChoice2: state.ingChoice2, ingChoice3: state.ingChoice3,
-    type: state.type, level: state.level, energyPokemon: state.energyPokemon,
+    type: state.type, level: state.level, levelReal: state.levelReal, energyPokemon: state.energyPokemon,
     // v3.16：睡饱饱/副技能持有组合按面板各自独立（三态开关和睡眠时长才是全站共用的；
     // 南瓜四个尺寸现在是四个完全独立的物种，尺寸信息已经在 selectedDex 里，不需要单独字段）
     satiety: state.satiety, carrySub: state.carrySub,
@@ -6071,7 +6386,7 @@ function applyBuild(build){
   state.selected = build.selected.slice(); state.incAttr = build.incAttr; state.decAttr = build.decAttr;
   state.selectedDex = build.selectedDex; state.pkSearchText = build.pkSearchText;
   state.ingChoice2 = build.ingChoice2; state.ingChoice3 = build.ingChoice3;
-  state.type = build.type; state.level = build.level; state.energyPokemon = build.energyPokemon;
+  state.type = build.type; state.levelReal = levelRealOf(build); state.energyPokemon = build.energyPokemon;
   state.satiety = build.satiety || 0;
   state.carrySub = build.carrySub || null;
   state.boxNickname = build.boxNickname || null;
@@ -6081,7 +6396,7 @@ function blankBuildFromPanel1(){
     selected: [null,null,null,null,null], incAttr: null, decAttr: null,
     selectedDex: state.selectedDex, pkSearchText: state.pkSearchText,
     ingChoice2: null, ingChoice3: null,
-    type: state.type, level: state.level, energyPokemon: state.energyPokemon,
+    type: state.type, level: state.level, levelReal: state.levelReal, energyPokemon: state.energyPokemon,
     satiety: 0, carrySub: null, boxNickname: null,
   };
 }
@@ -6603,22 +6918,22 @@ function renderEnergySubmenu(containerId, pfx, compact){
 // 用 setTimeout 让浮窗先画出来再执行重算（rAF 在标签页失焦/隐藏时会被挂起，故不用 rAF）
 function setLevelWithRankOverlay(lv){
   const page3 = document.getElementById('page3');
-  if(page3 && page3.classList.contains('active-page')){
+  // v3.20：档位没变就不用弹"排名计算中"——真实等级 65→66 这种改动档位仍是 60，
+  // 排名缓存 key 里吃的是档位，直接命中缓存，弹个浮窗再关反而闪一下
+  const tierChanged = levelTierOf(lv) !== state.level;
+  if(page3 && page3.classList.contains('active-page') && tierChanged){
     showRankCalcOverlay();
     setTimeout(async ()=>{
-      state.level = lv;
+      state.levelReal = lv;
       await renderAll(); // 等真正算完（乌波进度条走到头）再收起浮窗，不然浮窗会在算完之前就被提前关掉
       hideRankCalcOverlay(); // 必须走这个函数，直接改 display 会把乌波的动画留在后台空转
     }, 20);
   } else {
-    state.level = lv;
+    state.levelReal = lv;
     renderAll();
   }
 }
-// 所有区域的等级按钮统一提供 50/60/70/80 四档
-function levelOptionsForCtrlPfx(pfx){
-  return [50,60,70,80];
-}
+// v3.20：原 levelOptionsForCtrlPfx 已撤除，所有等级按钮排统一走 renderLevelSegRow（四档 + 自定义）
 function renderControlsGeneric(pfx, compact){
   const lockedType = (()=>{ const r = getSelectedPokemonRecord(); return r ? DEX_TYPE_MAP[r[3]] : null; })();
   const typeEl = document.getElementById(pfx+'typeSel'); typeEl.innerHTML='';
@@ -6653,14 +6968,7 @@ function renderControlsGeneric(pfx, compact){
     if(block) block.style.display = (hideType && !hasSubmenuContent) ? 'none' : '';
   }
 
-  const lvEl = document.getElementById(pfx+'levelSel'); lvEl.innerHTML='';
-  levelOptionsForCtrlPfx(pfx).forEach(lv=>{
-    const b = document.createElement('div');
-    b.className = 'segbtn'+(state.level===lv?' selected':'');
-    b.textContent = lv;
-    b.onclick = ()=>{ setLevelWithRankOverlay(lv); };
-    lvEl.appendChild(b);
-  });
+  renderLevelSegRow(document.getElementById(pfx+'levelSel'), state.levelReal, lv=> setLevelWithRankOverlay(lv));
   const lockEl = document.getElementById(pfx+'lockSel');
   if(lockEl){
     lockEl.innerHTML='';
@@ -6710,17 +7018,7 @@ function renderDashPanelShinyLevel(){
     shinyBtn.onclick = ()=>{ state.shiny = !state.shiny; renderAll(); };
   }
   renderSatietySel();   // v3.16：睡饱饱档位跟等级/闪光一样属于"这一只自己的数据"，随修改面板一起渲染
-  const lvEl = document.getElementById('dashPanelLevelSel');
-  if(lvEl){
-    lvEl.innerHTML = '';
-    levelOptionsForCtrlPfx('dash-').forEach(lv=>{
-      const b = document.createElement('div');
-      b.className = 'segbtn'+(state.level===lv?' selected':'');
-      b.textContent = lv;
-      b.onclick = ()=>{ setLevelWithRankOverlay(lv); };
-      lvEl.appendChild(b);
-    });
-  }
+  renderLevelSegRow(document.getElementById('dashPanelLevelSel'), state.levelReal, lv=> setLevelWithRankOverlay(lv));
 }
 /* ============ v3.16 持有上限控制区（三态开关 + 副技能持有 + 睡饱饱 + 睡眠时长数轴） ============ */
 const CARRY_CTRL_PFXS = ['', 'p2-', 'p3-', 'dash-', 'boxdet-'];
@@ -7163,11 +7461,15 @@ function applyMergedData(cloud){
     if(cloud.prefs.island && typeof cloud.prefs.island==='object'){
       applyIslandCloudSnapshot(cloud.prefs.island);
     }
+    // v3.20 培养计划同理：标签定义 + 条目都挂在 prefs_json 的 plan 子字段里，并集合并
+    if(cloud.prefs.plan && typeof cloud.prefs.plan==='object'){
+      applyPlanCloudSnapshot(cloud.prefs.plan);
+    }
   }
   return overflow;
 }
 function cloudPayload(){
-  return {box: boxData, prefs: Object.assign({}, userPrefs, {island: islandCloudSnapshot()})};
+  return {box: boxData, prefs: Object.assign({}, userPrefs, {island: islandCloudSnapshot(), plan: planCloudSnapshot()})};
 }
 async function pushCloudData(){
   if(!authLoggedIn()) return;
@@ -7433,8 +7735,11 @@ async function pscSyncBox(){
         dex, name: rowDef[1],
         nickname: boxTrimNickname(rec.nickname) || rowDef[1],
         shiny: !!rec.shiny,
-        // 对方的等级概念跟本站不通用，同步进来一律按种族类型给默认等级，不采信对方的原始等级数字
-        level: TYPE_LEVEL_DEFAULT[DEX_TYPE_MAP[rowDef[3]]],
+        // v3.20：本站等级已放开成任意值，不用再把对方的连续等级归档成整十档——原样保留。
+        // 只有对方压根没给等级（或给了个非法值）才回落到按种族类型的默认等级。
+        // level 存换算后的计算档位、levelReal 存原始真实等级，跟站内其它条目一个口径。
+        level: levelTierOf(pscKeepLevel(rec.level, rowDef)),
+        levelReal: pscKeepLevel(rec.level, rowDef),
         selected, incAttr, decAttr,
         ingChoice2: ing.c2, ingChoice3: ing.c3,
         satiety: pscMapSatiety(rec.sleepHours),
@@ -7450,7 +7755,7 @@ async function pscSyncBox(){
     if(dup) parts.push('跳过重复 '+dup+' 只');
     if(unmapped) parts.push('暂不支持已跳过 '+unmapped+' 只');
     if(full) parts.push('盒子已满，本次未同步完');
-    if(added) parts.push('等级已按类型给默认值');
+    if(added) parts.push('等级按对方原值保留');
     setPscMsg('同步完成：'+parts.join('，'), true);
   }catch(e){
     setPscMsg(e.message || '同步失败');
@@ -8393,7 +8698,7 @@ function renderGraduation(pfx){
   disarmTerrorPrompt(pfx);
   const borderClass = state.shiny? 'grad-shiny-border' : '';
   const badgeEl = document.getElementById(pfx+'gradLevelBadge');
-  if(badgeEl) badgeEl.textContent = state.level+'级';
+  if(badgeEl) badgeEl.textContent = levelBadgeText(state.levelReal);
   const gradRec = getSelectedPokemonRecord();
   const pkNameEl = document.getElementById(pfx+'gradPkName');
   if(pkNameEl){
@@ -9421,15 +9726,7 @@ function renderPokemonModule(){
   }
 
   // 等级开关
-  const lvEl = document.getElementById('pkLevelSel');
-  lvEl.innerHTML = '';
-  [50,60,70,80].forEach(lv=>{
-    const b = document.createElement('div');
-    b.className = 'segbtn'+(state.level===lv?' selected':'');
-    b.textContent = lv;
-    b.onclick = ()=>{ state.level=lv; renderAll(); };
-    lvEl.appendChild(b);
-  });
+  renderLevelSegRow(document.getElementById('pkLevelSel'), state.levelReal, lv=>{ state.levelReal = lv; renderAll(); });
 
   // 类型胶囊（全称，颜色对应类型按钮）
   const typeCap = document.getElementById('pkTypeCapsule');
@@ -13251,7 +13548,9 @@ function updatePageActionBar(){
   // 岛屿评分子页把这颗按钮借来做"批量选择"入口，不收起（updatePanelBtnLabel 里换文字/行为）
   const page2El = document.getElementById('page2');
   const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
-  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland;
+  // v3.20：培养计划子页把这颗借去做「资源总计」，跟岛屿评分一样不收起
+  const onPlanSub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
+  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlanSub;
   const ctrlBtn = document.getElementById('pageActControlsBtn');
   if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
@@ -13266,15 +13565,48 @@ function updatePanelBtnLabel(inBox){
   const onPage4 = !inBox && !!(page4 && page4.classList.contains('active-page'));
   const page2El = document.getElementById('page2');
   const onIsland = !inBox && !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  // v3.20 培养计划页：右侧那颗换成「加入培养」（左侧「资源总计」在阶段4接管）
+  const onPlan = !inBox && !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
   const ctrlBtn = document.getElementById('pageActControlsBtn');
-  if(ctrlBtn) ctrlBtn.textContent = onIsland ? '批量选择' : '控制参数';
-  const text = onIsland ? '取消' : (onPage4 ? '加入面板' : '修改面板');
-  const pageLabel = document.getElementById('pageActPanelLabel');
-  if(pageLabel) pageLabel.textContent = text;
   const panelBtn = document.getElementById('pageActPanelBtn');
-  if(panelBtn) panelBtn.classList.toggle('page-act-btn-off', onIsland && islandBatchTag===null);
+  const pageLabel = document.getElementById('pageActPanelLabel');
   const fabLabel = document.getElementById('fabPanelLabel');
-  fabLabel && (fabLabel.innerHTML = onIsland ? '取消' : (onPage4 ? '加入<br>面板' : '修改<br>面板'));
+  const fabCtrlLabel = document.getElementById('fabControlsLabel');
+  /* v3.20 培养计划页脚三态：
+       正常        左=资源总计            右=加入培养
+       移出培养    左=移出培养(红)        右=取消(灰)
+       资源总计    左=资源总计(高亮)      右=取消(灰)
+     两种多选态互斥，同一时刻最多进一种。 */
+  let leftTxt = onIsland ? '批量选择' : '控制参数';
+  let rightTxt = onIsland ? '取消' : (onPage4 ? '加入面板' : '修改面板');
+  let rightFab = onIsland ? '取消' : (onPage4 ? '加入<br>面板' : '修改<br>面板');
+  let leftDanger = false, leftOn = false, rightPlain = false;
+  if(onPlan){
+    if(planRemoveMode){
+      leftTxt = '移出培养'; leftDanger = true;
+      rightTxt = '取消'; rightFab = '取消'; rightPlain = true;
+    } else if(planSumMode){
+      leftTxt = '资源总计'; leftOn = true;
+      rightTxt = '取消'; rightFab = '取消'; rightPlain = true;
+    } else {
+      leftTxt = '资源总计';
+      rightTxt = '加入培养'; rightFab = '加入<br>培养';
+    }
+  }
+  if(ctrlBtn){
+    ctrlBtn.textContent = leftTxt;
+    ctrlBtn.classList.toggle('page-act-btn-danger', leftDanger);
+    // 资源总计多选中但一条都没勾时把左侧按钮压灰：点了也没数字可看
+    ctrlBtn.classList.toggle('page-act-btn-off', leftOn && planPickedIds.size===0);
+  }
+  if(pageLabel) pageLabel.textContent = rightTxt;
+  if(panelBtn){
+    panelBtn.classList.toggle('page-act-btn-off', onIsland && islandBatchTag===null);
+    panelBtn.classList.toggle('page-act-btn-plain', rightPlain);
+  }
+  fabLabel && (fabLabel.innerHTML = rightFab);
+  fabCtrlLabel && (fabCtrlLabel.innerHTML = leftTxt.length>3 ? (leftTxt.slice(0,2)+'<br>'+leftTxt.slice(2)) : leftTxt);
+  if(typeof planRenderSumBar==='function') planRenderSumBar();
 }
 /* 圆形浮窗模式的显隐/位置统一在这里算，updatePageActionBar 与 updateBoxActionBar
    各自改动后都会调一次，两套按钮条切页面/开关盒子/开关模式时都能保持同步。
@@ -13423,6 +13755,11 @@ function closeDashboard(){
 document.getElementById('pageActPanelBtn').onclick = ()=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
+  // v3.20 培养计划：多选态下这颗是「取消」，正常态才是「加入培养」
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
+    if(planRemoveMode || planSumMode) planFooterCancel(); else planStartPickFromBox();
+    return;
+  }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -13437,6 +13774,11 @@ document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEnt
 document.getElementById('fabPanel').onclick = ()=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
+  // v3.20 培养计划：多选态下这颗是「取消」，正常态才是「加入培养」
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
+    if(planRemoveMode || planSumMode) planFooterCancel(); else planStartPickFromBox();
+    return;
+  }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -13533,6 +13875,11 @@ function closeControlsDashboard(){
 document.getElementById('pageActControlsBtn').onclick = (e)=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandOpenBatchBubble(e.currentTarget); return; }
+  // v3.20 培养计划：这颗在移出态是「移出培养」(红)，其余时候是「资源总计」入口
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
+    if(planRemoveMode) planFooterRemoveConfirm(); else planToggleSumMode();
+    return;
+  }
   // 捕捉推荐页(page4)跟其他三页共用一颗"控制参数"按钮，但内容风马牛不相及——
   // 那三页开的是等级/持有上限那套共享浮窗，这里换成页4专用的"标记已毕业"小浮窗
   const page4 = document.getElementById('page4');
@@ -13542,6 +13889,11 @@ document.getElementById('pageActControlsBtn').onclick = (e)=>{
 document.getElementById('fabControls').onclick = (e)=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandOpenBatchBubble(e.currentTarget); return; }
+  // v3.20 培养计划：这颗在移出态是「移出培养」(红)，其余时候是「资源总计」入口
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
+    if(planRemoveMode) planFooterRemoveConfirm(); else planToggleSumMode();
+    return;
+  }
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
@@ -13791,7 +14143,7 @@ function boxCommitPickToPanel(entryId){
   state.pkSearchText = '';
   state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
-  state.level = e.level;
+  state.levelReal = levelRealOf(e);   // v3.20：旧条目没有 levelReal，回落到 level 本身
   state.selected = e.selected.slice();
   state.incAttr = e.incAttr;
   state.decAttr = e.decAttr;
@@ -13958,7 +14310,7 @@ function renderBoxPage(){
     if(userPrefs.boxLevelOn){
       const levelLabel = document.createElement('div');
       levelLabel.className = 'box-grid-level';
-      levelLabel.textContent = 'Lv.'+entry.level;
+      levelLabel.textContent = 'Lv.'+levelRealOf(entry);   // v3.20 网格小卡片位置窄，只显示真实等级，不带「按XX档」后缀
       item.appendChild(levelLabel);
     }
     item.onclick = ()=> boxGridItemClick(entry.id, item);
@@ -14032,6 +14384,7 @@ function boxInfoBubbleHtml(entry, noActions){
       '<button type="button" class="box-bub-act-btn box-bub-act-detail" data-act="detail">详情</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-edit" data-act="edit">修改</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-output" data-act="output">输出</button>'+
+      '<button type="button" class="box-bub-act-btn box-bub-act-plan" data-act="plan">培养</button>'+
       '<button type="button" class="box-bub-act-btn box-bub-act-delete" data-act="delete">删除</button>'+
     '</div>');
 }
@@ -14043,6 +14396,12 @@ function wireBoxInfoBubbleActions(entry){
       if(act==='detail'){ closeBoxInfoBubble(); openBoxDetail(entry.id); }
       else if(act==='edit'){ closeBoxInfoBubble(); openDashboardForBoxEntry(entry.id); }
       else if(act==='output'){ boxApplyEntryToState(entry.id); btn.textContent='✓'; setTimeout(()=>{ btn.textContent='输出'; },1200); }
+      // v3.20：一键加入培养计划。刻意不跳转到培养计划页——用户还在盒子里挑，
+      // 跳走会打断挑选流程，跟「输出」一样给个即时反馈就够了
+      else if(act==='plan'){
+        const r = planAddFromBox([entry.id]);
+        showBoxToast(r.added ? '✓ 已加入培养计划' : ('培养计划已满（上限 '+PLAN_MAX_ENTRIES+' 条）'));
+      }
       else if(act==='delete'){ openBoxDeleteWarn([entry.id], ()=>{ closeBoxInfoBubble(); renderBoxPage(); }); }
     };
   });
@@ -14149,7 +14508,7 @@ function openDashboardForBoxEntry(entryId){
   state.pkSearchText = '';
   state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
-  state.level = e.level;
+  state.levelReal = levelRealOf(e);   // v3.20：旧条目没有 levelReal，回落到 level 本身
   state.selected = e.selected.slice();
   state.incAttr = e.incAttr;
   state.decAttr = e.decAttr;
@@ -14201,19 +14560,12 @@ function renderBoxDetailHeader(entry){
     if(live){ live.nickname = boxTrimNickname(nickInput.value) || live.name; saveBoxData(); nickInput.value = live.nickname; renderBoxPage(); }
     state.boxNickname = live ? live.nickname : (boxTrimNickname(nickInput.value) || null);
   };
-  const lvEl = document.getElementById('boxdet-pkLevelSel');
-  lvEl.innerHTML = '';
-  [50,60,70,80].forEach(lv=>{
-    const b = document.createElement('div');
-    b.className = 'segbtn'+(state.level===lv?' selected':'');
-    b.textContent = lv;
-    b.onclick = ()=>{
-      state.level = lv;
-      const live = boxGetEntry(entry.id); if(live){ live.level = lv; saveBoxData(); }
-      renderGraduation('boxdet-'); renderYieldAnalysis('boxdet-'); renderPanelSummary('boxdet-'); renderControlsGeneric('boxdet-', true);
-      renderBoxDetailHeader(entry);
-    };
-    lvEl.appendChild(b);
+  renderLevelSegRow(document.getElementById('boxdet-pkLevelSel'), state.levelReal, lv=>{
+    state.levelReal = lv;
+    // 条目上 level 存档位、levelReal 存真实值，跟 boxSnapshotFromState 的口径保持一致
+    const live = boxGetEntry(entry.id); if(live){ live.levelReal = lv; live.level = levelTierOf(lv); saveBoxData(); }
+    renderGraduation('boxdet-'); renderYieldAnalysis('boxdet-'); renderPanelSummary('boxdet-'); renderControlsGeneric('boxdet-', true);
+    renderBoxDetailHeader(entry);
   });
   const typeCap = document.getElementById('boxdet-pkTypeCapsule');
   if(!rec){ typeCap.className = 'pk-capsule pk-capsule-empty'; typeCap.style.cssText=''; typeCap.textContent = '类型'; }
@@ -14274,7 +14626,7 @@ function boxDetailLoadEntry(entryId){
   selectPokemon(e.dex); // selectPokemon 内部会清空 state.boxNickname，下面必须在它之后再赋值
   state.boxNickname = e.nickname || e.name;
   state.shiny = !!e.shiny;
-  state.level = e.level;
+  state.levelReal = levelRealOf(e);   // v3.20：旧条目没有 levelReal，回落到 level 本身
   state.selected = e.selected.slice();
   state.incAttr = e.incAttr;
   state.decAttr = e.decAttr;
@@ -14601,7 +14953,8 @@ document.getElementById('boxImportFileInput').addEventListener('change', (e)=>{
 
 /* ============ 宝可梦盒：批量删除 ============ */
 // 批量条出现时气泡底部换成 --panel 底色，小尾巴要跟着换，否则会有一道色差
-const BOX_SELECT_MODE_BAR = {delete:'boxBatchBar', level:'boxLevelBar', species:'boxSpeciesBar'};
+// 'plan' 是培养计划借用的多选态，入口不在盒子工具栏上（从培养计划页的「加入培养」进来），所以 BTN 表里没有它
+const BOX_SELECT_MODE_BAR = {delete:'boxBatchBar', level:'boxLevelBar', species:'boxSpeciesBar', plan:'boxPlanBar'};
 const BOX_SELECT_MODE_BTN = {delete:'boxBatchDeleteBtn', level:'boxLevelEditBtn', species:'boxSpeciesEditBtn'};
 function boxSetSelectBarVisible(){
   Object.entries(BOX_SELECT_MODE_BAR).forEach(([mode,id])=>{
@@ -14663,14 +15016,40 @@ function boxApplyLevelToSelected(lv){
   let count = 0;
   boxSelectedIds.forEach(id=>{
     const e = boxGetEntry(id);
-    if(e){ e.level = lv; count++; }
+    if(e){ e.levelReal = clampLevelReal(lv); e.level = levelTierOf(lv); count++; }
   });
   if(count){ saveBoxData(); renderBoxPage(); }
-  alert('已将 '+count+' 只宝可梦修改为 '+lv+' 级。');
+  alert('已将 '+count+' 只宝可梦修改为 '+clampLevelReal(lv)+' 级。');
 }
 document.getElementById('boxLevelBar').querySelectorAll('.box-batch-level-btn').forEach(btn=>{
   btn.onclick = ()=> boxApplyLevelToSelected(parseInt(btn.dataset.lv, 10));
 });
+/* v3.20 批量改等级的第五颗「自定义」：这一条按钮不是 segbtn，是批量条自己的 .box-batch-level-btn 样式，
+   所以不能直接复用 renderLevelSegRow，就地做一个同样口径的输入态（输入完直接应用到选中项） */
+document.getElementById('boxLevelCustomBtn').onclick = function(){
+  const btn = this;
+  if(btn.querySelector('input')) return;
+  const prev = btn.textContent;
+  btn.textContent = '';
+  const inp = document.createElement('input');
+  inp.type='text'; inp.inputMode='numeric'; inp.maxLength=2; inp.className='box-batch-level-input';
+  let done = false;
+  const finish = ()=>{
+    if(done) return; done = true;
+    const raw = inp.value.trim();
+    btn.textContent = prev;
+    if(/^\d{1,2}$/.test(raw) && Number(raw) >= LEVEL_REAL_MIN) boxApplyLevelToSelected(clampLevelReal(raw));
+  };
+  inp.oninput = ()=>{ inp.value = inp.value.replace(/\D/g,'').slice(0,2); };
+  // 同 startLevelCustomInput：不依赖 blur，focus() 万一没生效时 blur() 是空操作会把按钮卡在空白态
+  inp.onkeydown = (e)=>{
+    if(e.key==='Enter'){ e.preventDefault(); finish(); }
+    else if(e.key==='Escape'){ e.preventDefault(); inp.value=''; finish(); }
+  };
+  inp.onblur = finish;
+  btn.appendChild(inp);
+  inp.focus();
+};
 document.getElementById('boxLevelCancelBtn').onclick = ()=> boxExitSelectMode();
 
 /* ---- 修改种族：选中后点「修改」弹出批量修改种族浮窗，浮窗自己的确认/取消见下方定义 ---- */
@@ -14952,7 +15331,8 @@ function boxEntryMatchesFilters(entry){
   if(boxFilters.shiny===false && entry.shiny) return false;
   if(boxFilters.types.size && !boxFilters.types.has(DEX_TYPE_MAP[rec[3]])) return false;
   if(boxFilters.attrs.size && !boxFilters.attrs.has(rec[2])) return false;
-  if(boxFilters.levels.size && !boxFilters.levels.has(entry.level)) return false;
+  // v3.20：勾四个整档按【档位】命中（选 60 = 60~69 全都算），勾盒子里实际存在的自定义等级按【真实等级】精确命中
+  if(boxFilters.levels.size && !boxFilters.levels.has(entry.level) && !boxFilters.levels.has(levelRealOf(entry))) return false;
   if(boxFilters.medals.size && !boxFilters.medals.has(boxEntrySatiety(entry))) return false;
   if(boxFilters.foods.size){
     const capRow = boxCapRowFor(entry.dex);
@@ -15230,7 +15610,11 @@ function openBoxFilterPopup(key, anchorEl){
       add:(v)=>boxFilters.levels.add(Number(v)),
       delete:(v)=>boxFilters.levels.delete(Number(v)),
     };
-    boxMultiOptPopup(key, anchorEl, '\u7b49\u7ea7', [50,60,70,80].map(l=>({value:String(l),label:String(l)})), shim,
+    // v3.20\uff1a\u7b5b\u9009\u5668\u4e0d\u505a\u8f93\u5165\u6846\u2014\u2014\u76f4\u63a5\u628a\u76d2\u5b50\u91cc\u3010\u5b9e\u9645\u5b58\u5728\u3011\u7684\u81ea\u5b9a\u4e49\u7b49\u7ea7\u5217\u6210\u989d\u5916\u9009\u9879\uff0c
+    // \u60f3\u7b5b 65 \u7ea7\u5c31\u70b9 65\uff0c\u4e0d\u7528\u8bb0\u5f97\u81ea\u5df1\u6709\u54ea\u4e9b\u7b49\u7ea7\uff0c\u4e5f\u7701\u6389\u4e00\u5957\u8f93\u5165\u6001 UI
+    const extraLvs = [...new Set(boxData.map(e=>levelRealOf(e)).filter(l=>!LEVEL_TIERS.includes(l)))].sort((a,b)=>a-b);
+    const lvOpts = LEVEL_TIERS.concat(extraLvs).map(l=>({value:String(l),label:String(l)}));
+    boxMultiOptPopup(key, anchorEl, '\u7b49\u7ea7', lvOpts, shim,
       (o,sel)=>'<div class="segbtn'+(sel?' selected':'')+'" data-val="'+o.value+'">'+o.label+'</div>');
   } else if(key==='medals'){
     const shim = {
@@ -15553,15 +15937,23 @@ var mfSubView = null; // null=hub，'effi' / 'island'
 function mfShowSub(sub){
   // 离开岛屿评分子页时顺带退出批量选择模式，免得回来时"取消"按钮还亮着但用户早忘了自己在批量模式里
   if(mfSubView === 'island' && sub !== 'island' && typeof islandExitBatchMode==='function') islandExitBatchMode();
+  // 同理：离开培养计划时退出「移出培养」多选态，免得回来时按钮还亮着但用户早忘了
+  if(mfSubView === 'plan' && sub !== 'plan'){
+    if(typeof planExitRemoveMode==='function') planExitRemoveMode();
+    if(typeof planExitSumMode==='function') planExitSumMode();
+  }
   mfSubView = sub || null;
   const hub = document.getElementById('mfHubView');
   const effi = document.getElementById('mfSubEffi');
   const island = document.getElementById('mfSubIsland');
-  if(!hub || !effi || !island) return;
+  const plan = document.getElementById('mfSubPlan');
+  if(!hub || !effi || !island || !plan) return;
   hub.style.display = mfSubView ? 'none' : '';
   effi.style.display = mfSubView === 'effi' ? '' : 'none';
   island.style.display = mfSubView === 'island' ? '' : 'none';
+  plan.style.display = mfSubView === 'plan' ? '' : 'none';
   if(mfSubView === 'island') islandRenderAll();
+  else if(mfSubView === 'plan') planRenderAll();
   window.scrollTo(0,0);
   // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
   updatePageActionBar();
@@ -15593,6 +15985,12 @@ const ISLAND_DEFAULT_TAGS = [
   {id:'tag_neg1', name:'看到就烦', score:-1,  color:'#9aa3ad'},
 ];
 const ISLAND_NO_TAG_COLOR = '#b8b2a2';
+// v3.20：跟培养计划标签统一口径——最多 20 个、名称最长 20 字（按 Unicode 码位，
+// 复用盒子昵称那套 boxTakeChars，emoji/生僻字不会被切成半个代理对）。
+// 超长一律静默截断而不是报错：既顺手，也挡住"贴一段超长文本把列表撑爆"这种玩法。
+const ISLAND_TAG_MAX = 20;
+const ISLAND_TAG_NAME_MAX = 20;
+function islandTrimTagName(raw){ return boxTakeChars((raw==null?'':String(raw)).trim(), ISLAND_TAG_NAME_MAX); }
 // 标签名是用户自己敲进 localStorage 的，拼进 innerHTML 前得转义
 function islEsc(s){
   return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -15626,6 +16024,8 @@ function islandLoadState(){
     const t = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
     islandTags = (Array.isArray(t) && t.length) ? t : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
   }catch(e){ islandTags = JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS)); }
+  if(islandTags.length > ISLAND_TAG_MAX) islandTags = islandTags.slice(0, ISLAND_TAG_MAX);
+  islandTags.forEach(t=>{ t.name = islandTrimTagName(t.name); });
   try{
     const m = JSON.parse(localStorage.getItem(ISLAND_POKETAGS_KEY));
     islandPokeTags = (m && typeof m === 'object') ? m : {};
@@ -15668,7 +16068,7 @@ function mergeIslandTagDefs(cloudList, localList){
   (Array.isArray(localList) ? localList : []).forEach(t=>{
     if(t && typeof t.id==='string' && !seen.has(t.id)){ seen.add(t.id); out.push(t); }
   });
-  return out.length ? out : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
+  return out.length ? out.slice(0, ISLAND_TAG_MAX) : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
 }
 function mergeIslandPokeTags(cloudMap, localMap){
   return Object.assign(
@@ -15865,6 +16265,8 @@ function islandMonGridHtml(mapId, lvIdx){
 /* ---- 标签管理 ---- */
 function islandRenderTags(){
   const list = document.getElementById('islTagList'); if(!list) return;
+  const addBtn = document.getElementById('islAddTagBtn');
+  if(addBtn) addBtn.style.display = islandTags.length >= ISLAND_TAG_MAX ? 'none' : '';
   list.innerHTML = islandTags.map(t=>`
     <div class="isl-tag-row">
       <span class="isl-tag-sw" style="background:${t.color}"></span>
@@ -15884,7 +16286,7 @@ function islandOpenTagModal(tagId){
   pop.innerHTML = `<div class="cap-ctrl-box" style="width:min(340px,100%)">
     <div class="cap-ctrl-head">${tag ? '编辑标签' : '新增标签'}<span class="cap-ctrl-close" id="islTagClose">✕</span></div>
     <div class="isl-modal-field"><div class="isl-modal-lab">名称</div>
-      <input type="text" class="isl-modal-in" id="islTagName" value="${tag?islEsc(tag.name):''}" placeholder="标签名称"></div>
+      <input type="text" class="isl-modal-in" id="islTagName" maxlength="${ISLAND_TAG_NAME_MAX}" value="${tag?islEsc(tag.name):''}" placeholder="标签名称（最长 ${ISLAND_TAG_NAME_MAX} 字）"></div>
     <div class="isl-modal-field"><div class="isl-modal-lab">分值</div>
       <input type="number" step="0.1" class="isl-modal-in" id="islTagScore" value="${tag?tag.score:1}"></div>
     <div class="isl-modal-field"><div class="isl-modal-lab">颜色</div>
@@ -15900,12 +16302,15 @@ function islandOpenTagModal(tagId){
   document.getElementById('islTagClose').onclick = close;
   document.getElementById('islTagCancel').onclick = close;
   document.getElementById('islTagSave').onclick = ()=>{
-    const name = document.getElementById('islTagName').value.trim();
+    const name = islandTrimTagName(document.getElementById('islTagName').value);
     const score = parseFloat(document.getElementById('islTagScore').value);
     const color = document.getElementById('islTagColor').value;
     if(!name || isNaN(score)) return;
     if(tag){ tag.name = name; tag.score = score; tag.color = color; }
-    else islandTags.push({id:'tag_'+Date.now(), name, score, color});
+    else {
+      if(islandTags.length >= ISLAND_TAG_MAX){ alert('标签最多 '+ISLAND_TAG_MAX+' 个。'); return; }
+      islandTags.push({id:'tag_'+Date.now(), name, score, color});
+    }
     islandSaveState(); close(); islandRenderAll();
   };
   const delBtn = document.getElementById('islTagDel');
@@ -16061,6 +16466,851 @@ function islandRenderAll(){
   else { islandRenderChips(); islandRenderBox(); }
 }
 
+
+/* ============ v3.20 培养计划 ============
+   跟岛屿评分同构：本地存两个独立 localStorage 键，同时整体塞进 prefs_json 的 plan 子字段跟着账号走，
+   合并策略照抄岛屿那套并集合并（按 id 去重、云端优先、本地独有的保留），避免多设备互相盖掉。
+
+   与盒子的关系是【单向快照】：加入培养时把当时的种族/昵称/等级/性格拷一份进来，此后两边完全独立——
+   盒子里改名、改等级、甚至删除，都不会动培养计划里的这一条（用户明确要求，因为盒子有时要展示
+   "培养完成后"的状态，而培养计划记的是"现在还差多少"）。srcBoxId 只用来标重复，不做任何联动。 */
+const PLAN_TAGS_KEY = 'effiprobcalc_plan_tags_v1';
+const PLAN_DATA_KEY = 'effiprobcalc_plan_data_v1';
+const PLAN_OPTS_KEY = 'effiprobcalc_plan_opts_v1';
+const PLAN_MAX_ENTRIES  = 50;   // 条目上限：prefs_json 跟盒子/岛屿共用一次上传（后端 body 上限 2MB），留足余量
+const PLAN_TAG_MAX      = 20;
+const PLAN_TAG_NAME_MAX = 20;   // 按 Unicode 码位算，跟盒子昵称同一套 boxTakeChars，emoji 不会被切一半
+const PLAN_PRIO_MIN = 1, PLAN_PRIO_MAX = 20;
+const PLAN_DEFAULT_TAGS = [
+  {id:'ptag_hi',  name:'高', prio:1, color:'#d9534f'},
+  {id:'ptag_mid', name:'中', prio:2, color:'#e0a92e'},
+  {id:'ptag_lo',  name:'低', prio:3, color:'#3f9a52'},
+];
+const PLAN_NO_TAG_COLOR = '#b8b2a2';
+let planTags = [];
+let planData = [];
+// 增强开关。boost 只能三选一（'none' / 'mini' / 'candy'，两种增强互斥）；
+// boostCap 打开时增强只作用于前 cap 颗糖，用完自动恢复正常消耗
+let planOpts = {boost:'none', boostCap:true};
+let planPane = 'list';
+let planRemoveMode = false;      // 移出培养多选态：工具条那颗进入，页脚接管确认/取消
+let planSumMode = false;         // 资源总计多选态：页脚左槽进入
+let planPickedIds = new Set();   // 两种多选态共用这一份勾选集合（同一时刻只会进其中一种）
+
+function genPlanId(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function planEsc(s){
+  return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function planTrimTagName(raw){ return boxTakeChars((raw==null?'':String(raw)).trim(), PLAN_TAG_NAME_MAX); }
+function planClampPrio(v){
+  const n = Math.floor(Number(v));
+  if(!Number.isFinite(n)) return PLAN_PRIO_MIN;
+  return Math.min(PLAN_PRIO_MAX, Math.max(PLAN_PRIO_MIN, n));
+}
+
+/* ---- 读写与云同步 ---- */
+let planLoaded = false;
+// 培养计划页没被打开过时 planData 还是空数组，这时若直接从别处（比如盒子气泡的「培养」按钮）
+// 加条目，planSaveState 会拿空数组把 localStorage 里已有的记录整个盖掉。
+// 所有会写 planData 的入口都得先过这道懒加载。
+function planEnsureLoaded(){ if(!planLoaded) planLoadState(); }
+function planLoadState(){
+  planLoaded = true;
+  try{
+    const t = JSON.parse(localStorage.getItem(PLAN_TAGS_KEY));
+    planTags = (Array.isArray(t) && t.length) ? t : JSON.parse(JSON.stringify(PLAN_DEFAULT_TAGS));
+  }catch(e){ planTags = JSON.parse(JSON.stringify(PLAN_DEFAULT_TAGS)); }
+  try{
+    const d = JSON.parse(localStorage.getItem(PLAN_DATA_KEY));
+    planData = Array.isArray(d) ? d.filter(e=>e && typeof e==='object' && typeof e.id==='string') : [];
+  }catch(e){ planData = []; }
+  // 存量数据超限时截到上限（正常路径进不来，防的是手改 localStorage 或旧版本遗留）
+  if(planTags.length > PLAN_TAG_MAX) planTags = planTags.slice(0, PLAN_TAG_MAX);
+  if(planData.length > PLAN_MAX_ENTRIES) planData = planData.slice(0, PLAN_MAX_ENTRIES);
+  planTags.forEach(t=>{ t.name = planTrimTagName(t.name); t.prio = planClampPrio(t.prio); });
+  try{
+    const o = JSON.parse(localStorage.getItem(PLAN_OPTS_KEY));
+    if(o && typeof o==='object'){
+      planOpts.boost = PLAN_BOOSTS[o.boost] ? o.boost : 'none';
+      planOpts.boostCap = o.boostCap !== false;   // 默认开启上限
+    }
+  }catch(e){}
+}
+function planSaveState(){
+  try{
+    localStorage.setItem(PLAN_TAGS_KEY, JSON.stringify(planTags));
+    localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(planData));
+    localStorage.setItem(PLAN_OPTS_KEY, JSON.stringify(planOpts));
+  }catch(e){}
+  scheduleCloudPush(5000); // 跟岛屿打标一样用 5s 长防抖：连续改标签/加一批条目时不必每次都推
+}
+function planCloudSnapshot(){
+  try{
+    const t = JSON.parse(localStorage.getItem(PLAN_TAGS_KEY));
+    const d = JSON.parse(localStorage.getItem(PLAN_DATA_KEY));
+    return { tags: Array.isArray(t) ? t : null, entries: Array.isArray(d) ? d : null,
+             opts: JSON.parse(JSON.stringify(planOpts)) };
+  }catch(e){ return null; }
+}
+function planMergeById(cloudList, localList, cap){
+  const out = [], seen = new Set();
+  (Array.isArray(cloudList) ? cloudList : []).forEach(x=>{
+    if(x && typeof x.id==='string' && !seen.has(x.id)){ seen.add(x.id); out.push(x); }
+  });
+  (Array.isArray(localList) ? localList : []).forEach(x=>{
+    if(x && typeof x.id==='string' && !seen.has(x.id)){ seen.add(x.id); out.push(x); }
+  });
+  return out.slice(0, cap);
+}
+function applyPlanCloudSnapshot(snap){
+  if(!snap) return;
+  try{
+    const localTags = JSON.parse(localStorage.getItem(PLAN_TAGS_KEY));
+    const localData = JSON.parse(localStorage.getItem(PLAN_DATA_KEY));
+    const mergedTags = planMergeById(snap.tags, localTags, PLAN_TAG_MAX);
+    localStorage.setItem(PLAN_TAGS_KEY, JSON.stringify(mergedTags.length ? mergedTags : JSON.parse(JSON.stringify(PLAN_DEFAULT_TAGS))));
+    localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(planMergeById(snap.entries, localData, PLAN_MAX_ENTRIES)));
+    // opts 是单值开关，没有"并集"可言，云端有就以云端为准
+    if(snap.opts && typeof snap.opts==='object') localStorage.setItem(PLAN_OPTS_KEY, JSON.stringify(snap.opts));
+  }catch(e){}
+  planLoadState();
+}
+
+/* ---- 标签 ---- */
+function planTagOf(entry){ return planTags.find(t=>t.id === (entry && entry.tagId)) || null; }
+// 没打标签的排最下，视作优先级 ∞
+function planPrioOf(entry){ const t = planTagOf(entry); return t ? planClampPrio(t.prio) : Infinity; }
+function planSorted(){
+  return planData.slice().sort((a,b)=>{
+    const pa = planPrioOf(a), pb = planPrioOf(b);
+    if(pa !== pb) return pa - pb;
+    return (b.addedAt||0) - (a.addedAt||0);   // 同优先级内：新加入的在上
+  });
+}
+
+/* ---- 条目 ---- */
+// 从盒子条目做一次性快照。阶段3 要用的几个计算字段先占位建好，免得以后还要写迁移
+function planEntryFromBoxEntry(e){
+  return {
+    id: genPlanId(),
+    srcBoxId: e.id,                      // 仅用于标"重复加入"，不做任何联动
+    dex: e.dex, name: e.name,
+    nickname: e.nickname || e.name,
+    shiny: !!e.shiny,
+    level: e.level, levelReal: levelRealOf(e),
+    incAttr: e.incAttr || null, decAttr: e.decAttr || null,
+    tagId: null,
+    addedAt: Date.now(),
+    targetLevel: null, remainExp: null, candyOwned: 0, evoDex: null,  // 阶段3
+  };
+}
+function planAddFromBox(ids){
+  planEnsureLoaded();
+  let added = 0, full = 0;
+  ids.forEach(id=>{
+    if(planData.length >= PLAN_MAX_ENTRIES){ full++; return; }
+    const e = boxGetEntry(id);
+    if(!e) return;
+    planData.push(planEntryFromBoxEntry(e));
+    added++;
+  });
+  if(added) planSaveState();
+  return {added, full};
+}
+// 同一只盒子宝可梦被加了不止一次时，这几条都要挂"重复"角标（只标后面那条的话，
+// 用户看第一条根本不知道下面还有一条一样的）
+function planDupIdSet(){
+  const cnt = {}, dup = new Set();
+  planData.forEach(e=>{ if(e.srcBoxId) cnt[e.srcBoxId] = (cnt[e.srcBoxId]||0)+1; });
+  planData.forEach(e=>{ if(e.srcBoxId && cnt[e.srcBoxId] > 1) dup.add(e.id); });
+  return dup;
+}
+function planRemoveEntries(ids){
+  const s = new Set(ids);
+  const before = planData.length;
+  planData = planData.filter(e=>!s.has(e.id));
+  if(planData.length !== before) planSaveState();
+  return before - planData.length;
+}
+
+/* ============ v3.20 培养计划：升级/进化消耗引擎 ============
+   数据口径对着用户给的那份参考实现逐条核过：
+   - PLAN_LEVEL_EXP[i] 是【等级 i+1 的累计经验】，1.0 倍率基准。算某一级所需经验必须
+     "累计值先各自乘种族倍率取整、再做差"，不能先算增量再乘倍率——个别等级会差 1 点经验，
+     进而多算或少算一颗糖。
+   - PLAN_SHARDS[i] 是【在等级 i 吃一颗糖的碎片单价】，索引就是当前等级本身。
+   - 每颗糖给的经验分三档（<25 / 25~29 / 30+）再按性格的 exp 增减取值，跟碎片单价是两套独立数据。
+   两张表都只到 Lv.70（参考实现同样在 70 封顶），所以培养计划的等级上限是 70。
+   这跟面板那边放开到 99 不矛盾：面板只吃 50/60/70/80 四个档位，不需要逐级表。 */
+const PLAN_LEVEL_MAX = 70;
+const PLAN_LEVEL_EXP = [0,54,125,233,361,525,727,971,1245,1560,1905,2281,2688,3107,3536,3976,4430,4899,5382,5879,6394,6931,7489,8068,8668,9290,9933,10598,11284,11992,12721,13469,14235,15020,15823,16644,17483,18340,19215,20108,21018,21946,22891,23854,24834,25831,26846,27878,28927,29993,31355,32917,34664,36610,38805,41084,43488,46021,48687,51493,54358,57280,60257,63286,66363,69458,72574,75718,78907,82162];
+const PLAN_SHARDS    = [0,14,18,22,27,30,34,39,44,48,50,52,53,56,59,62,66,68,71,74,78,81,85,88,92,95,100,105,111,117,122,126,130,136,143,151,160,167,174,184,192,201,211,221,227,236,250,264,279,295,309,323,338,356,372,391,437,486,538,593,651,698,750,804,866,932,1004,1084,1173,1272];
+const PLAN_CANDY_EXP = {
+  S:{'-':33,'0':40,'+':47},
+  M:{'-':29,'0':35,'+':41},
+  L:{'-':21,'0':25,'+':30},
+};
+// 种族经验倍率。名单由用户给定：准神=大器晚成三家、传说=三圣兽+拉帝兄妹+克雷色利亚、幻兽=梦幻+达克莱伊
+const PLAN_SPECIES_MULT = {
+  '#147':1.5,'#148':1.5,'#149':1.5,   // 迷你龙 → 哈克龙 → 快龙
+  '#246':1.5,'#247':1.5,'#248':1.5,   // 幼基拉斯 → 沙基拉斯 → 班基拉斯
+  '#371':1.5,'#372':1.5,'#373':1.5,   // 宝贝龙 → 甲壳龙 → 暴飞龙
+  '#243':1.8,'#244':1.8,'#245':1.8,   // 雷公 / 炎帝 / 水君
+  '#380':1.8,'#381':1.8,'#488':1.8,   // 拉帝亚斯 / 拉帝欧斯 / 克雷色利亚
+  '#151':2.2,'#491':2.2,              // 梦幻 / 达克莱伊
+};
+// 大器晚成（=准神）三家：中间体→最终体要 100 颗，不是通常的 80 颗
+const PLAN_LATE_BLOOMER = new Set(['#147','#148','#149','#246','#247','#248','#371','#372','#373']);
+
+/* 培养计划自带的进化链表。刻意【不复用也不修改】站内的 POKEMON_FINAL_DEX_MAP：
+   那张表只记"最终形态"、推不出阶段顺序，而且有四处跟实际进化链对不上——
+     皮丘#172 直接指向雷丘#026，漏掉了中间的皮卡丘#025
+     大岩蛇#095 → 大钢蛇#208 这条边完全没有
+     小福蛋#440 把吉利蛋#113 和幸福蛋#242 并列当成两个最终态（实际是三段链）
+     懒人獭#287 把过动猿#288 和请假王#289 并列当成两个最终态（实际是三段链）
+   直接改那张表会连带影响全站的效率解析与毕业判定（比如盒子里的大岩蛇会被解析成
+   属性完全不同的大钢蛇），所以这里另起一份，只服务培养计划。
+   PLAN_EVO_NEXT: dex -> 直接下一步（分支进化时是数组，单个时压成字符串省体积）
+   PLAN_EVO_STAGE: dex -> 阶段序号，只列 >=2 的，查不到即阶段 1（幼体/基础形态） */
+const PLAN_EVO_NEXT = {"#001":"#002","#002":"#003","#004":"#005","#005":"#006","#007":"#008","#008":"#009","#010":"#011","#011":"#012","#019":"#020","#023":"#024","#025":"#026","#027":"#028","#035":"#036","#037":"#038","#037-1":"#038-1","#039":"#040","#050":"#051","#052":"#053","#054":"#055","#056":"#057","#058":"#059","#069":"#070","#070":"#071","#074":"#075","#075":"#076","#079":["#080","#199"],"#081":"#082","#082":"#462","#084":"#085","#092":"#093","#093":"#094","#095":"#208","#104":"#105","#113":"#242","#133":["#134","#135","#136","#196","#197","#470","#471","#700"],"#147":"#148","#148":"#149","#152":"#153","#153":"#154","#155":"#156","#156":"#157","#158":"#159","#159":"#160","#172":"#025","#173":"#035","#174":"#039","#175":"#176","#176":"#468","#177":"#178","#179":"#180","#180":"#181","#194":"#195","#194-1":"#980","#198":"#430","#215":"#461","#228":"#229","#246":"#247","#247":"#248","#252":"#253","#253":"#254","#255":"#256","#256":"#257","#258":"#259","#259":"#260","#280":"#281","#281":["#282","#475"],"#287":"#288","#288":"#289","#304":"#305","#305":"#306","#316":"#317","#328":"#329","#329":"#330","#333":"#334","#353":"#354","#360":"#202","#363":"#364","#364":"#365","#371":"#372","#372":"#373","#387":"#388","#388":"#389","#390":"#391","#391":"#392","#393":"#394","#394":"#395","#403":"#404","#404":"#405","#425":"#426","#438":"#185","#439":"#122","#440":"#113","#447":"#448","#453":"#454","#459":"#460","#517":"#518","#557":"#558","#627":"#628","#696":"#697","#710":"#711","#710-1":"#711-1","#710-2":"#711-2","#710-3":"#711-3","#714":"#715","#736":"#737","#737":"#738","#742":"#743","#759":"#760","#848":"#849","#906":"#907","#907":"#908","#909":"#910","#910":"#911","#912":"#913","#913":"#914","#921":"#922","#922":"#923","#957":"#958","#958":"#959","#974":"#975"};
+const PLAN_EVO_STAGE = {"#002":2,"#003":3,"#005":2,"#006":3,"#008":2,"#009":3,"#011":2,"#012":3,"#020":2,"#024":2,"#025":2,"#026":3,"#028":2,"#035":2,"#036":3,"#038":2,"#038-1":2,"#039":2,"#040":3,"#051":2,"#053":2,"#055":2,"#057":2,"#059":2,"#070":2,"#071":3,"#075":2,"#076":3,"#080":2,"#082":2,"#085":2,"#093":2,"#094":3,"#105":2,"#113":2,"#122":2,"#134":2,"#135":2,"#136":2,"#148":2,"#149":3,"#153":2,"#154":3,"#156":2,"#157":3,"#159":2,"#160":3,"#176":2,"#178":2,"#180":2,"#181":3,"#185":2,"#195":2,"#196":2,"#197":2,"#199":2,"#202":2,"#208":2,"#229":2,"#242":3,"#247":2,"#248":3,"#253":2,"#254":3,"#256":2,"#257":3,"#259":2,"#260":3,"#281":2,"#282":3,"#288":2,"#289":3,"#305":2,"#306":3,"#317":2,"#329":2,"#330":3,"#334":2,"#354":2,"#364":2,"#365":3,"#372":2,"#373":3,"#388":2,"#389":3,"#391":2,"#392":3,"#394":2,"#395":3,"#404":2,"#405":3,"#426":2,"#430":2,"#448":2,"#454":2,"#460":2,"#461":2,"#462":3,"#468":3,"#470":2,"#471":2,"#475":3,"#518":2,"#558":2,"#628":2,"#697":2,"#700":2,"#711":2,"#711-1":2,"#711-2":2,"#711-3":2,"#715":2,"#737":2,"#738":3,"#743":2,"#760":2,"#849":2,"#907":2,"#908":3,"#910":2,"#911":3,"#913":2,"#914":3,"#922":2,"#923":3,"#958":2,"#959":3,"#975":2,"#980":2};
+function planEvoNext(dex){
+  const v = PLAN_EVO_NEXT[dex];
+  if(!v) return [];
+  return Array.isArray(v) ? v : [v];
+}
+function planEvoStage(dex){ return PLAN_EVO_STAGE[dex] || 1; }
+// 进化【到】某形态花多少糖：到最终体(阶段3) 80 颗、大器晚成 100 颗；到中间体或两段链的终点 40 颗
+function planEvoCostTo(dex){
+  if(planEvoStage(dex) >= 3) return PLAN_LATE_BLOOMER.has(dex) ? 100 : 80;
+  return 40;
+}
+// fromDex 能到达的所有下游形态（含中间体），广度优先，用于弹窗里的形态选择器
+function planEvoReachable(fromDex){
+  const out = [], seen = new Set([fromDex]);
+  let frontier = [fromDex];
+  while(frontier.length){
+    const nf = [];
+    frontier.forEach(d=> planEvoNext(d).forEach(n=>{
+      if(seen.has(n)) return;
+      seen.add(n); out.push(n); nf.push(n);
+    }));
+    frontier = nf;
+  }
+  return out;
+}
+// fromDex → toDex 的进化路径（不含起点）。够不到返回 null
+function planEvoPath(fromDex, toDex){
+  if(!toDex || toDex === fromDex) return [];
+  const prev = new Map(), q = [fromDex], seen = new Set([fromDex]);
+  while(q.length){
+    const cur = q.shift();
+    for(const n of planEvoNext(cur)){
+      if(seen.has(n)) continue;
+      seen.add(n); prev.set(n, cur);
+      if(n === toDex){
+        const path = []; let x = n;
+        while(x !== fromDex){ path.unshift(x); x = prev.get(x); }
+        return path;
+      }
+      q.push(n);
+    }
+  }
+  return null;
+}
+function planEvoTotalCost(fromDex, toDex){
+  const path = planEvoPath(fromDex, toDex);
+  if(!path) return 0;
+  return path.reduce((sum,d)=> sum + planEvoCostTo(d), 0);
+}
+
+/* ---- 单只的逐颗模拟 ---- */
+function planSpeciesMult(dex){ return PLAN_SPECIES_MULT[dex] || 1; }
+// 性格的 exp 增减：盒子记录里 incAttr/decAttr 的 'E' 就是 exp
+function planNatureKey(entry){
+  if(entry && entry.incAttr === 'E') return '+';
+  if(entry && entry.decAttr === 'E') return '-';
+  return '0';
+}
+function planCandyExpAt(level, natureKey){
+  const band = level < 25 ? 'S' : (level < 30 ? 'M' : 'L');
+  return PLAN_CANDY_EXP[band][natureKey];
+}
+function planClampLevel(v){
+  const n = Math.floor(Number(v));
+  if(!Number.isFinite(n)) return 1;
+  return Math.min(PLAN_LEVEL_MAX, Math.max(1, n));
+}
+// a 级升到 b 级所需经验：累计值各自先乘倍率取整再做差
+function planExpBetween(a, b, mult){
+  return Math.round(PLAN_LEVEL_EXP[b-1] * mult) - Math.round(PLAN_LEVEL_EXP[a-1] * mult);
+}
+/* 逐颗糖前向模拟。必须逐颗算，不能"先算总颗数再按比例切"——增强让每颗糖的经验翻倍，
+   哪几颗吃到增强会直接改变升级边界落在哪一颗上，进而改变后面每颗糖的碎片单价。
+   boostBudget = 这一只还能吃到增强的颗数（Infinity = 不限量）。
+   返回的 boosted 是实际消耗掉的增强额度，调用方拿去扣全局配额。 */
+function planSimulate(fromLv, remainExp, toLv, natureKey, mult, expMul, shardMul, boostBudget){
+  let candies = 0, shards = 0, boosted = 0;
+  let lv = planClampLevel(fromLv);
+  const target = planClampLevel(toLv);
+  if(target <= lv) return {candies:0, shards:0, boosted:0, ok:true};
+  // 首级特判：填了"升级还需 exp"就以它为准，没填才回表算整级
+  let need = (remainExp > 0) ? remainExp : planExpBetween(lv, lv+1, mult);
+  let guard = 0;
+  while(lv < target){
+    if(++guard > 200000) return {candies, shards, boosted, ok:false};   // 死循环保险
+    // 一颗糖的经验可能【超过整整一级】（开增强时 94exp/颗，而 Lv.2 只要 71），
+    // 这时溢出经验要能白顶过后面若干级、这几级一颗糖都不吃。所以升级判定必须放在
+    // 吃糖【之前】并且能连续级联——写成"吃一颗再判一次"会在这种情况下多记糖和碎片。
+    if(need <= 0){
+      lv++;
+      if(lv >= target) break;
+      need += planExpBetween(lv, lv+1, mult);         // need 此时 <=0，正好把溢出经验结转下去
+      continue;
+    }
+    const useBoost = boosted < boostBudget;
+    const perExp = planCandyExpAt(lv, natureKey) * (useBoost ? expMul : 1);
+    candies++;
+    shards += PLAN_SHARDS[lv] * (useBoost ? shardMul : 1);
+    if(useBoost) boosted++;
+    need -= perExp;
+  }
+  return {candies, shards, boosted, ok:true};
+}
+
+/* ---- 增强 ---- */
+const PLAN_BOOSTS = {
+  mini:  {label:'迷你增强', expMul:2, shardMul:4, cap:350},
+  candy: {label:'糖果增强', expMul:2, shardMul:5, cap:3500},
+};
+function planBoostCtx(){
+  const b = PLAN_BOOSTS[planOpts.boost];
+  if(!b) return {kind:null, expMul:1, shardMul:1, budget:0};
+  return {kind:planOpts.boost, expMul:b.expMul, shardMul:b.shardMul,
+          budget: planOpts.boostCap ? b.cap : Infinity};
+}
+
+/* ---- 单条结果 ---- */
+// 目标等级没填、非法、或不高于当前等级，都算"无需升级"：不出升级数字，也不占增强配额
+function planEntryReady(e){
+  const tgt = Math.floor(Number(e.targetLevel));
+  return Number.isFinite(tgt) && tgt >= 1 && tgt <= PLAN_LEVEL_MAX && tgt > planClampLevel(e.levelReal);
+}
+function planComputeEntry(e, boost, budgetLeft){
+  const evoCandy = planEvoTotalCost(e.dex, e.evoDex);
+  const owned = Math.max(0, Math.floor(Number(e.candyOwned)) || 0);
+  if(!planEntryReady(e)){
+    // 等级已达成但选了进化：进化糖果照样得算，只是没有升级消耗
+    const need = Math.max(0, evoCandy - owned);
+    return {ready:false, levelCandy:0, evoCandy, totalCandy:evoCandy,
+            needCandy:need, handyCandy:Math.ceil(need/3), shards:0, boosted:0, ok:true};
+  }
+  const sim = planSimulate(
+    e.levelReal, Math.max(0, Math.floor(Number(e.remainExp)) || 0), e.targetLevel,
+    planNatureKey(e), planSpeciesMult(e.dex),
+    boost.expMul, boost.shardMul, Math.max(0, budgetLeft)
+  );
+  const total = sim.candies + evoCandy;          // 进化糖果不产生经验、不消耗碎片、不占增强配额
+  const need  = Math.max(0, total - owned);
+  return {ready:true, levelCandy:sim.candies, evoCandy, totalCandy:total,
+          needCandy:need, handyCandy:Math.ceil(need/3), shards:sim.shards,
+          boosted:sim.boosted, ok:sim.ok};
+}
+/* 全表计算：增强配额【全表共享】，按显示顺序（优先级）从上往下消耗。
+   传了 ids 就只在这批里从头重新分配配额（资源总计多选时用这个口径，
+   保证"页脚合计 = 被选中卡片上的数字之和"），不传就是全表。 */
+function planComputeAll(ids){
+  const boost = planBoostCtx();
+  let left = boost.budget;
+  const res = {};
+  const list = ids ? planSorted().filter(e=>ids.has(e.id)) : planSorted();
+  list.forEach(e=>{
+    const r = planComputeEntry(e, boost, left);
+    res[e.id] = r;
+    if(Number.isFinite(left)) left -= r.boosted;
+  });
+  res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;
+  res.__boostCap  = Number.isFinite(boost.budget) ? boost.budget : null;
+  return res;
+}
+// 梦之碎片等大数每三位一个逗号
+function planFmtNum(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
+
+/* ---- 资源图标（梦碎/宝可梦糖果染成主题紫，万能糖保持原色）----
+   三张都是 72×72 webp 内嵌 base64，共约 6KB。前两张原图是纯白剪影+透明底，
+   染色时只换 RGB、alpha 原样保留，抗锯齿边缘不会出现紫白硬边。 */
+const PLAN_ICONS = {
+  candy: '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',
+  handy: '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',
+  shard: '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',
+};
+function planIcon(kind){
+  return `<img class="plan-res-ic" src="data:image/webp;base64,${PLAN_ICONS[kind]}" alt="">`;
+}
+
+/* ---- 列表渲染 ---- */
+function planPortraitHtml(entry, dexOverride){
+  // 进化后形态要按目标 dex 取头像，所以名字得从图鉴反查，不能直接用 entry.name
+  let nm = entry.name;
+  if(dexOverride && dexOverride !== entry.dex){
+    const rec = POKEMON_DEX_DATA.find(r=>r[0]===dexOverride);
+    nm = rec ? rec[1] : nm;
+  }
+  const pair = POKEMON_PORTRAITS[nm];
+  const b64 = pair ? (entry.shiny ? pair[1] : pair[0]) : null;
+  return b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<span class="plan-av-q">?</span>`;
+}
+function planResHtml(r, e){
+  if(!r) return '';
+  // 「还没填目标等级」和「填了但已经达成」是两回事，提示语不能混用
+  if(e && (e.targetLevel === null || e.targetLevel === undefined || e.targetLevel === '')){
+    return `<div class="plan-res"><span class="plan-res-todo">点开填写目标等级后显示所需资源</span></div>`;
+  }
+  if(r.needCandy === 0 && r.shards === 0){
+    return `<div class="plan-res"><span class="plan-res-done">已达成</span></div>`;
+  }
+  const boostTag = r.boosted > 0
+    ? `<span class="plan-res-boost">⚡${r.boosted}/${r.levelCandy}</span>` : '';
+  return `<div class="plan-res">`+
+    `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
+    `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`+
+    `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
+    boostTag+
+  `</div>`;
+}
+function planRenderBoostBar(){
+  const set = (id, on)=>{ const b=document.getElementById(id); if(b) b.classList.toggle('on', on); };
+  set('planBoostMiniBtn',  planOpts.boost==='mini');
+  set('planBoostCandyBtn', planOpts.boost==='candy');
+  set('planBoostCapBtn',   !!planOpts.boostCap);
+}
+function planRenderList(){
+  const el = document.getElementById('planList'); if(!el) return;
+  planRenderBoostBar();
+  const cnt = document.getElementById('planCount');
+  if(cnt) cnt.textContent = planData.length + ' / ' + PLAN_MAX_ENTRIES;
+  const rmBtn = document.getElementById('planRemoveBtn');
+  if(rmBtn){
+    rmBtn.classList.toggle('on', planRemoveMode);
+    rmBtn.textContent = planRemoveMode ? ('移出所选 (' + planPickedIds.size + ')') : '移出培养';
+    rmBtn.disabled = planSumMode;                 // 资源总计进行中不让另一种多选插进来
+    rmBtn.style.opacity = planSumMode ? '.45' : '';
+  }
+  if(!planData.length){
+    el.innerHTML = `<div class="plan-empty">培养计划还是空的。<br>点右下角「加入培养」从盒子里挑几只吧。</div>`;
+    const nb = document.getElementById('planBoostNote'); if(nb) nb.style.display='none';
+    return;
+  }
+  /* 增强配额是全表共享的，一次算完整张表再逐条取用——单条自己算不出该拿多少额度。
+     资源总计多选时改用【只在选中条目内部从头分配】的子集口径，并且卡片上的数字
+     一起切过去，这样"页脚合计 = 被选中卡片之和"永远成立（用户明确选的这个口径）。 */
+  const subsetMode = planSumMode && planPickedIds.size > 0;
+  const all = subsetMode ? planComputeAll(planPickedIds) : planComputeAll();
+  const note = document.getElementById('planBoostNote');
+  if(note){
+    if(planOpts.boost !== 'none' && all.__boostCap != null){
+      note.style.display = '';
+      note.textContent = PLAN_BOOSTS[planOpts.boost].label + '已用 ' + planFmtNum(all.__boostUsed) +
+        ' / ' + planFmtNum(all.__boostCap) + ' 颗，按上方优先级顺序依次分配';
+    } else if(planOpts.boost !== 'none'){
+      note.style.display = '';
+      note.textContent = PLAN_BOOSTS[planOpts.boost].label + '已开启（未限量）';
+    } else note.style.display = 'none';
+  }
+  const dup = planDupIdSet();
+  el.innerHTML = '';
+  planSorted().forEach(entry=>{
+    const t = planTagOf(entry);
+    const r = all[entry.id];
+    const wrap = document.createElement('div');
+    const picking = planRemoveMode || planSumMode;
+    wrap.className = 'plan-rowwrap' + (picking && planPickedIds.has(entry.id) ? ' plan-row-picked' : '');
+    wrap.innerHTML =
+      `<div class="plan-row">`+
+        `<div class="plan-tagslot" style="background:${t?planEsc(t.color):'#e9e4d6'}">`+
+          (t ? `<span class="plan-tagslot-txt">${planEsc(t.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
+        `</div>`+
+        `<div class="plan-body">`+
+          `<div class="plan-av">${planPortraitHtml(entry)}</div>`+
+          `<div class="plan-names">`+
+            `<div class="plan-nick">${planEsc(entry.nickname)}${dup.has(entry.id)?'<span class="plan-dup">重复</span>':''}</div>`+
+            `<div class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></div>`+
+          `</div>`+
+          `<div class="plan-lv">Lv.${levelRealOf(entry)}${(entry.targetLevel && planClampLevel(entry.targetLevel) > levelRealOf(entry)) ? (' → '+planClampLevel(entry.targetLevel)) : ''}</div>`+
+          (picking ? `<div class="plan-check${planPickedIds.has(entry.id)?' on':''}">${planPickedIds.has(entry.id)?'✓':''}</div>` : '')+
+        `</div>`+
+      `</div>`+
+      planResHtml(r, entry);
+    // 两个热区分开：标签位弹标签气泡，其余部分是勾选/展开编辑
+    wrap.querySelector('.plan-tagslot').onclick = (ev)=>{
+      ev.stopPropagation();
+      if(picking) return;                     // 多选态下整行只做勾选，别让标签气泡插一脚
+      planOpenTagPop(entry, ev.currentTarget);
+    };
+    wrap.querySelector('.plan-body').onclick = ()=>{
+      if(picking){
+        planPickedIds.has(entry.id) ? planPickedIds.delete(entry.id) : planPickedIds.add(entry.id);
+        planRenderList();
+        updatePageActionBar();                  // 勾选数变了，页脚合计和按钮灰态要跟着刷新
+        return;
+      }
+      planOpenEditModal(entry.id);
+    };
+    el.appendChild(wrap);
+  });
+}
+
+/* ---- 编辑弹窗 ---- */
+let planEditId = null;
+function planOpenEditModal(id){
+  const e = planData.find(x=>x.id===id); if(!e) return;
+  planEditId = id;
+  let pop = document.getElementById('planEditModal');
+  if(!pop){ pop = document.createElement('div'); pop.id='planEditModal'; pop.className='cap-ctrl-overlay'; document.body.appendChild(pop); }
+  pop.innerHTML = `<div class="cap-ctrl-box plan-modal-box">
+    <div class="cap-ctrl-head">${planEsc(e.nickname)}<span class="cap-ctrl-close" id="planEditClose">✕</span></div>
+    <div class="plan-field-grid">
+      <div class="plan-field"><span class="plan-field-lab">当前等级（1~${PLAN_LEVEL_MAX}）</span>
+        <input type="number" class="plan-field-in" id="planFCur" min="1" max="${PLAN_LEVEL_MAX}" value="${levelRealOf(e)}"></div>
+      <div class="plan-field"><span class="plan-field-lab">升级还需 exp（不填按整级算）</span>
+        <input type="number" class="plan-field-in" id="planFExp" min="0" value="${e.remainExp||''}"></div>
+      <div class="plan-field"><span class="plan-field-lab">现有宝可梦糖果</span>
+        <input type="number" class="plan-field-in" id="planFOwn" min="0" value="${e.candyOwned||0}"></div>
+      <div class="plan-field"><span class="plan-field-lab">目标等级（1~${PLAN_LEVEL_MAX}）</span>
+        <input type="number" class="plan-field-in" id="planFTgt" min="1" max="${PLAN_LEVEL_MAX}" value="${e.targetLevel||''}"></div>
+    </div>
+    <div class="plan-evo-lab">进化到（性格 exp：${planNatureKey(e)==='+'?'加成':(planNatureKey(e)==='-'?'减成':'无影响')}，种族倍率 ${planSpeciesMult(e.dex)}×）</div>
+    <div class="plan-evo-pick" id="planEvoPick"></div>
+    <div class="plan-arrow-wrap" id="planArrowWrap"></div>
+    <div class="plan-modal-note" id="planModalNote"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="planEditCancel">关闭</button>
+      <button type="button" class="isl-modal-btn isl-modal-save" id="planEditSave">保存</button>
+    </div></div>`;
+  pop.style.display = 'flex';
+  const close = ()=>{ pop.style.display='none'; planEditId=null; };
+  document.getElementById('planEditClose').onclick = close;
+  document.getElementById('planEditCancel').onclick = close;
+  document.getElementById('planEditSave').onclick = ()=>{ planEditCollect(e); planSaveState(); close(); planRenderList(); };
+  // 任一字段改动都即时重算右侧结果，不用等保存
+  ['planFCur','planFExp','planFOwn','planFTgt'].forEach(fid=>{
+    const el = document.getElementById(fid);
+    if(el) el.oninput = ()=>{ planEditCollect(e); planEditRefresh(e); };
+  });
+  planEditRenderEvoPick(e);
+  planEditRefresh(e);
+}
+// 把弹窗里四个输入框的当前值收进条目对象（不落盘，落盘只在点保存时）
+function planEditCollect(e){
+  const num = id=>{ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
+  e.levelReal = planClampLevel(num('planFCur') || 1);
+  e.level = levelTierOf(e.levelReal);           // 档位跟着真实等级走，跟站内其它条目一个口径
+  const ex = Math.floor(Number(num('planFExp')));
+  e.remainExp = (num('planFExp')==='' || !Number.isFinite(ex) || ex<0) ? null : ex;
+  const ow = Math.floor(Number(num('planFOwn')));
+  e.candyOwned = (!Number.isFinite(ow) || ow<0) ? 0 : ow;
+  const tg = num('planFTgt');
+  e.targetLevel = tg==='' ? null : planClampLevel(tg);
+}
+function planEditRenderEvoPick(e){
+  const box = document.getElementById('planEvoPick'); if(!box) return;
+  const reach = planEvoReachable(e.dex);
+  const opt = (dex, label, cost, on)=>{
+    const rec = dex ? POKEMON_DEX_DATA.find(r=>r[0]===dex) : null;
+    const nm = rec ? rec[1] : label;
+    const pair = rec ? POKEMON_PORTRAITS[nm] : null;
+    const b64 = pair ? (e.shiny ? pair[1] : pair[0]) : null;
+    return `<button type="button" class="plan-evo-opt${on?' on':''}" data-evo="${dex||''}">`+
+      (b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<div class="plan-evo-opt-none">不进化</div>`)+
+      `<div class="plan-evo-opt-nm">${planEsc(nm)}</div>`+
+      (cost ? `<div class="plan-evo-opt-cost">${cost}颗</div>` : `<div class="plan-evo-opt-cost">&nbsp;</div>`)+
+    `</button>`;
+  };
+  // 「不进化」永远在最前；下游形态按累计进化消耗展示（选最终体时是路径上各段之和）
+  let html = opt(null, '不进化', 0, !e.evoDex);
+  reach.forEach(d=> html += opt(d, '', planEvoTotalCost(e.dex, d), e.evoDex===d));
+  box.innerHTML = html;
+  if(!reach.length) box.innerHTML = `<div class="plan-res-todo" style="font-size:11px;">这只已经是最终形态，没有可进化的目标。</div>`;
+  box.querySelectorAll('[data-evo]').forEach(b=>{
+    b.onclick = ()=>{
+      e.evoDex = b.getAttribute('data-evo') || null;
+      planEditRenderEvoPick(e); planEditRefresh(e);
+    };
+  });
+}
+function planEditRefresh(e){
+  const wrap = document.getElementById('planArrowWrap'); if(!wrap) return;
+  // 弹窗里这一只按"全表顺序算到它为止"的口径取增强额度，跟列表卡片上的数字保持一致
+  const all = planComputeAll();
+  const r = all[e.id] || planComputeEntry(e, planBoostCtx(), 0);
+  const curLv = levelRealOf(e);
+  const tgtLv = e.targetLevel ? planClampLevel(e.targetLevel) : curLv;
+  const rightDex = e.evoDex || e.dex;
+  const nothing = r.needCandy===0 && r.shards===0;
+  wrap.innerHTML =
+    `<div class="plan-side">`+
+      `<div>${planPortraitHtml(e)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
+    `</div>`+
+    `<div class="plan-mid">`+
+      `<div class="plan-mid-top">`+
+        (nothing ? `<span class="plan-res-done">已达成</span>` :
+          `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
+          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`)+
+      `</div>`+
+      `<div class="plan-arrow-line"></div>`+
+      `<div class="plan-mid-bot">`+
+        (nothing ? '' : `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`)+
+      `</div>`+
+    `</div>`+
+    `<div class="plan-side">`+
+      `<div>${planPortraitHtml(e, rightDex)}</div><div class="plan-side-lv">Lv.${tgtLv}</div>`+
+    `</div>`;
+  const note = document.getElementById('planModalNote');
+  if(note){
+    const bits = [];
+    if(r.ready) bits.push('升级 ' + planFmtNum(r.levelCandy) + ' 颗');
+    if(r.evoCandy) bits.push('进化 ' + planFmtNum(r.evoCandy) + ' 颗（进化不消耗梦之碎片）');
+    if(e.candyOwned) bits.push('已有 ' + planFmtNum(e.candyOwned) + ' 颗已扣除');
+    if(r.boosted) bits.push(PLAN_BOOSTS[planOpts.boost].label + ' 覆盖前 ' + r.boosted + ' 颗');
+    if(r.ok === false) bits.push('⚠ 计算未收敛，请检查输入');
+    note.textContent = bits.join(' · ');
+  }
+}
+
+/* ---- 标签选择气泡 ---- */
+function planCloseTagPop(){
+  const p = document.getElementById('planTagPop'); if(p) p.remove();
+  document.removeEventListener('pointerdown', planTagPopOutside, true);
+}
+function planTagPopOutside(ev){
+  const p = document.getElementById('planTagPop');
+  if(p && !p.contains(ev.target)) planCloseTagPop();
+}
+function planOpenTagPop(entry, anchorEl){
+  planCloseTagPop();
+  const pop = document.createElement('div');
+  pop.id = 'planTagPop'; pop.className = 'plan-tagpop';
+  const chip = (tagId, name, color, prio)=>
+    `<div class="plan-tagpop-chip" data-ptag="${tagId}">`+
+      `<span class="plan-tagpop-sw" style="background:${planEsc(color)}"></span>`+
+      `<span>${planEsc(name)}</span>`+
+      (prio!=null ? `<span class="plan-tagpop-prio">P${prio}</span>` : '')+
+    `</div>`;
+  pop.innerHTML = chip('__none__','未标记',PLAN_NO_TAG_COLOR,null)
+    + planTags.slice().sort((a,b)=>planClampPrio(a.prio)-planClampPrio(b.prio))
+        .map(t=>chip(t.id, t.name, t.color, planClampPrio(t.prio))).join('');
+  document.body.appendChild(pop);
+  // 贴着标签位弹，靠近屏幕边缘时翻到另一侧/上方，免得被裁掉
+  const r = anchorEl.getBoundingClientRect();
+  const pr = pop.getBoundingClientRect();
+  let left = r.right + 6, top = r.top;
+  if(left + pr.width > window.innerWidth - 8) left = Math.max(8, r.left - pr.width - 6);
+  if(top + pr.height > window.innerHeight - 8) top = Math.max(8, window.innerHeight - pr.height - 8);
+  pop.style.left = left+'px'; pop.style.top = top+'px';
+  pop.querySelectorAll('[data-ptag]').forEach(c=>{
+    c.onclick = ()=>{
+      const v = c.getAttribute('data-ptag');
+      const live = planData.find(x=>x.id===entry.id);
+      if(live){ live.tagId = (v==='__none__') ? null : v; planSaveState(); }
+      planCloseTagPop();
+      planRenderList();
+    };
+  });
+  // 用捕获阶段监听：气泡里的 click 先于它触发，上面 pop.contains 判断能正确放行
+  setTimeout(()=> document.addEventListener('pointerdown', planTagPopOutside, true), 0);
+}
+
+/* ---- 标签管理分栏 ---- */
+function planRenderTags(){
+  const list = document.getElementById('planTagList'); if(!list) return;
+  const add = document.getElementById('planAddTagBtn');
+  if(add) add.style.display = planTags.length >= PLAN_TAG_MAX ? 'none' : '';
+  list.innerHTML = planTags.slice().sort((a,b)=>planClampPrio(a.prio)-planClampPrio(b.prio)).map(t=>`
+    <div class="plan-tag-row">
+      <span class="plan-tag-sw" style="background:${planEsc(t.color)}"></span>
+      <span class="plan-tag-name">${planEsc(t.name)}</span>
+      <span class="plan-tag-prio">优先级 ${planClampPrio(t.prio)}</span>
+      <button type="button" class="plan-tag-edit" data-ptagedit="${t.id}">编辑</button>
+    </div>`).join('');
+  list.querySelectorAll('[data-ptagedit]').forEach(b=>{
+    b.onclick = ()=> planOpenTagModal(b.getAttribute('data-ptagedit'));
+  });
+}
+function planOpenTagModal(tagId){
+  const tag = tagId ? planTags.find(t=>t.id===tagId) : null;
+  if(!tag && planTags.length >= PLAN_TAG_MAX){ alert('标签最多 '+PLAN_TAG_MAX+' 个。'); return; }
+  let pop = document.getElementById('planTagModal');
+  if(!pop){ pop = document.createElement('div'); pop.id='planTagModal'; pop.className='cap-ctrl-overlay'; document.body.appendChild(pop); }
+  pop.innerHTML = `<div class="cap-ctrl-box isl-modal-box">
+    <div class="cap-ctrl-head">${tag ? '编辑标签' : '新增标签'}<span class="cap-ctrl-close" id="planTagClose">✕</span></div>
+    <div class="isl-modal-row"><span class="isl-modal-lab">名称</span>
+      <input type="text" class="isl-modal-in" id="planTagName" maxlength="${PLAN_TAG_NAME_MAX}" value="${tag?planEsc(tag.name):''}" placeholder="标签名称（最长 ${PLAN_TAG_NAME_MAX} 字）"></div>
+    <div class="isl-modal-row"><span class="isl-modal-lab">优先级</span>
+      <input type="number" step="1" min="${PLAN_PRIO_MIN}" max="${PLAN_PRIO_MAX}" class="isl-modal-in" id="planTagPrio" value="${tag?planClampPrio(tag.prio):1}"></div>
+    <div class="isl-modal-row"><span class="isl-modal-lab">颜色</span>
+      <input type="color" class="isl-modal-in isl-modal-color" id="planTagColor" value="${tag?planEsc(tag.color):'#3a7fd5'}"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="planTagCancel">取消</button>
+      ${tag ? '<button type="button" class="isl-modal-btn isl-modal-del" id="planTagDel">删除</button>' : ''}
+      <button type="button" class="isl-modal-btn isl-modal-save" id="planTagSave">保存</button>
+    </div></div>`;
+  pop.style.display = 'flex';
+  const close = ()=>{ pop.style.display='none'; };
+  document.getElementById('planTagClose').onclick = close;
+  document.getElementById('planTagCancel').onclick = close;
+  document.getElementById('planTagSave').onclick = ()=>{
+    // 超长直接截断而不是报错：名称是用户自己敲的，静默截到 20 字比拦下来更顺手，
+    // 也顺带挡住"贴一段超长文本进来把列表撑爆"这种玩法
+    const name = planTrimTagName(document.getElementById('planTagName').value);
+    const prio = planClampPrio(document.getElementById('planTagPrio').value);
+    const color = document.getElementById('planTagColor').value;
+    if(!name){ alert('标签名称不能为空。'); return; }
+    if(tag){ tag.name = name; tag.prio = prio; tag.color = color; }
+    else planTags.push({id:'ptag_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5), name, prio, color});
+    planSaveState(); close(); planRenderAll();
+  };
+  const del = document.getElementById('planTagDel');
+  if(del) del.onclick = ()=>{
+    if(!confirm('删除标签「'+tag.name+'」？已打这个标签的条目会变回未标记。')) return;
+    planTags = planTags.filter(t=>t.id !== tag.id);
+    planData.forEach(e=>{ if(e.tagId === tag.id) e.tagId = null; });
+    planSaveState(); close(); planRenderAll();
+  };
+}
+
+/* ---- 分栏与整体渲染 ---- */
+const PLAN_PANES = [ {id:'list', label:'培养列表'}, {id:'tags', label:'标签管理'} ];
+function planRenderTabs(){
+  const el = document.getElementById('planTabs'); if(!el) return;
+  el.innerHTML = PLAN_PANES.map(p=>
+    `<div class="isl-tab${planPane===p.id?' active':''}" data-planpane="${p.id}">${p.label}</div>`).join('');
+  el.querySelectorAll('[data-planpane]').forEach(t=>{
+    t.onclick = ()=>{ planPane = t.getAttribute('data-planpane'); planRenderAll(); };
+  });
+}
+function planExitRemoveMode(){
+  planRemoveMode = false;
+  planPickedIds = new Set();
+  if(mfSubView === 'plan') planRenderList();
+  updatePageActionBar();
+}
+function planExitSumMode(){
+  planSumMode = false;
+  planPickedIds = new Set();
+  if(mfSubView === 'plan') planRenderList();
+  updatePageActionBar();
+}
+// 页脚左槽：正常态进资源总计；已在资源总计里再点＝原地不动（退出走右侧"取消"）
+function planToggleSumMode(){
+  if(planRemoveMode) return;
+  if(!planSumMode){
+    if(!planData.length) return;
+    planSumMode = true; planPickedIds = new Set();
+    planRenderList(); updatePageActionBar();
+  }
+}
+// 页脚右槽在两种多选态下都是"取消"
+function planFooterCancel(){
+  if(planRemoveMode) planExitRemoveMode();
+  else if(planSumMode) planExitSumMode();
+}
+// 页脚左槽在移出态下是"移出培养"（红），点了弹确认
+function planFooterRemoveConfirm(){
+  if(!planPickedIds.size){ planExitRemoveMode(); return; }
+  if(!confirm('确定要把选中的 ' + planPickedIds.size + ' 条移出培养计划吗？')) return;
+  planRemoveEntries([...planPickedIds]);
+  planExitRemoveMode();
+}
+/* 资源总计浮层：万能糖合计 + 梦之碎片合计。
+   口径跟卡片一致——只在选中的这几条内部从头分配增强配额，所以这里的合计
+   就是那几张卡片上数字的直接相加，不会出现"合计对不上卡片"的情况。 */
+function planRenderSumBar(){
+  const bar = document.getElementById('planSumBar'); if(!bar) return;
+  const onPlan = mfSubView === 'plan'
+    && !!(document.getElementById('page2')||{}).classList
+    && document.getElementById('page2').classList.contains('active-page');
+  if(!onPlan || !planSumMode){ bar.classList.remove('on'); bar.innerHTML = ''; return; }
+  bar.classList.add('on');
+  if(!planPickedIds.size){
+    bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
+    return;
+  }
+  const all = planComputeAll(planPickedIds);
+  let handy = 0, shards = 0, candy = 0;
+  planPickedIds.forEach(id=>{
+    const r = all[id]; if(!r) return;
+    candy += r.needCandy; handy += r.handyCandy; shards += r.shards;
+  });
+  bar.innerHTML =
+    `<span class="plan-sum-item">${planIcon('candy')}${planFmtNum(candy)}</span>`+
+    `<span class="plan-sum-item">${planIcon('handy')}${planFmtNum(handy)}</span>`+
+    `<span class="plan-sum-item">${planIcon('shard')}${planFmtNum(shards)}</span>`+
+    `<span class="plan-sum-n">已选 ${planPickedIds.size} 只</span>`;
+}
+let planInited = false;
+function planRenderAll(){
+  if(!planInited){
+    planEnsureLoaded();
+    const add = document.getElementById('planAddTagBtn');
+    if(add) add.onclick = ()=> planOpenTagModal(null);
+    // 两种增强互斥：点亮着的那颗＝关掉；点另一颗＝直接切过去
+    const boostBtn = (id, kind)=>{
+      const el = document.getElementById(id);
+      if(el) el.onclick = ()=>{
+        planOpts.boost = (planOpts.boost === kind) ? 'none' : kind;
+        planSaveState(); planRenderList();
+      };
+    };
+    boostBtn('planBoostMiniBtn','mini');
+    boostBtn('planBoostCandyBtn','candy');
+    const capBtn = document.getElementById('planBoostCapBtn');
+    if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); };
+    const rm = document.getElementById('planRemoveBtn');
+    if(rm) rm.onclick = ()=>{
+      if(planSumMode) return;                      // 两种多选态互斥
+      if(!planRemoveMode){
+        if(!planData.length) return;
+        planRemoveMode = true; planPickedIds = new Set();
+        planRenderList(); updatePageActionBar(); return;
+      }
+      planFooterRemoveConfirm();                   // 跟页脚那颗红的行为一致
+    };
+    planInited = true;
+  }
+  planRenderTabs();
+  document.getElementById('planPaneList').style.display = planPane==='list' ? '' : 'none';
+  document.getElementById('planPaneTags').style.display = planPane==='tags' ? '' : 'none';
+  if(planPane === 'list') planRenderList();
+  else planRenderTags();
+}
+
+/* ---- 从盒子多选加入 ---- */
+function planStartPickFromBox(){
+  planEnsureLoaded();
+  if(planData.length >= PLAN_MAX_ENTRIES){ alert('培养计划最多 '+PLAN_MAX_ENTRIES+' 条，先移出几条再加。'); return; }
+  if(!boxOverlayOpen) openBoxOverlay();
+  boxEnterSelectMode('plan');
+}
+document.getElementById('boxPlanCancelBtn').onclick = ()=> boxExitSelectMode();
+document.getElementById('boxPlanSelectAllBtn').onclick = ()=>{
+  const entries = boxFilteredEntries();
+  const allSelected = entries.length>0 && entries.every(e=>boxSelectedIds.has(e.id));
+  if(allSelected){ boxSelectedIds = new Set(); }
+  else { entries.forEach(e=>boxSelectedIds.add(e.id)); }
+  renderBoxPage();
+};
+document.getElementById('boxPlanConfirmBtn').onclick = ()=>{
+  if(!boxSelectedIds.size) return;
+  const {added, full} = planAddFromBox([...boxSelectedIds]);
+  boxExitSelectMode();
+  closeBoxOverlay();
+  switchPage('page2');
+  mfShowSub('plan');
+  const parts = [];
+  if(added) parts.push('已加入 '+added+' 只');
+  if(full)  parts.push('已达 '+PLAN_MAX_ENTRIES+' 条上限，'+full+' 只未加入');
+  if(parts.length) alert(parts.join('；') + '。');
+};
 
 /* ============ 宝可梦盒：首次渲染 ============ */
 renderBoxFilterRow();
