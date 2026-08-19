@@ -5021,12 +5021,17 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
       : capHelpsPerDay(x.interval, level, medal) * berryBase * capBerryPerBerry(x.attr, level);
     value *= ingFrac;
     let specialStaminaDeduct = null;
-    if(spec && spec.kind==='energy'){ // 达克莱伊/巨锻匠：技能额外产出能量，部分种类同时扣活力（仅展示，不参与任何合计）
+    // 达克莱伊/巨锻匠：技能额外产出能量，跟树果本体分开记账——树果部分该吃"树果效率"(帮忙速度/
+    // hasFruit/性格)，技能加成部分该吃"技能概率效率"，两者substat来源不一样，不能套同一个eff
+    // 硬乘（之前就是这么算的，技能概率堆得越高、树果效率没跟着涨，总能量就会被系统性算低）。
+    // triggerCount 这里先不乘任何效率，留给调用方在拿到"技能类型eff"后再乘。
+    let skillBonusValue = null;
+    if(spec && spec.kind==='energy'){
       const triggerCount = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
-      value += spec.energyPerTrigger * triggerCount;
+      skillBonusValue = spec.energyPerTrigger * triggerCount;
       if(spec.staminaDeduct!=null) specialStaminaDeduct = spec.staminaDeduct * triggerCount;
     }
-    return {kind:'flame', value, specialStaminaDeduct};
+    return {kind:'flame', value, skillBonusValue, specialStaminaDeduct};
   }
   if(type==='food'){
     const ingChoice2 = build ? build.ingChoice2 : state.ingChoice2;
@@ -5124,7 +5129,7 @@ function capSkillEffectHtml(base, e){
 }
 // 排名对比页的>/<号和1/2/3名次徽章要按实际产量比大小，这里单独抽一个只算数值、不拼HTML的版本，
 // 缩放规则跟 capPageActualYieldHtml 保持一致（含持有上限）
-function capPageActualYieldValue(base, eff, build){
+function capPageActualYieldValue(base, eff, build, skillEff){
   if(!base) return null;
   let e = ffloat(eff);
   const cm = build ? carryModelForBuild(build) : null;
@@ -5133,13 +5138,19 @@ function capPageActualYieldValue(base, eff, build){
     else if(base.kind==='food') e *= cm.ingScale;
     else if(base.kind==='skill') e *= cm.skillScale;
   }
-  if(base.kind==='flame') return base.value*e;
+  if(base.kind==='flame'){
+    let v = base.value*e;
+    // 达克莱伊/巨锻匠技能加成的能量单独吃技能效率，不吃树果效率（carry上限也不封它——技能触发
+    // 直接产能量，不经过背包树果那条路，跟 renderYieldAnalysis 页1产能分析口径保持一致）
+    if(base.skillBonusValue!=null) v += base.skillBonusValue * ffloat(skillEff!=null ? skillEff : eff);
+    return v;
+  }
   if(base.kind==='food') return base.primary.value*e;
   if(base.kind==='skill') return base.byEffect ? base.effect*e : base.count*e;
   return null;
 }
 // build 传进来时（页3 三个对比面板）按该面板自己的持有上限参数缩放；不传时（面板天梯）保持无限持有口径
-function capPageActualYieldHtml(base, eff, build){
+function capPageActualYieldHtml(base, eff, build, skillEff){
   if(!base) return '';
   let e = ffloat(eff);
   const cm = build ? carryModelForBuild(build) : null;
@@ -5149,8 +5160,11 @@ function capPageActualYieldHtml(base, eff, build){
     else if(base.kind==='skill') e *= cm.skillScale;
   }
   if(base.kind==='flame'){
-    let html = `<span class="cap-val">${capFlameImg()}<b>${capFmt(base.value*e,0)}</b></span>`;
-    if(base.specialStaminaDeduct!=null) html += `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(base.specialStaminaDeduct*e,0)}</b></span>`;
+    const se = ffloat(skillEff!=null ? skillEff : eff);
+    let total = base.value*e;
+    if(base.skillBonusValue!=null) total += base.skillBonusValue*se;
+    let html = `<span class="cap-val">${capFlameImg()}<b>${capFmt(total,0)}</b></span>`;
+    if(base.specialStaminaDeduct!=null) html += `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(base.specialStaminaDeduct*se,0)}</b></span>`;
     return html;
   }
   if(base.kind==='food'){
@@ -5386,25 +5400,32 @@ function computePanelRankingData(panel){
     });
   } else {
     const baseYield = capPageBaseYield(type, level, build);
-    const yieldHtml = eff => baseYield ? capPageActualYieldHtml(baseYield, eff, build) : null;
-    const yieldValue = eff => baseYield ? capPageActualYieldValue(baseYield, eff, build) : null;
+    // 达克莱伊/巨锻匠这类技能额外产能量的，树果部分吃"树果效率"、技能加成部分该吃"技能概率效率"，
+    // 两者互相独立算，只有命中这类宝可梦才需要多算一份 skill 口径的 eff，其余宝可梦不用多算
+    const needSkillEff = !!(baseYield && baseYield.skillBonusValue!=null);
+    const yieldHtml = (eff, skillEff) => baseYield ? capPageActualYieldHtml(baseYield, eff, build, skillEff) : null;
+    const yieldValue = (eff, skillEff) => baseYield ? capPageActualYieldValue(baseYield, eff, build, skillEff) : null;
 
     const eff = computeEfficiency(labels, type, level, persona);
+    const skillEff = needSkillEff ? computeEfficiency(labels, 'skill', level, persona) : null;
     const raw = getRawRankByGold(type, level, eff, hasHelper);
-    result.raw = {rank:raw.rank, total:raw.total, eff, outputKind:yieldHtml(eff), outputValue:yieldValue(eff), hasHelper, cmp};
+    result.raw = {rank:raw.rank, total:raw.total, eff, outputKind:yieldHtml(eff, skillEff), outputValue:yieldValue(eff, skillEff), hasHelper, cmp};
 
     const fusionEff = computeFusionEfficiency(labels, type, level, persona);
+    const fusionSkillEff = needSkillEff ? computeFusionEfficiency(labels, 'skill', level, persona) : null;
     const fusion = getFusionRank(type, level, fusionEff);
-    result.fusion = {rank:fusion.rank, total:fusion.total, eff:fusionEff, outputKind:yieldHtml(fusionEff), outputValue:yieldValue(fusionEff), cmp};
+    result.fusion = {rank:fusion.rank, total:fusion.total, eff:fusionEff, outputKind:yieldHtml(fusionEff, fusionSkillEff), outputValue:yieldValue(fusionEff, fusionSkillEff), cmp};
 
     const fusionRawEff = computeRawFusionEfficiency(labels, type, level, persona);
+    const fusionRawSkillEff = needSkillEff ? computeRawFusionEfficiency(labels, 'skill', level, persona) : null;
     const fusionRaw = getRawFusionRank(type, level, fusionRawEff);
-    result.fusionRaw = {rank:fusionRaw.rank, total:fusionRaw.total, eff:fusionRawEff, outputKind:yieldHtml(fusionRawEff), outputValue:yieldValue(fusionRawEff), cmp};
+    result.fusionRaw = {rank:fusionRaw.rank, total:fusionRaw.total, eff:fusionRawEff, outputKind:yieldHtml(fusionRawEff, fusionRawSkillEff), outputValue:yieldValue(fusionRawEff, fusionRawSkillEff), cmp};
 
     result.squad = [1,2,3,4].map(n=>{
       const eff2 = computeDisplayEfficiency(labels, type, level, persona, n);
+      const skillEff2 = needSkillEff ? computeDisplayEfficiency(labels, 'skill', level, persona, n) : null;
       const rk = getSquadRank(type, level, eff2, n);
-      return {n, rank:rk.rank, total:rk.total, eff:eff2, outputKind:yieldHtml(eff2), outputValue:yieldValue(eff2), cmp};
+      return {n, rank:rk.rank, total:rk.total, eff:eff2, outputKind:yieldHtml(eff2, skillEff2), outputValue:yieldValue(eff2, skillEff2), cmp};
     });
   }
   return result;
@@ -5848,7 +5869,17 @@ function ladderRowBodyHtml(row, type, level, topEffNum, red, mode, squadN){
     // 自己的 labels/persona 算，不能落回 state 当前选中的那一套，否则几千行会全部套用同一个
     // （错误的）食材概率
     const base = capPageBaseYield(type, level, null, row.labels, row.persona);
-    yieldHtml = base ? capPageActualYieldHtml(base, row.eff) : '';
+    // 达克莱伊/巨锻匠这类技能额外产能量的，还要按这一行自己的 labels/persona、用跟 row.eff 同一个
+    // mode 但 type 换成 'skill' 再算一份技能概率效率——逻辑照抄 ladderCurrentEff 的 mode 分支，
+    // 只是这里不经过 build（天梯行本来就是无限持有口径）
+    let skillEff = null;
+    if(base && base.skillBonusValue!=null){
+      if(mode==='fusion') skillEff = computeFusionEfficiency(row.labels, 'skill', level, row.persona);
+      else if(mode==='fusionRaw') skillEff = computeRawFusionEfficiency(row.labels, 'skill', level, row.persona);
+      else if(mode==='squad') skillEff = computeDisplayEfficiency(row.labels, 'skill', level, row.persona, squadN);
+      else skillEff = computeEfficiencyFromSums(windowSums(row.labels, windowSizeOf(level)), 'skill', row.persona);
+    }
+    yieldHtml = base ? capPageActualYieldHtml(base, row.eff, null, skillEff) : '';
   }
   const rowNum = type==='energy' ? row.eff : ffloat(row.eff);
   const pct = topEffNum>0 ? rowNum/topEffNum*100 : 0;
