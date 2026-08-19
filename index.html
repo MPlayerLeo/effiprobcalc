@@ -4245,7 +4245,7 @@ function boxAssetPath(dex, shiny){
   return null;
 }
 const BOX_STORAGE_KEY = 'effiprobcalc_box_v1';
-const BOX_MAX_COUNT = 800;
+const BOX_MAX_COUNT = 500;   // 改动时必须同步改后端 worker.js 的同名常量并重新部署，否则超出部分会被静默切掉
 let boxData = [];
 function loadBoxData(){
   try{
