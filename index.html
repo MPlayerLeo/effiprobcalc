@@ -12674,6 +12674,7 @@ function switchPage(pageId){
     else { renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); maybeOpenFinalPkPopup(); }
   }
   if(pageId==='page4'){ renderCapturePage(); applyCapHeaderStickyOffset(); }
+  if(typeof syncViewHash==='function') syncViewHash();
 }
 /* v3.18：捕捉推荐页改成"上半部分不动、只有条目区自己滚"。这里量出条目区顶部到页面切换栏
    之间还剩多少高度，写进 --cap-view-h 当条目区的固定高度。
@@ -15533,6 +15534,7 @@ function mfShowSub(sub){
   window.scrollTo(0,0);
   // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
   updatePageActionBar();
+  if(typeof syncViewHash==='function') syncViewHash();
 }
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
   btn.onclick = ()=> mfShowSub(btn.getAttribute('data-mfsub'));
@@ -15746,6 +15748,7 @@ function islandRenderGrid(){
       islandSelId = (islandSelId === id) ? null : id;
       islandRenderGrid();
       islandRenderDetail();
+      syncViewHash();
     };
   });
 }
@@ -15782,6 +15785,39 @@ function islandRenderDetail(){
       body.classList.add('open');
     };
   });
+}
+/* ---- v3.19 地址栏深链接：本站所有页面切换原来都不改 URL，Safari"添加到主屏幕"存的
+   图标只会永远指向添加那一刻的地址栏内容，所以不管添加时停在哪个岛屿明细，图标点开都
+   只能回到首页。这里让岛屿评分子页把当前状态（子页/分栏/展开的岛屿）实时写进 hash，
+   加桌面图标时就能连状态一起存下来；开场再反过来读一次 hash 把状态摆回去。
+   用 replaceState 不用 pushState/直接改 hash：避免每点一次都占一条返回历史记录。 ---- */
+function syncViewHash(){
+  const page2El = document.getElementById('page2');
+  const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  let h = '';
+  if(onIsland){
+    h = '#island';
+    if(islandPane !== 'islands') h += '/' + islandPane;
+    else if(islandSelId != null) h += '/' + islandSelId;
+  }
+  if(location.hash !== h) history.replaceState(null, '', location.pathname + location.search + h);
+}
+// 开场按 hash 把岛屿评分子页恢复到之前那个状态；没有匹配的 hash 就返回 false，走原来的首页开场
+function islandApplyHashOnBoot(){
+  const m = /^#island(?:\/([^/]+))?$/.exec(location.hash);
+  if(!m) return false;
+  const seg = m[1];
+  if(seg === 'tags' || seg === 'box'){ islandPane = seg; }
+  else{
+    islandPane = 'islands';
+    if(seg != null){
+      const id = Number(seg);
+      if(ISLAND_MAPS.some(map=> map.id === id)) islandSelId = id;
+    }
+  }
+  switchPage('page2');
+  mfShowSub('island');
+  return true;
 }
 function islandMonGridHtml(mapId, lvIdx){
   return islandLevelStyles(mapId, lvIdx).map(st=>{
@@ -15963,7 +15999,7 @@ function islandRenderTabs(){
   el.innerHTML = ISLAND_PANES.map(p=>
     `<div class="isl-tab${islandPane===p.id?' active':''}" data-islpane="${p.id}">${p.label}</div>`).join('');
   el.querySelectorAll('[data-islpane]').forEach(t=>{
-    t.onclick = ()=>{ islandPane = t.getAttribute('data-islpane'); islandRenderAll(); };
+    t.onclick = ()=>{ islandPane = t.getAttribute('data-islpane'); islandRenderAll(); syncViewHash(); };
   });
 }
 let islandInited = false;
@@ -15999,7 +16035,7 @@ function islandRenderAll(){
 renderBoxFilterRow();
 
 renderAll();
-mfShowSub(null);
+if(!islandApplyHashOnBoot()) mfShowSub(null);
 updatePageActionBar(); // v3.18：开场同步一次吸底按钮条（原来这里是 updateFabDocking()）
 </script>
 </body>
