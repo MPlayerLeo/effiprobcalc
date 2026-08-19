@@ -2146,7 +2146,9 @@
 .mf-hub-ic-island{ background:#2f8f8a; }
 /* 岛屿评分/培养计划的头图不再用 emoji：emoji 在安卓/iOS/PC 上是三套完全不同的彩色字形，
    跟旁边扁平的白色「%」放一起风格对不上，还得看系统装没装对应字体。
-   岛屿＝内联的扁平椰子树矢量（跟着 color 走白色），培养＝万能糖图标本体（下方 JS 注入 src，
+   岛屿＝内联的扁平椰子树小岛矢量（椰树＋沙丘＋海浪三层，跟着 color 走白色；
+   单独一棵椰树看着像棵树而不像岛，沙丘给它个落脚点、海浪才能把“岛”读出来），
+   培养＝万能糖图标本体（下方 JS 注入 src，
    因为图是 base64 存在 PLAN_ICONS 里的，HTML 里写不进去）。 */
 .mf-hub-svg{ width:27px; height:27px; display:block; }
 .mf-hub-ic-plan img{ width:31px; height:31px; object-fit:contain; display:block; }
@@ -2738,7 +2740,7 @@
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-mfsub="island">
-        <span class="mf-hub-ic mf-hub-ic-island"><svg class="mf-hub-svg" viewBox="3.6 -2.6 40.8 43.4" aria-hidden="true"><g fill="currentColor"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g></svg></span>
+        <span class="mf-hub-ic mf-hub-ic-island"><svg class="mf-hub-svg" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><g transform="translate(5.28,2.528) scale(0.78)"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g><path d="M9 38.6C11.8 33.9 17.1 31.5 24 31.5C30.9 31.5 36.2 33.9 39 38.6Z"/></g><path d="M4.6 46.6C7.83 46.6 11.07 43.4 14.3 43.4C17.53 43.4 20.77 46.6 24 46.6C27.23 46.6 30.47 43.4 33.7 43.4C36.93 43.4 40.17 46.6 43.4 46.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">岛屿评分</span>
           <span class="mf-hub-d">给宝可梦打标签，算出每座岛屿睡姿池的含金量得分</span>
