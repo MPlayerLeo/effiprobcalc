@@ -2144,6 +2144,12 @@
   font-size:21px; font-weight:900; color:#fff; background:var(--accent);
 }
 .mf-hub-ic-island{ background:#2f8f8a; }
+/* 岛屿评分/培养计划的头图不再用 emoji：emoji 在安卓/iOS/PC 上是三套完全不同的彩色字形，
+   跟旁边扁平的白色「%」放一起风格对不上，还得看系统装没装对应字体。
+   岛屿＝内联的扁平椰子树矢量（跟着 color 走白色），培养＝万能糖图标本体（下方 JS 注入 src，
+   因为图是 base64 存在 PLAN_ICONS 里的，HTML 里写不进去）。 */
+.mf-hub-svg{ width:27px; height:27px; display:block; }
+.mf-hub-ic-plan img{ width:31px; height:31px; object-fit:contain; display:block; }
 .mf-hub-body{ flex:1 1 auto; min-width:0; }
 .mf-hub-t{ font-size:15.5px; font-weight:900; color:var(--ink); }
 .mf-hub-d{ font-size:11.5px; color:#8a8375; font-weight:700; margin-top:3px; line-height:1.5; }
@@ -2323,11 +2329,19 @@
 /* 标签位：默认空白的一条窄竖条，点它弹标签气泡（点条目其余部分是展开编辑弹窗，两个热区分开） */
 .plan-tagslot{
   flex:0 0 30px; display:flex; align-items:center; justify-content:center;
-  background:#e9e4d6; border-right:1px solid var(--line); position:relative;
+  background:#e9e4d6; border-right:1px solid var(--line); position:relative; overflow:hidden;
 }
+/* 标签名横排，一行最多 2 个字（宽度锁死 2em，中日文正好两个字满行），最多 4 行，超出省略号。
+   关键是 position:absolute —— 条目的上下高度只能由右侧头像那一栏决定，标签字数从 1 个变到
+   20 个都不许把行撑高。之前是 writing-mode:vertical-rl 的竖排文字参与撑高，长标签会把整条
+   顶高一截，列表看着参差不齐。 */
 .plan-tagslot-txt{
-  font-size:10px; font-weight:900; color:#fff; writing-mode:vertical-rl; text-orientation:upright;
-  letter-spacing:1px; max-height:100%; overflow:hidden; padding:4px 0;
+  position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+  width:2em; text-align:center; letter-spacing:0;
+  font-size:10px; line-height:1.12; font-weight:900; color:#fff;
+  word-break:break-all; overflow-wrap:anywhere;
+  display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:4; line-clamp:4;
+  overflow:hidden;
 }
 .plan-tagslot-empty{ font-size:15px; font-weight:900; color:#b8b2a2; }
 .plan-body{ flex:1 1 auto; min-width:0; display:flex; align-items:center; gap:9px; padding:8px 10px; }
@@ -2381,16 +2395,23 @@
   font-size:11px; font-weight:800; color:var(--accent-dk); background:#efe9f6;
   border-radius:8px; padding:6px 10px; margin:-4px 0 10px;
 }
-/* 条目上的结果条：糖果 / 万能糖 / 碎片，图标当单位（阶段4 换成真图标） */
+/* 条目上的结果条：糖果 / 万能糖 / 碎片，图标当单位（阶段4 换成真图标）
+   整条居中——三组数字长度差很多（碎片能到 7 位），左对齐时每条参差不齐，居中更整齐 */
 .plan-res{
-  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
   border-top:1px dashed var(--line); padding:5px 10px 7px 10px; font-size:11.5px; font-weight:800;
 }
 .plan-res-item{ display:inline-flex; align-items:center; gap:3px; color:var(--ink); }
 .plan-res-ic{ width:14px; height:14px; flex:0 0 auto; object-fit:contain; vertical-align:-2px; }
+/* 万能糖裁完透明边后图案仍只占画布的 0.84（另外两张是宝可梦糖果 1.0 / 梦碎 0.82×0.71），
+   14px 方框里目视还是偏小一号，这里把框放到 17px，实际画出来 ≈14.3px，跟宝可梦糖果齐平 */
+.plan-res-ic-handy{ width:17px; height:17px; }
 .plan-res-done{ color:#3f9a52; }
 .plan-res-todo{ color:#9a9484; font-weight:700; }
-.plan-res-boost{ margin-left:auto; color:var(--accent); font-weight:900; }
+/* 原来是 margin-left:auto 顶到最右边，那会把上面的 justify-content:center 吃掉
+   （auto 边距优先级高于对齐），所以改成跟着一起居中排 */
+.plan-res-boost{ display:inline-flex; align-items:center; gap:2px; color:var(--accent); font-weight:900; }
+.plan-up-ic{ width:10px; height:10px; flex:0 0 auto; fill:currentColor; }
 .plan-rowwrap{ display:flex; flex-direction:column; background:var(--panel); border:1px solid var(--line);
   border-radius:11px; overflow:hidden; }
 .plan-rowwrap.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
@@ -2717,7 +2738,7 @@
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-mfsub="island">
-        <span class="mf-hub-ic mf-hub-ic-island">🏝</span>
+        <span class="mf-hub-ic mf-hub-ic-island"><svg class="mf-hub-svg" viewBox="3.6 -2.6 40.8 43.4" aria-hidden="true"><g fill="currentColor"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">岛屿评分</span>
           <span class="mf-hub-d">给宝可梦打标签，算出每座岛屿睡姿池的含金量得分</span>
@@ -2725,7 +2746,7 @@
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-mfsub="plan">
-        <span class="mf-hub-ic mf-hub-ic-plan">🍬</span>
+        <span class="mf-hub-ic mf-hub-ic-plan" id="mfHubIcPlan"></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">培养计划</span>
           <span class="mf-hub-d">排出要练的宝可梦，算清升到目标等级要多少糖果和梦之碎片</span>
@@ -13019,6 +13040,49 @@ function applyCapHeaderStickyOffset(){
   const h = Math.max(160, Math.round(bottom - top - 10));
   document.documentElement.style.setProperty('--cap-view-h', h+'px');
 }
+
+/* ============ 软键盘收起后的底部复位 ============
+   现象：在标签编辑弹窗里改完名字/优先级、输入结束之后，页面切换栏＋底部按钮条整块停在半空，
+   底下露出一条空白，看着像"整个底部被向上拉"。不是每次都有，所以之前一直没定位到。
+
+   成因是两条老坑叠在一起：
+   1) 软键盘弹出时浏览器把视口压矮，body 上的 min-height:100dvh 跟着缩水。培养计划/岛屿评分
+      条目少的时候文档本来就不够一屏，缩完更短。
+   2) 顶部注释里记过的那条：文档高度一旦小于视口，部分浏览器就不再把 bottom:0 的固定定位元素
+      当成"贴视口底"，而是当成跟着文档走。键盘收起、视口弹回全高的那一帧如果没触发重排，
+      固定栏就停在键盘原来的位置不动了。
+
+   修法不是去改布局（min-height 那条是用来防另一个 bug 的，不能动），而是在输入结束后强制
+   让浏览器重算一次：读一下 body 高度打断批量布局，再做一次 ±1px 的滚动抖动。抖动幅度肉眼
+   不可见，但足以让固定定位元素重新贴回视口底部。 */
+let kbdResetTimer = 0;
+function resetBottomAfterKeyboard(){
+  clearTimeout(kbdResetTimer);
+  // 键盘收起动画本身要 200~300ms，太早抖没用（那时视口还没弹回全高），所以延后一点再做
+  kbdResetTimer = setTimeout(()=>{
+    void document.body.offsetHeight;            // 强制同步布局
+    const y = window.scrollY || window.pageYOffset || 0;
+    window.scrollTo(0, y + 1);
+    window.scrollTo(0, y);                      // 抖回原位，用户看不出来
+    if(typeof positionTabIndicator==='function') positionTabIndicator();
+    const p4 = document.getElementById('page4');
+    if(p4 && p4.classList.contains('active-page')) applyCapHeaderStickyOffset();
+  }, 320);
+}
+// 用 focusout 而不是 blur：blur 不冒泡，得给每个输入框单独挂
+document.addEventListener('focusout', (e)=>{
+  const t = e.target;
+  if(!t || !t.tagName) return;
+  const tag = t.tagName.toLowerCase();
+  if(tag!=='input' && tag!=='textarea' && tag!=='select') return;
+  resetBottomAfterKeyboard();
+}, true);
+// 有些浏览器上弹窗被 remove 掉时不给焦点元素补发 focusout，关弹窗前主动收一次键盘
+function blurActiveInput(){
+  const a = document.activeElement;
+  if(a && a.blur && /^(input|textarea|select)$/i.test(a.tagName)) a.blur();
+  resetBottomAfterKeyboard();
+}
 document.querySelectorAll('.tab-item').forEach(t=>{
   t.onclick = ()=>{
     // v3.19：已经停在更多功能页时再点它自己的页签＝退回子页列表
@@ -13042,7 +13106,7 @@ function pageSwipeBlocked(){
   if(boxOverlayOpen || dashboardOpen) return true;
   const openClassIds = ['boxDetailOverlay','boxFilterPopupOverlay','boxInfoBubbleOverlay'];
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
-  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal'];
+  const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal','planTagModal','planEditModal'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
   return false;
 }
@@ -16297,7 +16361,7 @@ function islandOpenTagModal(tagId){
       <button type="button" class="isl-modal-btn isl-modal-save" id="islTagSave">保存</button>
     </div>
   </div>`;
-  const close = ()=>{ pop.style.display='none'; };
+  const close = ()=>{ blurActiveInput(); pop.style.display='none'; };
   pop.onclick = e=>{ if(e.target===pop) close(); };
   document.getElementById('islTagClose').onclick = close;
   document.getElementById('islTagCancel').onclick = close;
@@ -16833,20 +16897,33 @@ function planComputeAll(ids){
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.budget : null;
   return res;
 }
+// 增强徽标上的向上箭头：扁平实心矢量，替掉原来的 ⚡ emoji（emoji 各平台字形不一，
+// 安卓上是黄色闪电、iOS 上带描边，跟旁边纯色的紫字放一起很跳）
+const PLAN_UP_SVG = '<svg class="plan-up-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 2.6 12.6h5.15v9h8.5v-9h5.15z"/></svg>';
 // 梦之碎片等大数每三位一个逗号
 function planFmtNum(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
 /* ---- 资源图标（梦碎/宝可梦糖果染成主题紫，万能糖保持原色）----
-   三张都是 72×72 webp 内嵌 base64，共约 6KB。前两张原图是纯白剪影+透明底，
-   染色时只换 RGB、alpha 原样保留，抗锯齿边缘不会出现紫白硬边。 */
+   candy / shard 是 72×72 webp，原图纯白剪影+透明底，染色时只换 RGB、alpha 原样保留，
+   抗锯齿边缘不会出现紫白硬边。
+   handy（万能糖）原图 72×72 里图案只占中间 38×39，四周全是透明边，跟另外两张放在同一个
+   14px 方框里时看起来小了一大半。这里存的是【按 alpha 包围盒裁完再补 1px 呼吸边】的
+   41×41 无损版本，图案占比 0.93，跟 candy 的 1.0 目视等大，CSS 不用再单独放大它。
+   ⚠️ 以后换素材要么同样先裁掉透明边，要么给它单独加一条放大的 CSS，否则又会缩回去。 */
 const PLAN_ICONS = {
   candy: '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',
-  handy: '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',
+  handy: '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',
   shard: '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',
 };
 function planIcon(kind){
-  return `<img class="plan-res-ic" src="data:image/webp;base64,${PLAN_ICONS[kind]}" alt="">`;
+  return `<img class="plan-res-ic plan-res-ic-${kind}" src="data:image/webp;base64,${PLAN_ICONS[kind]}" alt="">`;
 }
+// 更多功能 hub 上「培养计划」那颗头图＝万能糖本体。图是 base64 常量，静态 HTML 里塞不进去，
+// 这里定义完 PLAN_ICONS 之后补一次（脚本在 body 末尾，这时候节点一定已经在了）
+(function(){
+  const el = document.getElementById('mfHubIcPlan');
+  if(el) el.innerHTML = `<img src="data:image/webp;base64,${PLAN_ICONS.handy}" alt="">`;
+})();
 
 /* ---- 列表渲染 ---- */
 function planPortraitHtml(entry, dexOverride){
@@ -16870,7 +16947,7 @@ function planResHtml(r, e){
     return `<div class="plan-res"><span class="plan-res-done">已达成</span></div>`;
   }
   const boostTag = r.boosted > 0
-    ? `<span class="plan-res-boost">⚡${r.boosted}/${r.levelCandy}</span>` : '';
+    ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '';
   return `<div class="plan-res">`+
     `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
     `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`+
@@ -16988,7 +17065,7 @@ function planOpenEditModal(id){
       <button type="button" class="isl-modal-btn isl-modal-save" id="planEditSave">保存</button>
     </div></div>`;
   pop.style.display = 'flex';
-  const close = ()=>{ pop.style.display='none'; planEditId=null; };
+  const close = ()=>{ blurActiveInput(); pop.style.display='none'; planEditId=null; };
   document.getElementById('planEditClose').onclick = close;
   document.getElementById('planEditCancel').onclick = close;
   document.getElementById('planEditSave').onclick = ()=>{ planEditCollect(e); planSaveState(); close(); planRenderList(); };
@@ -17155,7 +17232,7 @@ function planOpenTagModal(tagId){
       <button type="button" class="isl-modal-btn isl-modal-save" id="planTagSave">保存</button>
     </div></div>`;
   pop.style.display = 'flex';
-  const close = ()=>{ pop.style.display='none'; };
+  const close = ()=>{ blurActiveInput(); pop.style.display='none'; };
   document.getElementById('planTagClose').onclick = close;
   document.getElementById('planTagCancel').onclick = close;
   document.getElementById('planTagSave').onclick = ()=>{
