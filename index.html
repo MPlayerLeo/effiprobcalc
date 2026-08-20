@@ -571,6 +571,9 @@
   #fabCreate{ background:#3f9a52; right:24px; bottom:100px; }
   /* "更多功能"按需求固定在左下角，不跟右侧那组共用位置 */
   #fabMore{ background:#7a4f9e; left:24px; bottom:100px; }
+  /* 培养计划资源总计态「取消全选」：借 fabMore 在左下角的坐标——两者互斥（fabMore 只在
+     盒子浮层内出现，这颗只在普通页面的培养计划里出现），不会真的叠在一起 */
+  #fabPlanClear{ background:#8d8776; left:24px; bottom:100px; }
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
   #fabPanel.fab-lifted{ bottom:212px; }
   #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
@@ -2424,8 +2427,13 @@
    现在直接当条目本体，列表和弹窗共用 planArrowHtml() / .plan-arrow-wrap 一套东西。
    wrap 自己不再是 flex 容器——真正的内容都挪进 .plan-swipe-front 了，wrap 退化成
    "裁切窗口 + 删除按钮的定位参系"，overflow:hidden 保证 front 往左滑走时删除按钮不会露到条目外面去。 */
+/* user-select:none + -webkit-touch-callout:none：不然长按准备左滑/拖动的这段时间里，
+   手指按在头像图片上会被系统当成"长按图片"，弹出保存图片/预览大图那一套，把我们自己的
+   手势判定打断——跟盒子网格 .box-grid-item 长按改昵称时的处理是同一个道理 */
 .plan-rowwrap{ position:relative; background:var(--panel);
-  border:1px solid var(--line); border-radius:11px; overflow:hidden; cursor:pointer; }
+  border:1px solid var(--line); border-radius:11px; overflow:hidden; cursor:pointer;
+  user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none; }
+.plan-rowwrap img{ -webkit-user-drag:none; pointer-events:none; }
 .plan-rowwrap.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
 /* 长按拖动排序：抬起来一点，压在别的条目上面 */
 .plan-rowwrap.plan-dragging{ z-index:5; box-shadow:0 6px 18px rgba(0,0,0,.22); }
@@ -3087,6 +3095,7 @@
 <div class="page-action-bar" id="pageActionBar">
   <div class="page-act-side page-act-side-left">
     <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+    <button type="button" class="page-act-btn page-act-btn-plain" id="pageActSelAllBtn" style="display:none">取消全选</button>
   </div>
   <div class="page-act-gap"></div>
   <div class="page-act-side page-act-side-right">
@@ -3099,6 +3108,7 @@
 <div class="plan-sum-bar" id="planSumBar"></div>
 <div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
 <div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
+<div class="ui-fab" id="fabPlanClear"><span>取消<br>全选</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
 <div class="ui-fab" id="fabMore">更多<br>功能</div>
 <div class="box-toast" id="boxToast"></div>
@@ -7707,12 +7717,12 @@ function renderPscActions(){
   box.textContent = '';
   const mk = (cls, text, fn)=>{
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'psc-btn '+cls; b.textContent = text; b.onclick = fn;
+    b.type = 'button'; b.className = 'psc-btn '+cls; b.innerHTML = text; b.onclick = fn;
     box.appendChild(b); return b;
   };
   mk('psc-btn-deny', linked ? '关闭' : '拒绝', closePscModal);
   if(linked) mk('psc-btn-unlink', '解除连接', pscUnlink);
-  else mk('psc-btn-allow', '✓ 前往授权', pscStartLink);
+  else mk('psc-btn-allow', checkIconSvg('#fff',3,13)+' 前往授权', pscStartLink);
 }
 function renderPscModal(){
   const linked = !!(pscLinkState && pscLinkState.linked);
@@ -7968,11 +7978,11 @@ async function oauthConsentBootstrap(){
   actions.textContent = '';
   const mk = (cls, text, fn)=>{
     const btn = document.createElement('button');
-    btn.type='button'; btn.className='psc-btn '+cls; btn.textContent=text; btn.onclick=fn;
+    btn.type='button'; btn.className='psc-btn '+cls; btn.innerHTML=text; btn.onclick=fn;
     actions.appendChild(btn);
   };
   mk('psc-btn-deny', '拒绝', ()=> oauthDecide(false));
-  mk('psc-btn-allow', '✓ 允许访问', ()=> oauthDecide(true));
+  mk('psc-btn-allow', checkIconSvg('#fff',3,13)+' 允许访问', ()=> oauthDecide(true));
 }
 function openPwdModal(){
   document.getElementById('pwdNew1').value = '';
@@ -13737,6 +13747,8 @@ function updatePanelBtnLabel(inBox){
     } else if(planSumMode){
       // v3.21：这颗以前点了原地不动（已经在资源总计里），干脆改成「全选」，
       // 一键把所有条目勾上再看合计，免得几十条一条条点
+      // v3.22：全选/取消全选拆成两颗独立按钮——左槽原按钮固定管"全选"，旁边新开一颗管
+      // "取消全选"；浮窗模式同理多开一颗 fabPlanClear，不再指望一颗按钮兼两种状态的文字提示
       leftTxt = '全选';
       rightTxt = '取消'; rightFab = '取消'; rightPlain = true;
     } else {
@@ -13757,6 +13769,17 @@ function updatePanelBtnLabel(inBox){
   }
   fabLabel && (fabLabel.innerHTML = rightFab);
   fabCtrlLabel && (fabCtrlLabel.innerHTML = leftTxt.length>3 ? (leftTxt.slice(0,2)+'<br>'+leftTxt.slice(2)) : leftTxt);
+  // v3.22：资源总计态下「取消全选」是独立的第二颗按钮/圆圈，只在这个状态下冒出来；
+  // 没条目可选/已经一条没选时压灰，点了也没意义
+  const showClear = onPlan && planSumMode;
+  const clearOff = planPickedIds.size === 0;
+  const selAllBtn = document.getElementById('pageActSelAllBtn');
+  if(selAllBtn){
+    selAllBtn.style.display = showClear ? '' : 'none';
+    selAllBtn.classList.toggle('page-act-btn-off', clearOff);
+  }
+  const fabClear = document.getElementById('fabPlanClear');
+  if(fabClear) fabClear.classList.toggle('ui-fab-off', clearOff);
   if(typeof planRenderSumBar==='function') planRenderSumBar();
 }
 /* 圆形浮窗模式的显隐/位置统一在这里算，updatePageActionBar 与 updateBoxActionBar
@@ -13768,9 +13791,11 @@ function updateFabCircles(){
   const fabControls = document.getElementById('fabControls');
   const fabCreate = document.getElementById('fabCreate');
   const fabMore = document.getElementById('fabMore');
+  const fabPlanClear = document.getElementById('fabPlanClear');
   if(!fabPanel || !fabControls || !fabCreate || !fabMore) return;
   if(!userPrefs.fabCircleModeOn){
-    [fabPanel, fabControls, fabCreate, fabMore].forEach(el=>{
+    [fabPanel, fabControls, fabCreate, fabMore, fabPlanClear].forEach(el=>{
+      if(!el) return;
       el.style.display = 'none'; el.classList.remove('box-page-visible','fab-lifted');
     });
     return;
@@ -13788,6 +13813,7 @@ function updateFabCircles(){
     });
     fabControls.style.display = 'none';
     fabControls.classList.remove('box-page-visible','fab-lifted');
+    if(fabPlanClear) fabPlanClear.style.display = 'none';   // 「取消全选」只在普通页面的培养计划里出现，盒子里不需要
     // 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住
     const authBar = document.getElementById('boxActionBar');
     const authVisible = !!(show && authBar && authBar.style.display !== 'none' && authBar.classList.contains('box-auth-only'));
@@ -13808,6 +13834,9 @@ function updateFabCircles(){
     const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlan;
     fabPanel.style.display = show ? 'flex' : 'none';
     fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
+    // v3.22：「取消全选」借 fabMore 在普通页面里空出来的左下角坐标，只在培养计划的
+    // 资源总计态下冒出来；灰态跟着 updatePanelBtnLabel 里勾选数是否为空一起算
+    if(fabPlanClear) fabPlanClear.style.display = (show && onPlan && planSumMode) ? 'flex' : 'none';
     fabPanel.classList.toggle('ui-fab-off', onIsland && islandBatchTag===null);
     const fcLabel = document.getElementById('fabControlsLabel');
     // 培养计划页的文字（资源总计/全选/移出培养/取消）已经在 updatePageActionBar 里写进
@@ -13942,6 +13971,8 @@ document.getElementById('fabPanel').onclick = ()=>{
 };
 document.getElementById('fabCreate').onclick = ()=> openDashboardForNewEntry();
 document.getElementById('fabMore').onclick = openMoreFuncModal;
+document.getElementById('pageActSelAllBtn').onclick = ()=> planSumDeselectAll();
+document.getElementById('fabPlanClear').onclick = ()=> planSumDeselectAll();
 document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
 document.getElementById('dashCreateAddBtn').onclick = ()=>{
   if(!state.selectedDex){ alert('请先选择宝可梦。'); return; }
@@ -14273,7 +14304,7 @@ function openBoxRenamePrompt(id){
     live.nickname = boxTrimNickname(name) || live.name;   // 清空则回落到种族名
     saveBoxData();
     renderBoxPage();
-    showBoxToast('✓ 已改名');
+    showBoxToastOk('已改名');
   }, {title:'给「'+cur+'」改个名字', skip:false});
 }
 function boxGridItemClick(id, itemEl){
@@ -14319,7 +14350,7 @@ function boxCommitPickToPanel(entryId){
   // 里"退出盒子统一补算一次"的分支去做——它会先弹"排名计算中"再算，避免卡顿感，还省了重算两遍
   renderAll();
   closeBoxOverlay();
-  showBoxToast('✓ 已加入对比');
+  showBoxToastOk('已加入对比');
 }
 function boxApplySelectVerdict(id, itemEl){
   if(boxDragSelectMode==='select') boxSelectedIds.add(id); else boxSelectedIds.delete(id);
@@ -14600,7 +14631,8 @@ function wireBoxInfoBubbleActions(entry){
       // 跳走会打断挑选流程，跟「输出」一样给个即时反馈就够了
       else if(act==='plan'){
         const r = planAddFromBox([entry.id]);
-        showBoxToast(r.added ? '✓ 已加入培养计划' : ('培养计划已满（上限 '+PLAN_MAX_ENTRIES+' 条）'));
+        if(r.added) showBoxToastOk('已加入培养计划');
+        else showBoxToast('培养计划已满（上限 '+PLAN_MAX_ENTRIES+' 条）');
       }
       else if(act==='delete'){ openBoxDeleteWarn([entry.id], ()=>{ closeBoxInfoBubble(); renderBoxPage(); }); }
     };
@@ -14922,7 +14954,7 @@ document.getElementById('boxDetailOutputBtn').onclick = ()=>{
   boxDetailCommitted = true;
   const btn = document.getElementById('boxDetailOutputBtn');
   // 完成态只换文字，底色保持黄色（不加 box-btn-done）
-  btn.textContent = '✓ 输出完成';
+  btn.innerHTML = checkIconSvg('#fff',3,13)+' 输出完成';
   setTimeout(()=>{ btn.textContent='输出'; }, 1400);
 };
 // 保存/关闭现在是同一个动作：都写回当前改动再退出，不再有"关闭=放弃改动"这条路径
@@ -14933,7 +14965,7 @@ function boxDetailSaveAndClose(){
   // 注意不要置 boxDetailCommitted：保存是写回盒子，不等于把这只输出到各页面的面板上
   // 立刻退出详情页，反馈交给不遮罩的轻提示
   closeBoxDetail();
-  showBoxToast('✓ 已保存');
+  showBoxToastOk('已保存');
 }
 document.getElementById('boxDetailSaveBtn').onclick = boxDetailSaveAndClose;
 document.getElementById('boxDetailCloseBtn').onclick = boxDetailSaveAndClose;
@@ -15048,12 +15080,14 @@ function hideBoxToast(){
   // 等淡出走完再收起，中途又弹新提示的话 display 已经被重新打开，这里别覆盖
   setTimeout(()=>{ if(!el.classList.contains('on')) el.style.display = 'none'; }, 240);
 }
-function showBoxToast(text, ms){
+// html=true 时按 innerHTML 写入，只给站内写死的提示语用（比如带对勾图标的成功提示），
+// 不要把任何用户输入原样传进来喂给这个开关——没有转义
+function showBoxToast(text, ms, html){
   const el = document.getElementById('boxToast');
   if(!el) return;
   if(boxToastTimer){ clearTimeout(boxToastTimer); boxToastTimer = null; }
   if(boxToastDismiss){ boxToastDismiss(); boxToastDismiss = null; }
-  el.textContent = text;
+  if(html) el.innerHTML = text; else el.textContent = text;
   el.style.display = 'block';
   void el.offsetWidth; // 重开时要能重新走一遍淡入
   el.classList.add('on');
@@ -15067,6 +15101,11 @@ function showBoxToast(text, ms){
     evs.forEach(t=> document.addEventListener(t, on, {capture:true, passive:true}));
     boxToastDismiss = ()=> evs.forEach(t=> document.removeEventListener(t, on, {capture:true}));
   }, 0);
+}
+// 成功类轻提示统一带直角对勾图标（跟站内其它"已勾选/已完成"图标同一套 checkIconSvg），
+// 不再用 Unicode 的 ✓ 字形当前缀。只给写死的提示语调用，text 会原样拼进 innerHTML
+function showBoxToastOk(text, ms){
+  showBoxToast(checkIconSvg('#fff', 3, 14) + '<span style="margin-left:5px">' + text + '</span>', ms, true);
 }
 
 /* ============ 宝可梦盒：命名弹窗 / 删除警告弹窗（通用）============ */
@@ -15131,7 +15170,7 @@ document.getElementById('dashOutputBtn').onclick = ()=>{
   if(!dashboardBoxEditContext) return;
   boxApplyEntryToState(dashboardBoxEditContext.entryId);
   const btn = document.getElementById('dashOutputBtn');
-  btn.textContent = '✓ 输出完成';
+  btn.innerHTML = checkIconSvg('#fff',3,13)+' 输出完成';
   btn.classList.add('box-btn-done');
   setTimeout(()=>{ btn.textContent='输出计算'; btn.classList.remove('box-btn-done'); }, 1400);
 };
@@ -16819,6 +16858,17 @@ function planSorted(){
     return (b.addedAt||0) - (a.addedAt||0);    // 排序数字也一样时兜底，理论上迁移过一次后不会撞
   });
 }
+// 同优先级内排序数字必须互不相同——用户在编辑弹窗里手填的数字如果撞上组里已有的某条，
+// 就把 entry 插到"排序数字 >= wantNum 的第一条"前面，组内所有条目重新铺成连续的 1..N，
+// 而不是留两条数字相同、界面上分不出谁先谁后
+function planReindexGroup(prio, editedEntry, wantNum){
+  const rest = planData.filter(e=> e!==editedEntry && planPrioOf(e)===prio)
+    .sort((a,b)=>{ const d=planSortNumOf(a)-planSortNumOf(b); if(d) return d; return (b.addedAt||0)-(a.addedAt||0); });
+  let idx = 0;
+  while(idx < rest.length && planSortNumOf(rest[idx]) < wantNum) idx++;
+  rest.splice(idx, 0, editedEntry);
+  rest.forEach((e,i)=>{ e.sortNum = Math.min(PLAN_SORT_MAX, i+1); });
+}
 
 /* ---- 条目 ---- */
 // 从盒子条目做一次性快照。阶段3 要用的几个计算字段先占位建好，免得以后还要写迁移
@@ -17002,8 +17052,10 @@ function planEvoCompatible(a, b){
   if(a===b) return true;
   return !!planEvoPath(a,b) || !!planEvoPath(b,a);
 }
-// 点一下链上某个形态：已选中就取消；选满2个再点第3个＝挤掉最早选的那个，留后一个+新点的；
-// 挤完/新增后如果两个凑不成同一条链（分叉高阶互斥），直接收缩成只留新点的这一个——
+// 点一下链上某个形态：已选中就取消；选满2个再点第3个——如果两个里有一个跟新点的搭得上边
+// （祖先/子孙关系），留住那个搭边的、换掉另一个，这样"幼体+分叉终形态A"点一下同分叉的
+// 终形态B 会变成"幼体+终形态B"（在两条分叉之间切换），而不是稀里糊涂把幼体也弄丢；
+// 两个都跟新点的搭不上边（老规则：挤掉最早选的那个），凑不成同一条链就直接收缩成只留新点的这一个——
 // 不留一个"选不出方向"的死态，保证 planCurrentEvoDex/planTargetEvoDex 任何时候都有合法结果。
 // picks 是空的时候（从没碰过，或者点过重置），第一下点击要当成"选目标"而不是"把现状改成它"——
 // 用 planEvoSeedPicks 补上隐含的"现状＝e.dex"再操作，这样第一次点的永远是"第二个"，
@@ -17011,7 +17063,10 @@ function planEvoCompatible(a, b){
 function planEvoTogglePick(e, d){
   let picks = planEvoSeedPicks(e).slice();
   if(picks.includes(d)) picks = picks.filter(x=>x!==d);
-  else if(picks.length>=2) picks = [picks[picks.length-1], d];
+  else if(picks.length>=2){
+    const keepIdx = picks.findIndex(p=>planEvoCompatible(p,d));
+    picks = keepIdx>=0 ? [picks[keepIdx], d] : [picks[picks.length-1], d];
+  }
   else picks.push(d);
   if(picks.length===2 && !planEvoCompatible(picks[0], picks[1])) picks = [d];
   e.evoPicks = picks;
@@ -17238,18 +17293,20 @@ function planArrowHtml(r, e, mini){
   const leftDex = planCurrentEvoDex(e);
   const rightDex = planTargetEvoDex(e) || leftDex;
   const done = !!r && r.needCandy === 0 && r.shards === 0;
+  // v3.22：午睡岛不再单开一行，挪进糖果/万能糖那一行，跟在万能糖右边一起排
+  const napHtml = planNapDaysHtml(e, mini);
   let top = '', bot = '';
-  if(noTgt)      top = `<span class="plan-res-todo">未设目标等级</span>`;
-  else if(done)  top = `<span class="plan-res-done">已达成</span>`;
+  if(noTgt)      top = `<span class="plan-res-todo">未设目标等级</span>` + napHtml;
+  else if(done)  top = `<span class="plan-res-done">已达成</span>` + napHtml;
   else if(r){
     top = `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
-          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`;
+          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`+
+          napHtml;
     // 增强额度只挂在列表上；弹窗底下的 planModalNote 已经拿文字说过一遍了
     bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
           (mini && r.boosted > 0 ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '');
   }
-  return planNapDaysHtml(e, mini)+
-  `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
+  return `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
     `<div class="plan-side">`+
       `<div>${planPortraitHtml(e, leftDex)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
     `</div>`+
@@ -17279,6 +17336,7 @@ let planSwipeOpenId = null;         // 当前左滑露出删除按钮的那一�
 let planRowGestureFired = false;    // 刚触发过滑动/拖动，抑制紧跟着那次 click（避免误开编辑弹窗）
 let planGestId = null, planGestWrap = null, planGestFront = null;
 let planGestStart = null, planGestBaseOffset = 0, planGestMode = null;
+let planGestLastY = null;           // 长按计时期间手指还在动，真正判进拖动时要拿这个当起点，不能用按下那一刻的位置（会跳一下）
 let planDragTimer = null, planDragGroup = null;
 const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 100, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
 function planCloseSwipe(){
@@ -17305,6 +17363,7 @@ function planRowPointerDown(ev, entry, wrap, front){
   if(planSwipeOpenId!=null && planSwipeOpenId!==entry.id) return;
   planGestId = entry.id; planGestWrap = wrap; planGestFront = front;
   planGestStart = {x:ev.clientX, y:ev.clientY, t:Date.now()};
+  planGestLastY = ev.clientY;
   planGestBaseOffset = (planSwipeOpenId===entry.id) ? -PLAN_SWIPE_W : 0;
   planDragTimer = setTimeout(()=>{
     planDragTimer = null;
@@ -17317,12 +17376,21 @@ function planRowPointerMove(ev){
   if(!planGestId) return;
   const dx = ev.clientX - planGestStart.x, dy = ev.clientY - planGestStart.y;
   const elapsed = Date.now() - planGestStart.t;
+  planGestLastY = ev.clientY;
   if(planGestMode===null){
     if(Math.abs(dx) < PLAN_GEST_TOL && Math.abs(dy) < PLAN_GEST_TOL) return;  // 没动够，继续等（长按门槛交给 setTimeout）
-    if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }     // 动了就肯定不是长按，先撤计时器
-    if(elapsed < PLAN_SWIPE_ARM_MS){ planCancelRowGesture(); return; }        // 0.1s 内的位移当滚动，放行给浏览器
-    if(dx < -PLAN_GEST_TOL && Math.abs(dx) > Math.abs(dy)) planGestMode = 'swipe';
-    else { planCancelRowGesture(); return; }                                  // 纵向/右滑不是我们要的手势
+    // 明显是"左滑"意图（横向位移为主）：0.1s 内当成误触/滚动抖动直接放行，过了 0.1s 才真判进滑动删除
+    if(dx < -PLAN_GEST_TOL && Math.abs(dx) > Math.abs(dy)){
+      if(elapsed < PLAN_SWIPE_ARM_MS){ planCancelRowGesture(); return; }
+      if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }
+      planGestMode = 'swipe';
+    } else {
+      // 纵向为主（或右滑）：不是滑动删除的方向，但也不能直接撤销手势——长按 0.5s 期间
+      // 手指几乎不可能纹丝不动，这点纵向抖动很正常，撤了计时器会导致长按拖动永远判不进去。
+      // 什么都不做，让计时器接着等；真要滚页面的话浏览器自己会通过 pointercancel 把这次
+      // 手势收掉（下面的 pointercancel 监听会清状态），不用在这里抢着拦
+      return;
+    }
   }
   if(planGestMode==='swipe'){
     ev.preventDefault();
@@ -17374,7 +17442,10 @@ function planStartDragReorder(entry, wrap){
   while(lo>0 && rows[lo-1].dataset.prio===myPrio) lo--;
   while(hi<rows.length-1 && rows[hi+1].dataset.prio===myPrio) hi++;
   const step = wrap.getBoundingClientRect().height + 8;   // 行高 + .plan-list 的 gap:8px
-  planDragGroup = { list, rows, lo, hi, curIdx: myIdx, wrap, step, startY: planGestStart.y };
+  // 起点用"刚才最后一次挪到的位置"而不是按下那一刻的位置——0.5s 等待期间手指本来就会有
+  // 些许纵向漂移（不然长按永远判不进拖动，见上面 planRowPointerMove 的改动），如果起点还
+  // 钉在按下那一刻，一进拖动就会因为这段漂移直接跳一格
+  planDragGroup = { list, rows, lo, hi, curIdx: myIdx, wrap, step, startY: (planGestLastY!=null ? planGestLastY : planGestStart.y) };
   wrap.classList.add('plan-dragging');
 }
 function planDragReorderMove(clientY){
@@ -17563,7 +17634,8 @@ function planEditCollect(e){
   e.candyOwned = (!Number.isFinite(ow) || ow<0) ? 0 : ow;
   const tg = num('planFTgt');
   e.targetLevel = tg==='' ? null : planClampLevel(tg);
-  e.sortNum = planClampSortNum(num('planFSort') || planSortNumOf(e));
+  // 组内排序数字不能相同：按用户填的数字把这条插到该去的位置，同组其它条目让位重排
+  planReindexGroup(planPrioOf(e), e, planClampSortNum(num('planFSort') || planSortNumOf(e)));
 }
 // 性格 exp：+exp / 无影响 / -exp 三选一，默认值来自加入培养时盒子里那只的性格，
 // 这里选完直接写进 e.natureExp（独立字段，不会被盒子那边的性格带着走）
@@ -17584,18 +17656,22 @@ function planEditRenderEvoPick(e){
   const box = document.getElementById('planEvoPick'); if(!box) return;
   const family = planEvoFamily(e.dex);
   const curDex = planCurrentEvoDex(e), tgtDex = planTargetEvoDex(e);
-  // 灰掉规则要按"再点一下会怎样"算，不是按"现在选没选"算：已经凑够2个时，再点第3个会把
-  // 最早选的那个挤掉、只留后一个跟新点的配对，所以这里的锚点要用 seed 的最后一个（那个会
-  // 幸存下来的），而不是简单看"只选了1个时的那个" —— 否则已经配对好之后，分叉的另一支
-  // 不会变灰，点了会在挤掉环节被悄悄收缩掉，用户看不出发生了什么
-  const anchor = planEvoSeedPicks(e).slice(-1)[0];
+  // 灰掉规则："锚点自己还能不能往下进化"决定要不要卡：选集里只要还留着一个没定型的
+  // 祖先/中间体（自己还有 planEvoNext），说明玩家还没定死走哪条分叉，两条分叉的终形态都该
+  // 保持能点、点哪个就切到哪个（比如已经选了拉鲁拉丝+沙奈朵，艾路雷朵不该变灰，点一下
+  // 就换成拉鲁拉丝+艾路雷朵，靠 planEvoTogglePick 里"留住搭边的那个"的逻辑做切换）；
+  // 只有当选集里全是终形态（比如单选了一只沙奈朵，没有幼体/中间体撑着）时，才用那个终形态
+  // 卡掉跟它不搭边的其它分支——这时候再点分叉另一支会直接把选集收缩成新点的这一只，
+  // 保留原样反而会让玩家看不出发生了什么，不如提前灰掉
+  const seed = planEvoSeedPicks(e);
+  const anchor = seed.some(d=> planEvoNext(d).length>0) ? null : seed.slice(-1)[0];
   const opt = (dex)=>{
     const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
     const nm = rec ? rec[1] : dex;
     const pair = POKEMON_PORTRAITS[nm];
     const b64 = pair ? (e.shiny ? pair[1] : pair[0]) : null;
     const isCur = dex===curDex, isTgt = dex===tgtDex;
-    const disabled = !planEvoCompatible(anchor, dex);
+    const disabled = anchor!=null && !planEvoCompatible(anchor, dex);
     const cost = isTgt ? planEvoTotalCost(curDex, tgtDex) : 0;
     const cls = 'plan-evo-opt'+(isCur?' cur':'')+(isTgt?' tgt':'')+(disabled?' disabled':'');
     const tag = isCur ? '<span class="plan-evo-opt-tag plan-evo-opt-tag-cur">现状</span>'
@@ -17669,7 +17745,13 @@ function planOpenTagPop(entry, anchorEl){
     c.onclick = ()=>{
       const v = c.getAttribute('data-ptag');
       const live = planData.find(x=>x.id===entry.id);
-      if(live){ live.tagId = (v==='__none__') ? null : v; planSaveState(); }
+      if(live){
+        live.tagId = (v==='__none__') ? null : v;
+        // 换了优先级分组：排序数字跟着分组走，沿用旧数字很容易撞上新组里已有的号，
+        // 直接接到新组末尾最安全（组内排序数字必须互不相同）
+        live.sortNum = planNextSortNum(planPrioOf(live));
+        planSaveState();
+      }
       planCloseTagPop();
       planRenderList();
     };
@@ -17775,6 +17857,12 @@ function planFooterCancel(){
   if(planRemoveMode) planExitRemoveMode();
   else if(planSumMode) planExitSumMode();
 }
+// 「全选」独立拆出来的另一半：只清空勾选，不退出资源总计态（退出态是右槽「取消」的事）
+function planSumDeselectAll(){
+  if(!planSumMode) return;
+  planPickedIds = new Set();
+  planRenderList(); updatePageActionBar();
+}
 // 页脚左槽在移出态下是"移出培养"（红），点了弹确认
 function planFooterRemoveConfirm(){
   if(!planPickedIds.size){ planExitRemoveMode(); return; }
@@ -17793,7 +17881,17 @@ function planPositionSumBar(bar){
     const r = act.getBoundingClientRect();
     bar.style.bottom = Math.max(0, Math.round(window.innerHeight - r.top)) + 'px';
   } else {
-    bar.style.bottom = '24px';
+    // 按钮条整条隐藏时（小圆浮窗模式）原来固定贴 24px，但切换栏中间凸起的"宝可梦盒"
+    // 圆球是 margin-top:-24px 顶出来的，顶部比切换栏本身高出一截——24px 罩不住它，
+    // 球的上半截会露在资源总计条上方，跟条子之间空出一小片透明背景。改成量一下球实际
+    // 顶到哪，贴着球顶边覆盖过去，浮窗高度变了/换机型也不会露缝
+    const ball = document.getElementById('tabBoxCapsule');
+    if(ball){
+      const br = ball.getBoundingClientRect();
+      bar.style.bottom = Math.max(24, Math.round(window.innerHeight - br.top) + 2) + 'px';
+    } else {
+      bar.style.bottom = '24px';
+    }
   }
 }
 window.addEventListener('resize', ()=>{
