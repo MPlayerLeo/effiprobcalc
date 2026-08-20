@@ -1016,6 +1016,16 @@
   .box-filter-pop.for-eff{ width:270px; }
   .box-filter-pop.for-attrs{ width:250px; }
   .box-filter-pop.for-foods{ width:250px; }
+  .box-filter-pop.for-search{ width:220px; }
+  .box-quicksearch-input{
+    display:block; width:100%; box-sizing:border-box; border:1.5px solid var(--line); border-radius:8px;
+    padding:7px 9px; font-size:13px; font-weight:800; font-family:inherit; color:var(--ink);
+    background:#fff; margin-bottom:8px;
+  }
+  .box-quicksearch-cancel-btn{
+    display:block; width:100%; border:none; border-radius:8px; padding:7px 0;
+    background:#e2ddcd; color:#7a7568; font-size:12px; font-weight:800; cursor:pointer; font-family:inherit;
+  }
   .box-eff-slider-track{ position:relative; height:6px; background:var(--line); border-radius:3px; margin:24px 10px 14px; }
   .box-eff-slider-range{ position:absolute; height:100%; background:var(--accent); border-radius:3px; }
   .box-eff-slider-handle{ position:absolute; top:50%; width:20px; height:20px; border-radius:50%; background:var(--accent); border:3px solid #fff; box-shadow:0 1px 6px rgba(0,0,0,.4); transform:translate(-50%,-50%); cursor:grab; touch-action:none; }
@@ -1982,6 +1992,41 @@
 .account-btn-blue{ background:#3a7fd5; }
 .account-btn-red{ background:#c1443a; }
 
+/* v3.26 更多设置页：账号卡片（头像框 + 用户名/邮箱），替掉原来纯文字的 .account-info。
+   头像框圆形紫描边呼应站内主题色，点了开选头像浮窗；没设置过就是灰色问号占位 */
+.settings-account-card{
+  display:flex; align-items:center; gap:14px; padding:14px; margin-bottom:16px;
+  background:linear-gradient(135deg, #f3edf9, var(--paper));
+  border:1px solid var(--line); border-radius:14px;
+}
+.settings-avatar-frame{
+  flex:0 0 64px; width:64px; height:64px; border-radius:50%;
+  background:var(--panel); border:2.5px solid var(--accent);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  cursor:pointer; box-shadow:0 3px 10px rgba(122,79,158,.25);
+}
+.settings-avatar-frame img{ width:100%; height:100%; object-fit:contain; }
+.settings-avatar-q{ font-size:22px; font-weight:900; color:#c3bdae; }
+.settings-account-info{ min-width:0; flex:1 1 auto; }
+.settings-account-name{ font-size:16px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.settings-account-email{ font-size:12px; font-weight:700; color:#8a8375; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* 没登录时账号卡片整块换成这个：提示 + 登录/注册入口，比原来浮窗里"直接隐掉整块"更友好——
+   毕竟现在是常驻页面，进来啥都看不见容易让人以为坏了 */
+.settings-login-card{
+  display:flex; flex-direction:column; align-items:center; gap:10px;
+  padding:18px 14px; margin-bottom:16px;
+  background:var(--paper); border:1px dashed var(--line); border-radius:14px; text-align:center;
+}
+.settings-login-hint{ font-size:12.5px; color:#8a8375; font-weight:700; }
+.avatar-pick-box{ width:min(340px,94vw); }
+.avatar-pick-preview-wrap{ display:flex; justify-content:center; margin:14px 0; }
+.avatar-pick-preview{
+  width:88px; height:88px; border-radius:16px; background:var(--paper); border:1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.avatar-pick-preview img{ width:100%; height:100%; object-fit:contain; }
+.avatar-pick-shiny-row{ display:flex; align-items:center; justify-content:center; gap:10px; margin-bottom:14px; }
+
 /* ============ v3.18 盒子底部吸底按钮条 ============ */
 /* 替代 v3.17 那四颗小圆浮窗（修改面板/新建/奖章/账号设置）。跟原 .box-auth-bar 一样是
    .box-bubble-panel 这个 flex 列的最后一个子项，flex:0 0 auto 让它钉在气泡底边不参与滚动。
@@ -2838,6 +2883,14 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="rank">
+        <span class="mf-hub-ic mf-hub-ic-rank"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20V14" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">排名对比</span>
+          <span class="mf-hub-d">同时摆开多个面板，按各项数值直接比高低，管理面板天梯</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
       <button type="button" class="mf-hub-btn" data-mfsub="island">
         <span class="mf-hub-ic mf-hub-ic-island"><svg class="mf-hub-svg" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><g transform="translate(5.28,2.528) scale(0.78)"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g><path d="M9 38.6C11.8 33.9 17.1 31.5 24 31.5C30.9 31.5 36.2 33.9 39 38.6Z"/></g><path d="M4.6 46.6C7.83 46.6 11.07 43.4 14.3 43.4C17.53 43.4 20.77 46.6 24 46.6C27.23 46.6 30.47 43.4 33.7 43.4C36.93 43.4 40.17 46.6 43.4 46.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>
         <span class="mf-hub-body">
@@ -2968,67 +3021,11 @@
 
   </div><!-- /#mfSubEffi -->
 
-  <div class="mf-sub" id="mfSubIsland" style="display:none;">
-    <div class="mf-sub-head">
-      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
-      <span class="mf-sub-title">岛屿评分</span>
-    </div>
-    <div class="isl-tabs" id="islTabs"></div>
-    <div id="islPaneIslands">
-      <div class="isl-hint">得分＝该岛全部睡姿对应宝可梦标签分值的平均值 × 1000。点岛屿卡片展开各等级睡姿明细。</div>
-      <div class="isl-grid" id="islGrid"></div>
-      <div id="islDetail"></div>
-    </div>
-    <div id="islPaneTags" style="display:none;">
-      <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。最多 20 个标签，名称最长 20 字。登录后跟着账号走。</div>
-      <div class="isl-tag-list" id="islTagList"></div>
-      <button type="button" class="isl-add-btn" id="islAddTagBtn">＋ 新增标签</button>
-    </div>
-    <div id="islPaneBox" style="display:none;">
-      <div class="isl-hint">点宝可梦可切换它的标签，切换后各岛屿得分同步更新。</div>
-      <input type="text" class="isl-search" id="islSearch" placeholder="搜索宝可梦名称或编号…">
-      <div class="isl-chips" id="islChips"></div>
-      <div class="isl-tool-row">
-        <span class="isl-tool-cap">排序</span>
-        <button type="button" class="isl-tool-btn" data-islsort="id">编号</button>
-        <button type="button" class="isl-tool-btn" data-islsort="tag">标签</button>
-        <button type="button" class="isl-tool-btn" id="islClearBtn">清除筛选</button>
-      </div>
-      <div class="isl-box" id="islBox"></div>
-    </div>
-  </div><!-- /#mfSubIsland -->
-
-  <!-- v3.20 培养计划：分栏结构跟岛屿评分一致（列表 / 标签管理），
-       「加入培养」在页脚按钮条上（updatePanelBtnLabel 里把「修改面板」换掉），
-       「移出培养」和两个增强开关在本页自己的工具条上 -->
-  <div class="mf-sub" id="mfSubPlan" style="display:none;">
-    <div class="mf-sub-head">
-      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
-      <span class="mf-sub-title">培养计划</span>
-    </div>
-    <div class="isl-tabs" id="planTabs"></div>
-    <div id="planPaneList">
-      <div class="plan-hint">点右下角「加入培养」从盒子里挑宝可梦。点条目左侧的标签位打标签，点条目其余部分展开编辑。优先级数字越小排得越靠上。</div>
-      <div class="plan-tool-row" id="planToolRow">
-        <button type="button" class="plan-tool-btn plan-tool-danger" id="planRemoveBtn">移出培养</button>
-        <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
-        <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
-        <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
-        <span class="plan-count" id="planCount"></span>
-      </div>
-      <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
-      <div class="plan-list" id="planList"></div>
-    </div>
-    <div id="planPaneTags" style="display:none;">
-      <div class="plan-hint">优先级为 1~20 的整数，越小排得越靠上；改完立刻重排。最多 20 个标签，名称最长 20 字。</div>
-      <div class="isl-tag-list" id="planTagList"></div>
-      <button type="button" class="isl-add-btn" id="planAddTagBtn">＋ 新增标签</button>
-    </div>
-  </div><!-- /#mfSubPlan -->
-
-  </div><!-- /#page2 -->
-
-  <div class="app-page" id="page3">
+  <div class="mf-sub" id="mfSubRank" style="display:none;">
+  <div class="mf-sub-head">
+    <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+    <span class="mf-sub-title">排名对比</span>
+  </div>
 
   <div class="card" id="p3ctrlCard">
     <h2 class="collapsible-h2" id="h2-p3ctrl"><span class="n">1</span>控制参数<svg class="collapse-arrow" id="arrow-p3ctrl" viewBox="0 0 24 24" width="13" height="13"><path d="M12 6 L4 14 L20 14 Z" fill="currentColor" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/></svg></h2>
@@ -3106,6 +3103,127 @@
     </div>
   </div>
 
+  </div><!-- /#mfSubRank -->
+
+  <div class="mf-sub" id="mfSubIsland" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">岛屿评分</span>
+    </div>
+    <div class="isl-tabs" id="islTabs"></div>
+    <div id="islPaneIslands">
+      <div class="isl-hint">得分＝该岛全部睡姿对应宝可梦标签分值的平均值 × 1000。点岛屿卡片展开各等级睡姿明细。</div>
+      <div class="isl-grid" id="islGrid"></div>
+      <div id="islDetail"></div>
+    </div>
+    <div id="islPaneTags" style="display:none;">
+      <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。最多 20 个标签，名称最长 20 字。登录后跟着账号走。</div>
+      <div class="isl-tag-list" id="islTagList"></div>
+      <button type="button" class="isl-add-btn" id="islAddTagBtn">＋ 新增标签</button>
+    </div>
+    <div id="islPaneBox" style="display:none;">
+      <div class="isl-hint">点宝可梦可切换它的标签，切换后各岛屿得分同步更新。</div>
+      <input type="text" class="isl-search" id="islSearch" placeholder="搜索宝可梦名称或编号…">
+      <div class="isl-chips" id="islChips"></div>
+      <div class="isl-tool-row">
+        <span class="isl-tool-cap">排序</span>
+        <button type="button" class="isl-tool-btn" data-islsort="id">编号</button>
+        <button type="button" class="isl-tool-btn" data-islsort="tag">标签</button>
+        <button type="button" class="isl-tool-btn" id="islClearBtn">清除筛选</button>
+      </div>
+      <div class="isl-box" id="islBox"></div>
+    </div>
+  </div><!-- /#mfSubIsland -->
+
+  <!-- v3.20 培养计划：分栏结构跟岛屿评分一致（列表 / 标签管理），
+       「加入培养」在页脚按钮条上（updatePanelBtnLabel 里把「修改面板」换掉），
+       「移出培养」和两个增强开关在本页自己的工具条上 -->
+  <div class="mf-sub" id="mfSubPlan" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">培养计划</span>
+    </div>
+    <div class="isl-tabs" id="planTabs"></div>
+    <div id="planPaneList">
+      <div class="plan-hint">点右下角「加入培养」从盒子里挑宝可梦。点条目左侧的标签位打标签，点条目其余部分展开编辑。优先级数字越小排得越靠上。</div>
+      <div class="plan-tool-row" id="planToolRow">
+        <button type="button" class="plan-tool-btn plan-tool-danger" id="planRemoveBtn">移出培养</button>
+        <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
+        <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
+        <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
+        <span class="plan-count" id="planCount"></span>
+      </div>
+      <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
+      <div class="plan-list" id="planList"></div>
+    </div>
+    <div id="planPaneTags" style="display:none;">
+      <div class="plan-hint">优先级为 1~20 的整数，越小排得越靠上；改完立刻重排。最多 20 个标签，名称最长 20 字。</div>
+      <div class="isl-tag-list" id="planTagList"></div>
+      <button type="button" class="isl-add-btn" id="planAddTagBtn">＋ 新增标签</button>
+    </div>
+  </div><!-- /#mfSubPlan -->
+
+  </div><!-- /#page2 -->
+
+  <div class="app-page" id="page3">
+
+  <!-- v3.26：page3 从"排名对比"改成"更多设置"——原来的排名对比整块内容搬进了更多功能 hub
+       的 #mfSubRank 子页（效率概率和岛屿评分之间）；这里换成账号卡片（含头像框）+ 原来
+       "更多设置"浮窗（moreFuncModal）那些开关/导入导出/账号操作，浮窗改常驻页面显示 -->
+  <div class="settings-account-card" id="settingsAccountCard" style="display:none;">
+    <div class="settings-avatar-frame" id="settingsAvatarFrame">
+      <span class="settings-avatar-q">?</span>
+    </div>
+    <div class="settings-account-info">
+      <div class="settings-account-name" id="settingsAccountName"></div>
+      <div class="settings-account-email" id="settingsAccountEmail"></div>
+    </div>
+  </div>
+  <div class="settings-login-card" id="settingsLoginCard" style="display:none;">
+    <div class="settings-login-hint">登录后可以设置头像、同步各页数据到云端</div>
+    <button type="button" class="account-btn account-btn-blue" id="settingsLoginBtn">登录 / 注册</button>
+  </div>
+
+  <div class="mf-io-row">
+    <button type="button" class="box-tool-btn box-tool-blue" id="boxImportBtn">导入盒子</button>
+    <button type="button" class="box-tool-btn box-tool-yellow" id="boxExportBtn">导出盒子</button>
+  </div>
+  <div class="mf-section">
+    <div class="mf-toggle-row">
+      <div>
+        <div class="mf-toggle-label">奖章显示</div>
+        <div class="mf-toggle-hint" id="mfMedalHint">关闭</div>
+      </div>
+      <div class="mf-switch" id="mfMedalSwitch"></div>
+    </div>
+    <div class="mf-toggle-row">
+      <div>
+        <div class="mf-toggle-label">宝可梦等级显示</div>
+        <div class="mf-toggle-hint" id="mfLevelHint">开启</div>
+      </div>
+      <div class="mf-switch" id="mfLevelSwitch"></div>
+    </div>
+    <div class="mf-toggle-row">
+      <div>
+        <div class="mf-toggle-label">显示联动标记</div>
+        <div class="mf-toggle-hint" id="mfPscBadgeHint">开启</div>
+      </div>
+      <div class="mf-switch" id="mfPscBadgeSwitch"></div>
+    </div>
+    <div class="mf-toggle-row">
+      <div>
+        <div class="mf-toggle-label">使用小圆浮窗</div>
+        <div class="mf-toggle-hint" id="mfFabCircleHint">关闭</div>
+      </div>
+      <div class="mf-switch" id="mfFabCircleSwitch"></div>
+    </div>
+  </div>
+  <div class="account-btns" id="settingsAccountBtns">
+    <button type="button" class="account-btn account-btn-psc" id="mfPscBtn">宝睡小当家联动</button>
+    <button type="button" class="account-btn account-btn-blue" id="mfChangePwdBtn">修改密码</button>
+    <button type="button" class="account-btn account-btn-red" id="mfLogoutBtn">退出登录</button>
+  </div>
+
   </div><!-- /#page3 -->
 
   <div class="app-page" id="page4">
@@ -3144,7 +3262,7 @@
 <div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
 <div class="ui-fab" id="fabPlanClear"><span>取消<br>全选</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
-<div class="ui-fab" id="fabMore">更多<br>设置</div>
+<div class="ui-fab" id="fabMore">快速<br>查找</div>
 <div class="box-toast" id="boxToast"></div>
 
 <div class="tabbar" id="tabBar">
@@ -3170,8 +3288,20 @@
     <span class="tab-label">更多功能</span>
   </div>
   <div class="tab-item" id="tabBtn3" data-page="page3">
-    <span class="tab-icon"><svg viewBox="0 0 24 24" width="20" height="20"><rect x="3" y="13" width="5" height="8" rx="1" fill="currentColor"/><rect x="9.5" y="7" width="5" height="14" rx="1" fill="currentColor"/><rect x="16" y="10" width="5" height="11" rx="1" fill="currentColor"/></svg></span>
-    <span class="tab-label">排名对比</span>
+    <span class="tab-icon"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+      <g fill="currentColor">
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(45 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(90 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(135 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(180 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(225 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(270 12 12)"/>
+        <rect x="10.6" y="1.4" width="2.8" height="3.6" rx="1" transform="rotate(315 12 12)"/>
+      </g>
+      <circle cx="12" cy="12" r="6.4" fill="none" stroke="currentColor" stroke-width="3.4"/>
+    </svg></span>
+    <span class="tab-label">更多设置</span>
   </div>
   </div>
 </div>
@@ -3237,7 +3367,7 @@
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
     <div class="box-action-bar" id="boxActionBar">
       <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
-      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">更多设置</button>
+      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">快速查找</button>
       <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
       <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn"><svg viewBox="0 0 24 24" width="20" height="20" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></button>
       <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
@@ -3681,64 +3811,6 @@
   </div>
 </div>
 
-<!-- v3.18 更多功能浮窗：顶部沿用登录/注册浮窗的吉祥物+站名，登录时紧跟着显示用户名/邮箱，
-     中间是奖章显示 / 宝可梦等级显示两个拨动开关，底部是联动/改密/登出三颗按钮。
-     v3.17 的 #accountModal「账号设置」浮窗整体被它取代 -->
-<div class="cap-ctrl-overlay auth-overlay" id="moreFuncModal">
-  <div class="cap-ctrl-box auth-box">
-    <div class="auth-head"><span class="cap-ctrl-close" id="moreFuncModalClose">✕</span></div>
-    <div class="auth-mascot-outer">
-      <div class="auth-mascot-cluster" id="moreFuncMascotCluster">
-        <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
-        <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
-        <img class="site-mascot site-mascot-clodsire" data-mascot-file="clodsire">
-        <img class="site-mascot site-mascot-paldea" data-mascot-file="wooper-paldea">
-      </div>
-    </div>
-    <div class="auth-brand-title">土王智商高</div>
-    <div class="account-info" id="moreFuncAccountInfo"></div>
-    <div class="mf-io-row">
-      <button type="button" class="box-tool-btn box-tool-blue" id="boxImportBtn">导入盒子</button>
-      <button type="button" class="box-tool-btn box-tool-yellow" id="boxExportBtn">导出盒子</button>
-    </div>
-    <div class="mf-section">
-      <div class="mf-toggle-row">
-        <div>
-          <div class="mf-toggle-label">奖章显示</div>
-          <div class="mf-toggle-hint" id="mfMedalHint">关闭</div>
-        </div>
-        <div class="mf-switch" id="mfMedalSwitch"></div>
-      </div>
-      <div class="mf-toggle-row">
-        <div>
-          <div class="mf-toggle-label">宝可梦等级显示</div>
-          <div class="mf-toggle-hint" id="mfLevelHint">开启</div>
-        </div>
-        <div class="mf-switch" id="mfLevelSwitch"></div>
-      </div>
-      <div class="mf-toggle-row">
-        <div>
-          <div class="mf-toggle-label">显示联动标记</div>
-          <div class="mf-toggle-hint" id="mfPscBadgeHint">开启</div>
-        </div>
-        <div class="mf-switch" id="mfPscBadgeSwitch"></div>
-      </div>
-      <div class="mf-toggle-row">
-        <div>
-          <div class="mf-toggle-label">使用小圆浮窗</div>
-          <div class="mf-toggle-hint" id="mfFabCircleHint">关闭</div>
-        </div>
-        <div class="mf-switch" id="mfFabCircleSwitch"></div>
-      </div>
-    </div>
-    <div class="account-btns">
-      <button type="button" class="account-btn account-btn-psc" id="mfPscBtn">宝睡小当家联动</button>
-      <button type="button" class="account-btn account-btn-blue" id="mfChangePwdBtn">修改密码</button>
-      <button type="button" class="account-btn account-btn-red" id="mfLogoutBtn">退出登录</button>
-    </div>
-  </div>
-</div>
-
 <!-- v3.18 宝睡小当家联动：本地授权确认页。点「前往授权」才真正跳到对方的 authorize 端点，
      本地这一页只负责讲清楚"我方将要申请什么权限、授权后回到哪里" -->
 <div class="cap-ctrl-overlay auth-overlay" id="pscModal">
@@ -3849,6 +3921,30 @@
     </form>
     <div class="auth-msg" id="pwdMsg"></div>
     <button type="button" class="auth-submit" id="pwdSubmitBtn">确认修改</button>
+  </div>
+</div>
+<!-- v3.26：更多设置页头像框——从全站图鉴里任选一只当头像，可选闪光。搜索框复用跟主面板
+     选宝可梦同一套输入框+下拉的样式（.pk-search-input-underline/.pk-dropdown），但状态是
+     独立的本地变量（avatarPickDex/avatarPickShiny），不碰全局的 state.selectedDex——
+     那个是给主面板用的，头像选择要是共用一份会把玩家正编辑的面板种族给顶掉 -->
+<div class="cap-ctrl-overlay" id="avatarPickModal">
+  <div class="cap-ctrl-box avatar-pick-box">
+    <div class="cap-ctrl-head">选择头像<span class="cap-ctrl-close" id="avatarPickClose">✕</span></div>
+    <div class="pk-search-wrap">
+      <input type="text" id="avatarSearchInput" class="pk-search-input-underline" placeholder="请输入宝可梦" autocomplete="off">
+      <div class="pk-dropdown" id="avatarSearchDropdown"></div>
+    </div>
+    <div class="avatar-pick-preview-wrap">
+      <div class="avatar-pick-preview" id="avatarPickPreview"><span class="settings-avatar-q">?</span></div>
+    </div>
+    <div class="avatar-pick-shiny-row">
+      <span class="mf-toggle-label">闪光</span>
+      <div class="mf-switch" id="avatarPickShinySwitch"></div>
+    </div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="avatarPickCancelBtn">取消</button>
+      <button type="button" class="isl-modal-btn isl-modal-save" id="avatarPickConfirmBtn">确认</button>
+    </div>
   </div>
 </div>
 <div class="dashboard-overlay" id="finalPkOverlay">
@@ -5641,8 +5737,7 @@ function closeFinalPkPopup(){
   document.getElementById('finalPkOverlay').style.display = 'none';
 }
 function maybeOpenFinalPkPopup(){
-  const page3 = document.getElementById('page3');
-  if(!page3 || !page3.classList.contains('active-page')) return;
+  if(!onRankSub()) return;
   const dex = state.selectedDex;
   if(!dex) return;
   const finals = POKEMON_FINAL_DEX_MAP[dex];
@@ -6095,8 +6190,7 @@ function renderRankModule(){
   if(dashboardOpen || boxOverlayOpen) return;
   const container = document.getElementById('rankModuleBody');
   if(!container) return;
-  const page3 = document.getElementById('page3');
-  if(!page3 || !page3.classList.contains('active-page')) return;
+  if(!onRankSub()) return;
   const n = state.compareCount;
   const builds = [];
   for(let i=1;i<=n;i++) builds.push(getPanelBuild(i));
@@ -6404,8 +6498,7 @@ async function ensureLadderRendered(){
 function renderLadderCard(){
   // 修改面板浮窗/宝可梦盒打开期间不同步重算天梯（会卡顿）；关闭浮窗/退出盒子时统一重算一次，逻辑同 renderRankModule
   if(dashboardOpen || boxOverlayOpen) return;
-  const page3 = document.getElementById('page3');
-  if(!page3 || !page3.classList.contains('active-page')) return;
+  if(!onRankSub()) return;
   renderLadderButtons();
   return ensureLadderRendered(); // 返回 Promise：部分调用方（切页/改等级等）需要等真正算完才收起"排名计算中"浮窗
 }
@@ -7051,11 +7144,10 @@ function renderEnergySubmenu(containerId, pfx, compact){
 // 控制参数模块/浮窗切换等级：在排名对比页会连带重算排名导致卡顿，切换前先弹出"排名计算中..."浮窗，
 // 用 setTimeout 让浮窗先画出来再执行重算（rAF 在标签页失焦/隐藏时会被挂起，故不用 rAF）
 function setLevelWithRankOverlay(lv){
-  const page3 = document.getElementById('page3');
   // v3.20：档位没变就不用弹"排名计算中"——真实等级 65→66 这种改动档位仍是 60，
   // 排名缓存 key 里吃的是档位，直接命中缓存，弹个浮窗再关反而闪一下
   const tierChanged = levelTierOf(lv) !== state.level;
-  if(page3 && page3.classList.contains('active-page') && tierChanged){
+  if(onRankSub() && tierChanged){
     showRankCalcOverlay();
     setTimeout(async ()=>{
       state.levelReal = lv;
@@ -7682,6 +7774,7 @@ async function authSubmit(){
     if(typeof renderBoxPage==='function') renderBoxPage();
     renderAll();
     if(typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandRenderAll==='function') islandRenderAll();
+    if(typeof renderMoreSettingsPage==='function') renderMoreSettingsPage();
     updateBoxActionBar();
     alert(overflow > 0
       ? `${isReg?'注册':'登录'}成功，数据已融合。\n注意：合并后超出了 ${BOX_MAX_COUNT} 只的上限，多出的 ${overflow} 只没有保留。`
@@ -7706,30 +7799,103 @@ function syncMoreFuncSwitches(){
     if(hint) hint.textContent = on ? '开启' : '关闭';
   });
 }
-function openMoreFuncModal(){
+// v3.26：原来的"更多功能"浮窗（open/closeMoreFuncModal）改成常驻页面（page3，更多设置）——
+// 不再有开/关的概念，进页面、登录状态变化时都调这个把内容刷新到当前状态就行
+function renderMoreSettingsPage(){
   const logged = authLoggedIn();
   const u = authState.user || {};
-  // 用户名/邮箱是用户自己输入的，一律走 textContent，不拼 innerHTML
-  const box = document.getElementById('moreFuncAccountInfo');
-  box.textContent = '';
-  box.style.display = logged ? '' : 'none';
+  const card = document.getElementById('settingsAccountCard');
+  const loginCard = document.getElementById('settingsLoginCard');
+  const btns = document.getElementById('settingsAccountBtns');
+  if(card) card.style.display = logged ? '' : 'none';
+  if(loginCard) loginCard.style.display = logged ? 'none' : '';
+  if(btns) btns.style.display = logged ? '' : 'none';
   if(logged){
-    [['用户名：', u.username||''], ['邮箱：', u.email||'']].forEach(([lab, val], i)=>{
-      if(i) box.appendChild(document.createElement('br'));
-      const tag = document.createElement('span'); tag.textContent = lab;
-      box.appendChild(tag);
-      box.appendChild(document.createTextNode(val));
-    });
+    const nameEl = document.getElementById('settingsAccountName');
+    const emailEl = document.getElementById('settingsAccountEmail');
+    // 用户名/邮箱是用户自己填的，一律走 textContent
+    if(nameEl) nameEl.textContent = u.username || '';
+    if(emailEl) emailEl.textContent = u.email || '';
+    renderSettingsAvatar();
   }
-  // 改密码/退出登录是账号态专属，未登录时整颗撤掉（联动按钮同理：没账号就没得绑）
-  ['mfChangePwdBtn','mfLogoutBtn','mfPscBtn'].forEach(id=>{
-    const el = document.getElementById(id);
-    if(el) el.style.display = logged ? '' : 'none';
-  });
   syncMoreFuncSwitches();
-  document.getElementById('moreFuncModal').style.display = 'flex';
 }
-function closeMoreFuncModal(){ document.getElementById('moreFuncModal').style.display = 'none'; }
+// 头像框：没选过就是占位问号，选过就按 avatarDex/avatarShiny 从内嵌头像表里取图
+function renderSettingsAvatar(){
+  const frame = document.getElementById('settingsAvatarFrame');
+  if(!frame) return;
+  const dex = userPrefs.avatarDex;
+  const rec = dex ? POKEMON_DEX_DATA.find(r=>r[0]===dex) : null;
+  const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
+  const b64 = pair ? (userPrefs.avatarShiny ? pair[1] : pair[0]) : null;
+  frame.innerHTML = b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<span class="settings-avatar-q">?</span>`;
+}
+/* ---- v3.26 头像选择浮窗：独立的本地选择状态，跟主面板的 state.selectedDex 完全不共用 ---- */
+let avatarPickDex = null, avatarPickShiny = false;
+function openAvatarPickModal(){
+  avatarPickDex = userPrefs.avatarDex || null;
+  avatarPickShiny = !!userPrefs.avatarShiny;
+  const input = document.getElementById('avatarSearchInput');
+  input.value = avatarPickDex ? ((POKEMON_DEX_DATA.find(r=>r[0]===avatarPickDex)||[])[1] || '') : '';
+  document.getElementById('avatarSearchDropdown').classList.remove('open');
+  renderAvatarPickPreview();
+  renderAvatarPickShinySwitch();
+  document.getElementById('avatarPickModal').style.display = 'flex';
+}
+function closeAvatarPickModal(){ document.getElementById('avatarPickModal').style.display = 'none'; }
+function renderAvatarPickPreview(){
+  const box = document.getElementById('avatarPickPreview');
+  const rec = avatarPickDex ? POKEMON_DEX_DATA.find(r=>r[0]===avatarPickDex) : null;
+  const pair = rec ? POKEMON_PORTRAITS[rec[1]] : null;
+  const b64 = pair ? (avatarPickShiny ? pair[1] : pair[0]) : null;
+  box.innerHTML = b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<span class="settings-avatar-q">?</span>`;
+}
+function renderAvatarPickShinySwitch(){
+  document.getElementById('avatarPickShinySwitch').classList.toggle('on', avatarPickShiny);
+}
+document.getElementById('avatarSearchInput').addEventListener('input', (e)=>{
+  const q = e.target.value.trim();
+  const dd = document.getElementById('avatarSearchDropdown');
+  if(!q){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+  let matches = POKEMON_DEX_DATA.filter(r=>r[1].includes(q));
+  if(matches.length===0){
+    const byNum = findPokemonByDexQuery(q);
+    if(byNum) matches = [byNum];
+  }
+  dd.innerHTML = matches.length ? matches.map(r=>`<div class="pk-dropdown-item" data-dex="${r[0]}"><span class="dex">${r[0]}</span><span>${r[1]}</span></div>`).join('')
+    : `<div class="pk-dropdown-empty">没有找到匹配的宝可梦</div>`;
+  dd.querySelectorAll('[data-dex]').forEach(el=>{
+    el.onclick = ()=>{
+      avatarPickDex = el.getAttribute('data-dex');
+      document.getElementById('avatarSearchInput').value = (POKEMON_DEX_DATA.find(r=>r[0]===avatarPickDex)||[])[1] || '';
+      dd.classList.remove('open'); dd.innerHTML='';
+      renderAvatarPickPreview();
+    };
+  });
+  dd.classList.add('open');
+});
+document.getElementById('avatarSearchInput').addEventListener('blur', ()=>{
+  // 跟主搜索框一样，晚一点点关，不然点下拉项那一下会被 blur 先关掉，点击落空
+  setTimeout(()=>{ const dd=document.getElementById('avatarSearchDropdown'); if(dd) dd.classList.remove('open'); }, 150);
+});
+document.getElementById('avatarPickShinySwitch').onclick = ()=>{
+  avatarPickShiny = !avatarPickShiny;
+  renderAvatarPickShinySwitch();
+  renderAvatarPickPreview();
+};
+document.getElementById('avatarPickClose').onclick = closeAvatarPickModal;
+document.getElementById('avatarPickCancelBtn').onclick = closeAvatarPickModal;
+document.getElementById('avatarPickConfirmBtn').onclick = ()=>{
+  if(!avatarPickDex){ alert('请先选择一只宝可梦。'); return; }
+  userPrefs.avatarDex = avatarPickDex;
+  userPrefs.avatarShiny = avatarPickShiny;
+  if(typeof saveUserPrefs==='function') saveUserPrefs();
+  renderSettingsAvatar();
+  closeAvatarPickModal();
+};
+document.getElementById('avatarPickModal').onclick = (e)=>{ if(e.target.id==='avatarPickModal') closeAvatarPickModal(); };
+document.getElementById('settingsAvatarFrame').onclick = openAvatarPickModal;
+document.getElementById('settingsLoginBtn').onclick = ()=> openAuthModal('login');
 
 /* ---- v3.18 宝睡小当家（PSC）联动：我方作为第三方客户端接入对方的 OIDC ----
    全套 OAuth2 细节（client_secret / PKCE verifier / access token / refresh token）
@@ -8039,7 +8205,6 @@ async function pwdSubmit(){
     const data = await authApi('/api/password', {method:'POST', body:{password:p1}, auth:true});
     if(data.token){ authState.token = data.token; saveAuthState(); } // 换新 token，本机不用重新登录
     document.getElementById('pwdModal').style.display = 'none';
-    closeMoreFuncModal();
     alert('密码已修改。');
   }catch(e){
     msg.classList.remove('ok');
@@ -8050,7 +8215,7 @@ async function pwdSubmit(){
 function authLogout(){
   if(!confirm('退出登录？\n这台设备上已有的盒子和设置会原样留着，下次登录会再并回账号里。')) return;
   clearAuthState();
-  closeMoreFuncModal();
+  if(typeof renderMoreSettingsPage==='function') renderMoreSettingsPage();
   updateBoxActionBar();
 }
 
@@ -8061,9 +8226,7 @@ document.getElementById('boxActLoginBtn').onclick = ()=> openAuthModal('login');
 document.getElementById('authModalClose').onclick = closeAuthModal;
 document.getElementById('authModal').onclick = (e)=>{ if(e.target.id==='authModal') closeAuthModal(); };
 document.getElementById('authSubmitBtn').onclick = authSubmit;
-document.getElementById('boxActMoreBtn').onclick = openMoreFuncModal;
-document.getElementById('moreFuncModalClose').onclick = closeMoreFuncModal;
-document.getElementById('moreFuncModal').onclick = (e)=>{ if(e.target.id==='moreFuncModal') closeMoreFuncModal(); };
+document.getElementById('boxActMoreBtn').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
 document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
@@ -9264,7 +9427,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -11621,7 +11784,6 @@ function initMascotCluster(root){
 }
 initMascotCluster(document.getElementById('siteMascotCluster'));
 initMascotCluster(document.getElementById('authMascotCluster'));
-initMascotCluster(document.getElementById('moreFuncMascotCluster')); // v3.18 更多功能浮窗顶部那一组
 initMascotCluster(document.getElementById('pscMascotCluster'));      // v3.18 宝睡小当家联动授权页顶部那一组
 initMascotCluster(document.getElementById('oauthMascotCluster'));    // v3.18 我方作为 Provider 时的授权确认页
 
@@ -12767,26 +12929,27 @@ function capBubbleBindAutoClose(){
   };
 }
 
-// 点条目弹出的跳转气泡：三个按钮对应捕捉推荐(page4)以外的另外三个主页面
+// 点条目弹出的跳转气泡：三个按钮对应捕捉推荐(page4)以外的另外三个目的地。
+// 效率概率/排名对比现在都是"更多功能"页里的子页，都落在 page2，用 sub 区分跳过去开哪个
 const CAP_JUMP_TARGETS = [
   {page:'page1', label:'毕业判定'},
-  {page:'page2', label:'效率概率'},
-  {page:'page3', label:'排名对比'},
+  {page:'page2', sub:'effi', label:'效率概率'},
+  {page:'page2', sub:'rank', label:'排名对比'},
 ];
 function capOpenJumpBubble(rowEl, dex){
   const html = '<div class="cap-jump-bubble">' + CAP_JUMP_TARGETS.map(t=>
-    `<button type="button" class="cap-jump-btn" data-page="${t.page}">${t.label}</button>`
+    `<button type="button" class="cap-jump-btn" data-page="${t.page}" data-sub="${t.sub||''}">${t.label}</button>`
   ).join('') + '</div>';
   capShowBubble(rowEl, html);
   document.querySelectorAll('#capBubble .cap-jump-btn').forEach(el=>{
-    el.onclick = ()=>{ capHideBubble(); capJumpToPage(el.getAttribute('data-page'), dex); };
+    el.onclick = ()=>{ capHideBubble(); capJumpToPage(el.getAttribute('data-page'), dex, el.getAttribute('data-sub')||null); };
   });
 }
 // 滑动跳到目标页、落地后再打开修改面板（面板种族预选好、其余留空）；
 // 若跳转前面板里正编辑着盒子里的某只，openDashboardForDexPreset 内部会先把改动存回盒子
-function capJumpToPage(pageId, dex){
-  // v3.19：效率概率现在是更多功能页里的一个子页，跳过去得直接落在那个子页上
-  if(pageId==='page2') mfShowSub('effi');
+function capJumpToPage(pageId, dex, sub){
+  // v3.19：效率概率/排名对比都是更多功能页里的子页，跳过去得先落在对应子页上
+  if(pageId==='page2') mfShowSub(sub || 'effi');
   pageSwitchAnimateTo(pageId).then(ok=>{ if(ok) openDashboardForDexPreset(dex); });
 }
 
@@ -13152,15 +13315,17 @@ function switchPage(pageId){
   // v3.18：显示/隐藏（含 page4 该不该出现）全在 updatePageActionBar 里判断，这里一句就够
   updatePageActionBar();
   positionTabIndicator();
-  if(pageId==='page3'){
-    // 从面板选择进入排名对比页时排名计算较重，先弹"排名计算中"再算，避免白屏卡顿
-    // 但如果还没有输入任何面板（未选择宝可梦），没有数据可算，直接渲染即可，不需要弹窗
-    const overlay=document.getElementById('rankCalcOverlay');
-    if(overlay && state.selectedDex){ showRankCalcOverlay(); setTimeout(async ()=>{ renderPkDispWindow(); renderRankModule(); await renderLadderCard(); renderFinalPkRow(); hideRankCalcOverlay(); maybeOpenFinalPkPopup(); },20); }
-    else { renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); maybeOpenFinalPkPopup(); }
-  }
+  // v3.26：排名对比挪进了更多功能 hub 当子页（见 mfShowSub 的 'rank' 分支），page3 原来
+  // 这里的排名计算触发逻辑一起搬过去；page3 现在是"更多设置"页，进页面时刷一次账号信息
+  if(pageId==='page3' && typeof renderMoreSettingsPage==='function') renderMoreSettingsPage();
   if(pageId==='page4'){ renderCapturePage(); applyCapHeaderStickyOffset(); }
   if(typeof syncViewHash==='function') syncViewHash();
+}
+// 排名对比现在是"更多功能"页里的一个子页（跟效率概率/岛屿评分/培养计划同一个层级），
+// 判定"当前是不是停在排名对比"不能再简单查 page3 是不是 active-page——那是"更多设置"了
+function onRankSub(){
+  const page2El = document.getElementById('page2');
+  return !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'rank';
 }
 /* v3.18：捕捉推荐页改成"上半部分不动、只有条目区自己滚"。这里量出条目区顶部到页面切换栏
    之间还剩多少高度，写进 --cap-view-h 当条目区的固定高度。
@@ -13497,8 +13662,7 @@ function closeBoxOverlay(){
   updatePageActionBar();
   // 排名对比页：盒子内切换/浏览宝可梦期间排名重算是延后的（见 renderRankModule 顶部的 boxOverlayOpen 判断），
   // 退出盒子时统一在这里补算一次；做法与 closeDashboard 收尾一致，先弹"排名计算中"再算，避免白屏卡顿感
-  const page3 = document.getElementById('page3');
-  if(page3 && page3.classList.contains('active-page')){
+  if(onRankSub()){
     showRankCalcOverlay();
     setTimeout(async ()=>{
       renderPkDispWindow();
@@ -13973,8 +14137,7 @@ function closeDashboard(){
   // 排名对比页：浮窗内编辑123号宝可梦期间排名重算是延后的（见 renderRankModule 顶部的 dashboardOpen 判断），
   // 关闭浮窗时统一在这里补算一次；用 setTimeout 保证"排名计算中..."先画出来再执行可能较重的计算，避免白屏卡顿感
   // （用 setTimeout 而非 rAF：rAF 在标签页失焦/隐藏时会被浏览器挂起，可能导致浮窗卡死不消失）
-  const page3 = document.getElementById('page3');
-  if(page3 && page3.classList.contains('active-page')){
+  if(onRankSub()){
     showRankCalcOverlay();
     setTimeout(async ()=>{
       renderPkDispWindow();
@@ -14033,7 +14196,7 @@ document.getElementById('fabPanel').onclick = ()=>{
   if(dashboardOpen) closeDashboard(); else openDashboard();
 };
 document.getElementById('fabCreate').onclick = ()=> openDashboardForNewEntry();
-document.getElementById('fabMore').onclick = openMoreFuncModal;
+document.getElementById('fabMore').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
 document.getElementById('pageActSelAllBtn').onclick = ()=> planSumDeselectAll();
 document.getElementById('fabPlanClear').onclick = ()=> planSumDeselectAll();
 document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
@@ -15501,7 +15664,7 @@ document.getElementById('boxSpeditCancelBtn').onclick = ()=> closeBoxSpeciesEdit
 document.getElementById('boxSpeditCloseBtn').onclick = ()=> closeBoxSpeciesEditModal(false, 0);
 
 /* ============ 宝可梦盒：筛选器 ============ */
-let boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null };
+let boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null, query:'' };
 const BOX_PRIORITY_SKILL_TYPES = ['奶妈','暴击','开锅','帮手加速','梦碎'];
 function boxAllSkillTypes(){
   const set = new Set();
@@ -15515,8 +15678,11 @@ function boxAllAttrs(){
 function boxAllFoods(){
   return (typeof ING_ICONS!=='undefined') ? Object.keys(ING_ICONS) : [];
 }
-function boxAnyFilterActive(){
+function boxAnyNonQueryFilterActive(){
   return BOX_FILTER_DEFS.some(d=>boxFilterIsActive(d.key)) || boxFilterIsActive('grades');
+}
+function boxAnyFilterActive(){
+  return boxAnyNonQueryFilterActive() || !!boxFilters.query.trim();
 }
 
 /* ---- 盒子「毕业等级」筛选：把一条记录归到十个档位 / 邪修 / 打工 / 其他 之一 ----
@@ -15628,9 +15794,13 @@ function boxEntryGradeCategory(entry){
 }
 function boxEntryMatchesFilters(entry){
   const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
-  // 物种没认出来的条目（OCR 失败，dex 为空）任何筛选条件都对不上，但没开筛选时必须照常显示出来，
+  // v3.26：快速查找按昵称/种族名找，两个只要有一个命中就算过；物种没认出来的条目也有昵称，
+  // 这条筛选唯一对它们也生效——放在最前面单独判，不算进下面"物种没认出来就整个不筛"那条里
+  const q = boxFilters.query.trim();
+  if(q && !(entry.nickname||'').includes(q) && !(rec && rec[1].includes(q))) return false;
+  // 物种没认出来的条目（OCR 失败，dex 为空）其它筛选条件都对不上，但没开筛选时必须照常显示出来，
   // 否则它被标红了也永远看不见，用户根本没机会去改它
-  if(!rec) return !boxAnyFilterActive();
+  if(!rec) return !boxAnyNonQueryFilterActive();
   if(boxFilters.shiny===true && !entry.shiny) return false;
   if(boxFilters.shiny===false && entry.shiny) return false;
   if(boxFilters.types.size && !boxFilters.types.has(DEX_TYPE_MAP[rec[3]])) return false;
@@ -15710,7 +15880,7 @@ function renderBoxFilterRow(){
   }
 }
 function boxResetAllFilters(){
-  boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null };
+  boxFilters = { shiny:null, types:new Set(), attrs:new Set(), levels:new Set(), medals:new Set(), foods:new Set(), skillTypes:new Set(), grades:new Set(), effMin:null, effMax:null, query:'' };
   boxSort = { key:null, dir:0 };
   renderBoxPage();
 }
@@ -15856,6 +16026,26 @@ function closeBoxFilterPop(){
   boxFilterUnbindAutoClose();
   document.getElementById('boxFilterPopupOverlay').classList.remove('open');
   boxFilterPopAnchor = null;
+}
+// v3.26：原来盒子底部那颗"更多设置"（现已挪到独立页面）腾出来的位置改成"快速查找"——
+// 按住的还是同一套气泡浮窗系统（boxFilterPopShow），只是内容换成一个输入框 + 取消查找按钮，
+// 不走 boxMultiOptPopup 那套勾选选项的路数
+function openBoxQuickSearchPop(anchorEl){
+  const html =
+    '<div class="box-filter-popup-title">快速查找</div>'+
+    '<input type="text" id="boxQuickSearchInput" class="box-quicksearch-input" maxlength="15" '+
+      'placeholder="按昵称/种族搜索" autocomplete="off" value="'+planEsc(boxFilters.query)+'">'+
+    '<button type="button" class="box-quicksearch-cancel-btn" id="boxQuickSearchCancelBtn">取消查找</button>';
+  boxFilterPopShow('search', anchorEl, html);
+  const input = document.getElementById('boxQuickSearchInput');
+  input.addEventListener('input', ()=>{ boxFilters.query = input.value; renderBoxPage(); });
+  input.focus();
+  input.select();
+  document.getElementById('boxQuickSearchCancelBtn').onclick = ()=>{
+    boxFilters.query = '';
+    renderBoxPage();
+    closeBoxFilterPop();
+  };
 }
 // \u6ca1\u6709\u786e\u8ba4\u6309\u94ae\uff1a\u52fe\u9009\u5373\u65f6\u751f\u6548\uff0c\u6c14\u6ce1\u4e00\u76f4\u5f00\u7740\uff0c\u76f4\u5230\u7528\u6237\u70b9\u5230\u6c14\u6ce1\u5916\u9762
 function boxFilterOptGrid(title, itemsHtml){
@@ -16019,7 +16209,10 @@ document.addEventListener('click', (e)=>{
   const overlay = document.getElementById('boxFilterPopupOverlay');
   if(!overlay.classList.contains('open')) return;
   if(document.getElementById('boxFilterPopupPanel').contains(e.target)) return;
-  if(e.target.closest && e.target.closest('.box-filter-btn')) return;
+  // .box-filter-btn 是筛选行那几颗；快速查找按钮（吸底按钮条/圆形浮窗两个版本）复用的
+  // 是同一套气泡浮窗，但不在筛选行里，得单独放行，不然打开它的这一下点击冒泡到 document
+  // 就会被这里当成"点了气泡外面"立刻反手关掉，气泡刚弹出来就自己合上
+  if(e.target.closest && (e.target.closest('.box-filter-btn') || e.target.closest('#boxActMoreBtn') || e.target.closest('#fabMore'))) return;
   closeBoxFilterPop();
 });
 window.addEventListener('resize', ()=>{
@@ -16249,15 +16442,28 @@ function mfShowSub(sub){
   mfSubView = sub || null;
   const hub = document.getElementById('mfHubView');
   const effi = document.getElementById('mfSubEffi');
+  const rank = document.getElementById('mfSubRank');
   const island = document.getElementById('mfSubIsland');
   const plan = document.getElementById('mfSubPlan');
-  if(!hub || !effi || !island || !plan) return;
+  if(!hub || !effi || !rank || !island || !plan) return;
   hub.style.display = mfSubView ? 'none' : '';
   effi.style.display = mfSubView === 'effi' ? '' : 'none';
+  rank.style.display = mfSubView === 'rank' ? '' : 'none';
   island.style.display = mfSubView === 'island' ? '' : 'none';
   plan.style.display = mfSubView === 'plan' ? '' : 'none';
   if(mfSubView === 'island') islandRenderAll();
   else if(mfSubView === 'plan') planRenderAll();
+  else if(mfSubView === 'rank'){
+    // 排名对比原来是独立主页面(page3)时的进场逻辑，挪进 hub 子页后原样保留：
+    // 排名计算较重，先弹"排名计算中"再算，避免白屏卡顿；没选过面板就没数据可算，直接渲染即可
+    const overlay = document.getElementById('rankCalcOverlay');
+    if(overlay && state.selectedDex){
+      showRankCalcOverlay();
+      setTimeout(async ()=>{ renderPkDispWindow(); renderRankModule(); await renderLadderCard(); renderFinalPkRow(); hideRankCalcOverlay(); maybeOpenFinalPkPopup(); }, 20);
+    } else {
+      renderPkDispWindow(); renderRankModule(); renderLadderCard(); renderFinalPkRow(); maybeOpenFinalPkPopup();
+    }
+  }
   window.scrollTo(0,0);
   // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
   updatePageActionBar();
