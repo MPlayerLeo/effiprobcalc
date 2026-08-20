@@ -799,6 +799,15 @@
     position:absolute; bottom:0; left:0; right:0; margin-left:auto; margin-right:auto;
     width:auto; height:auto; max-width:100%; max-height:100%; image-rendering:pixelated;
   }
+  /* v3.26 盒子等比显示（userPrefs.boxUniformScaleOn）：51:55 固定框是按普通模式里最大的
+     素材反推的比例，宽度跟着列走，画面还是会被 max-width/max-height 按各自素材夹小——
+     这个模式要求"务必保证每个宝可梦的像素大小完全一致"，所以框子不能再是固定比例，改成
+     JS 用素材加载完成后的真实原生像素宽高（boxApplyUniformWrapSize）撑开，画面本身也去掉
+     max-*夹小，一律按原生像素 1:1 显示，不再有任何缩放；改成固定4列腾出更宽的格子后，
+     极少数比这还宽的素材允许露出到相邻格子的空隙里（overflow:visible），不裁切不再缩小 */
+  .box-grid.box-uniform-scale{ grid-template-columns:repeat(4, 1fr); }
+  .box-grid.box-uniform-scale .box-grid-img-wrap{ aspect-ratio:unset; min-height:40px; overflow:visible; }
+  .box-grid.box-uniform-scale .box-grid-img, .box-grid.box-uniform-scale .box-grid-canvas{ max-width:none; max-height:none; }
   /* 干脆利落的一跳：蹬地弹起 → 到顶立刻加速下坠 → 落地后停一拍，而不是整秒都在飘。
      故意动 bottom 而不是 transform:translateY——transform 动画不管加不加 will-change，
      浏览器都会自动把这张图单开一个GPU合成层，pixelated的硬边像素图一旦进合成层就会被
@@ -3216,6 +3225,13 @@
         <div class="mf-toggle-hint" id="mfFabCircleHint">关闭</div>
       </div>
       <div class="mf-switch" id="mfFabCircleSwitch"></div>
+    </div>
+    <div class="mf-toggle-row">
+      <div>
+        <div class="mf-toggle-label">盒子等比显示</div>
+        <div class="mf-toggle-hint" id="mfBoxUniformHint">关闭</div>
+      </div>
+      <div class="mf-switch" id="mfBoxUniformSwitch"></div>
     </div>
   </div>
   <div class="account-btns" id="settingsAccountBtns">
@@ -7571,6 +7587,14 @@ function toggleBoxPscBadge(){
   saveUserPrefs();
   if(typeof renderBoxPage==='function') renderBoxPage();
 }
+// v3.26 盒子等比显示：关闭时素材维持原来"超框才按 max-width/max-height 缩小"的老样子；
+// 开启时素材一律按原生像素 1:1 显示，不再有任何缩放（保证体型差异跟游戏内完全一致），
+// 因此改用固定4列腾出更宽的格子，见 renderBoxPage/boxDrawFrozenFrame 里的 boxUniformScaleOn 分支
+function toggleBoxUniformScale(){
+  userPrefs.boxUniformScaleOn = !userPrefs.boxUniformScaleOn;
+  saveUserPrefs();
+  if(typeof renderBoxPage==='function') renderBoxPage();
+}
 /* 按钮样式开关：吸底按钮条 <-> 小圆浮窗。两套 DOM 一直都在，只是互斥显隐，
    所以切换后两边（页面按钮条+盒子按钮条）都要各自重新同步一次显隐状态 */
 function toggleFabCircleMode(){
@@ -7793,7 +7817,8 @@ function syncMoreFuncSwitches(){
   [['mfMedalSwitch','mfMedalHint', !!userPrefs.boxMedalOn],
    ['mfLevelSwitch','mfLevelHint', !!userPrefs.boxLevelOn],
    ['mfPscBadgeSwitch','mfPscBadgeHint', !!userPrefs.boxPscBadgeOn],
-   ['mfFabCircleSwitch','mfFabCircleHint', !!userPrefs.fabCircleModeOn]].forEach(([swId, hintId, on])=>{
+   ['mfFabCircleSwitch','mfFabCircleHint', !!userPrefs.fabCircleModeOn],
+   ['mfBoxUniformSwitch','mfBoxUniformHint', !!userPrefs.boxUniformScaleOn]].forEach(([swId, hintId, on])=>{
     const sw = document.getElementById(swId), hint = document.getElementById(hintId);
     if(sw) sw.classList.toggle('on', on);
     if(hint) hint.textContent = on ? '开启' : '关闭';
@@ -8231,6 +8256,7 @@ document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncM
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
 document.getElementById('mfFabCircleSwitch').onclick = ()=>{ toggleFabCircleMode(); syncMoreFuncSwitches(); };
+document.getElementById('mfBoxUniformSwitch').onclick = ()=>{ toggleBoxUniformScale(); syncMoreFuncSwitches(); };
 document.getElementById('mfChangePwdBtn').onclick = openPwdModal;
 document.getElementById('mfLogoutBtn').onclick = authLogout;
 document.getElementById('mfPscBtn').onclick = openPscModal;
@@ -9427,7 +9453,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -14429,7 +14455,7 @@ function boxGifCacheTouch(src, img){
     boxGifImageCache.delete(boxGifImageCache.keys().next().value);
   }
 }
-function boxDrawFrozenFrame(canvas, src){
+function boxDrawFrozenFrame(canvas, src, wrap){
   const draw = (imgObj)=>{
     if(!imgObj.naturalWidth) return;
     canvas.width = imgObj.naturalWidth;
@@ -14437,6 +14463,7 @@ function boxDrawFrozenFrame(canvas, src){
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(imgObj, 0, 0);
+    boxApplyUniformWrapSize(wrap, imgObj.naturalWidth, imgObj.naturalHeight);
   };
   let tmp = boxGifImageCache.get(src);
   if(tmp){
@@ -14688,7 +14715,15 @@ function computeBoxGridColumnCount(){
 function applyBoxGridColumns(){
   const grid = document.getElementById('boxGrid');
   if(!grid) return;
-  grid.style.gridTemplateColumns = 'repeat('+computeBoxGridColumnCount()+', 1fr)';
+  const uniform = !!userPrefs.boxUniformScaleOn;
+  grid.classList.toggle('box-uniform-scale', uniform);
+  grid.style.gridTemplateColumns = 'repeat('+(uniform ? 4 : computeBoxGridColumnCount())+', 1fr)';
+}
+// 等比显示模式下把画面框撑成素材的真实原生像素宽高，让每只宝可梦都按 1:1 显示，不夹小
+function boxApplyUniformWrapSize(wrap, w, h){
+  if(!userPrefs.boxUniformScaleOn || !wrap || !w || !h) return;
+  wrap.style.width = w + 'px';
+  wrap.style.height = h + 'px';
 }
 function renderBoxPage(){
   renderBoxFilterRow();
@@ -14711,7 +14746,9 @@ function renderBoxPage(){
     // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），素材自身的动画不受影响。
     // v3.17 南瓜两族换成 gif 后这层壳对 gif 分支也要生效，所以提到两个分支外面统一处理
     // （gif 分支要把 canvas 和 img 一起塞进壳里，否则静帧和播放态的缩放会对不上）
-    const pumpkinScale = PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
+    // 等比显示模式下按原生像素1:1显示，是"务必保证像素大小完全一致"的字面要求，
+    // 不能再叠加南瓜精那种针对个别物种的人工缩放特例，所以这个模式下不套那层壳
+    const pumpkinScale = userPrefs.boxUniformScaleOn ? null : PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
     let imgHost = imgWrap;
     if(pumpkinScale && asset){
       const shell = document.createElement('div');
@@ -14728,11 +14765,15 @@ function renderBoxPage(){
       img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
       imgHost.appendChild(canvas);
       imgHost.appendChild(img);
-      boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny));
+      boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny), imgWrap);
     } else if(asset && asset.kind==='png'){
       const img = document.createElement('img');
       img.className = 'box-grid-img';
       img.src = boxAssetPath(entry.dex, entry.shiny);
+      if(userPrefs.boxUniformScaleOn){
+        if(img.complete && img.naturalWidth) boxApplyUniformWrapSize(imgWrap, img.naturalWidth, img.naturalHeight);
+        else img.addEventListener('load', ()=> boxApplyUniformWrapSize(imgWrap, img.naturalWidth, img.naturalHeight), {once:true});
+      }
       imgHost.appendChild(img);
     } else {
       // 没有素材（多半是 OCR 连物种都没认出来，dex 为空）：放个问号占位，别留一个空白格
