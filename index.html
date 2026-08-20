@@ -502,12 +502,6 @@
   .page-act-side-right{ border-top-left-radius:15px; }
   /* 透明空档：不铺白底，也不要挡住下层页面的点击 */
   .page-act-gap{ flex:0 0 50px; pointer-events:none; }
-  /* v3.23：资源总计浮层贴在按钮条正上方时，这段空档里"球顶到球实际露出来"之间那小截
-     还是会透出按钮条后面的页面内容（球本身带的白环盖不到那么高）——正常状态下球紧贴着
-     切换栏、这截缝隙太窄看不出来，但资源总计条压在上面对比明显，露出一道颜色不对的缝。
-     资源总计条开着的时候把这段空档整个刷成白色；球在切换栏里 z-index 比按钮条高一层，
-     照样会盖在这片白色上面，不会被遮住 */
-  .page-act-gap.plan-sumbar-patch{ background: var(--panel); }
   .page-act-btn{
     position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
     padding:9px 10px;
@@ -537,6 +531,16 @@
   .plan-sum-bar.on{ display:flex; }
   .plan-sum-item{ display:inline-flex; align-items:center; gap:4px; }
   .plan-sum-n{ font-size:11px; font-weight:800; color:#7a7568; }
+  /* v3.24：资源总计条下方到切换栏（含中间凸起的宝可梦盒球体）之间那截缝，之前只补了
+     按钮条中间 50px 那道透明空档，边上和小圆浮窗模式下量出来的位置总有些没堵严实的角落。
+     改成不管三七二十一铺一条满屏宽的白条，从条子底边一路盖到切换栏顶边——球和切换栏
+     本身 z-index 比这条高很多，照样叠在最上面露出来，不会被这条白条挡住；位置和高度
+     由 planPositionSumBarFill() 现量现贴，两种模式（按钮条/小圆浮窗）共用同一份逻辑 */
+  .plan-sumbar-fill{
+    display:none; position:fixed; left:0; right:0; background:var(--panel);
+    z-index:1088; pointer-events:none;
+  }
+  .plan-sumbar-fill.on{ display:block; }
   .page-act-btn.page-act-btn-off:hover{ filter:none; }
   /* 「修改面板」头像气泡：与盒子里那颗同源，挂在按钮内部（position:relative 就是按钮自己），
      贴着屏幕右边缘上方，常驻不交替。点击气泡的事件会冒泡到按钮本身，不用再单独绑一次 */
@@ -2384,6 +2388,29 @@
 /* 多选态下给标题两边同样留出圈的位置：只留右边会把居中的标题抹歪 */
 .plan-rowwrap.plan-picking .plan-head{ padding:0 22px; }
 
+/* v3.25：资源总计态"标签融合"卡片——外壳跟 .plan-rowwrap 长得一样（边框/圆角/裁切），
+   只是左边标签位不再是每条各占一份，而是整组共用一条、撑满这一组的高度；右边堆叠的
+   每一条自己是独立热区（点它单选/取消），互相之间用细描边分隔，看起来像同一张标签下的
+   一串子条目。没打标签的条目退化成 group.length===1 的单行卡，跟平时长得一样。 */
+.plan-taggrp{
+  position:relative; display:flex; align-items:stretch;
+  background:var(--panel); border:1px solid var(--line); border-radius:11px; overflow:hidden;
+  user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none;
+}
+.plan-taggrp img{ -webkit-user-drag:none; pointer-events:none; }
+.plan-taggrp-tag{
+  flex:0 0 30px; display:flex; align-items:center; justify-content:center;
+  background:#e9e4d6; border-right:1px solid var(--line); position:relative; overflow:hidden;
+}
+/* 有标签（能点整批勾选）才是手型；没打标签那种单行退化卡，色块是死的，跟平时一样是默认光标 */
+.plan-taggrp-tag[style*="background"]:not([style*="#e9e4d6"]){ cursor:pointer; }
+.plan-taggrp-tag-check{ position:absolute; top:4px; left:50%; transform:translateX(-50%); }
+.plan-taggrp-body{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+.plan-taggrp-row{ position:relative; padding:8px 8px 6px; cursor:pointer; }
+.plan-taggrp-row + .plan-taggrp-row{ border-top:1px solid var(--line); }
+.plan-taggrp-row.plan-row-picked{ background:#f3edf9; }
+.plan-taggrp-row .plan-head{ padding:0 22px; }
+
 /* 标签选择气泡：贴着标签位弹出 */
 .plan-tagpop{
   position:fixed; z-index:1400; background:var(--panel); border:1px solid var(--line); border-radius:11px;
@@ -3112,11 +3139,12 @@
   </div>
 </div>
 <div class="plan-sum-bar" id="planSumBar"></div>
+<div class="plan-sumbar-fill" id="planSumBarFill"></div>
 <div class="ui-fab" id="fabPanel"><span id="fabPanelLabel">修改<br>面板</span></div>
 <div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
 <div class="ui-fab" id="fabPlanClear"><span>取消<br>全选</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
-<div class="ui-fab" id="fabMore">更多<br>功能</div>
+<div class="ui-fab" id="fabMore">更多<br>设置</div>
 <div class="box-toast" id="boxToast"></div>
 
 <div class="tabbar" id="tabBar">
@@ -3209,7 +3237,7 @@
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
     <div class="box-action-bar" id="boxActionBar">
       <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
-      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">更多功能</button>
+      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">更多设置</button>
       <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
       <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn"><svg viewBox="0 0 24 24" width="20" height="20" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></button>
       <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
@@ -13109,6 +13137,14 @@ function positionTabIndicator(){
 function switchPage(pageId){
   // 切去别的主页面时，如果正停在岛屿评分子页的批量选择模式里，顺带退出（同 mfShowSub 离开岛屿评分时的处理）
   if(pageId!=='page2' && typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandExitBatchMode==='function') islandExitBatchMode();
+  // 同理：培养计划的「移出培养」「资源总计」这两种多选态也是子页专属的，跳去别的主页面时
+  // 不该继续留着——不然回来时按钮还亮着、资源总计浮层可能还挂在别的页面上方，用户早忘了
+  // 自己曾经进过这个态。跟 mfShowSub 离开培养计划子页时的处理是同一个原则，这里补上
+  // "跳出 page2 整个页面"这一支（原来只在子页之间切换会触发）
+  if(pageId!=='page2' && typeof mfSubView!=='undefined' && mfSubView==='plan'){
+    if(typeof planExitRemoveMode==='function') planExitRemoveMode();
+    if(typeof planExitSumMode==='function') planExitSumMode();
+  }
   if(boxOverlayOpen) closeBoxOverlay();
   document.querySelectorAll('.app-page').forEach(p=>p.classList.toggle('active-page', p.id===pageId));
   document.querySelectorAll('.tab-item').forEach(t=>t.classList.toggle('active', t.dataset.page===pageId));
@@ -13209,11 +13245,6 @@ function pageSwipeBlocked(){
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
   const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal','planTagModal','planEditModal'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
-  // 培养计划页自己的左滑删除/长按拖动排序跟这套全局翻页手势抢同一次触摸：横向位移一旦
-  // 超过 70px 就会被 touchend 那边判成翻页，跟条目左滑删除（PLAN_SWIPE_W=72，幅度几乎
-  // 一样大）撞在一起，滑一下删除键可能顺带把页面切走。培养计划子页整个禁用翻页手势
-  const page2El = document.getElementById('page2');
-  if(!!(page2El && page2El.classList.contains('active-page')) && typeof mfSubView!=='undefined' && mfSubView==='plan') return true;
   return false;
 }
 // 核心平移动画，step 只决定方向（>0 当前页向左退出/下一页从右侧进入，<0 反过来），
@@ -13289,6 +13320,10 @@ function pageSwitchAnimateTo(targetId){
     if(e.touches.length!==1 || pageSwiping || pageSwipeBlocked()){ tracking=false; return; }
     // 起手在横向滚动的小组件（如捕捉推荐页的岛屿选择条）里就不当成翻页手势，让它正常横滚
     if(e.target.closest && e.target.closest('.cap-cscroll')){ tracking=false; return; }
+    // 培养计划条目本身有自己的左滑删除，幅度（PLAN_SWIPE_W=72）跟这里的翻页阈值（70）
+    // 差不多大，起手在条目上的横滑只交给条目自己判定，不参与翻页；起手在条目之间的空隙
+    // 或者列表左右两侧的空白处仍然照常翻页
+    if(e.target.closest && e.target.closest('.plan-rowwrap')){ tracking=false; return; }
     // v3.18：这里原来还排除了 .cap-rank-viewport（捕捉推荐条目区），因为当时整页一起滚，
     // 上下滑带点横向偏移就会把标题也滑走。现在条目区是自己的滚动容器，纵向滑动由它自己消化，
     // 于是把这条排除撤掉——条目区里左右滑同样能翻页。方向判定改到 touchend 里从严处理。
@@ -13402,6 +13437,11 @@ function unlockPageScroll(){
 
 function openBoxOverlay(){
   if(boxOverlayOpen) return;
+  // 培养计划的「资源总计」「移出培养」是贴在页面下方的浮层，跟盒子浮层叠在一起会互相遮挡
+  // （资源总计条层级比盒子还高，会整条盖在盒子上面）；打开盒子前先退出这两种多选态——
+  // "加入培养"本身要开盒子选人走的是另一套 boxSelectMode('plan')，不受这里影响
+  if(typeof planExitSumMode==='function' && planSumMode) planExitSumMode();
+  if(typeof planExitRemoveMode==='function' && planRemoveMode) planExitRemoveMode();
   boxOverlayOpen = true;
   const backdrop = document.getElementById('boxBackdrop');
   if(backdrop) backdrop.classList.add('open');
@@ -13427,6 +13467,10 @@ function closeBoxOverlay(){
   // 不管是选中后自动关（boxCommitPickToPanel 已经清过一次）还是用户中途退出没选，
   // 拾取态都不该带到下一次盒子会话里，双重保险清一次
   boxPickTargetPanel = null;
+  // 同理：批量删除/改等级/改种族/加入培养这几种多选态（boxSelectMode）也不该带到下一次
+  // 盒子会话——比如点了「加入培养」进盒子选人，选到一半直接关掉盒子（不是点确认/取消），
+  // 之前这个态会一直挂着，下次随便什么原因再打开盒子，选择栏还亮着、上次勾的还在
+  if(boxSelectMode) boxExitSelectMode();
   if(typeof boxDetailEntryId!=='undefined' && boxDetailEntryId) closeBoxDetail();
   closeBoxInfoBubble();
   closeBoxFilterPop();
@@ -13706,7 +13750,13 @@ function updatePageActionBar(){
   let inDetail = false, inBox = false;
   try{ inDetail = !!boxDetailEntryId; }catch(e){}
   try{ inBox = !!boxOverlayOpen; }catch(e){}
-  const show = !(inDetail || inBox);
+  // v3.24：更多功能的选择页（hub，mfSubView 还是 null）没有任何按钮能用，之前只把左边
+  // "控制参数"那颗按钮压成 visibility:hidden——按钮本身看不见了，但它所在的白色底条还在，
+  // hub 页上会留一小截空白的白色胶囊，右边"修改面板"整颗还照常显示。以后说"隐藏这两颗
+  // 按钮"都按这个新标准来：白色底条要跟按钮一起整条收起，不是留白占位
+  const page2El = document.getElementById('page2');
+  const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
+  const show = !(inDetail || inBox || onHub);
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -13716,7 +13766,6 @@ function updatePageActionBar(){
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
   // v3.19：更多功能页的 hub 没有可调的计算参数，"控制参数"那颗按钮收起；
   // 岛屿评分子页把这颗按钮借来做"批量选择"入口，不收起（updatePanelBtnLabel 里换文字/行为）
-  const page2El = document.getElementById('page2');
   const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
   // v3.20：培养计划子页把这颗借去做「资源总计」，跟岛屿评分一样不收起
   const onPlanSub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
@@ -13834,10 +13883,13 @@ function updateFabCircles(){
     [fabPanel, fabCreate, fabMore].forEach(el=> el.classList.remove('box-page-visible','fab-lifted'));
     fabCreate.style.display = 'none';
     fabMore.style.display = 'none';
-    const show = !inDetail;
+    const page2El = document.getElementById('page2');
+    // v3.24：更多功能选择页（hub）不需要任何浮窗——两颗圆一起收起，跟按钮条模式下
+    // 整条按钮条+白底一起收起是同一个标准
+    const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
+    const show = !inDetail && !onHub;
     // 与按钮条一致：更多功能页的 hub 没有可调参数，控制参数那颗圆收起；
     // 岛屿评分子页借这颗圆做"批量选择"，不收起
-    const page2El = document.getElementById('page2');
     const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
     // v3.21：培养计划页和岛屿评分一样，左槽圆圈被借去做多选入口（资源总计/移出培养），
     // 之前漏了 onPlan 这一支，导致开小圆浮窗后培养计划页根本进不去资源总计
@@ -17354,7 +17406,7 @@ function planRenderBoostBar(){
   set('planBoostCapBtn',   !!planOpts.boostCap);
 }
 /* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
-   两种手势共用同一个 pointerdown 起点：按住 0.05s 之后再往左滑，才开始把删除按钮拉出来；
+   两种手势共用同一个 pointerdown 起点：往左滑（横向位移压过纵向）就立即把删除按钮拉出来，不设起手门槛；
    按住 0.5s 且这段时间里没怎么挪，就判成长按，进入拖动排序（同优先级内互换 sortNum）。
    一次只会判进其中一种，同一条不会又滑又拖。
    按下瞬间就把这一条的 touch-action 摘成 none（见 planRowPointerDown），交给自己全权
@@ -17368,7 +17420,7 @@ let planGestId = null, planGestWrap = null, planGestFront = null;
 let planGestStart = null, planGestBaseOffset = 0, planGestMode = null;
 let planGestLastY = null;           // 长按计时期间手指还在动，真正判进拖动时要拿这个当起点，不能用按下那一刻的位置（会跳一下）
 let planDragTimer = null, planDragGroup = null;
-const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 50, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
+const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 0, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
 function planCloseSwipe(){
   if(planSwipeOpenId==null) return;
   planSwipeOpenId = null;
@@ -17558,6 +17610,11 @@ function planRenderList(){
   // 免得切进多选态时还留着一条歪在那
   const picking0 = planRemoveMode || planSumMode;
   if(picking0) planSwipeOpenId = null;
+  // v3.25：资源总计态下同一标签的条目改成"标签融合"卡片——一个标签只出一条左侧色块，
+  // 右边堆着这个标签下的所有条目；点标签色块＝整批勾/取消勾这个标签下所有条目，
+  // 点右边单条还是单选。跟移出培养态（仍是每条各自一张卡）分开两条渲染路径，
+  // 别把两种多选态的交互硬揉进同一段循环里
+  if(planSumMode){ planRenderSumGrouped(el, planSorted(), all, dup); return; }
   planSorted().forEach(entry=>{
     const t = planTagOf(entry);
     const r = all[entry.id];
@@ -17613,6 +17670,66 @@ function planRenderList(){
     }
     el.appendChild(wrap);
   });
+}
+// 资源总计态专用渲染：planSorted() 已经按优先级排过，同一个 tagId 的条目必然连在一起，
+// 顺着扫一遍、把连续同 tagId 的条目收进一组即可，不用额外排序。没打标签的条目彼此之间
+// 没有"同一标签"可言，各自单独一张卡（标签位是灰色"＋"占位，跟平时没打标签时长得一样）。
+function planRenderSumGrouped(el, sorted, all, dup){
+  let i = 0;
+  while(i < sorted.length){
+    const entry = sorted[i];
+    if(!entry.tagId){ el.appendChild(planBuildSumCard([entry], null, all, dup)); i++; continue; }
+    let j = i + 1;
+    while(j < sorted.length && sorted[j].tagId === entry.tagId) j++;
+    el.appendChild(planBuildSumCard(sorted.slice(i, j), planTagOf(entry), all, dup));
+    i = j;
+  }
+}
+// group.length===1 时（没打标签，或者这个标签目前就这一条）退化成单行卡，跟多条时共用同一套
+// 外壳样式，视觉上不会因为"要不要合并"而长得不一样
+function planBuildSumCard(group, tag, all, dup){
+  const ids = group.map(e=>e.id);
+  const allPicked = ids.every(id=>planPickedIds.has(id));
+  const wrap = document.createElement('div');
+  wrap.className = 'plan-taggrp';
+  const rowsHtml = group.map(entry=>{
+    const r = all[entry.id];
+    const picked = planPickedIds.has(entry.id);
+    return `<div class="plan-taggrp-row${picked?' plan-row-picked':''}" data-id="${entry.id}">`+
+      `<div class="plan-head">`+
+        `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
+        (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
+        `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+      `</div>`+
+      planArrowHtml(r, entry, true)+
+      `<div class="plan-check${picked?' on':''}">${picked?checkIconSvg('#fff',3.6,12):''}</div>`+
+    `</div>`;
+  }).join('');
+  wrap.innerHTML =
+    `<div class="plan-taggrp-tag" style="background:${tag?planEsc(tag.color):'#e9e4d6'}">`+
+      (tag ? `<span class="plan-tagslot-txt">${planEsc(tag.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
+      (tag && allPicked ? `<span class="plan-taggrp-tag-check">${checkIconSvg('#fff',3.2,14)}</span>` : '')+
+    `</div>`+
+    `<div class="plan-taggrp-body">${rowsHtml}</div>`;
+  // 标签色块：点一下＝整批勾选/取消这个标签下所有条目；没打标签时这个色块是死的，
+  // 跟平时未标记条目点标签位没反应（picking 态本来就不弹标签气泡）是同一个道理
+  if(tag){
+    wrap.querySelector('.plan-taggrp-tag').onclick = ()=>{
+      const nowAllPicked = ids.every(id=>planPickedIds.has(id));
+      nowAllPicked ? ids.forEach(id=>planPickedIds.delete(id)) : ids.forEach(id=>planPickedIds.add(id));
+      planRenderList();
+      updatePageActionBar();
+    };
+  }
+  wrap.querySelectorAll('.plan-taggrp-row').forEach(rowEl=>{
+    const id = rowEl.dataset.id;
+    rowEl.onclick = ()=>{
+      planPickedIds.has(id) ? planPickedIds.delete(id) : planPickedIds.add(id);
+      planRenderList();
+      updatePageActionBar();
+    };
+  });
+  return wrap;
 }
 
 /* ---- 编辑弹窗 ---- */
@@ -17925,22 +18042,37 @@ function planPositionSumBar(bar){
     const r = act.getBoundingClientRect();
     bar.style.bottom = Math.max(0, Math.round(window.innerHeight - r.top)) + 'px';
   } else {
-    // 按钮条整条隐藏时（小圆浮窗模式）原来固定贴 24px，但切换栏中间凸起的"宝可梦盒"
-    // 圆球是 margin-top:-24px 顶出来的，顶部比切换栏本身高出一截——24px 罩不住它，
-    // 球的上半截会露在资源总计条上方，跟条子之间空出一小片透明背景。改成量一下球实际
-    // 顶到哪，贴着球顶边覆盖过去，浮窗高度变了/换机型也不会露缝
-    const ball = document.getElementById('tabBoxCapsule');
-    if(ball){
-      const br = ball.getBoundingClientRect();
-      bar.style.bottom = Math.max(24, Math.round(window.innerHeight - br.top) + 2) + 'px';
-    } else {
-      bar.style.bottom = '24px';
-    }
+    // 按钮条整条隐藏时（小圆浮窗模式）跟按钮条模式一个道理：直接贴切换栏的顶边，球本身
+    // z-index 更高会正常叠在条子上面露出来（跟按钮条模式下条子贴 actionBar 顶边、球叠在
+    // 上面是同一个效果）；固定 24px 起不到这个作用——条子会整条陷进切换栏区域里，
+    // 跟下面 planPositionSumBarFill() 算出来的高度就会是负数，等于没堵
+    const tabbar = document.getElementById('tabBar');
+    const tb = tabbar ? tabbar.getBoundingClientRect().top : (window.innerHeight - 63);
+    bar.style.bottom = Math.max(24, Math.round(window.innerHeight - tb)) + 'px';
   }
+}
+/* 条子下边到切换栏顶边之间，不管是按钮条模式的那道 50px 透明空档，还是小圆浮窗模式下
+   两者中间空出来的一整块，都用一条满屏宽的白条盖过去——球和切换栏本身 z-index(1100)
+   比这条白条(1088)高得多，会正常叠在最上面，不会被挡住。两种模式量法不同，其它一律不用管。 */
+function planPositionSumBarFill(){
+  const fill = document.getElementById('planSumBarFill');
+  const bar = document.getElementById('planSumBar');
+  const tabbar = document.getElementById('tabBar');
+  if(!fill || !bar) return;
+  if(!bar.classList.contains('on') || !tabbar){ fill.classList.remove('on'); return; }
+  const barR = bar.getBoundingClientRect();
+  const tabR = tabbar.getBoundingClientRect();
+  const top = Math.round(barR.bottom);
+  const bottom = Math.round(tabR.top) + 2;   // 多贴 2px 盖住取整误差，反正切换栏层级更高不怕盖住
+  const h = bottom - top;
+  if(h <= 0){ fill.classList.remove('on'); return; }
+  fill.style.top = top + 'px';
+  fill.style.height = h + 'px';
+  fill.classList.add('on');
 }
 window.addEventListener('resize', ()=>{
   const bar = document.getElementById('planSumBar');
-  if(bar && bar.classList.contains('on')) planPositionSumBar(bar);
+  if(bar && bar.classList.contains('on')){ planPositionSumBar(bar); planPositionSumBarFill(); }
 });
 /* 资源总计浮层：万能糖合计 + 梦之碎片合计。
    口径跟卡片一致——只在选中的这几条内部从头分配增强配额，所以这里的合计
@@ -17950,15 +18082,14 @@ function planRenderSumBar(){
   const onPlan = mfSubView === 'plan'
     && !!(document.getElementById('page2')||{}).classList
     && document.getElementById('page2').classList.contains('active-page');
-  const gapEl = document.querySelector('.page-act-gap');
   if(!onPlan || !planSumMode){
     bar.classList.remove('on'); bar.innerHTML = '';
-    if(gapEl) gapEl.classList.remove('plan-sumbar-patch');
+    planPositionSumBarFill();   // bar 已经 off，这个调用会顺带把白条也收起来
     return;
   }
   bar.classList.add('on');
-  if(gapEl) gapEl.classList.add('plan-sumbar-patch');
   planPositionSumBar(bar);
+  planPositionSumBarFill();
   if(!planPickedIds.size){
     bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
     return;
