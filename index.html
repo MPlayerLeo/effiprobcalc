@@ -13920,7 +13920,11 @@ function updatePageActionBar(){
   // 按钮"都按这个新标准来：白色底条要跟按钮一起整条收起，不是留白占位
   const page2El = document.getElementById('page2');
   const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
-  const show = !(inDetail || inBox || onHub);
+  // v3.26：更多设置页（page3）也没有任何控制参数/修改面板可用，跟 hub 一样整条收起——
+  // 漏掉这个分支会导致按钮条卡在页面内容和页面切换栏之间，看起来像切换栏被顶起来了
+  const page3El = document.getElementById('page3');
+  const onSettings = !!(page3El && page3El.classList.contains('active-page'));
+  const show = !(inDetail || inBox || onHub || onSettings);
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -14051,7 +14055,10 @@ function updateFabCircles(){
     // v3.24：更多功能选择页（hub）不需要任何浮窗——两颗圆一起收起，跟按钮条模式下
     // 整条按钮条+白底一起收起是同一个标准
     const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
-    const show = !inDetail && !onHub;
+    // 圆形浮窗模式同理，更多设置页（page3）也要跟 hub 一样两颗圆一起收起
+    const page3El = document.getElementById('page3');
+    const onSettings = !!(page3El && page3El.classList.contains('active-page'));
+    const show = !inDetail && !onHub && !onSettings;
     // 与按钮条一致：更多功能页的 hub 没有可调参数，控制参数那颗圆收起；
     // 岛屿评分子页借这颗圆做"批量选择"，不收起
     const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
