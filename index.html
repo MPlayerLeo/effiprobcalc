@@ -502,6 +502,12 @@
   .page-act-side-right{ border-top-left-radius:15px; }
   /* 透明空档：不铺白底，也不要挡住下层页面的点击 */
   .page-act-gap{ flex:0 0 50px; pointer-events:none; }
+  /* v3.23：资源总计浮层贴在按钮条正上方时，这段空档里"球顶到球实际露出来"之间那小截
+     还是会透出按钮条后面的页面内容（球本身带的白环盖不到那么高）——正常状态下球紧贴着
+     切换栏、这截缝隙太窄看不出来，但资源总计条压在上面对比明显，露出一道颜色不对的缝。
+     资源总计条开着的时候把这段空档整个刷成白色；球在切换栏里 z-index 比按钮条高一层，
+     照样会盖在这片白色上面，不会被遮住 */
+  .page-act-gap.plan-sumbar-patch{ background: var(--panel); }
   .page-act-btn{
     position:relative; flex:1 1 0; min-width:0; border:none; border-radius:10px;
     padding:9px 10px;
@@ -13203,6 +13209,11 @@ function pageSwipeBlocked(){
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
   const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal','planTagModal','planEditModal'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
+  // 培养计划页自己的左滑删除/长按拖动排序跟这套全局翻页手势抢同一次触摸：横向位移一旦
+  // 超过 70px 就会被 touchend 那边判成翻页，跟条目左滑删除（PLAN_SWIPE_W=72，幅度几乎
+  // 一样大）撞在一起，滑一下删除键可能顺带把页面切走。培养计划子页整个禁用翻页手势
+  const page2El = document.getElementById('page2');
+  if(!!(page2El && page2El.classList.contains('active-page')) && typeof mfSubView!=='undefined' && mfSubView==='plan') return true;
   return false;
 }
 // 核心平移动画，step 只决定方向（>0 当前页向左退出/下一页从右侧进入，<0 反过来），
@@ -16763,19 +16774,33 @@ let planLoaded = false;
 function planEnsureLoaded(){ if(!planLoaded){ planLoadState(); planEnsureSortNums(); } }
 // 老数据没有 sortNum 字段（拖动排序是后加的功能）：按各自现在显示的顺序（原来是同优先级内
 // 新加入的在上）在组内一次性铺出 1..N，这样升级后视觉顺序完全不变，且从此以后每条都有
-// 互不相同的排序数字——不然新字段大家都一样，第一次拖动时"交换"两个相同的数没有任何效果
+// 互不相同的排序数字——不然新字段大家都一样，第一次拖动时"交换"两个相同的数没有任何效果。
+// v3.23：也要抓"数字本身合法但组内撞号"这种坏数据——早期几个版本加数据/换标签的口径
+// 前后不一致，云同步/本地混过之后有些账号攒下了同一组里好几条都是同一个数字的存量数据，
+// 光查"是不是合法数字"逮不到这种情况，得同时查"同一个数字是不是被用了不止一次"
 function planEnsureSortNums(){
   const groups = {};
   planData.forEach(e=>{ (groups[planPrioOf(e)] = groups[planPrioOf(e)] || []).push(e); });
   let changed = false;
   Object.values(groups).forEach(list=>{
+    const seen = new Set();
     const bad = list.some(e=>{
       const n = Math.floor(Number(e.sortNum));
-      return !Number.isFinite(n) || n<PLAN_SORT_MIN || n>PLAN_SORT_MAX;
+      if(!Number.isFinite(n) || n<PLAN_SORT_MIN || n>PLAN_SORT_MAX) return true;
+      if(seen.has(n)) return true;
+      seen.add(n);
+      return false;
     });
     if(!bad) return;
-    list.slice().sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))
-      .forEach((e,i)=>{ e.sortNum = Math.min(PLAN_SORT_MAX, i+1); changed = true; });
+    // 尽量保留原本的相对先后：先按现有数字排（没有/非法的丢最后），撞号的再按加入时间兜底，
+    // 排完直接铺成连续的 1..N——这样"坏数据"被治好之后，界面上的顺序基本不会跳变
+    list.slice().sort((a,b)=>{
+      const na = Math.floor(Number(a.sortNum)), nb = Math.floor(Number(b.sortNum));
+      const va = (Number.isFinite(na) && na>=PLAN_SORT_MIN && na<=PLAN_SORT_MAX) ? na : Infinity;
+      const vb = (Number.isFinite(nb) && nb>=PLAN_SORT_MIN && nb<=PLAN_SORT_MAX) ? nb : Infinity;
+      if(va !== vb) return va - vb;
+      return (b.addedAt||0) - (a.addedAt||0);
+    }).forEach((e,i)=>{ e.sortNum = Math.min(PLAN_SORT_MAX, i+1); changed = true; });
   });
   if(changed) planSaveState();
 }
@@ -16839,6 +16864,8 @@ function applyPlanCloudSnapshot(snap){
     if(snap.opts && typeof snap.opts==='object') localStorage.setItem(PLAN_OPTS_KEY, JSON.stringify(snap.opts));
   }catch(e){}
   planLoadState();
+  // 云端和本地各自独立分配过排序数字，合并之后同一组里撞号很正常，得再跑一遍体检
+  planEnsureSortNums();
 }
 
 /* ---- 标签 ---- */
@@ -17327,18 +17354,21 @@ function planRenderBoostBar(){
   set('planBoostCapBtn',   !!planOpts.boostCap);
 }
 /* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
-   两种手势共用同一个 pointerdown 起点：按住 0.1s 之后再往左滑，才开始把删除按钮拉出来；
+   两种手势共用同一个 pointerdown 起点：按住 0.05s 之后再往左滑，才开始把删除按钮拉出来；
    按住 0.5s 且这段时间里没怎么挪，就判成长按，进入拖动排序（同优先级内互换 sortNum）。
-   起手前手指的移动一律当成"想滚页面"，什么都不拦；真正判进某种手势之后才 preventDefault，
-   跟盒子那套滑动多选（0.25s 才 armed）是同一个思路，只是这里滑动方向不同、多了个长按分支。
-   一次只会判进其中一种，同一条不会又滑又拖。 */
+   一次只会判进其中一种，同一条不会又滑又拖。
+   按下瞬间就把这一条的 touch-action 摘成 none（见 planRowPointerDown），交给自己全权
+   判定手势，不再指望"起手前不拦、让浏览器自己滚"——纵向位移只要一超过很小的阈值，
+   系统的原生滚动识别器几乎立刻就会把这次触摸判走，根本轮不到我们自己 0.5s 的计时器，
+   长按拖动在真机上因此实际上永远启动不了；代价是手指按在条目上没法直接原生滚整页，
+   跟盒子那套滑动多选（0.25s 才 armed，但那边是靠时间不是靠 touch-action）不是同一个思路。 */
 let planSwipeOpenId = null;         // 当前左滑露出删除按钮的那一条 id，同一时刻只留一条开着
 let planRowGestureFired = false;    // 刚触发过滑动/拖动，抑制紧跟着那次 click（避免误开编辑弹窗）
 let planGestId = null, planGestWrap = null, planGestFront = null;
 let planGestStart = null, planGestBaseOffset = 0, planGestMode = null;
 let planGestLastY = null;           // 长按计时期间手指还在动，真正判进拖动时要拿这个当起点，不能用按下那一刻的位置（会跳一下）
 let planDragTimer = null, planDragGroup = null;
-const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 100, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
+const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 50, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
 function planCloseSwipe(){
   if(planSwipeOpenId==null) return;
   planSwipeOpenId = null;
@@ -17353,6 +17383,8 @@ document.addEventListener('pointerdown', (ev)=>{
 }, true);
 function planCancelRowGesture(){
   if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }
+  // 按下时临时摘掉的 touch-action 记得还回去，不然松手/取消之后这一条会一直不能原生滚动
+  if(planGestFront) planGestFront.style.touchAction = '';
   planGestId = null; planGestMode = null; planGestWrap = null; planGestFront = null;
 }
 function planRowPointerDown(ev, entry, wrap, front){
@@ -17365,6 +17397,15 @@ function planRowPointerDown(ev, entry, wrap, front){
   planGestStart = {x:ev.clientX, y:ev.clientY, t:Date.now()};
   planGestLastY = ev.clientY;
   planGestBaseOffset = (planSwipeOpenId===entry.id) ? -PLAN_SWIPE_W : 0;
+  // touch-action:pan-y 在真机上意味着"纵向位移交给系统原生滚动处理"——系统的手势识别器
+  // 通常在纵向移动刚超过很小的阈值（往往就几像素）时就已经把这次触摸判给了原生滚动，
+  // 远早于我们自己 0.5s 的长按计时器触发，长按拖动因此在真机上几乎永远轮不到自己判定
+  // （之前只在这个文件内部用合成 PointerEvent 测试"能不能拖"，合成事件不经过系统手势识别器，
+  // 测出来是好的，实机上仍然会被原生滚动截胡）。按下的瞬间就把这一条摘出滚动系统，交给
+  // 我们自己全权处理，松手/取消再还回去——代价是"手指按在条目上直接往上下滑"不能再原生
+  // 滚动整页了，但这跟现在按住 0.1s 才能左滑删除是同一个取舍，多数长列表 app 的长按排序
+  // 都是这么处理的
+  front.style.touchAction = 'none';
   planDragTimer = setTimeout(()=>{
     planDragTimer = null;
     if(planGestId!==entry.id || planGestMode) return;   // 已经松手，或已经判给了滑动
@@ -17417,6 +17458,9 @@ function planRowPointerUp(){
     planEndDragReorder();
   }
   if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }
+  // 单纯点了一下（没有判进滑动/拖动）时这一条不会被 planRenderList 重新画过，
+  // 按下时摘掉的 touch-action 得在这里自己还回去，不然这一条会一直不能原生滚动
+  if(planGestFront) planGestFront.style.touchAction = '';
   planGestId = null; planGestMode = null; planGestWrap = null; planGestFront = null;
 }
 window.addEventListener('pointermove', planRowPointerMove);
@@ -17906,8 +17950,14 @@ function planRenderSumBar(){
   const onPlan = mfSubView === 'plan'
     && !!(document.getElementById('page2')||{}).classList
     && document.getElementById('page2').classList.contains('active-page');
-  if(!onPlan || !planSumMode){ bar.classList.remove('on'); bar.innerHTML = ''; return; }
+  const gapEl = document.querySelector('.page-act-gap');
+  if(!onPlan || !planSumMode){
+    bar.classList.remove('on'); bar.innerHTML = '';
+    if(gapEl) gapEl.classList.remove('plan-sumbar-patch');
+    return;
+  }
   bar.classList.add('on');
+  if(gapEl) gapEl.classList.add('plan-sumbar-patch');
   planPositionSumBar(bar);
   if(!planPickedIds.size){
     bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
