@@ -1455,8 +1455,8 @@
   /* 加了自定义档位那颗按钮之后这一行变成 5 颗，原来 padding:3px 12px 的宽按钮在窄屏
      上会被挤到换行。改成方形（宽高都 24px 左右）后 5 颗一起排一行，320px 宽都够放，
      所以下面 360px 那档媒体查询就不用再单独收紧这两颗按钮的 padding 了 */
-  .dash-shiny-level-row .segbtn{ padding:3px 4px; }
-  .dash-shiny-level-row .segbtn.seg-lv-custom{ width:24px; padding-left:2px; padding-right:2px; }
+  .dash-shiny-level-row .segbtn{ flex:0 0 26px; width:26px; padding:3px 2px; text-align:center; }
+  .dash-shiny-level-row .segbtn.seg-lv-custom{ flex:0 0 26px; width:26px; padding-left:2px; padding-right:2px; }
   .dash-shiny-level-row .pk-recommend-box.pk-recommend-box-sm{ flex:0 0 auto; height:auto; align-self:stretch; padding:0 8px; }
   @media (max-width:360px){
     .dash-shiny-level-row{ gap:5px; }
@@ -13930,6 +13930,22 @@ let dashboardOpen = false;
    updateControlsFabVisibility），还要额外算避让「计算概率」按钮的停靠位置。现在两颗一起并进
    #pageActionBar（钉在页面切换栏正上方），显示与否只有一处判断，下面两个旧函数保留成薄壳，
    免得改动散落各处的十来个调用点。 */
+// v3.27：岛屿评分/培养计划子页各自有好几个分页（岛屿浏览/标签管理/宝可梦；培养列表/优先级标签管理），
+// 但按钮条+圆形浮窗借来做的"批量选择/取消""资源总计/加入培养"只在各自那个罗列条目的分页里有意义
+// （岛屿评分是 islPaneBox 对应的"宝可梦"分页，培养计划是 planPaneList 对应的"培养列表"分页）。
+// 其余分页（岛屿浏览、两边的标签管理）没有可用的批量操作，要跟 hub/更多设置一样整条收起，
+// 而不是继续borrow这两颗按钮却什么都不响应。islandPane/planPane 都是脚本靠后才声明的 let，
+// 这两个函数可能在它们初始化之前就被调用到（页面刚加载那一次），所以要 try 住，默认按"能用"处理
+function onIslandBoxPane(){
+  const page2El = document.getElementById('page2');
+  if(!(page2El && page2El.classList.contains('active-page')) || mfSubView !== 'island') return false;
+  try{ return islandPane === 'box'; }catch(e){ return true; }
+}
+function onPlanListPane(){
+  const page2El = document.getElementById('page2');
+  if(!(page2El && page2El.classList.contains('active-page')) || mfSubView !== 'plan') return false;
+  try{ return planPane === 'list'; }catch(e){ return true; }
+}
 function updatePageActionBar(){
   const bar = document.getElementById('pageActionBar');
   if(!bar) return;
@@ -13950,7 +13966,15 @@ function updatePageActionBar(){
   // 漏掉这个分支会导致按钮条卡在页面内容和页面切换栏之间，看起来像切换栏被顶起来了
   const page3El = document.getElementById('page3');
   const onSettings = !!(page3El && page3El.classList.contains('active-page'));
-  const show = !(inDetail || inBox || onHub || onSettings);
+  // v3.19：更多功能页的 hub 没有可调的计算参数，"控制参数"那颗按钮收起；
+  // 岛屿评分子页把这颗按钮借来做"批量选择"入口，不收起（updatePanelBtnLabel 里换文字/行为）
+  const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  // v3.20：培养计划子页把这颗借去做「资源总计」，跟岛屿评分一样不收起
+  const onPlanSub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
+  // v3.27：只有各自的"宝可梦"/"培养列表"分页才真的用得到，其余分页整条收起
+  const onIslandBox = onIslandBoxPane();
+  const onPlanList = onPlanListPane();
+  const show = !(inDetail || inBox || onHub || onSettings || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -13958,12 +13982,7 @@ function updatePageActionBar(){
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
   const tabbar = document.getElementById('tabBar');
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
-  // v3.19：更多功能页的 hub 没有可调的计算参数，"控制参数"那颗按钮收起；
-  // 岛屿评分子页把这颗按钮借来做"批量选择"入口，不收起（updatePanelBtnLabel 里换文字/行为）
-  const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
-  // v3.20：培养计划子页把这颗借去做「资源总计」，跟岛屿评分一样不收起
-  const onPlanSub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
-  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlanSub;
+  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIslandBox && !onPlanList;
   const ctrlBtn = document.getElementById('pageActControlsBtn');
   if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
@@ -13977,9 +13996,11 @@ function updatePanelBtnLabel(inBox){
   const page4 = document.getElementById('page4');
   const onPage4 = !inBox && !!(page4 && page4.classList.contains('active-page'));
   const page2El = document.getElementById('page2');
-  const onIsland = !inBox && !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+  // v3.27：只在"宝可梦"/"培养列表"分页才用批量操作的文案，切到岛屿浏览/标签管理/优先级标签管理
+  // 时按钮条已经整条收起了（见 updatePageActionBar 的 show），这里同步一下避免重新出现时文案是旧的
+  const onIsland = !inBox && onIslandBoxPane();
   // v3.20 培养计划页：右侧那颗换成「加入培养」（左侧「资源总计」在阶段4接管）
-  const onPlan = !inBox && !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
+  const onPlan = !inBox && onPlanListPane();
   const ctrlBtn = document.getElementById('pageActControlsBtn');
   const panelBtn = document.getElementById('pageActPanelBtn');
   const pageLabel = document.getElementById('pageActPanelLabel');
@@ -14084,13 +14105,16 @@ function updateFabCircles(){
     // 圆形浮窗模式同理，更多设置页（page3）也要跟 hub 一样两颗圆一起收起
     const page3El = document.getElementById('page3');
     const onSettings = !!(page3El && page3El.classList.contains('active-page'));
-    const show = !inDetail && !onHub && !onSettings;
     // 与按钮条一致：更多功能页的 hub 没有可调参数，控制参数那颗圆收起；
-    // 岛屿评分子页借这颗圆做"批量选择"，不收起
-    const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
+    // 岛屿评分子页借这颗圆做"批量选择"，不收起；v3.27 起两边都只认各自罗列条目的那个分页
+    const onIsland = onIslandBoxPane();
     // v3.21：培养计划页和岛屿评分一样，左槽圆圈被借去做多选入口（资源总计/移出培养），
     // 之前漏了 onPlan 这一支，导致开小圆浮窗后培养计划页根本进不去资源总计
-    const onPlan = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
+    const onPlan = onPlanListPane();
+    // v3.27：岛屿评分/培养计划切到非罗列分页（岛屿浏览、两边的标签管理）时，两颗圆跟 hub/更多设置一样整条收起
+    const onIslandOther = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island' && !onIsland;
+    const onPlanOther = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan' && !onPlan;
+    const show = !inDetail && !onHub && !onSettings && !onIslandOther && !onPlanOther;
     const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlan;
     fabPanel.style.display = show ? 'flex' : 'none';
     fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
@@ -14455,7 +14479,7 @@ function boxGifCacheTouch(src, img){
     boxGifImageCache.delete(boxGifImageCache.keys().next().value);
   }
 }
-function boxDrawFrozenFrame(canvas, src, wrap){
+function boxDrawFrozenFrame(canvas, src, wrap, pairImg, scale){
   const draw = (imgObj)=>{
     if(!imgObj.naturalWidth) return;
     canvas.width = imgObj.naturalWidth;
@@ -14463,7 +14487,7 @@ function boxDrawFrozenFrame(canvas, src, wrap){
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0,0,canvas.width,canvas.height);
     ctx.drawImage(imgObj, 0, 0);
-    boxApplyUniformWrapSize(wrap, imgObj.naturalWidth, imgObj.naturalHeight);
+    boxApplyUniformSize(wrap, canvas, pairImg, imgObj.naturalWidth, imgObj.naturalHeight, scale);
   };
   let tmp = boxGifImageCache.get(src);
   if(tmp){
@@ -14719,11 +14743,17 @@ function applyBoxGridColumns(){
   grid.classList.toggle('box-uniform-scale', uniform);
   grid.style.gridTemplateColumns = 'repeat('+(uniform ? 4 : computeBoxGridColumnCount())+', 1fr)';
 }
-// 等比显示模式下把画面框撑成素材的真实原生像素宽高，让每只宝可梦都按 1:1 显示，不夹小
-function boxApplyUniformWrapSize(wrap, w, h){
+// 等比显示模式下把画面框、canvas/img 一起按素材的真实原生像素宽高（× scale）撑开，让每只
+// 宝可梦都按 1:1 显示、不再被夹小；scale 只给南瓜精/南瓜怪人四个体型档用（同一张原图，靠这个
+// 系数区分小中大巨——不是"夹小/拉伸失真"那种要消除的误差，是这四只本来就该有的体型差异，
+// 所以等比模式也要保留，跟其他物种的"完全按原生像素"并不矛盾），其余物种 scale 传 undefined 按1处理
+function boxApplyUniformSize(wrap, elA, elB, w, h, scale){
   if(!userPrefs.boxUniformScaleOn || !wrap || !w || !h) return;
-  wrap.style.width = w + 'px';
-  wrap.style.height = h + 'px';
+  const k = scale || 1;
+  const rw = Math.round(w*k), rh = Math.round(h*k);
+  wrap.style.width = rw+'px'; wrap.style.height = rh+'px';
+  if(elA){ elA.style.width = rw+'px'; elA.style.height = rh+'px'; }
+  if(elB){ elB.style.width = rw+'px'; elB.style.height = rh+'px'; }
 }
 function renderBoxPage(){
   renderBoxFilterRow();
@@ -14746,11 +14776,13 @@ function renderBoxPage(){
     // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），素材自身的动画不受影响。
     // v3.17 南瓜两族换成 gif 后这层壳对 gif 分支也要生效，所以提到两个分支外面统一处理
     // （gif 分支要把 canvas 和 img 一起塞进壳里，否则静帧和播放态的缩放会对不上）
-    // 等比显示模式下按原生像素1:1显示，是"务必保证像素大小完全一致"的字面要求，
-    // 不能再叠加南瓜精那种针对个别物种的人工缩放特例，所以这个模式下不套那层壳
-    const pumpkinScale = userPrefs.boxUniformScaleOn ? null : PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
+    // 南瓜精/南瓜怪人小中大巨四档共用同一张原图，靠这个系数区分体型——两种模式都要保留；
+    // 等比显示模式下不再靠"壳+transform:scale"实现（那套是配合固定51:55框写的），改成
+    // 直接把系数乘进 boxApplyUniformSize 要撑开的像素宽高里，所以这个模式下不建那层壳
+    const pumpkinScale = PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
+    const uniformOn = !!userPrefs.boxUniformScaleOn;
     let imgHost = imgWrap;
-    if(pumpkinScale && asset){
+    if(pumpkinScale && asset && !uniformOn){
       const shell = document.createElement('div');
       shell.className = 'box-pumpkin-scale';
       shell.style.transform = 'scale('+pumpkinScale+')';
@@ -14765,14 +14797,15 @@ function renderBoxPage(){
       img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
       imgHost.appendChild(canvas);
       imgHost.appendChild(img);
-      boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny), imgWrap);
+      boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny), imgWrap, img, pumpkinScale);
     } else if(asset && asset.kind==='png'){
       const img = document.createElement('img');
       img.className = 'box-grid-img';
       img.src = boxAssetPath(entry.dex, entry.shiny);
-      if(userPrefs.boxUniformScaleOn){
-        if(img.complete && img.naturalWidth) boxApplyUniformWrapSize(imgWrap, img.naturalWidth, img.naturalHeight);
-        else img.addEventListener('load', ()=> boxApplyUniformWrapSize(imgWrap, img.naturalWidth, img.naturalHeight), {once:true});
+      if(uniformOn){
+        const applyPng = ()=> boxApplyUniformSize(imgWrap, null, img, img.naturalWidth, img.naturalHeight, pumpkinScale);
+        if(img.complete && img.naturalWidth) applyPng();
+        else img.addEventListener('load', applyPng, {once:true});
       }
       imgHost.appendChild(img);
     } else {
@@ -16993,7 +17026,8 @@ function islandRenderTabs(){
   el.innerHTML = ISLAND_PANES.map(p=>
     `<div class="isl-tab${islandPane===p.id?' active':''}" data-islpane="${p.id}">${p.label}</div>`).join('');
   el.querySelectorAll('[data-islpane]').forEach(t=>{
-    t.onclick = ()=>{ islandPane = t.getAttribute('data-islpane'); islandRenderAll(); syncViewHash(); };
+    // v3.27：切分页会改变"宝可梦"分页专属的按钮条/圆形浮窗是否该整条收起，得跟着刷新一次
+    t.onclick = ()=>{ islandPane = t.getAttribute('data-islpane'); islandRenderAll(); syncViewHash(); updatePageActionBar(); };
   });
 }
 let islandInited = false;
@@ -18240,7 +18274,8 @@ function planRenderTabs(){
   el.innerHTML = PLAN_PANES.map(p=>
     `<div class="isl-tab${planPane===p.id?' active':''}" data-planpane="${p.id}">${p.label}</div>`).join('');
   el.querySelectorAll('[data-planpane]').forEach(t=>{
-    t.onclick = ()=>{ planPane = t.getAttribute('data-planpane'); planRenderAll(); };
+    // v3.27：切分页会改变"培养列表"分页专属的按钮条/圆形浮窗是否该整条收起，得跟着刷新一次
+    t.onclick = ()=>{ planPane = t.getAttribute('data-planpane'); planRenderAll(); updatePageActionBar(); };
   });
 }
 function planExitRemoveMode(){
