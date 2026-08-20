@@ -519,7 +519,8 @@
   /* v3.20 培养计划：移出培养多选态下页脚两颗变红/灰 */
   .page-act-btn.page-act-btn-danger{ background:#c1443a !important; }
   .page-act-btn.page-act-btn-plain{ background:#8d8776 !important; }
-  /* 资源总计浮层：贴在页脚按钮条正上方 */
+  /* 资源总计浮层：贴在页脚按钮条正上方。这里的 bottom:110px 只是没量出实际数字之前的初值，
+     真正的位置由 planPositionSumBar() 每次显示时按 #pageActionBar 的实际位置现算现贴 */
   .plan-sum-bar{
     display:none; position:fixed; left:0; right:0; bottom:110px; z-index:1089;
     justify-content:center; gap:14px; flex-wrap:wrap;
@@ -819,7 +820,13 @@
     border:2px solid #fff; background:rgba(255,255,255,.5); box-shadow:0 1px 4px rgba(0,0,0,.3); z-index:2;
   }
   .box-grid-checkbox.checked{ background:var(--accent); border-color:var(--accent); }
-  .box-grid-checkbox.checked::after{ content:'✓'; color:#fff; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; height:100%; }
+  /* v3.21：跟食材柱状图已毕业头像上那颗对勾统一成直角风格（stroke-linecap:square+
+     stroke-linejoin:miter），不再用字体自带的圆润 ✓ 字形——CSS content 画不出描边 SVG，
+     这里用同一条 path 编码成的 data URI 背景图代替 */
+  .box-grid-checkbox.checked::after{
+    content:''; position:absolute; inset:3px;
+    background:no-repeat center/contain url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHZpZXdCb3g9JzAgMCAyNCAyNCcgZmlsbD0nbm9uZScgc3Ryb2tlPSd3aGl0ZScgc3Ryb2tlLXdpZHRoPSc0JyBzdHJva2UtbGluZWNhcD0nc3F1YXJlJyBzdHJva2UtbGluZWpvaW49J21pdGVyJz48cGF0aCBkPSdNNCAxM2w1IDZMMjAgNicvPjwvc3ZnPg==");
+  }
   /* 来源角标：从宝睡小当家同步进来的条目左上角标一个小圆点，本站自建的不标 */
   .box-grid-source-psc{
     position:absolute; top:2px; left:6px; width:16px; height:16px; border-radius:50%;
@@ -1413,13 +1420,15 @@
   .dash-shiny-level-row{ display:flex; align-items:stretch; gap:8px; margin:8px 0 8px; }
   .dash-shiny-level-row .pk-shiny-capsule{ flex:0 0 68px; width:68px; padding:3px 8px; display:flex; align-items:center; justify-content:center; }
   .dash-shiny-level-row .btnrow{ flex:0 1 auto; }
-  .dash-shiny-level-row .segbtn{ padding:3px 12px; }
+  /* 加了自定义档位那颗按钮之后这一行变成 5 颗，原来 padding:3px 12px 的宽按钮在窄屏
+     上会被挤到换行。改成方形（宽高都 24px 左右）后 5 颗一起排一行，320px 宽都够放，
+     所以下面 360px 那档媒体查询就不用再单独收紧这两颗按钮的 padding 了 */
+  .dash-shiny-level-row .segbtn{ padding:3px 4px; }
+  .dash-shiny-level-row .segbtn.seg-lv-custom{ width:24px; padding-left:2px; padding-right:2px; }
   .dash-shiny-level-row .pk-recommend-box.pk-recommend-box-sm{ flex:0 0 auto; height:auto; align-self:stretch; padding:0 8px; }
-  /* 极窄屏（<=360px）：这一行多了个推荐胶囊，不收紧的话四个等级按钮会被挤到换行 */
   @media (max-width:360px){
     .dash-shiny-level-row{ gap:5px; }
     .dash-shiny-level-row .btnrow{ gap:5px; }
-    .dash-shiny-level-row .segbtn{ padding:3px 7px; }
     .dash-shiny-level-row .pk-shiny-capsule{ flex:0 0 54px; width:54px; font-size:10.5px; }
     .dash-shiny-level-row .pk-recommend-box.pk-recommend-box-sm{ padding:0 5px; font-size:9px; }
   }
@@ -2046,7 +2055,8 @@
 .psc-scope-t{ font-size:14px; font-weight:800; color:var(--ink); }
 .psc-scope-d{ font-size:11.5px; color:#8a8375; line-height:1.5; margin-top:2px; }
 .psc-scope-ok{ flex:0 0 auto; width:22px; height:22px; border-radius:50%; background:#e0a32e; color:#fff;
-  display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:900; }
+  display:flex; align-items:center; justify-content:center; }
+.psc-scope-ok svg{ width:60%; height:60%; }
 .psc-note{ display:flex; gap:8px; padding:11px 12px; background:rgba(224,163,46,.15); border-radius:10px;
   font-size:11.5px; color:#7a6f56; line-height:1.6; margin:14px 0 16px; }
 .psc-msg{ font-size:12.5px; text-align:center; min-height:18px; margin-bottom:10px; color:#c1443a; font-weight:700; }
@@ -2412,10 +2422,24 @@
 .plan-up-ic{ width:10px; height:10px; flex:0 0 auto; fill:currentColor; }
 /* 一条 = 左边一根通高的标签竖条 + 右边「标题 + 箭头图」。箭头图原本只在编辑弹窗里出现，
    现在直接当条目本体，列表和弹窗共用 planArrowHtml() / .plan-arrow-wrap 一套东西。
-   position:relative 是给多选态的勾选圈做定位参系用的。 */
-.plan-rowwrap{ position:relative; display:flex; align-items:stretch; background:var(--panel);
+   wrap 自己不再是 flex 容器——真正的内容都挪进 .plan-swipe-front 了，wrap 退化成
+   "裁切窗口 + 删除按钮的定位参系"，overflow:hidden 保证 front 往左滑走时删除按钮不会露到条目外面去。 */
+.plan-rowwrap{ position:relative; background:var(--panel);
   border:1px solid var(--line); border-radius:11px; overflow:hidden; cursor:pointer; }
 .plan-rowwrap.plan-row-picked{ outline:2.5px solid var(--accent); outline-offset:-2px; }
+/* 长按拖动排序：抬起来一点，压在别的条目上面 */
+.plan-rowwrap.plan-dragging{ z-index:5; box-shadow:0 6px 18px rgba(0,0,0,.22); }
+/* 删除按钮铺在整条底下贴右边，平时被 front 盖住；touch-action:pan-y 让手指按下但还没
+   被判进任何手势的这段时间里，纵向滚动照常走浏览器原生的，不用等 JS 判定完 */
+.plan-swipe-del{
+  position:absolute; right:0; top:0; bottom:0; width:72px;
+  background:#c1443a; color:#fff; display:flex; align-items:center; justify-content:center;
+  font-size:13px; font-weight:900; cursor:pointer;
+}
+.plan-swipe-front{
+  position:relative; z-index:1; display:flex; align-items:stretch;
+  width:100%; background:var(--panel); touch-action:pan-y;
+}
 
 /* 编辑弹窗 */
 .plan-modal-box{ width:min(560px, 94vw); max-height:88vh; overflow:auto; }
@@ -2426,19 +2450,46 @@
   border:1.5px solid var(--line); border-radius:8px; padding:7px 9px; font-size:14px;
   font-weight:800; font-family:inherit; color:var(--ink); background:#fff; width:100%; box-sizing:border-box;
 }
-.plan-evo-lab{ font-size:11px; font-weight:800; color:#7a7568; margin-bottom:5px; }
+.plan-evo-lab{ font-size:11px; font-weight:800; color:#7a7568; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
+/* v3.21：整条进化链自由点两只当"现状/目标"，重置按钮就近放在标题行右边 */
+.plan-evo-reset{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--accent); cursor:pointer; text-decoration:underline; }
+.plan-evo-hint{ font-size:10px; color:#9a9484; font-weight:700; line-height:1.5; margin:-2px 0 7px; }
 .plan-evo-pick{ display:flex; gap:7px; flex-wrap:wrap; margin-bottom:13px; }
+.plan-nature-seg{ display:flex; gap:7px; margin-bottom:13px; }
+.plan-nature-seg .plan-nature-btn{ flex:1 1 0; text-align:center; padding:6px 4px; }
 .plan-evo-opt{
-  width:56px; padding:4px 2px 5px; border:1.5px solid var(--line); border-radius:10px; background:#fff;
+  position:relative; width:56px; padding:4px 2px 5px; border:1.5px solid var(--line); border-radius:10px; background:#fff;
   cursor:pointer; text-align:center; font-family:inherit;
 }
-.plan-evo-opt.on{ border-color:var(--accent); background:#f3edf9; }
+/* 现状＝蓝色（跟控制参数/资源总计那颗蓝呼应），目标＝原来的紫色；两个都占了就同时挂两种颜色，
+   靠 tag 角标区分谁是谁。分叉互斥的形态直接压灰、点不动，不用等点了才提示选不了 */
+.plan-evo-opt.cur{ border-color:#3a8fae; background:#e8f3f7; }
+.plan-evo-opt.tgt{ border-color:var(--accent); background:#f3edf9; }
+.plan-evo-opt.cur.tgt{ background:linear-gradient(135deg,#e8f3f7 50%,#f3edf9 50%); }
+.plan-evo-opt.disabled{ opacity:.35; cursor:default; pointer-events:none; }
+.plan-evo-opt-tag{
+  position:absolute; left:50%; top:-8px; transform:translateX(-50%); white-space:nowrap;
+  font-size:8.5px; font-weight:900; color:#fff; padding:1px 5px; border-radius:999px;
+}
+.plan-evo-opt-tag-cur{ background:#3a8fae; }
+.plan-evo-opt-tag-tgt{ background:var(--accent); }
 .plan-evo-opt img{ width:38px; height:38px; object-fit:contain; display:block; margin:0 auto; }
 .plan-evo-opt-none{ display:flex; align-items:center; justify-content:center; height:38px; font-size:11px; font-weight:900; color:#b8b2a2; }
 .plan-evo-opt-nm{ font-size:9px; font-weight:800; color:var(--ink); margin-top:2px; line-height:1.15;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .plan-evo-opt-cost{ font-size:8.5px; font-weight:800; color:var(--accent); }
 
+/* 午睡岛：箭头图正上方一个独立小行，跟糖果/碎片那套升级模拟完全不共用数据——
+   不开/开午睡券每天分别给150/600exp，这里只是把"还差多少exp"换算成"要睡几天"。
+   开券那个数字（右边，除以600那个）标紫色，呼应站内 --accent 那支紫 */
+.plan-nap-row{ display:flex; align-items:center; justify-content:center; gap:5px; padding:1px 0 4px; }
+.plan-nap-ic{ width:16px; height:16px; flex:0 0 auto; color:#2f8f8a; }
+.plan-nap-n{ font-size:12.5px; font-weight:900; color:var(--ink); }
+.plan-nap-slash{ color:#9a9484; margin:0 1px; font-weight:700; }
+.plan-nap-tk{ color:var(--accent); }
+.plan-nap-row-mini{ gap:4px; padding:0 0 2px; }
+.plan-nap-row-mini .plan-nap-ic{ width:13px; height:13px; }
+.plan-nap-row-mini .plan-nap-n{ font-size:11px; }
 /* 结果区：左现状 → 箭头 → 右目标。列表条目和编辑弹窗用的是同一块，差别只在 .plan-arrow-mini。
    #planArrowWrap 是弹窗里的外壳，本身原来就长这样，现在内容自带一层，外壳退成纯容器。 */
 .plan-arrow-wrap{ display:flex; align-items:center; gap:8px; background:var(--paper);
@@ -3679,7 +3730,7 @@
           <div class="psc-scope-t">只读宝可梦盒子</div>
           <div class="psc-scope-d">读取你在宝睡小当家盒子里的宝可梦资料；不能新增、修改或删除对方的记录。</div>
         </div>
-        <div class="psc-scope-ok">✓</div>
+        <div class="psc-scope-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></div>
       </div>
       <div class="psc-scope">
         <div class="psc-scope-ic">🔒</div>
@@ -3687,7 +3738,7 @@
           <div class="psc-scope-t">离线访问</div>
           <div class="psc-scope-d">在你离开本页后继续访问，最长 30 天；你随时可以在这里解除连接。</div>
         </div>
-        <div class="psc-scope-ok">✓</div>
+        <div class="psc-scope-ok"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></div>
       </div>
     </div>
     <div class="psc-note">
@@ -3905,6 +3956,15 @@ function parseDecimalToFrac(str){
   let n = BigInt(intPart)*d + BigInt(fracPart||'0');
   if(neg) n = -n;
   return F(n, d);
+}
+
+/* v3.21：全站统一的"对勾"图标——直角转折（stroke-linecap:square + stroke-linejoin:miter），
+   样子照抄食材柱状图里已毕业头像上那颗，不用字体自带圆润的 ✓ 字形（各平台字形不一，
+   跟站内其它扁平线条图标风格也不一致）。以后任何要打勾的地方都用这个，不要再各写一份。 */
+function checkIconSvg(color, strokeW, sizePx){
+  const sizeAttr = sizePx ? ('width="'+sizePx+'" height="'+sizePx+'" style="vertical-align:middle" ') : '';
+  return '<svg '+sizeAttr+'viewBox="0 0 24 24" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(strokeW||3)+
+    '" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>';
 }
 
 /* ============ 副技能定义 ============ */
@@ -7843,7 +7903,7 @@ function renderOauthScopes(scopes){
     const t = document.createElement('div'); t.className = 'psc-scope-t'; t.textContent = meta.t;
     const d = document.createElement('div'); d.className = 'psc-scope-d'; d.textContent = meta.d;
     body.appendChild(t); body.appendChild(d);
-    const ok = document.createElement('div'); ok.className = 'psc-scope-ok'; ok.textContent = '✓';
+    const ok = document.createElement('div'); ok.className = 'psc-scope-ok'; ok.innerHTML = checkIconSvg();
     row.appendChild(ic); row.appendChild(body); row.appendChild(ok);
     box.appendChild(row);
   });
@@ -11787,7 +11847,17 @@ function capSkillRate(prob, base, level, medal, pity){
   return expectedTriggerRatePerHelp(prob, pityN, true);
 }
 function capBerryPerBerry(attr, level){ const row = CAP_BERRY_MATRIX[capBerryAttrKey(attr)]; return row ? (row[CAP_LEVEL_IDX[level]]||0) : 0; }
-function capBerryEnergy(x, level, medal){ return capHelpsPerDay(x.interval, level, medal) * 3 * capBerryPerBerry(x.attr, level); }
+// v3.21：达克莱伊/巨锻匠这两只树果型的技能额外产能量（CAP_SKILL_SPECIAL_OUTPUT 里 kind==='energy'
+// 的那两条）之前这里完全没算——8/19 那次修复只补了排名对比/面板天梯用的 capPageBaseYield 那条链路，
+// 捕捉推荐的树果/能量 tab 排名走的是这条完全独立的静态口径，压根没碰过，达克莱伊的技能能量因此
+// 从数据表定义了就一直没在这个 tab 里体现过。两只都是 dtype 树果、pity 天然不生效，直接复用
+// capSkillCount(helps×rate) 乘 energyPerTrigger 加进去，跟 capEnergyEnergy 处理 CAP_ENERGY_SKILL 是同一个套路
+function capBerryEnergy(x, level, medal){
+  let e = capHelpsPerDay(x.interval, level, medal) * 3 * capBerryPerBerry(x.attr, level);
+  const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+  if(spec && spec.kind==='energy') e += capSkillCount(x, level, medal, false) * spec.energyPerTrigger;
+  return e;
+}
 function capEnergyEnergy(x, level, medal, ctrl){
   const helps = capHelpsPerDay(x.interval, level, medal);
   const berryE = helps * 2 * capBerryPerBerry(x.attr, level);
@@ -11838,7 +11908,10 @@ function capRealHelpsPerDay(x, level, medal, sums, persona){
 }
 function capBerryEnergyReal(x, level, medal, real){
   const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
-  return helps * (real.sums.hasFruit?3:2) * capBerryPerBerry(x.attr, level);
+  let e = helps * (real.sums.hasFruit?3:2) * capBerryPerBerry(x.attr, level);
+  const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
+  if(spec && spec.kind==='energy') e += capSkillCountReal(x, level, medal, false, real) * spec.energyPerTrigger;
+  return e;
 }
 function capEnergyEnergyReal(x, level, medal, ctrl, real){
   const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
@@ -12412,9 +12485,9 @@ function capAvatarComboHtml(rec, food){
   const terror = !graduated && capFoodComboTerror(x, food);
   const xiexiu = !graduated && !terror && capFoodComboXiexiu(x, food);
   const checkHtml = graduated
-    ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>`
+    ? `<span class="cap-cav-grad-check">${checkIconSvg('#1f8a3d')}</span>`
     : xiexiu
-    ? `<span class="cap-cav-grad-check"><svg viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="3" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg></span>`
+    ? `<span class="cap-cav-grad-check">${checkIconSvg('#c0392b')}</span>`
     : '';
   const frameCls = graduated ? ' cap-cav-grad' : (terror ? ' cap-cav-terror' : (xiexiu ? ' cap-cav-xiexiu' : ''));
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
@@ -12572,7 +12645,7 @@ function capRenderFoodChart(container){
         ${lineHtml}
         ${markers}
       </div>
-      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':(foodTerror?' cap-ccol-ic-terror':(foodXiexiu?' cap-ccol-ic-xiexiu':''))}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?'<svg viewBox="0 0 24 24" fill="none" stroke="#1f8a3d" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':(foodTerror?'<span class="cap-ccol-check-rainbow"></span>':(foodXiexiu?'<svg viewBox="0 0 24 24" fill="none" stroke="#c0392b" stroke-width="3.2" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>':''))}</span></div>
+      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':(foodTerror?' cap-ccol-ic-terror':(foodXiexiu?' cap-ccol-ic-xiexiu':''))}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?checkIconSvg('#1f8a3d',3.2):(foodTerror?'<span class="cap-ccol-check-rainbow"></span>':(foodXiexiu?checkIconSvg('#c0392b',3.2):''))}</span></div>
     </div>`;
   }).join('');
   container.innerHTML = `<div class="cap-chart-outer">
@@ -12729,12 +12802,15 @@ function toggleCapGradNewbie(){
 }
 // 全局开关：只影响大嘴娃/蝶结萌虻的主技能产出数值（食材精选括号标注+产能分析等），
 // 不影响它们的毕业判定档位（沿用食材型排除技能产出计入毕业判定的既有规则），所以要 renderAll()
-// 而不是只 renderCapturePage()，让页1/2/3的产能分析、食谱覆盖率、排名对比一起联动刷新
+// 而不是只 renderCapturePage()，让页1/2/3的产能分析、食谱覆盖率、排名对比一起联动刷新——
+// 但 renderAll() 本身不包含 renderCapturePage()（page4 是懒渲染的独立一套），漏了它自己所在的
+// 捕捉推荐页反而不刷新，两个都要调
 function toggleCapMainSkillMax(){
   userPrefs.mainSkillMaxOn = !userPrefs.mainSkillMaxOn;
   saveUserPrefs();
   syncCapGradModalSwitch();
   renderAll();
+  renderCapturePage();
 }
 
 /* ================= 捕捉推荐页"加入面板" =================
@@ -13659,7 +13735,9 @@ function updatePanelBtnLabel(inBox){
       leftTxt = '移出培养'; leftDanger = true;
       rightTxt = '取消'; rightFab = '取消'; rightPlain = true;
     } else if(planSumMode){
-      leftTxt = '资源总计'; leftOn = true;
+      // v3.21：这颗以前点了原地不动（已经在资源总计里），干脆改成「全选」，
+      // 一键把所有条目勾上再看合计，免得几十条一条条点
+      leftTxt = '全选';
       rightTxt = '取消'; rightFab = '取消'; rightPlain = true;
     } else {
       leftTxt = '资源总计';
@@ -13724,12 +13802,17 @@ function updateFabCircles(){
     // 岛屿评分子页借这颗圆做"批量选择"，不收起
     const page2El = document.getElementById('page2');
     const onIsland = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island';
-    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland;
+    // v3.21：培养计划页和岛屿评分一样，左槽圆圈被借去做多选入口（资源总计/移出培养），
+    // 之前漏了 onPlan 这一支，导致开小圆浮窗后培养计划页根本进不去资源总计
+    const onPlan = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan';
+    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlan;
     fabPanel.style.display = show ? 'flex' : 'none';
     fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
     fabPanel.classList.toggle('ui-fab-off', onIsland && islandBatchTag===null);
     const fcLabel = document.getElementById('fabControlsLabel');
-    if(fcLabel) fcLabel.innerHTML = onIsland ? '批量<br>选择' : '控制<br>参数';
+    // 培养计划页的文字（资源总计/全选/移出培养/取消）已经在 updatePageActionBar 里写进
+    // fabControlsLabel 了，这里不能再拿固定文字覆盖回去
+    if(fcLabel && !onPlan) fcLabel.innerHTML = onIsland ? '批量<br>选择' : '控制<br>参数';
   }
 }
 function openDashboard(){
@@ -14512,7 +14595,7 @@ function wireBoxInfoBubbleActions(entry){
       const act = btn.dataset.act;
       if(act==='detail'){ closeBoxInfoBubble(); openBoxDetail(entry.id); }
       else if(act==='edit'){ closeBoxInfoBubble(); openDashboardForBoxEntry(entry.id); }
-      else if(act==='output'){ boxApplyEntryToState(entry.id); btn.textContent='✓'; setTimeout(()=>{ btn.textContent='输出'; },1200); }
+      else if(act==='output'){ boxApplyEntryToState(entry.id); btn.innerHTML=checkIconSvg('#fff',3.4,14); setTimeout(()=>{ btn.textContent='输出'; },1200); }
       // v3.20：一键加入培养计划。刻意不跳转到培养计划页——用户还在盒子里挑，
       // 跳走会打断挑选流程，跟「输出」一样给个即时反馈就够了
       else if(act==='plan'){
@@ -16600,6 +16683,7 @@ const PLAN_MAX_ENTRIES  = 50;   // 条目上限：prefs_json 跟盒子/岛屿共
 const PLAN_TAG_MAX      = 20;
 const PLAN_TAG_NAME_MAX = 20;   // 按 Unicode 码位算，跟盒子昵称同一套 boxTakeChars，emoji 不会被切一半
 const PLAN_PRIO_MIN = 1, PLAN_PRIO_MAX = 20;
+const PLAN_SORT_MIN = 1, PLAN_SORT_MAX = 50;   // 同优先级内部排序：跟 PLAN_MAX_ENTRIES 一样上限 50，够用
 const PLAN_DEFAULT_TAGS = [
   {id:'ptag_hi',  name:'高', prio:1, color:'#d9534f'},
   {id:'ptag_mid', name:'中', prio:2, color:'#e0a92e'},
@@ -16626,13 +16710,36 @@ function planClampPrio(v){
   if(!Number.isFinite(n)) return PLAN_PRIO_MIN;
   return Math.min(PLAN_PRIO_MAX, Math.max(PLAN_PRIO_MIN, n));
 }
+function planClampSortNum(v){
+  const n = Math.floor(Number(v));
+  if(!Number.isFinite(n)) return PLAN_SORT_MIN;
+  return Math.min(PLAN_SORT_MAX, Math.max(PLAN_SORT_MIN, n));
+}
 
 /* ---- 读写与云同步 ---- */
 let planLoaded = false;
 // 培养计划页没被打开过时 planData 还是空数组，这时若直接从别处（比如盒子气泡的「培养」按钮）
 // 加条目，planSaveState 会拿空数组把 localStorage 里已有的记录整个盖掉。
 // 所有会写 planData 的入口都得先过这道懒加载。
-function planEnsureLoaded(){ if(!planLoaded) planLoadState(); }
+function planEnsureLoaded(){ if(!planLoaded){ planLoadState(); planEnsureSortNums(); } }
+// 老数据没有 sortNum 字段（拖动排序是后加的功能）：按各自现在显示的顺序（原来是同优先级内
+// 新加入的在上）在组内一次性铺出 1..N，这样升级后视觉顺序完全不变，且从此以后每条都有
+// 互不相同的排序数字——不然新字段大家都一样，第一次拖动时"交换"两个相同的数没有任何效果
+function planEnsureSortNums(){
+  const groups = {};
+  planData.forEach(e=>{ (groups[planPrioOf(e)] = groups[planPrioOf(e)] || []).push(e); });
+  let changed = false;
+  Object.values(groups).forEach(list=>{
+    const bad = list.some(e=>{
+      const n = Math.floor(Number(e.sortNum));
+      return !Number.isFinite(n) || n<PLAN_SORT_MIN || n>PLAN_SORT_MAX;
+    });
+    if(!bad) return;
+    list.slice().sort((a,b)=>(b.addedAt||0)-(a.addedAt||0))
+      .forEach((e,i)=>{ e.sortNum = Math.min(PLAN_SORT_MAX, i+1); changed = true; });
+  });
+  if(changed) planSaveState();
+}
 function planLoadState(){
   planLoaded = true;
   try{
@@ -16699,11 +16806,17 @@ function applyPlanCloudSnapshot(snap){
 function planTagOf(entry){ return planTags.find(t=>t.id === (entry && entry.tagId)) || null; }
 // 没打标签的排最下，视作优先级 ∞
 function planPrioOf(entry){ const t = planTagOf(entry); return t ? planClampPrio(t.prio) : Infinity; }
+function planSortNumOf(entry){
+  const n = Math.floor(Number(entry && entry.sortNum));
+  return (Number.isFinite(n) && n>=PLAN_SORT_MIN && n<=PLAN_SORT_MAX) ? n : PLAN_SORT_MIN;
+}
 function planSorted(){
   return planData.slice().sort((a,b)=>{
     const pa = planPrioOf(a), pb = planPrioOf(b);
     if(pa !== pb) return pa - pb;
-    return (b.addedAt||0) - (a.addedAt||0);   // 同优先级内：新加入的在上
+    const sa = planSortNumOf(a), sb = planSortNumOf(b);
+    if(sa !== sb) return sa - sb;              // 同优先级内：数字越小越靠前
+    return (b.addedAt||0) - (a.addedAt||0);    // 排序数字也一样时兜底，理论上迁移过一次后不会撞
   });
 }
 
@@ -16721,7 +16834,18 @@ function planEntryFromBoxEntry(e){
     tagId: null,
     addedAt: Date.now(),
     targetLevel: null, remainExp: null, candyOwned: 0, evoDex: null,  // 阶段3
+    // 性格 exp 默认按盒子里这只的性格算（incAttr/decAttr 里的 'E'），但存成独立字段，
+    // 用户之后可以在编辑弹窗里自己改，不会被盒子那边的性格带着走
+    natureExp: planNatureKey(e),
+    sortNum: planNextSortNum(Infinity),   // 新条目还没打标签，先按"未标记"这一组算
   };
+}
+// 某个优先级分组里下一个可用的排序数字：接着组内现有最大值往后排，让新加入的默认排在最后
+function planNextSortNum(prio){
+  const inGroup = planData.filter(e=> planPrioOf(e)===prio);
+  if(!inGroup.length) return PLAN_SORT_MIN;
+  const mx = Math.max(...inGroup.map(e=> planSortNumOf(e)));
+  return Math.min(PLAN_SORT_MAX, mx+1);
 }
 function planAddFromBox(ids){
   planEnsureLoaded();
@@ -16842,14 +16966,95 @@ function planEvoTotalCost(fromDex, toDex){
   if(!path) return 0;
   return path.reduce((sum,d)=> sum + planEvoCostTo(d), 0);
 }
+/* v3.21：进化选择器从「固定当前形态、单选目标」改成「整条进化链自由点两只，系统按阶数
+   自动分现状/目标」——沙奈朵这类已经是最终体的条目现在也能打开整条链看，还能把"现状"
+   本身改成链上别的形态（不再假设条目当前形态永远等于加入培养时盒子里的那个 dex）。
+   entry.evoPicks：用户点选的 0~2 个 dex，谁当现状谁当目标由 planEvoStage 排序决定，
+   不记录先后点击顺序。旧数据只有 entry.evoDex（老版本单选目标）时在这里补全成
+   [e.dex, e.evoDex] 两个，视觉/计算结果跟老版本完全一致，不需要迁移脚本。 */
+function planEvoPicksOf(e){
+  if(Array.isArray(e.evoPicks)) return e.evoPicks;
+  return e.evoDex ? [e.dex, e.evoDex] : [];
+}
+// 给"点下一个会怎样"用的起手集合：真正存的 picks 是空的（从没碰过，或者点过重置），
+// 就当成隐含选中了 e.dex 自己——这样第一次点击/重置后第一次点击，永远是在"配对"，
+// 不会把这唯一一次点击误判成"把现状直接改成它"
+function planEvoSeedPicks(e){
+  const raw = planEvoPicksOf(e);
+  return raw.length ? raw : [e.dex];
+}
+function planEvoOrderedPicks(e){
+  return planEvoPicksOf(e).slice().sort((a,b)=> planEvoStage(a)-planEvoStage(b));
+}
+// 现状形态：选了两个取阶数低的；选了一个就是它自己（等于把"现状"改成这只）；一个都没选就还是 e.dex
+function planCurrentEvoDex(e){
+  const p = planEvoOrderedPicks(e);
+  return p.length ? p[0] : e.dex;
+}
+// 目标形态：选了两个取阶数高的；不足两个＝没有"要进化到哪"这回事
+function planTargetEvoDex(e){
+  const p = planEvoOrderedPicks(e);
+  return p.length===2 ? p[1] : null;
+}
+// 两个形态能同时选中的前提：必须在同一条链上有先后关系（其中一个是另一个的祖先/子孙），
+// 不能是分叉出去的两支高阶形态（沙奈朵/艾路雷朵那种）
+function planEvoCompatible(a, b){
+  if(a===b) return true;
+  return !!planEvoPath(a,b) || !!planEvoPath(b,a);
+}
+// 点一下链上某个形态：已选中就取消；选满2个再点第3个＝挤掉最早选的那个，留后一个+新点的；
+// 挤完/新增后如果两个凑不成同一条链（分叉高阶互斥），直接收缩成只留新点的这一个——
+// 不留一个"选不出方向"的死态，保证 planCurrentEvoDex/planTargetEvoDex 任何时候都有合法结果。
+// picks 是空的时候（从没碰过，或者点过重置），第一下点击要当成"选目标"而不是"把现状改成它"——
+// 用 planEvoSeedPicks 补上隐含的"现状＝e.dex"再操作，这样第一次点的永远是"第二个"，
+// 凑出（现状,目标）这一对，不会把 e.dex 本身顶掉
+function planEvoTogglePick(e, d){
+  let picks = planEvoSeedPicks(e).slice();
+  if(picks.includes(d)) picks = picks.filter(x=>x!==d);
+  else if(picks.length>=2) picks = [picks[picks.length-1], d];
+  else picks.push(d);
+  if(picks.length===2 && !planEvoCompatible(picks[0], picks[1])) picks = [d];
+  e.evoPicks = picks;
+}
+// dex 所在整条进化链的全部形态（祖先+自己+所有分支子孙），按"先到根、再逐阶往下"的顺序返回。
+// PLAN_EVO_NEXT 只有正向边，找祖先得反查一遍——链最长3阶、表统共百来条，反查开销可以忽略
+function planEvoFamily(dex){
+  const findParent = d=>{
+    for(const k in PLAN_EVO_NEXT){
+      const v = PLAN_EVO_NEXT[k];
+      if(Array.isArray(v) ? v.includes(d) : v===d) return k;
+    }
+    return null;
+  };
+  let root = dex, guard = 0;
+  while(guard++ < 10){ const p = findParent(root); if(!p) break; root = p; }
+  const out = [root], seen = new Set([root]);
+  let frontier = [root];
+  while(frontier.length){
+    const nf = [];
+    frontier.forEach(d=> planEvoNext(d).forEach(n=>{
+      if(seen.has(n)) return;
+      seen.add(n); out.push(n); nf.push(n);
+    }));
+    frontier = nf;
+  }
+  return out;
+}
 
 /* ---- 单只的逐颗模拟 ---- */
 function planSpeciesMult(dex){ return PLAN_SPECIES_MULT[dex] || 1; }
-// 性格的 exp 增减：盒子记录里 incAttr/decAttr 的 'E' 就是 exp
+// 性格的 exp 增减：盒子记录里 incAttr/decAttr 的 'E' 就是 exp。
+// 这是加入培养计划那一刻的"默认值"来源，实际计算一律走下面 planNatureKeyOf 读独立字段——
+// 玩家在编辑弹窗里改过之后，不应该被盒子那边的性格带着走
 function planNatureKey(entry){
   if(entry && entry.incAttr === 'E') return '+';
   if(entry && entry.decAttr === 'E') return '-';
   return '0';
+}
+function planNatureKeyOf(entry){
+  const v = entry && entry.natureExp;
+  if(v==='+' || v==='-' || v==='0') return v;
+  return planNatureKey(entry);   // 老条目没有 natureExp 字段，回落到盒子性格派生
 }
 function planCandyExpAt(level, natureKey){
   const band = level < 25 ? 'S' : (level < 30 ? 'M' : 'L');
@@ -16916,7 +17121,10 @@ function planEntryReady(e){
   return Number.isFinite(tgt) && tgt >= 1 && tgt <= PLAN_LEVEL_MAX && tgt > planClampLevel(e.levelReal);
 }
 function planComputeEntry(e, boost, budgetLeft){
-  const evoCandy = planEvoTotalCost(e.dex, e.evoDex);
+  // 现状/目标形态现在可能被链上选择改掉了，不能再假设现状永远是 e.dex——
+  // 种族倍率跟着"现状形态"走，进化消耗跟着"现状→目标"这条区间走
+  const curDex = planCurrentEvoDex(e), tgtDex = planTargetEvoDex(e);
+  const evoCandy = planEvoTotalCost(curDex, tgtDex);
   const owned = Math.max(0, Math.floor(Number(e.candyOwned)) || 0);
   if(!planEntryReady(e)){
     // 等级已达成但选了进化：进化糖果照样得算，只是没有升级消耗
@@ -16926,7 +17134,7 @@ function planComputeEntry(e, boost, budgetLeft){
   }
   const sim = planSimulate(
     e.levelReal, Math.max(0, Math.floor(Number(e.remainExp)) || 0), e.targetLevel,
-    planNatureKey(e), planSpeciesMult(e.dex),
+    planNatureKeyOf(e), planSpeciesMult(curDex),
     boost.expMul, boost.shardMul, Math.max(0, budgetLeft)
   );
   const total = sim.candies + evoCandy;          // 进化糖果不产生经验、不消耗碎片、不占增强配额
@@ -16955,6 +17163,33 @@ function planComputeAll(ids){
 // 增强徽标上的向上箭头：扁平实心矢量，替掉原来的 ⚡ emoji（emoji 各平台字形不一，
 // 安卓上是黄色闪电、iOS 上带描边，跟旁边纯色的紫字放一起很跳）
 const PLAN_UP_SVG = '<svg class="plan-up-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.4 2.6 12.6h5.15v9h8.5v-9h5.15z"/></svg>';
+// 午睡岛图标：照抄岛屿评分头图那颗椰子树小岛矢量（树+沙丘+海浪三层），跟着 currentColor 走
+const PLAN_ISLAND_SVG = '<svg class="plan-nap-ic" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><g transform="translate(5.28,2.528) scale(0.78)"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g><path d="M9 38.6C11.8 33.9 17.1 31.5 24 31.5C30.9 31.5 36.2 33.9 39 38.6Z"/></g><path d="M4.6 46.6C7.83 46.6 11.07 43.4 14.3 43.4C17.53 43.4 20.77 46.6 24 46.6C27.23 46.6 30.47 43.4 33.7 43.4C36.93 43.4 40.17 46.6 43.4 46.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+const PLAN_NAP_EXP_PER_DAY = 150, PLAN_NAP_EXP_PER_DAY_TICKET = 600;
+// 现在到目标等级还差多少原始 exp（不受性格/糖果影响，纯粹是等级表里的经验差）——
+// remainExp 是"当前这一级还差多少"，再往后每一级都按整级的表内经验算，累加起来就是总差额
+function planExpGapToTarget(e){
+  const curDex = planCurrentEvoDex(e);
+  const mult = planSpeciesMult(curDex);
+  const fromLv = planClampLevel(e.levelReal);
+  if(e.targetLevel === null || e.targetLevel === undefined || e.targetLevel === '') return null;
+  const toLv = planClampLevel(e.targetLevel);
+  if(toLv <= fromLv) return 0;
+  const remainExp = Math.max(0, Math.floor(Number(e.remainExp)) || 0);
+  const firstStep = remainExp > 0 ? remainExp : planExpBetween(fromLv, fromLv+1, mult);
+  return firstStep + planExpBetween(fromLv+1, toLv, mult);
+}
+// 午睡岛：不开/开午睡券每天分别给 150/600 exp，这里只是把 exp 差额换算成"要睡几天"，
+// 跟糖果/碎片那套升级模拟完全独立，两边不共用任何中间结果
+function planNapDaysHtml(e, mini){
+  const gap = planExpGapToTarget(e);
+  const noN = gap==null ? '－' : Math.max(0, Math.ceil(gap / PLAN_NAP_EXP_PER_DAY));
+  const tkN = gap==null ? '－' : Math.max(0, Math.ceil(gap / PLAN_NAP_EXP_PER_DAY_TICKET));
+  return `<div class="plan-nap-row${mini?' plan-nap-row-mini':''}">`+
+    PLAN_ISLAND_SVG+
+    `<span class="plan-nap-n">${noN}<span class="plan-nap-slash">/</span><span class="plan-nap-tk">${tkN}</span></span>`+
+  `</div>`;
+}
 // 梦之碎片等大数每三位一个逗号
 function planFmtNum(n){ return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }
 
@@ -16999,7 +17234,9 @@ function planArrowHtml(r, e, mini){
   // 「还没填目标等级」和「填了但已经达成」是两回事，提示语不能混用
   const noTgt = (e.targetLevel === null || e.targetLevel === undefined || e.targetLevel === '');
   const tgtLv = noTgt ? curLv : planClampLevel(e.targetLevel);
-  const rightDex = e.evoDex || e.dex;
+  // 现状/目标形态现在可能被进化链选择器改掉了，不再假设左边永远是 e.dex
+  const leftDex = planCurrentEvoDex(e);
+  const rightDex = planTargetEvoDex(e) || leftDex;
   const done = !!r && r.needCandy === 0 && r.shards === 0;
   let top = '', bot = '';
   if(noTgt)      top = `<span class="plan-res-todo">未设目标等级</span>`;
@@ -17011,9 +17248,10 @@ function planArrowHtml(r, e, mini){
     bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
           (mini && r.boosted > 0 ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '');
   }
-  return `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
+  return planNapDaysHtml(e, mini)+
+  `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
     `<div class="plan-side">`+
-      `<div>${planPortraitHtml(e)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
+      `<div>${planPortraitHtml(e, leftDex)}</div><div class="plan-side-lv">Lv.${curLv}</div>`+
     `</div>`+
     `<div class="plan-mid">`+
       `<div class="plan-mid-top">${top}</div>`+
@@ -17030,6 +17268,141 @@ function planRenderBoostBar(){
   set('planBoostMiniBtn',  planOpts.boost==='mini');
   set('planBoostCandyBtn', planOpts.boost==='candy');
   set('planBoostCapBtn',   !!planOpts.boostCap);
+}
+/* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
+   两种手势共用同一个 pointerdown 起点：按住 0.1s 之后再往左滑，才开始把删除按钮拉出来；
+   按住 0.5s 且这段时间里没怎么挪，就判成长按，进入拖动排序（同优先级内互换 sortNum）。
+   起手前手指的移动一律当成"想滚页面"，什么都不拦；真正判进某种手势之后才 preventDefault，
+   跟盒子那套滑动多选（0.25s 才 armed）是同一个思路，只是这里滑动方向不同、多了个长按分支。
+   一次只会判进其中一种，同一条不会又滑又拖。 */
+let planSwipeOpenId = null;         // 当前左滑露出删除按钮的那一条 id，同一时刻只留一条开着
+let planRowGestureFired = false;    // 刚触发过滑动/拖动，抑制紧跟着那次 click（避免误开编辑弹窗）
+let planGestId = null, planGestWrap = null, planGestFront = null;
+let planGestStart = null, planGestBaseOffset = 0, planGestMode = null;
+let planDragTimer = null, planDragGroup = null;
+const PLAN_SWIPE_W = 72, PLAN_SWIPE_ARM_MS = 100, PLAN_DRAG_ARM_MS = 500, PLAN_GEST_TOL = 10;
+function planCloseSwipe(){
+  if(planSwipeOpenId==null) return;
+  planSwipeOpenId = null;
+  planRenderList();
+}
+// 点在滑开的那条外面：收起它。点在它自己身上交给那一条自己的 front.onclick 处理
+document.addEventListener('pointerdown', (ev)=>{
+  if(planSwipeOpenId==null) return;
+  const row = ev.target && ev.target.closest ? ev.target.closest('.plan-rowwrap') : null;
+  if(row && row.dataset.id===planSwipeOpenId) return;
+  planCloseSwipe();
+}, true);
+function planCancelRowGesture(){
+  if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }
+  planGestId = null; planGestMode = null; planGestWrap = null; planGestFront = null;
+}
+function planRowPointerDown(ev, entry, wrap, front){
+  if(ev.button!=null && ev.button!==0) return;
+  planCancelRowGesture();
+  // 已经有别的条目滑开着：这一下先交给上面那条 document 级的 pointerdown 去关，
+  // 这里不再另起一次手势判定，免得关闭动画和新手势打架
+  if(planSwipeOpenId!=null && planSwipeOpenId!==entry.id) return;
+  planGestId = entry.id; planGestWrap = wrap; planGestFront = front;
+  planGestStart = {x:ev.clientX, y:ev.clientY, t:Date.now()};
+  planGestBaseOffset = (planSwipeOpenId===entry.id) ? -PLAN_SWIPE_W : 0;
+  planDragTimer = setTimeout(()=>{
+    planDragTimer = null;
+    if(planGestId!==entry.id || planGestMode) return;   // 已经松手，或已经判给了滑动
+    planGestMode = 'drag';
+    planStartDragReorder(entry, wrap);
+  }, PLAN_DRAG_ARM_MS);
+}
+function planRowPointerMove(ev){
+  if(!planGestId) return;
+  const dx = ev.clientX - planGestStart.x, dy = ev.clientY - planGestStart.y;
+  const elapsed = Date.now() - planGestStart.t;
+  if(planGestMode===null){
+    if(Math.abs(dx) < PLAN_GEST_TOL && Math.abs(dy) < PLAN_GEST_TOL) return;  // 没动够，继续等（长按门槛交给 setTimeout）
+    if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }     // 动了就肯定不是长按，先撤计时器
+    if(elapsed < PLAN_SWIPE_ARM_MS){ planCancelRowGesture(); return; }        // 0.1s 内的位移当滚动，放行给浏览器
+    if(dx < -PLAN_GEST_TOL && Math.abs(dx) > Math.abs(dy)) planGestMode = 'swipe';
+    else { planCancelRowGesture(); return; }                                  // 纵向/右滑不是我们要的手势
+  }
+  if(planGestMode==='swipe'){
+    ev.preventDefault();
+    const off = Math.min(0, Math.max(-PLAN_SWIPE_W-24, planGestBaseOffset + dx));
+    planGestFront.style.transition = 'none';
+    planGestFront.style.transform = 'translateX('+off+'px)';
+    planGestFront.__liveOffset = off;
+    planRowGestureFired = true;
+  } else if(planGestMode==='drag'){
+    ev.preventDefault();
+    planDragReorderMove(ev.clientY);
+    planRowGestureFired = true;
+  }
+}
+function planRowPointerUp(){
+  if(!planGestId){ return; }
+  if(planGestMode==='swipe'){
+    const off = planGestFront.__liveOffset || 0;
+    planGestFront.style.transition = '';
+    planGestFront.style.transform = '';
+    if(off <= -PLAN_SWIPE_W*0.5) planSwipeOpenId = planGestId; else if(planSwipeOpenId===planGestId) planSwipeOpenId = null;
+    planRenderList();
+  } else if(planGestMode==='drag'){
+    planEndDragReorder();
+  }
+  if(planDragTimer){ clearTimeout(planDragTimer); planDragTimer=null; }
+  planGestId = null; planGestMode = null; planGestWrap = null; planGestFront = null;
+}
+window.addEventListener('pointermove', planRowPointerMove);
+window.addEventListener('pointerup', planRowPointerUp);
+window.addEventListener('pointercancel', planRowPointerUp);
+// 真正拦住触屏纵向滚动：跟盒子滑动多选一样，pointer 事件的 preventDefault 在部分机型上
+// 对触屏滚动不生效，得在原生 touchmove 上、非被动监听里拦
+window.addEventListener('touchmove', (ev)=>{ if(planGestMode==='swipe' || planGestMode==='drag') ev.preventDefault(); }, {passive:false});
+// 拖动排序：同优先级分组内互换 sortNum，不允许跨分组（比如"高"拖不进"中"）
+function planSwapSortNum(rowA, rowB){
+  const ea = planData.find(x=>x.id===rowA.dataset.id);
+  const eb = planData.find(x=>x.id===rowB.dataset.id);
+  if(!ea || !eb) return;
+  const tmp = ea.sortNum; ea.sortNum = eb.sortNum; eb.sortNum = tmp;
+}
+function planStartDragReorder(entry, wrap){
+  const list = document.getElementById('planList');
+  const rows = [...list.querySelectorAll('.plan-rowwrap')];
+  const myIdx = rows.indexOf(wrap);
+  if(myIdx<0){ planGestMode=null; return; }
+  const myPrio = wrap.dataset.prio;
+  let lo = myIdx, hi = myIdx;
+  while(lo>0 && rows[lo-1].dataset.prio===myPrio) lo--;
+  while(hi<rows.length-1 && rows[hi+1].dataset.prio===myPrio) hi++;
+  const step = wrap.getBoundingClientRect().height + 8;   // 行高 + .plan-list 的 gap:8px
+  planDragGroup = { list, rows, lo, hi, curIdx: myIdx, wrap, step, startY: planGestStart.y };
+  wrap.classList.add('plan-dragging');
+}
+function planDragReorderMove(clientY){
+  const g = planDragGroup; if(!g) return;
+  let dy = clientY - g.startY;
+  while(g.curIdx > g.lo && dy < -g.step*0.5){
+    const other = g.rows[g.curIdx-1];
+    planSwapSortNum(g.wrap, other);
+    g.list.insertBefore(g.wrap, other);
+    g.rows[g.curIdx] = other; g.rows[g.curIdx-1] = g.wrap;
+    g.curIdx--; g.startY -= g.step; dy = clientY - g.startY;
+  }
+  while(g.curIdx < g.hi && dy > g.step*0.5){
+    const other = g.rows[g.curIdx+1];
+    planSwapSortNum(g.wrap, other);
+    g.list.insertBefore(other, g.wrap);
+    g.rows[g.curIdx] = other; g.rows[g.curIdx+1] = g.wrap;
+    g.curIdx++; g.startY += g.step; dy = clientY - g.startY;
+  }
+  g.wrap.style.transform = 'translateY('+dy+'px)';
+}
+function planEndDragReorder(){
+  const g = planDragGroup; if(!g) return;
+  g.wrap.style.transform = '';
+  g.wrap.classList.remove('plan-dragging');
+  planDragGroup = null;
+  planSaveState();
+  planRenderList();
 }
 function planRenderList(){
   const el = document.getElementById('planList'); if(!el) return;
@@ -17066,43 +17439,63 @@ function planRenderList(){
   }
   const dup = planDupIdSet();
   el.innerHTML = '';
+  // 多选态下手势（左滑删除/长按拖动排序）整个不出现，滑开的删除按钮也一起收起，
+  // 免得切进多选态时还留着一条歪在那
+  const picking0 = planRemoveMode || planSumMode;
+  if(picking0) planSwipeOpenId = null;
   planSorted().forEach(entry=>{
     const t = planTagOf(entry);
     const r = all[entry.id];
     const wrap = document.createElement('div');
-    const picking = planRemoveMode || planSumMode;
+    const picking = picking0;
+    const prio = planPrioOf(entry);
     wrap.className = 'plan-rowwrap' + (picking ? ' plan-picking' : '') +
       (picking && planPickedIds.has(entry.id) ? ' plan-row-picked' : '');
+    wrap.dataset.id = entry.id;
+    wrap.dataset.prio = String(prio);
+    const swipeOpen = !picking && planSwipeOpenId === entry.id;
     wrap.innerHTML =
-      `<div class="plan-tagslot" style="background:${t?planEsc(t.color):'#e9e4d6'}">`+
-        (t ? `<span class="plan-tagslot-txt">${planEsc(t.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
-      `</div>`+
-      `<div class="plan-body">`+
-        `<div class="plan-head">`+
-          `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
-          (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
-          `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+      (picking ? '' : `<div class="plan-swipe-del" data-del="1">删除</div>`)+
+      `<div class="plan-swipe-front"${swipeOpen ? ' style="transform:translateX(-'+PLAN_SWIPE_W+'px)"' : ''}>`+
+        `<div class="plan-tagslot" style="background:${t?planEsc(t.color):'#e9e4d6'}">`+
+          (t ? `<span class="plan-tagslot-txt">${planEsc(t.name)}</span>` : `<span class="plan-tagslot-empty">＋</span>`)+
         `</div>`+
-        planArrowHtml(r, entry, true)+
-      `</div>`+
-      (picking ? `<div class="plan-check${planPickedIds.has(entry.id)?' on':''}">${planPickedIds.has(entry.id)?'✓':''}</div>` : '');
+        `<div class="plan-body">`+
+          `<div class="plan-head">`+
+            `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
+            (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
+            `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+          `</div>`+
+          planArrowHtml(r, entry, true)+
+        `</div>`+
+        (picking ? `<div class="plan-check${planPickedIds.has(entry.id)?' on':''}">${planPickedIds.has(entry.id)?checkIconSvg('#fff',3.6,12):''}</div>` : '')+
+      `</div>`;
+    const front = wrap.querySelector('.plan-swipe-front');
     /* 两个热区：正常态下标签竖条弹标签气泡、其余部分开编辑弹窗；多选态下标签条不拦截，
-       让它冒泡上去跟整条一样当勾选用。勾选圈现在是 wrap 的直接子节点（绝对定位），
-       所以点击挂在 wrap 上而不是 .plan-body，否则点圈本身不生效。 */
+       让它冒泡上去跟整条一样当勾选用。勾选圈现在是 front 的直接子节点（绝对定位），
+       所以点击挂在 front 上而不是 .plan-body，否则点圈本身不生效。 */
     wrap.querySelector('.plan-tagslot').onclick = (ev)=>{
       if(picking) return;
+      if(swipeOpen){ planCloseSwipe(); return; }   // 滑开状态下点哪都先收起，不弹标签气泡
       ev.stopPropagation();
       planOpenTagPop(entry, ev.currentTarget);
     };
-    wrap.onclick = ()=>{
+    front.onclick = (ev)=>{
       if(picking){
         planPickedIds.has(entry.id) ? planPickedIds.delete(entry.id) : planPickedIds.add(entry.id);
         planRenderList();
         updatePageActionBar();                  // 勾选数变了，页脚合计和按钮灰态要跟着刷新
         return;
       }
+      if(planRowGestureFired){ planRowGestureFired = false; return; }  // 刚滑过/拖过，这次 click 不算数
+      if(swipeOpen){ planCloseSwipe(); return; }
       planOpenEditModal(entry.id);
     };
+    if(!picking){
+      const delBtn = wrap.querySelector('.plan-swipe-del');
+      if(delBtn) delBtn.onclick = (ev)=>{ ev.stopPropagation(); planSwipeOpenId=null; planRemoveEntries([entry.id]); planRenderList(); };
+      front.addEventListener('pointerdown', (ev)=> planRowPointerDown(ev, entry, wrap, front));
+    }
     el.appendChild(wrap);
   });
 }
@@ -17125,8 +17518,13 @@ function planOpenEditModal(id){
         <input type="number" class="plan-field-in" id="planFOwn" min="0" value="${e.candyOwned||0}"></div>
       <div class="plan-field"><span class="plan-field-lab">目标等级（1~${PLAN_LEVEL_MAX}）</span>
         <input type="number" class="plan-field-in" id="planFTgt" min="1" max="${PLAN_LEVEL_MAX}" value="${e.targetLevel||''}"></div>
+      <div class="plan-field"><span class="plan-field-lab">同优先级内排序（1~${PLAN_SORT_MAX}，越小越靠前）</span>
+        <input type="number" class="plan-field-in" id="planFSort" min="${PLAN_SORT_MIN}" max="${PLAN_SORT_MAX}" value="${planSortNumOf(e)}"></div>
     </div>
-    <div class="plan-evo-lab">进化到（性格 exp：${planNatureKey(e)==='+'?'加成':(planNatureKey(e)==='-'?'减成':'无影响')}，种族倍率 ${planSpeciesMult(e.dex)}×）</div>
+    <div class="plan-evo-lab" id="planNatureLab">性格 exp（种族倍率 ${planSpeciesMult(planCurrentEvoDex(e))}×）</div>
+    <div class="plan-nature-seg" id="planNatureSeg"></div>
+    <div class="plan-evo-lab">现状 / 目标形态<span class="plan-evo-reset" id="planEvoResetBtn">重置为不进化</span></div>
+    <div class="plan-evo-hint">在整条进化链里点两只：阶数低的自动当现状，阶数高的当目标；只点一只就是把现状本身改成它。</div>
     <div class="plan-evo-pick" id="planEvoPick"></div>
     <div class="plan-arrow-wrap" id="planArrowWrap"></div>
     <div class="plan-modal-note" id="planModalNote"></div>
@@ -17140,14 +17538,21 @@ function planOpenEditModal(id){
   document.getElementById('planEditCancel').onclick = close;
   document.getElementById('planEditSave').onclick = ()=>{ planEditCollect(e); planSaveState(); close(); planRenderList(); };
   // 任一字段改动都即时重算右侧结果，不用等保存
-  ['planFCur','planFExp','planFOwn','planFTgt'].forEach(fid=>{
+  ['planFCur','planFExp','planFOwn','planFTgt','planFSort'].forEach(fid=>{
     const el = document.getElementById(fid);
     if(el) el.oninput = ()=>{ planEditCollect(e); planEditRefresh(e); };
   });
+  document.getElementById('planEvoResetBtn').onclick = ()=>{
+    e.evoPicks = [];
+    planEditRenderEvoPick(e); planEditRefresh(e);
+    const lab = document.getElementById('planNatureLab');
+    if(lab) lab.textContent = '性格 exp（种族倍率 '+planSpeciesMult(planCurrentEvoDex(e))+'×）';
+  };
+  planEditRenderNatureSeg(e);
   planEditRenderEvoPick(e);
   planEditRefresh(e);
 }
-// 把弹窗里四个输入框的当前值收进条目对象（不落盘，落盘只在点保存时）
+// 把弹窗里几个输入框的当前值收进条目对象（不落盘，落盘只在点保存时）
 function planEditCollect(e){
   const num = id=>{ const el=document.getElementById(id); return el ? el.value.trim() : ''; };
   e.levelReal = planClampLevel(num('planFCur') || 1);
@@ -17158,30 +17563,57 @@ function planEditCollect(e){
   e.candyOwned = (!Number.isFinite(ow) || ow<0) ? 0 : ow;
   const tg = num('planFTgt');
   e.targetLevel = tg==='' ? null : planClampLevel(tg);
+  e.sortNum = planClampSortNum(num('planFSort') || planSortNumOf(e));
+}
+// 性格 exp：+exp / 无影响 / -exp 三选一，默认值来自加入培养时盒子里那只的性格，
+// 这里选完直接写进 e.natureExp（独立字段，不会被盒子那边的性格带着走）
+function planEditRenderNatureSeg(e){
+  const box = document.getElementById('planNatureSeg'); if(!box) return;
+  const cur = planNatureKeyOf(e);
+  const opts = [['+','+exp'],['0','无影响'],['-','-exp']];
+  box.innerHTML = opts.map(([k,label])=>
+    `<div class="segbtn plan-nature-btn${cur===k?' selected':''}" data-nat="${k}">${label}</div>`).join('');
+  box.querySelectorAll('[data-nat]').forEach(b=>{
+    b.onclick = ()=>{
+      e.natureExp = b.getAttribute('data-nat');
+      planEditRenderNatureSeg(e); planEditRefresh(e);
+    };
+  });
 }
 function planEditRenderEvoPick(e){
   const box = document.getElementById('planEvoPick'); if(!box) return;
-  const reach = planEvoReachable(e.dex);
-  const opt = (dex, label, cost, on)=>{
-    const rec = dex ? POKEMON_DEX_DATA.find(r=>r[0]===dex) : null;
-    const nm = rec ? rec[1] : label;
-    const pair = rec ? POKEMON_PORTRAITS[nm] : null;
+  const family = planEvoFamily(e.dex);
+  const curDex = planCurrentEvoDex(e), tgtDex = planTargetEvoDex(e);
+  // 灰掉规则要按"再点一下会怎样"算，不是按"现在选没选"算：已经凑够2个时，再点第3个会把
+  // 最早选的那个挤掉、只留后一个跟新点的配对，所以这里的锚点要用 seed 的最后一个（那个会
+  // 幸存下来的），而不是简单看"只选了1个时的那个" —— 否则已经配对好之后，分叉的另一支
+  // 不会变灰，点了会在挤掉环节被悄悄收缩掉，用户看不出发生了什么
+  const anchor = planEvoSeedPicks(e).slice(-1)[0];
+  const opt = (dex)=>{
+    const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
+    const nm = rec ? rec[1] : dex;
+    const pair = POKEMON_PORTRAITS[nm];
     const b64 = pair ? (e.shiny ? pair[1] : pair[0]) : null;
-    return `<button type="button" class="plan-evo-opt${on?' on':''}" data-evo="${dex||''}">`+
-      (b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<div class="plan-evo-opt-none">不进化</div>`)+
+    const isCur = dex===curDex, isTgt = dex===tgtDex;
+    const disabled = !planEvoCompatible(anchor, dex);
+    const cost = isTgt ? planEvoTotalCost(curDex, tgtDex) : 0;
+    const cls = 'plan-evo-opt'+(isCur?' cur':'')+(isTgt?' tgt':'')+(disabled?' disabled':'');
+    const tag = isCur ? '<span class="plan-evo-opt-tag plan-evo-opt-tag-cur">现状</span>'
+      : isTgt ? '<span class="plan-evo-opt-tag plan-evo-opt-tag-tgt">目标</span>' : '';
+    return `<button type="button" class="${cls}" data-evo="${dex}">${tag}`+
+      (b64 ? `<img src="data:image/webp;base64,${b64}" alt="">` : `<div class="plan-evo-opt-none">?</div>`)+
       `<div class="plan-evo-opt-nm">${planEsc(nm)}</div>`+
       (cost ? `<div class="plan-evo-opt-cost">${cost}颗</div>` : `<div class="plan-evo-opt-cost">&nbsp;</div>`)+
     `</button>`;
   };
-  // 「不进化」永远在最前；下游形态按累计进化消耗展示（选最终体时是路径上各段之和）
-  let html = opt(null, '不进化', 0, !e.evoDex);
-  reach.forEach(d=> html += opt(d, '', planEvoTotalCost(e.dex, d), e.evoDex===d));
-  box.innerHTML = html;
-  if(!reach.length) box.innerHTML = `<div class="plan-res-todo" style="font-size:11px;">这只已经是最终形态，没有可进化的目标。</div>`;
+  box.innerHTML = family.map(opt).join('');
   box.querySelectorAll('[data-evo]').forEach(b=>{
     b.onclick = ()=>{
-      e.evoDex = b.getAttribute('data-evo') || null;
+      if(b.classList.contains('disabled')) return;
+      planEvoTogglePick(e, b.getAttribute('data-evo'));
       planEditRenderEvoPick(e); planEditRefresh(e);
+      const lab = document.getElementById('planNatureLab');
+      if(lab) lab.textContent = '性格 exp（种族倍率 '+planSpeciesMult(planCurrentEvoDex(e))+'×）';
     };
   });
 }
@@ -17305,7 +17737,7 @@ function planOpenTagModal(tagId){
 }
 
 /* ---- 分栏与整体渲染 ---- */
-const PLAN_PANES = [ {id:'list', label:'培养列表'}, {id:'tags', label:'标签管理'} ];
+const PLAN_PANES = [ {id:'list', label:'培养列表'}, {id:'tags', label:'优先级标签管理'} ];
 function planRenderTabs(){
   const el = document.getElementById('planTabs'); if(!el) return;
   el.innerHTML = PLAN_PANES.map(p=>
@@ -17326,12 +17758,15 @@ function planExitSumMode(){
   if(mfSubView === 'plan') planRenderList();
   updatePageActionBar();
 }
-// 页脚左槽：正常态进资源总计；已在资源总计里再点＝原地不动（退出走右侧"取消"）
+// 页脚左槽：正常态进资源总计；已在资源总计里再点＝全选所有条目
 function planToggleSumMode(){
   if(planRemoveMode) return;
   if(!planSumMode){
     if(!planData.length) return;
     planSumMode = true; planPickedIds = new Set();
+    planRenderList(); updatePageActionBar();
+  } else {
+    planPickedIds = new Set(planData.map(e=>e.id));
     planRenderList(); updatePageActionBar();
   }
 }
@@ -17347,6 +17782,24 @@ function planFooterRemoveConfirm(){
   planRemoveEntries([...planPickedIds]);
   planExitRemoveMode();
 }
+/* 资源总计浮层原来靠 CSS 里一个写死的 bottom:110px 贴在页脚按钮条正上方，
+   跟按钮条（.page-action-bar，bottom:63px + 自身高度会随字号/系统缩放变）之间会露出
+   几像素的页面背景，看着像断开了。改成每次显示时量一下按钮条实际顶边在哪，直接贴上去，
+   不管按钮条高度怎么变都严丝合缝；按钮条不在（比如圆形浮窗模式下收起了）就退回一个安全距离。 */
+function planPositionSumBar(bar){
+  const act = document.getElementById('pageActionBar');
+  const visible = act && getComputedStyle(act).display !== 'none';
+  if(visible){
+    const r = act.getBoundingClientRect();
+    bar.style.bottom = Math.max(0, Math.round(window.innerHeight - r.top)) + 'px';
+  } else {
+    bar.style.bottom = '24px';
+  }
+}
+window.addEventListener('resize', ()=>{
+  const bar = document.getElementById('planSumBar');
+  if(bar && bar.classList.contains('on')) planPositionSumBar(bar);
+});
 /* 资源总计浮层：万能糖合计 + 梦之碎片合计。
    口径跟卡片一致——只在选中的这几条内部从头分配增强配额，所以这里的合计
    就是那几张卡片上数字的直接相加，不会出现"合计对不上卡片"的情况。 */
@@ -17357,6 +17810,7 @@ function planRenderSumBar(){
     && document.getElementById('page2').classList.contains('active-page');
   if(!onPlan || !planSumMode){ bar.classList.remove('on'); bar.innerHTML = ''; return; }
   bar.classList.add('on');
+  planPositionSumBar(bar);
   if(!planPickedIds.size){
     bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
     return;
@@ -17380,17 +17834,19 @@ function planRenderAll(){
     const add = document.getElementById('planAddTagBtn');
     if(add) add.onclick = ()=> planOpenTagModal(null);
     // 两种增强互斥：点亮着的那颗＝关掉；点另一颗＝直接切过去
+    // v3.21：这几颗开关会改变每条卡片上的资源数字，资源总计态下页脚那条浮层不能等
+    // 下次勾选变化才刷新——浮层只在 updatePageActionBar() 里重画，planRenderList() 本身不管它
     const boostBtn = (id, kind)=>{
       const el = document.getElementById(id);
       if(el) el.onclick = ()=>{
         planOpts.boost = (planOpts.boost === kind) ? 'none' : kind;
-        planSaveState(); planRenderList();
+        planSaveState(); planRenderList(); updatePageActionBar();
       };
     };
     boostBtn('planBoostMiniBtn','mini');
     boostBtn('planBoostCandyBtn','candy');
     const capBtn = document.getElementById('planBoostCapBtn');
-    if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); };
+    if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); updatePageActionBar(); };
     const rm = document.getElementById('planRemoveBtn');
     if(rm) rm.onclick = ()=>{
       if(planSumMode) return;                      // 两种多选态互斥
