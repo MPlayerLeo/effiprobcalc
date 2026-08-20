@@ -799,14 +799,15 @@
     position:absolute; bottom:0; left:0; right:0; margin-left:auto; margin-right:auto;
     width:auto; height:auto; max-width:100%; max-height:100%; image-rendering:pixelated;
   }
-  /* v3.26 盒子等比显示（userPrefs.boxUniformScaleOn）：51:55 固定框是按普通模式里最大的
-     素材反推的比例，宽度跟着列走，画面还是会被 max-width/max-height 按各自素材夹小——
-     这个模式要求"务必保证每个宝可梦的像素大小完全一致"，所以框子不能再是固定比例，改成
-     JS 用素材加载完成后的真实原生像素宽高（boxApplyUniformWrapSize）撑开，画面本身也去掉
-     max-*夹小，一律按原生像素 1:1 显示，不再有任何缩放；改成固定4列腾出更宽的格子后，
-     极少数比这还宽的素材允许露出到相邻格子的空隙里（overflow:visible），不裁切不再缩小 */
+  /* v3.26 盒子等比显示（userPrefs.boxUniformScaleOn）：框子本身必须保持固定比例（继承自
+     .box-grid-img-wrap 的 51:55），不能再按素材尺寸撑开——早期版本让 JS 把 wrap 的宽高
+     改成各自素材的原生像素值，结果每个格子大小都不一样，网格的每一行就歪歪扭扭对不齐了。
+     正确做法是：格子的"框"继续由 CSS 固定比例撑开（4 列比 6 列本来就更宽，画面空间已经
+     增大了），画面本身去掉 max-width/max-height 的夹小，直接按原生像素 1:1 显示（不再拉伸
+     缩放），比框大就用 overflow:visible 露出到相邻格子的空隙里，比框小就居中留白——
+     格子的排布永远是规规矩矩的网格，只有画面自己的像素尺寸是"真实大小" */
   .box-grid.box-uniform-scale{ grid-template-columns:repeat(4, 1fr); }
-  .box-grid.box-uniform-scale .box-grid-img-wrap{ aspect-ratio:unset; min-height:40px; overflow:visible; }
+  .box-grid.box-uniform-scale .box-grid-img-wrap{ overflow:visible; }
   .box-grid.box-uniform-scale .box-grid-img, .box-grid.box-uniform-scale .box-grid-canvas{ max-width:none; max-height:none; }
   /* 干脆利落的一跳：蹬地弹起 → 到顶立刻加速下坠 → 落地后停一拍，而不是整秒都在飘。
      故意动 bottom 而不是 transform:translateY——transform 动画不管加不加 will-change，
@@ -14743,15 +14744,16 @@ function applyBoxGridColumns(){
   grid.classList.toggle('box-uniform-scale', uniform);
   grid.style.gridTemplateColumns = 'repeat('+(uniform ? 4 : computeBoxGridColumnCount())+', 1fr)';
 }
-// 等比显示模式下把画面框、canvas/img 一起按素材的真实原生像素宽高（× scale）撑开，让每只
-// 宝可梦都按 1:1 显示、不再被夹小；scale 只给南瓜精/南瓜怪人四个体型档用（同一张原图，靠这个
-// 系数区分小中大巨——不是"夹小/拉伸失真"那种要消除的误差，是这四只本来就该有的体型差异，
-// 所以等比模式也要保留，跟其他物种的"完全按原生像素"并不矛盾），其余物种 scale 传 undefined 按1处理
+// 等比显示模式下把 canvas/img 本身按素材的真实原生像素宽高（× scale）撑开，让每只宝可梦都按
+// 1:1 显示、不再被夹小；scale 只给南瓜精/南瓜怪人四个体型档用（同一张原图，靠这个系数区分
+// 小中大巨——不是"夹小/拉伸失真"那种要消除的误差，是这四只本来就该有的体型差异，所以等比
+// 模式也要保留，跟其他物种的"完全按原生像素"并不矛盾），其余物种 scale 传 undefined 按1处理。
+// 只改画面本身的尺寸，不碰 wrap（画面框）——wrap 必须保持 CSS 固定比例，网格的每一行才能
+// 对齐；早期版本连 wrap 也一起撑开过，导致每个格子大小不一，行与行歪歪扭扭对不齐，改掉了
 function boxApplyUniformSize(wrap, elA, elB, w, h, scale){
-  if(!userPrefs.boxUniformScaleOn || !wrap || !w || !h) return;
+  if(!userPrefs.boxUniformScaleOn || !w || !h) return;
   const k = scale || 1;
   const rw = Math.round(w*k), rh = Math.round(h*k);
-  wrap.style.width = rw+'px'; wrap.style.height = rh+'px';
   if(elA){ elA.style.width = rw+'px'; elA.style.height = rh+'px'; }
   if(elB){ elB.style.width = rw+'px'; elB.style.height = rh+'px'; }
 }
