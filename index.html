@@ -18771,24 +18771,23 @@ function pvpCategoryOf(entry){
 }
 
 /* "现在不合格、但升级之后能到某档位"的半价分。
-   复用 boxEntryGraduationGrade：把条目等级临时换成 70/80 再判一次档，取能达到的最高档的一半。
-   之所以不照抄毕业判定里那段 70/80 预测代码，是因为那段只处理 fruit/food/skill 三种 dtype
-   （classifyGrade 吃不下能量型，能量型的档位要跑排名表），而 boxEntryGraduationGrade 四种都能算。
-   只有当前判成不合格的才追未来——已经有分的不再叠加，避免同一只既拿现价又拿半价。 */
+   把条目等级临时换成 70/80 再判一次档，取能达到的最高档的一半。
+   只有当前判成不合格的才追未来——已经有分的不再叠加，避免同一只既拿现价又拿半价。
+
+   ⚠️ 这里必须走 pvpCategoryOf（＝ boxEntryGradeCategory 那条完整判定链），
+   不能图省事直接调 boxEntryGraduationGrade。后者只做"效率→档位"这一步，会绕过全部
+   结构性判废规则：abc/aba 强制不合格、组合不可用的删除线、能量型没选树果数量S的删除线。
+   这些是【组合本身不行】，不是【等级不够】，升到 80 级也救不回来。
+   2026-08-21 修：abc 组合的食材型因此被算成"未来金帮超级毕业"白拿 50 分。 */
 function pvpFutureHalfScore(entry){
-  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
-  if(!rec) return {score:0, grade:null};
-  const dtype = DEX_TYPE_MAP[rec[3]];
-  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
-  if(!dtype || !x) return {score:0, grade:null};
   let best = 0, bestGrade = null;
   [70, 80].forEach(lv=>{
     if(lv <= entry.level) return;                       // 已经到这个等级了就不算"未来"
     const probe = Object.assign({}, entry, {level: lv});
-    let g = null;
-    try{ g = boxEntryGraduationGrade(probe, x, dtype); }catch(e){ g = null; }
-    const s = g ? PVP_SCORE_MAP[g] : null;
-    if(s != null && s > best){ best = s; bestGrade = g; }
+    let cat = null;
+    try{ cat = pvpCategoryOf(probe); }catch(e){ cat = null; }
+    const s = cat ? PVP_SCORE_MAP[cat] : null;
+    if(s != null && s > best){ best = s; bestGrade = cat; }
   });
   return {score: best/2, grade: bestGrade};
 }
