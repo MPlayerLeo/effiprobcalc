@@ -1735,6 +1735,10 @@
   .cap-av-main .cap-medal{ top:2.4px; right:2.4px; width:22px; height:22px; }
   .cap-cav .cap-medal{ top:0.6px; right:0.6px; width:13px; height:13px; }
   .cap-bub2-av.cap-av .cap-medal{ top:2px; right:2px; width:20px; height:20px; }
+  /* 满包角标：钉在主头像左下角，跟右上角的睡饱饱奖章分开，两者可能同时出现 */
+  .cap-av-main .cap-fullbag{ position:absolute; left:-3px; bottom:-3px; z-index:6; width:17px; height:17px;
+    border-radius:50%; background:#b5651d; color:#fff; font-size:10px; font-weight:800; line-height:17px;
+    text-align:center; box-shadow:0 0 0 1.5px #fff; }
   .cap-reco-col{ display:flex; align-items:center; flex:0 0 auto; margin-left:-5px; }
   .cap-reco{ width:44px; height:44px; box-sizing:border-box; text-align:center; font-size:10px; font-weight:800; padding:2px; border-radius:8px; border:1px solid; display:flex; flex-direction:column; align-items:center; justify-content:center; line-height:1.25; overflow:hidden; }
   .cap-reco b, .cap-reco i{ font-style:normal; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100%; }
@@ -3674,6 +3678,13 @@
           <div class="mf-toggle-hint" id="capMainSkillMaxHint">关闭</div>
         </div>
         <div class="mf-switch" id="capMainSkillMaxSwitch"></div>
+      </div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">满包</div>
+          <div class="mf-toggle-hint" id="capFullBagHint">开启</div>
+        </div>
+        <div class="mf-switch" id="capFullBagSwitch"></div>
       </div>
     </div>
   </div>
@@ -9454,7 +9465,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -9493,6 +9504,7 @@ function loadUserPrefs(){
       if(typeof o.capGradNewbieOn==='boolean') userPrefs.capGradNewbieOn = o.capGradNewbieOn;
       if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
       if(typeof o.mainSkillMaxOn==='boolean') userPrefs.mainSkillMaxOn = o.mainSkillMaxOn;
+      if(typeof o.capFullBagOn==='boolean') userPrefs.capFullBagOn = o.capFullBagOn;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
           const b = o.capPanelBuild[t];
@@ -12085,15 +12097,21 @@ function capBerryPerBerry(attr, level){ const row = CAP_BERRY_MATRIX[capBerryAtt
 // 捕捉推荐的树果/能量 tab 排名走的是这条完全独立的静态口径，压根没碰过，达克莱伊的技能能量因此
 // 从数据表定义了就一直没在这个 tab 里体现过。两只都是 dtype 树果、pity 天然不生效，直接复用
 // capSkillCount(helps×rate) 乘 energyPerTrigger 加进去，跟 capEnergyEnergy 处理 CAP_ENERGY_SKILL 是同一个套路
-function capBerryEnergy(x, level, medal){
-  let e = capHelpsPerDay(x.interval, level, medal) * 3 * capBerryPerBerry(x.attr, level);
+// 满包：背包塞满后每次帮忙都只出树果、不再出食材，也不再触发主技能。只有 dtype=树果 才存在这个
+// 状态（能量型的定位就是不让它满包、随时收，所以恒按不满包算，fullBag 传进来也不生效，见
+// capBEEnergy 的分发）。fullBag=false 时一次帮忙要么出树果要么出食材、两者互斥，树果颗数必须按
+// (1-食材概率)折算——之前这里恒等于假设100%都出树果，把食材概率越高的宝可梦算得越虚高
+// （2026-08-21 巨锻匠能量排名过高一事查出）
+function capBerryEnergy(x, level, medal, fullBag){
+  let e = capHelpsPerDay(x.interval, level, medal) * 3 * capBerryPerBerry(x.attr, level) * (fullBag ? 1 : (1-(x.ingProb||0)));
   const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
-  if(spec && spec.kind==='energy') e += capSkillCount(x, level, medal, false) * spec.energyPerTrigger;
+  // 满包状态下主技能不触发，技能额外产的能量整条不计
+  if(spec && spec.kind==='energy' && !fullBag) e += capSkillCount(x, level, medal, false) * spec.energyPerTrigger;
   return e;
 }
 function capEnergyEnergy(x, level, medal, ctrl){
   const helps = capHelpsPerDay(x.interval, level, medal);
-  const berryE = helps * 2 * capBerryPerBerry(x.attr, level);
+  const berryE = helps * 2 * capBerryPerBerry(x.attr, level) * (1-(x.ingProb||0));
   const sk = CAP_ENERGY_SKILL[x.name]; let per = 0;
   if(sk){
     if(sk.kind==='fixed') per = sk.val;
@@ -12103,7 +12121,7 @@ function capEnergyEnergy(x, level, medal, ctrl){
   const rate = capSkillRate(x.skillProb, x.interval, level, medal, ctrl.pity);
   return berryE + helps * rate * per;
 }
-function capBEEnergy(x, level, medal, ctrl){ return x.dtype==='能量' ? capEnergyEnergy(x, level, medal, ctrl) : capBerryEnergy(x, level, medal); }
+function capBEEnergy(x, level, medal, ctrl, fullBag){ return x.dtype==='能量' ? capEnergyEnergy(x, level, medal, ctrl) : capBerryEnergy(x, level, medal, fullBag); }
 // 槽位用量求和从 capFoodProd 里抽出来，"加入面板"的真实产量版本(capFoodProdReal)要复用同一段，
 // 不能各写一份、改一处漏一处
 function capFoodAmountSum(x, ingName, level){
@@ -12139,16 +12157,18 @@ function capRealHelpsPerDay(x, level, medal, sums, persona){
   if(persona.h===1) interval *= 0.9; else if(persona.h===-1) interval *= 1.075;
   return 86400 / interval;
 }
-function capBerryEnergyReal(x, level, medal, real){
+function capBerryEnergyReal(x, level, medal, real, fullBag){
   const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
-  let e = helps * (real.sums.hasFruit?3:2) * capBerryPerBerry(x.attr, level);
+  const realIngProb = energySkillProb(x.ingProb||0, real.sums.f, real.persona.f);
+  let e = helps * (real.sums.hasFruit?3:2) * capBerryPerBerry(x.attr, level) * (fullBag ? 1 : (1-realIngProb));
   const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
-  if(spec && spec.kind==='energy') e += capSkillCountReal(x, level, medal, false, real) * spec.energyPerTrigger;
+  if(spec && spec.kind==='energy' && !fullBag) e += capSkillCountReal(x, level, medal, false, real) * spec.energyPerTrigger;
   return e;
 }
 function capEnergyEnergyReal(x, level, medal, ctrl, real){
   const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
-  const berryE = helps * (real.sums.hasFruit?2:1) * capBerryPerBerry(x.attr, level);
+  const realIngProb = energySkillProb(x.ingProb||0, real.sums.f, real.persona.f);
+  const berryE = helps * (real.sums.hasFruit?2:1) * capBerryPerBerry(x.attr, level) * (1-realIngProb);
   const sk = CAP_ENERGY_SKILL[x.name]; let per = 0;
   if(sk){
     if(sk.kind==='fixed') per = sk.val;
@@ -12159,7 +12179,7 @@ function capEnergyEnergyReal(x, level, medal, ctrl, real){
   const rate = capSkillRate(realProb, x.interval, level, medal, ctrl.pity);
   return berryE + helps * rate * per;
 }
-function capBEEnergyReal(x, level, medal, ctrl, real){ return x.dtype==='能量' ? capEnergyEnergyReal(x, level, medal, ctrl, real) : capBerryEnergyReal(x, level, medal, real); }
+function capBEEnergyReal(x, level, medal, ctrl, real, fullBag){ return x.dtype==='能量' ? capEnergyEnergyReal(x, level, medal, ctrl, real) : capBerryEnergyReal(x, level, medal, real, fullBag); }
 function capFoodProdReal(x, ingName, level, medal, real){
   const helps = capRealHelpsPerDay(x, level, medal, real.sums, real.persona);
   const realIngProb = energySkillProb(x.ingProb||0, real.sums.f, real.persona.f);
@@ -12279,10 +12299,19 @@ function capBuildBerryEnergy(){
   const build = userPrefs.capPanelBuild.berryEnergy;
   const real = build ? capRealSums(build) : null;
   const recs=[];
+  const fullBagOn = userPrefs.capFullBagOn !== false;
   pool.forEach(x=>{
-    const val = medal => real ? capBEEnergyReal(x,capState.level,medal,capState.ctrl,real) : capBEEnergy(x,capState.level,medal,capState.ctrl);
-    recs.push({x,medal:false,value:val(false)});
-    if(x.stage==='徽章') recs.push({x,medal:true,value:val(true)});
+    const val = (medal, fullBag) => real ? capBEEnergyReal(x,capState.level,medal,capState.ctrl,real,fullBag) : capBEEnergy(x,capState.level,medal,capState.ctrl,fullBag);
+    // 达克莱伊/巨锻匠这类"主技能直接产能量"的树果型，满包与否结果差异巨大（满包多出树果、但技能一次
+    // 都不触发），单给一个数会误导，所以满包开关开启时把两个状态都列进榜单各占一行、各自参与排序，
+    // 满包那条在头像上打个角标区分。能量型不存在满包（capBEEnergy 里就不吃 fullBag），不拆行
+    const dualState = fullBagOn && x.dtype!=='能量' && CAP_SKILL_SPECIAL_OUTPUT[x.dex] && CAP_SKILL_SPECIAL_OUTPUT[x.dex].kind==='energy';
+    const push = medal => {
+      recs.push({x,medal,value:val(medal,false),fullBag:false});
+      if(dualState) recs.push({x,medal,value:val(medal,true),fullBag:true});
+    };
+    push(false);
+    if(x.stage==='徽章') push(true);
   });
   recs.sort((a,b)=> b.value-a.value); return recs;
 }
@@ -12626,6 +12655,8 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   else reco = capRecoFromGH(x.reco,x.avail);
   const pct = maxVal>0 ? Math.max(0,Math.min(100, rec.value/maxVal*100)) : 0;
   const medalBadge = rec.medal ? `<img class="cap-medal" src="${CAP_ICONS.medal}" alt="睡饱饱奖章">` : '';
+  // 满包角标：同一只宝可梦的"满包"那一行才挂，用来跟紧挨着的"不满包"行区分（见 capBuildBerryEnergy）
+  const fullBagBadge = rec.fullBag ? `<span class="cap-fullbag" title="满包状态：只出树果、主技能不触发">满</span>` : '';
   const babySlot = showBaby ? `<div class="cap-av cap-av-baby">${capB64Img(x.baby)}</div>` : `<div class="cap-av-baby cap-av-none">不进化</div>`;
   const nameHtml = x.name;
   const sleepInfo = capSleepTypeOf(x);
@@ -12652,7 +12683,7 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   return `<div class="cap-row${rowMarkCls}" data-dex="${x.dex}">
     <div class="cap-rank ${sleepInfo.cls}"><div class="cap-rank-num">${rank}</div><div class="cap-sleep-lab">${sleepInfo.labHtml}</div></div>
     <div class="cap-avatars">
-      <div class="cap-av cap-av-main">${capB64Img(x.name)}${medalBadge}</div>
+      <div class="cap-av cap-av-main">${capB64Img(x.name)}${medalBadge}${fullBagBadge}</div>
       <div class="cap-av-baby-col">
         ${babySlot}
         ${capRowIngSeqHtml(x)}
@@ -13025,6 +13056,10 @@ function syncCapGradModalSwitch(){
   const on3 = !!userPrefs.mainSkillMaxOn;
   if(sw3) sw3.classList.toggle('on', on3);
   if(hint3) hint3.textContent = on3 ? '满级' : '关闭';
+  const sw4 = document.getElementById('capFullBagSwitch'), hint4 = document.getElementById('capFullBagHint');
+  const on4 = userPrefs.capFullBagOn !== false;
+  if(sw4) sw4.classList.toggle('on', on4);
+  if(hint4) hint4.textContent = on4 ? '开启' : '关闭';
 }
 function openCapGradModal(){
   syncCapGradModalSwitch();
@@ -13048,6 +13083,14 @@ function toggleCapGradNewbie(){
 // 而不是只 renderCapturePage()，让页1/2/3的产能分析、食谱覆盖率、排名对比一起联动刷新——
 // 但 renderAll() 本身不包含 renderCapturePage()（page4 是懒渲染的独立一套），漏了它自己所在的
 // 捕捉推荐页反而不刷新，两个都要调
+// 满包开关：只影响捕捉推荐树果/能量榜单（页1-3 的产能分析有自己独立的持有上限三态开关，不共用），
+// 所以只需要 renderCapturePage()
+function toggleCapFullBag(){
+  userPrefs.capFullBagOn = !(userPrefs.capFullBagOn !== false);
+  saveUserPrefs();
+  syncCapGradModalSwitch();
+  renderCapturePage();
+}
 function toggleCapMainSkillMax(){
   userPrefs.mainSkillMaxOn = !userPrefs.mainSkillMaxOn;
   saveUserPrefs();
@@ -14390,6 +14433,7 @@ document.getElementById('capGradModalCloseBtn').onclick = closeCapGradModal;
 document.getElementById('capGradMarkSwitch').onclick = toggleCapGradMark;
 document.getElementById('capGradNewbieSwitch').onclick = toggleCapGradNewbie;
 document.getElementById('capMainSkillMaxSwitch').onclick = toggleCapMainSkillMax;
+document.getElementById('capFullBagSwitch').onclick = toggleCapFullBag;
 document.getElementById('capPanelModalOverlay').onclick = (e)=>{ if(e.target.id==='capPanelModalOverlay') closeCapPanelModal(); };
 document.getElementById('capPanelModalPanel').onclick = (e)=> e.stopPropagation();
 document.getElementById('capPanelModalCloseBtn').onclick = closeCapPanelModal;
