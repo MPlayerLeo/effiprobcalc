@@ -2096,6 +2096,13 @@
 }
 .mf-toggle-label{ font-size:14px; font-weight:800; color:var(--ink); }
 .mf-toggle-hint{ font-size:11px; color:#9a9484; font-weight:700; margin-top:2px; }
+/* 作用范围小标签：贴在开关标题右侧，说明这个开关只对某一类宝可梦生效
+   （捕捉推荐控制参数里的「主技能满级」「满包」两个，见 syncCapGradModalSwitch 的显隐逻辑） */
+.mf-toggle-scope{
+  display:inline-block; margin-left:6px; padding:1px 6px; border-radius:8px;
+  font-size:10px; font-weight:800; color:#8a8069; background:rgba(0,0,0,.05);
+  border:1px solid var(--line); vertical-align:1.5px; white-space:nowrap;
+}
 /* iOS 风格拨动开关：纯 CSS，.on 决定底色与滑块位移 */
 .mf-switch{
   flex:0 0 auto; width:48px; height:28px; border-radius:14px; background:#cfc9bb;
@@ -3672,16 +3679,18 @@
         </div>
         <div class="mf-switch" id="capGradNewbieSwitch"></div>
       </div>
-      <div class="mf-toggle-row">
+      <!-- 下面两个开关都只对某一个大类生效，所以既在标题右边标了作用范围，也只在对应的大类
+           页签下显示（显隐逻辑在 syncCapGradModalSwitch，跟着 capState.type 走） -->
+      <div class="mf-toggle-row" id="capMainSkillMaxRow">
         <div>
-          <div class="mf-toggle-label">主技能满级</div>
+          <div class="mf-toggle-label">主技能满级<span class="mf-toggle-scope">仅对食材精选有效</span></div>
           <div class="mf-toggle-hint" id="capMainSkillMaxHint">关闭</div>
         </div>
         <div class="mf-switch" id="capMainSkillMaxSwitch"></div>
       </div>
-      <div class="mf-toggle-row">
+      <div class="mf-toggle-row" id="capFullBagRow">
         <div>
-          <div class="mf-toggle-label">满包</div>
+          <div class="mf-toggle-label">满包<span class="mf-toggle-scope">仅对树果型有效</span></div>
           <div class="mf-toggle-hint" id="capFullBagHint">开启</div>
         </div>
         <div class="mf-switch" id="capFullBagSwitch"></div>
@@ -13067,6 +13076,18 @@ function syncCapGradModalSwitch(){
   const on4 = userPrefs.capFullBagOn !== false;
   if(sw4) sw4.classList.toggle('on', on4);
   if(hint4) hint4.textContent = on4 ? '开启' : '关闭';
+  // 「主技能满级」「满包」两个开关各自只对一个大类有效，摆在别的页签下纯属误导（看着像全局开关，
+  // 拨了却什么都不变），所以只在对应大类的页签里显示：
+  //   主技能满级 → 只有食材精选里的大嘴娃/蝶结萌虻(#303/#743，CAP_SKILL_SPECIAL_OUTPUT 里有
+  //     itemsDefault 的那两只)产出会随它变，落在食材榜；另外四只食材精选没有 itemsDefault，
+  //     主技能效果不分满级/默认，开关对它们无影响
+  //   满包 → 只有 dtype=树果 存在满包状态（能量型定位就是随时收、恒按不满包算），落在树果/能量榜
+  // 这个开关本身仍是全局 pref（主技能满级还联动页1-3的产能分析），只是收起了展示位置；
+  // 页1的控制参数里另有一个独立的「主技能满级」按钮，隐藏在这里不影响那边使用
+  const rowSkillMax = document.getElementById('capMainSkillMaxRow');
+  const rowFullBag = document.getElementById('capFullBagRow');
+  if(rowSkillMax) rowSkillMax.style.display = (capState.type==='food') ? '' : 'none';
+  if(rowFullBag) rowFullBag.style.display = (capState.type==='berryEnergy') ? '' : 'none';
 }
 function openCapGradModal(){
   syncCapGradModalSwitch();
@@ -13424,8 +13445,11 @@ function applyCapHeaderStickyOffset(){
   if(!vp || !tabbar) return;
   const top = vp.getBoundingClientRect().top;
   const bottom = tabbar.getBoundingClientRect().top;
-  // 留 10px 呼吸空隙；下限 160px 是防止极端窄屏/横屏时算出个负数把条目区压没
-  const h = Math.max(160, Math.round(bottom - top - 10));
+  // 原来这里留了 10px 呼吸空隙，但食材柱状图的内容正好比条目区高出十几像素，轴标签最下面那行
+  // 毕业对勾会被白色区域的下边缘切掉一小截。改成一直贴到切换栏顶边（等于白区向下扩 10px），
+  // 对勾整行就能完全露出来；切换栏本身是不透明的固定栏，贴着它不会有观感问题。
+  // 下限 160px 是防止极端窄屏/横屏时算出个负数把条目区压没
+  const h = Math.max(160, Math.round(bottom - top));
   document.documentElement.style.setProperty('--cap-view-h', h+'px');
 }
 
