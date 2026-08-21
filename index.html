@@ -2261,7 +2261,9 @@
 }
 .mf-sub-title{ font-size:16px; font-weight:900; color:var(--ink); }
 
-/* ============ v3.28 大家的宝睡 PVP ============ */
+/* ============ v3.28 土王PVP ============ */
+/* 代码里的标识符一律保留 pvp 前缀（函数、CSS 类、/api/pvp 接口、数据库表名都是），
+   只有露给用户看的文案叫「土王PVP」——改标识符纯属churn，还要跟已部署的后端对齐 */
 .mf-hub-ic-pvp{ background:#c2554b; }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
@@ -3017,7 +3019,7 @@
       <button type="button" class="mf-hub-btn" data-mfsub="pvp">
         <span class="mf-hub-ic mf-hub-ic-pvp"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L14 10M10 6l8 8M17 4l3 3-2 2-3-3zM7 20H4v-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
         <span class="mf-hub-body">
-          <span class="mf-hub-t">大家的宝睡 PVP</span>
+          <span class="mf-hub-t">土王PVP</span>
           <span class="mf-hub-d">直接读你的宝可梦盒算出战力总分，看看自己在大家里排第几</span>
         </span>
         <span class="mf-hub-arrow">›</span>
@@ -3278,12 +3280,12 @@
     </div>
   </div><!-- /#mfSubPlan -->
 
-  <!-- v3.28 大家的宝睡 PVP：不做上传表单，成绩直接从宝可梦盒算出来（见 pvpBuildMyStats）。
+  <!-- v3.28 土王PVP：不做上传表单，成绩直接从宝可梦盒算出来（见 pvpBuildMyStats）。
        「参加排行」默认关闭，只有用户自己在这里打开才会把成绩快照上传参与跨用户排名。 -->
   <div class="mf-sub" id="mfSubPvp" style="display:none;">
     <div class="mf-sub-head">
       <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
-      <span class="mf-sub-title">大家的宝睡 PVP</span>
+      <span class="mf-sub-title">土王PVP</span>
     </div>
     <div class="pvp-disclaimer">
       <span>⚠️</span>
@@ -18699,7 +18701,9 @@ document.getElementById('boxPlanConfirmBtn').onclick = ()=>{
   if(parts.length) alert(parts.join('；') + '。');
 };
 
-/* ============ v3.28 大家的宝睡 PVP ============
+/* ============ v3.28 土王PVP ============
+   （功能原名"大家的宝睡 PVP"，是接入说明那份文档里的叫法；页面文案叫「土王PVP」，
+     函数/CSS类/接口路径/数据库表名一律保留 pvp 前缀，不跟着文案改）
    跟原始需求文档最大的两点出入（都是用户明确要求的）：
    1) 不做上传表单。成绩直接从宝可梦盒算出来——盒子本来就已经存着每只的等级/副技能/性格/
       食材组合，再让用户手填一遍纯属重复劳动。
