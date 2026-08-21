@@ -2261,6 +2261,89 @@
 }
 .mf-sub-title{ font-size:16px; font-weight:900; color:var(--ink); }
 
+/* ============ v3.28 大家的宝睡 PVP ============ */
+.mf-hub-ic-pvp{ background:#c2554b; }
+/* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
+   不是可以随手划掉的提示 */
+.pvp-disclaimer{
+  display:flex; gap:9px; align-items:flex-start;
+  background:#fbe9e7; border:1px solid #e6b5ae; border-radius:10px;
+  padding:10px 12px; margin-bottom:12px;
+  font-size:11.5px; font-weight:700; color:#8b2f24; line-height:1.6;
+}
+.pvp-disclaimer b{ font-size:12.5px; }
+.pvp-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:12px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.pvp-card-t{ font-size:13px; font-weight:900; color:var(--ink); margin-bottom:10px; }
+/* 总分/均分两个大数字并排 */
+.pvp-score-row{ display:flex; gap:10px; }
+.pvp-score-box{
+  flex:1 1 0; min-width:0; text-align:center;
+  background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:11px 6px;
+}
+.pvp-score-v{ font-size:25px; font-weight:900; color:var(--accent-dk); line-height:1.15; }
+.pvp-score-k{ font-size:11px; font-weight:800; color:#8a8375; margin-top:3px; }
+.pvp-score-sub{ font-size:10px; font-weight:700; color:#a49c8b; margin-top:2px; }
+/* 档位分布条：十个档位各占一段，宽度按物种数 */
+.pvp-dist{ display:flex; height:11px; border-radius:6px; overflow:hidden; background:#eae5d6; margin-top:4px; }
+.pvp-dist-seg{ height:100%; }
+.pvp-legend{ display:flex; flex-wrap:wrap; gap:5px 10px; margin-top:9px; }
+.pvp-legend-i{ display:flex; align-items:center; gap:4px; font-size:10.5px; font-weight:800; color:#6a6555; }
+.pvp-legend-dot{ width:9px; height:9px; border-radius:3px; flex:0 0 auto; }
+/* 物种明细行 */
+.pvp-list{ display:flex; flex-direction:column; }
+.pvp-row{
+  display:flex; align-items:center; gap:9px;
+  padding:7px 2px; border-bottom:1px solid var(--line);
+}
+.pvp-row:last-child{ border-bottom:none; }
+.pvp-row-rank{ flex:0 0 auto; width:26px; text-align:center; font-size:11px; font-weight:900; color:#a49c8b; }
+.pvp-av{
+  flex:0 0 auto; width:30px; height:30px; border-radius:9px; overflow:hidden;
+  background:#f4effa; border:1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+}
+.pvp-av img{ width:100%; height:100%; object-fit:cover; }
+.pvp-row-main{ flex:1 1 auto; min-width:0; }
+.pvp-row-name{ font-size:12.5px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pvp-row-sub{ font-size:10.5px; font-weight:700; color:#8a8375; margin-top:1px; }
+.pvp-grade{
+  flex:0 0 auto; padding:3px 8px; border-radius:8px;
+  font-size:11px; font-weight:900; color:#fff; white-space:nowrap;
+}
+.pvp-pt{ flex:0 0 auto; width:26px; text-align:right; font-size:13px; font-weight:900; color:var(--accent-dk); }
+.pvp-empty{ text-align:center; color:#9a927f; padding:26px 10px; font-size:13px; font-weight:700; }
+/* 闪光/不闪光切换：两套分完全独立，不是筛选而是两个不同的榜 */
+.pvp-seg{ display:flex; gap:6px; margin-bottom:12px; }
+.pvp-seg-b{
+  flex:1 1 0; text-align:center; cursor:pointer; user-select:none;
+  padding:9px 4px; border-radius:9px; font-size:12.5px; font-weight:800;
+  background:var(--panel); border:1px solid var(--line); color:#8a8375;
+}
+.pvp-seg-b.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+/* 物种榜的头像网格 */
+.pvp-grid{ display:grid; grid-template-columns:repeat(auto-fill,minmax(66px,1fr)); gap:9px; }
+.pvp-sp{ display:flex; flex-direction:column; align-items:center; gap:3px; cursor:pointer; }
+.pvp-sp .pvp-av{ width:40px; height:40px; border-radius:11px; }
+.pvp-sp-n{ font-size:10.5px; font-weight:800; color:var(--ink); text-align:center; line-height:1.2;
+  max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pvp-sp-c{ font-size:9.5px; font-weight:700; color:#a49c8b; }
+/* 榜单里自己那一行高亮，隐藏人名时这是唯一能定位自己的线索 */
+.pvp-row-me{ background:#f3ecfa; border-radius:8px; }
+.pvp-row-me .pvp-row-name{ color:var(--accent-dk); }
+.pvp-input{
+  width:100%; box-sizing:border-box; font-family:inherit;
+  background:var(--paper); border:1px solid var(--line); border-radius:9px;
+  padding:10px 12px; font-size:15px; font-weight:800; color:var(--ink);
+}
+.pvp-more-btn{
+  width:100%; font-family:inherit; cursor:pointer; margin-top:9px;
+  background:var(--paper); border:1px solid var(--line); border-radius:9px;
+  padding:8px; font-size:12px; font-weight:800; color:var(--accent-dk);
+}
+
 /* ============ v3.19 岛屿评分 ============ */
 .isl-tabs{ display:flex; gap:6px; margin-bottom:12px; }
 .isl-tab{
@@ -2931,6 +3014,14 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="pvp">
+        <span class="mf-hub-ic mf-hub-ic-pvp"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L14 10M10 6l8 8M17 4l3 3-2 2-3-3zM7 20H4v-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">大家的宝睡 PVP</span>
+          <span class="mf-hub-d">直接读你的宝可梦盒算出战力总分，看看自己在大家里排第几</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
     </div>
   </div>
 
@@ -3186,6 +3277,25 @@
       <button type="button" class="isl-add-btn" id="planAddTagBtn">＋ 新增标签</button>
     </div>
   </div><!-- /#mfSubPlan -->
+
+  <!-- v3.28 大家的宝睡 PVP：不做上传表单，成绩直接从宝可梦盒算出来（见 pvpBuildMyStats）。
+       「参加排行」默认关闭，只有用户自己在这里打开才会把成绩快照上传参与跨用户排名。 -->
+  <div class="mf-sub" id="mfSubPvp" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">大家的宝睡 PVP</span>
+    </div>
+    <div class="pvp-disclaimer">
+      <span>⚠️</span>
+      <span><b>本功能仅供娱乐，请勿上升至人身攻击。</b><br>
+        分数只反映盒子里已录入的面板，跟氪度、运气、玩了多久都有关系，跟任何人的水平或人品无关。
+        看到别人比自己强请一笑了之，看到别人比自己弱也请不要嘲讽。</span>
+    </div>
+    <div class="isl-tabs" id="pvpTabs"></div>
+    <div id="pvpPaneMe"></div>
+    <div id="pvpPaneBoard" style="display:none;"></div>
+    <div id="pvpPaneSet" style="display:none;"></div>
+  </div><!-- /#mfSubPvp -->
 
   </div><!-- /#page2 -->
 
@@ -9477,7 +9587,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -9517,6 +9627,9 @@ function loadUserPrefs(){
       if(typeof o.fabCircleModeOn==='boolean') userPrefs.fabCircleModeOn = o.fabCircleModeOn;
       if(typeof o.mainSkillMaxOn==='boolean') userPrefs.mainSkillMaxOn = o.mainSkillMaxOn;
       if(typeof o.capFullBagOn==='boolean') userPrefs.capFullBagOn = o.capFullBagOn;
+      if(typeof o.pvpJoinOn==='boolean') userPrefs.pvpJoinOn = o.pvpJoinOn;
+      if(typeof o.pvpShowNamesOn==='boolean') userPrefs.pvpShowNamesOn = o.pvpShowNamesOn;
+      if(typeof o.pvpCatchTotal==='number' && isFinite(o.pvpCatchTotal)) userPrefs.pvpCatchTotal = o.pvpCatchTotal;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
           const b = o.capPanelBuild[t];
@@ -14090,7 +14203,10 @@ function updatePageActionBar(){
   // v3.27：只有各自的"宝可梦"/"培养列表"分页才真的用得到，其余分页整条收起
   const onIslandBox = onIslandBoxPane();
   const onPlanList = onPlanListPane();
-  const show = !(inDetail || inBox || onHub || onSettings || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
+  // v3.28：PVP 子页没有任何可调的计算参数，也没借用这两颗按钮，整条收起
+  // （新增顶层页/子页都要在这里排除一次，漏了会让切换栏看起来被顶起来）
+  const onPvp = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'pvp';
+  const show = !(inDetail || inBox || onHub || onSettings || onPvp || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -16644,14 +16760,17 @@ function mfShowSub(sub){
   const rank = document.getElementById('mfSubRank');
   const island = document.getElementById('mfSubIsland');
   const plan = document.getElementById('mfSubPlan');
-  if(!hub || !effi || !rank || !island || !plan) return;
+  const pvp = document.getElementById('mfSubPvp');
+  if(!hub || !effi || !rank || !island || !plan || !pvp) return;
   hub.style.display = mfSubView ? 'none' : '';
   effi.style.display = mfSubView === 'effi' ? '' : 'none';
   rank.style.display = mfSubView === 'rank' ? '' : 'none';
   island.style.display = mfSubView === 'island' ? '' : 'none';
   plan.style.display = mfSubView === 'plan' ? '' : 'none';
+  pvp.style.display = mfSubView === 'pvp' ? '' : 'none';
   if(mfSubView === 'island') islandRenderAll();
   else if(mfSubView === 'plan') planRenderAll();
+  else if(mfSubView === 'pvp') pvpRenderAll();
   else if(mfSubView === 'rank'){
     // 排名对比原来是独立主页面(page3)时的进场逻辑，挪进 hub 子页后原样保留：
     // 排名计算较重，先弹"排名计算中"再算，避免白屏卡顿；没选过面板就没数据可算，直接渲染即可
@@ -18579,6 +18698,557 @@ document.getElementById('boxPlanConfirmBtn').onclick = ()=>{
   if(full)  parts.push('已达 '+PLAN_MAX_ENTRIES+' 条上限，'+full+' 只未加入');
   if(parts.length) alert(parts.join('；') + '。');
 };
+
+/* ============ v3.28 大家的宝睡 PVP ============
+   跟原始需求文档最大的两点出入（都是用户明确要求的）：
+   1) 不做上传表单。成绩直接从宝可梦盒算出来——盒子本来就已经存着每只的等级/副技能/性格/
+      食材组合，再让用户手填一遍纯属重复劳动。
+   2) 不引第二套分类。文档里的五类(树果/食材/技能/充能/树果剧增)在本站是 4 个 dtype，
+      充能型和树果剧增型都落在"能量型"里；文档自己也写了"如果攻略网站已有更完整的分类，
+      应由现有百科提供"，所以直接用 DEX_TYPE_MAP，不硬编码第二份名单。
+
+   总分口径：不能直接加效率值——树果/功能/能量的效率是 1.7~2.3，食材是日产量 20~250，
+   量纲差两个数量级，加起来食材型会把其它类型完全淹没。改用站内本来就跨类型可比的"毕业档位"，
+   每档给一个 0~100 的分值（PVP_SCORE_TABLE，由站长拍板，不是算出来的）。
+   注意分值里【金帮档位高于同名非金帮档位】，这是站长定的强度观：帮手奖励是实打实的团队产出。 */
+const PVP_LIST_STEP = 20;           // 明细列表每次展开的条数
+var pvpPane = 'me';                 // 'me' | 'board' | 'set'
+var pvpListLimit = PVP_LIST_STEP;
+
+/* 档位 -> 分值。按分从高到低排，画分布条和图例时直接照这个顺序走。
+   邪修/极致邪修/恐怖宝可梦/打工这四个不在十档体系里，是另一条评价线上的结果，
+   分值由站长指定塞进同一把尺子，方便和常规档位一起累加。 */
+const PVP_SCORE_TABLE = [
+  ['金帮超级毕业', 100],
+  ['超级毕业',      95],
+  ['金帮大毕业',    90],
+  ['大毕业',        85],
+  ['恐怖宝可梦',    80],
+  ['金帮毕业',      75],
+  ['毕业',          70],
+  ['极致邪修',      70],
+  ['金帮和解',      60],
+  ['邪修',          60],
+  ['和解',          55],
+  ['打工',          20],
+  ['金帮不合格',     0],
+  ['不合格',         0],
+];
+const PVP_SCORE_MAP = PVP_SCORE_TABLE.reduce((m,r)=>{ m[r[0]]=r[1]; return m; }, {});
+// 十档以外这几个另类档位的配色：TIER_STYLE 里没有它们
+const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375'};
+function pvpCatColor(cat){
+  if(PVP_EXTRA_COLOR[cat]) return PVP_EXTRA_COLOR[cat];
+  const st = (typeof tierStyleOf==='function') ? tierStyleOf(cat) : null;
+  return st ? st.color : '#999';
+}
+
+/* 一只宝可梦当前算什么档。boxEntryGradeCategory 已经把十档/打工/邪修/其他判全了，
+   但它有两处对 PVP 来说不够细，这里补上：
+   · 它把邪修和极致邪修合并成一个"邪修"（盒子筛选里本来就是合并的），PVP 要分开计分
+   · 它压根不返回恐怖宝可梦（那是页1的内部彩蛋，盒子筛选里没这一档）
+   优先级 恐怖 > 极致邪修/邪修 > 十档，跟捕捉推荐 capRowHtml 里的优先级一致 */
+function pvpCategoryOf(entry){
+  let cat = null;
+  try{ cat = boxEntryGradeCategory(entry); }catch(e){ return null; }
+  if(!cat || cat==='其他') return null;
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  const dtype = rec ? DEX_TYPE_MAP[rec[3]] : null;
+  const x = rec ? capFindDex(boxEffectiveFinalDex(entry.dex)) : null;
+  if(x && dtype){
+    try{ if(boxTerrorInfo(entry, x)) return '恐怖宝可梦'; }catch(e){}
+    if(cat==='邪修'){
+      let info = null;
+      try{ info = boxXiexiuInfo(entry, x, dtype); }catch(e){ info = null; }
+      if(info && info.grade) return info.grade;   // '邪修' 或 '极致邪修'
+    }
+  }
+  return cat;
+}
+
+/* "现在不合格、但升级之后能到某档位"的半价分。
+   复用 boxEntryGraduationGrade：把条目等级临时换成 70/80 再判一次档，取能达到的最高档的一半。
+   之所以不照抄毕业判定里那段 70/80 预测代码，是因为那段只处理 fruit/food/skill 三种 dtype
+   （classifyGrade 吃不下能量型，能量型的档位要跑排名表），而 boxEntryGraduationGrade 四种都能算。
+   只有当前判成不合格的才追未来——已经有分的不再叠加，避免同一只既拿现价又拿半价。 */
+function pvpFutureHalfScore(entry){
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  if(!rec) return {score:0, grade:null};
+  const dtype = DEX_TYPE_MAP[rec[3]];
+  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
+  if(!dtype || !x) return {score:0, grade:null};
+  let best = 0, bestGrade = null;
+  [70, 80].forEach(lv=>{
+    if(lv <= entry.level) return;                       // 已经到这个等级了就不算"未来"
+    const probe = Object.assign({}, entry, {level: lv});
+    let g = null;
+    try{ g = boxEntryGraduationGrade(probe, x, dtype); }catch(e){ g = null; }
+    const s = g ? PVP_SCORE_MAP[g] : null;
+    if(s != null && s > best){ best = s; bestGrade = g; }
+  });
+  return {score: best/2, grade: bestGrade};
+}
+
+/* 把一组条目汇总成一份战绩。站长要求【所有个体都计分，不按物种合并】——
+   同一个物种养了三只大毕业就是三份分，盒子本身的规模也是战力的一部分。 */
+/* 欧非分（第二个榜）＝ 总分 ÷ 捕捉次数 × 100，读作"每 100 次捕捉攒下多少战力"。
+
+   为什么分母不能用"已录入的只数"：差的宝可梦用户根本不会录进盒子，分母是用户自己挑出来的，
+   于是"录得越认真分越低"，激励方向是反的，谁都能靠只录极品把均分刷到接近满分。
+   也不能用"最强的N只平均"：抓1万只的人前30必然强过抓1000只的人前30，那仍然是规模的代理量。
+   捕捉次数是唯一跟"录不录入"无关的外部锚点，代价是它由用户自填、不可验证——所以有下面两道兜底，
+   页面上也明说了这个数不可验证。
+
+   闪光和不闪光【共用同一个分母】(总捕捉数)：游戏里根本没有"闪光捕捉数"这个统计。
+   好处是闪光那侧的欧非分天然把"闪光有多难出"也算进去了——同样都除以总捕捉数，
+   闪光出得多、出得好的人分才高。 */
+const PVP_CATCH_MIN = 50;        // 捕捉次数低于这个数不参与欧非榜：抓1次出1只极品会算出无限欧
+function pvpLuckScore(total, floorN, catchCount){
+  // 兜底一：分母不得小于整盒只数——录了300只却说只抓过200次，物理上不可能。
+  // 这条不需要信任用户任何输入，是纯粹的一致性约束。用整盒只数(不是计分只数)：
+  // 判不出档位的那些也是一只只抓来的，同样占捕捉次数
+  const n = (catchCount!=null && isFinite(catchCount)) ? Math.max(catchCount, floorN) : null;
+  if(n == null || n <= 0) return {score:null, denom:null, reason:'none'};
+  // 兜底二：样本太小的不给分，只提示
+  if(n < PVP_CATCH_MIN) return {score:null, denom:n, reason:'few'};
+  return {score: total/n*100, denom:n, reason:null};
+}
+function pvpAggregate(rows, unrated, boxCount, catchCount, floorN){
+  const list = rows.slice().sort((a,b)=> (b.score-a.score) || (b.eff-a.eff));
+  const total = list.reduce((s,r)=> s+r.score, 0);
+  const dist = new Map();        // 档位名 -> 只数（未来半价的单独归一类）
+  list.forEach(r=>{
+    const k = r.future ? '未来可期' : r.cat;
+    dist.set(k, (dist.get(k)||0) + 1);
+  });
+  const ratedCount = list.length;
+  const luck = pvpLuckScore(total, floorN, catchCount);
+  return { list, total, dist, unrated, boxCount, ratedCount, luck };
+}
+/* 闪光和不闪光完全分开算两套分、两个榜——闪光是稀有度而不是强度，混在一起
+   既让闪光党的分虚高、也让非闪光党没法比。两边各自独立累计总分/均分。 */
+function pvpBuildMyStats(){
+  const rows = {normal:[], shiny:[]};
+  const unrated = {normal:0, shiny:0};
+  const boxCount = {normal:0, shiny:0};
+  (typeof boxData!=='undefined' ? boxData : []).forEach(entry=>{
+    if(!entry || !entry.dex) return;
+    const g = entry.shiny ? 'shiny' : 'normal';
+    boxCount[g]++;
+    const cat = pvpCategoryOf(entry);
+    const base = cat==null ? null : PVP_SCORE_MAP[cat];
+    if(base == null){ unrated[g]++; return; }
+    let score = base, future = null;
+    if(score === 0){
+      const f = pvpFutureHalfScore(entry);
+      if(f.score > 0){ score = f.score; future = f.grade; }
+    }
+    rows[g].push({entry, cat, score, future, shiny:(g==='shiny'), eff: pvpEntryEff(entry)});
+  });
+  // 闪光和不闪光的分数各算各的，但欧非分共用同一个分母(总捕捉数)——游戏里没有"闪光捕捉数"。
+  // 分母下限用整盒只数(闪光+不闪光一起)：每一只都是抓来的，都占捕捉次数
+  const totalBox = (typeof boxData!=='undefined') ? boxData.length : 0;
+  const catches = userPrefs.pvpCatchTotal;
+  return {
+    normal: pvpAggregate(rows.normal, unrated.normal, boxCount.normal, catches, totalBox),
+    shiny:  pvpAggregate(rows.shiny,  unrated.shiny,  boxCount.shiny,  catches, totalBox),
+    boxCount: totalBox
+  };
+}
+function pvpEntryEff(entry){
+  try{ return boxEntryEfficiency(entry) || 0; }catch(e){ return 0; }
+}
+function pvpFmt(n, dec){ return Number(n).toFixed(dec==null?0:dec); }
+
+// 分数可能带 .5（未来可期是半价分），整数就不显示小数点
+function pvpFmtScore(n){ return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10); }
+
+/* ---- 「我的战绩」视图。闪光/不闪光两套分完全独立，用页签切 ---- */
+var pvpShinyView = 'normal';   // 'normal' | 'shiny'
+function pvpRenderMe(){
+  const el = document.getElementById('pvpPaneMe'); if(!el) return;
+  const all = pvpBuildMyStats();
+  if(!all.boxCount){
+    el.innerHTML = `<div class="pvp-card"><div class="pvp-empty">宝可梦盒还是空的。<br>先去盒子里加几只，这里就会自动算出战力总分。</div></div>`;
+    return;
+  }
+  const st = all[pvpShinyView];
+  const segHtml = `<div class="pvp-seg">
+    <div class="pvp-seg-b${pvpShinyView==='normal'?' active':''}" data-pvpshiny="normal">不闪光 ${pvpFmtScore(all.normal.total)}分</div>
+    <div class="pvp-seg-b${pvpShinyView==='shiny'?' active':''}" data-pvpshiny="shiny">✨闪光 ${pvpFmtScore(all.shiny.total)}分</div>
+  </div>`;
+  const distArr = [...st.dist.entries()]
+    .sort((a,b)=> (PVP_SCORE_MAP[b[0]]==null?-1:PVP_SCORE_MAP[b[0]]) - (PVP_SCORE_MAP[a[0]]==null?-1:PVP_SCORE_MAP[a[0]]));
+  const distHtml = st.ratedCount
+    ? `<div class="pvp-dist">${distArr.map(([k,n])=> `<div class="pvp-dist-seg" style="width:${n/st.ratedCount*100}%;background:${pvpCatColor(k)}" title="${k} ${n}只"></div>`).join('')}</div>
+       <div class="pvp-legend">${distArr.map(([k,n])=> `<span class="pvp-legend-i"><span class="pvp-legend-dot" style="background:${pvpCatColor(k)}"></span>${k} ${n}</span>`).join('')}</div>`
+    : '';
+  const shown = st.list.slice(0, pvpListLimit);
+  const rowsHtml = shown.map((r,i)=>{
+    const e = r.entry;
+    const nm = e.nickname && e.nickname!==e.name ? `${e.nickname}<span style="color:#a49c8b;font-weight:700">（${e.name}）</span>` : (e.name||'—');
+    // 未来可期的那些：档位牌显示"未来XX"，分数右上角标个"半"提示是半价
+    const label = r.future ? ('未来'+r.future) : r.cat;
+    return `<div class="pvp-row">
+      <div class="pvp-row-rank">${i+1}</div>
+      <div class="pvp-av">${capB64Img(e.name)}</div>
+      <div class="pvp-row-main">
+        <div class="pvp-row-name">${nm}</div>
+        <div class="pvp-row-sub">Lv.${e.level}${r.future?' · 当前不合格，按未来档位半价计分':''}</div>
+      </div>
+      <span class="pvp-grade" style="background:${r.future?'#1291d6':pvpCatColor(r.cat)}">${label}</span>
+      <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
+    </div>`;
+  }).join('');
+  const moreBtn = st.list.length > pvpListLimit
+    ? `<button type="button" class="pvp-more-btn" id="pvpMoreBtn">还有 ${st.list.length-pvpListLimit} 只，展开更多</button>` : '';
+  const groupName = pvpShinyView==='shiny' ? '闪光' : '不闪光';
+  el.innerHTML = `
+    ${segHtml}
+    <div class="pvp-card">
+      <div class="pvp-card-t">我的${groupName}战力</div>
+      <div class="pvp-score-row">
+        <div class="pvp-score-box">
+          <div class="pvp-score-v">${pvpFmtScore(st.total)}</div>
+          <div class="pvp-score-k">总分</div>
+          <div class="pvp-score-sub">${st.ratedCount} 只累加</div>
+        </div>
+        <div class="pvp-score-box">
+          <div class="pvp-score-v">${st.luck.score!=null ? pvpFmt(st.luck.score,1) : '—'}</div>
+          <div class="pvp-score-k">欧非分</div>
+          <div class="pvp-score-sub">${
+            st.luck.score!=null ? ('每100次捕捉 · 分母'+st.luck.denom)
+            : st.luck.reason==='few' ? ('捕捉数需≥'+PVP_CATCH_MIN)
+            : '去设置填捕捉次数'}</div>
+        </div>
+      </div>
+      ${distHtml}
+    </div>
+    <div class="pvp-card">
+      <div class="pvp-card-t">${groupName}明细（${st.ratedCount} 只）</div>
+      <div class="isl-hint" style="margin-bottom:8px">每一只都单独计分，同物种养几只就加几份。盒子里另有 ${st.unrated} 只${groupName}判不出档位（副技能没选满、或组合本身判废），既不计分也不进均分的分母。</div>
+      ${st.list.length ? `<div class="pvp-list">${rowsHtml}</div>${moreBtn}` : `<div class="pvp-empty">还没有能判出档位的${groupName}宝可梦</div>`}
+    </div>`;
+  el.querySelectorAll('[data-pvpshiny]').forEach(b=> b.onclick = ()=>{
+    pvpShinyView = b.getAttribute('data-pvpshiny'); pvpListLimit = PVP_LIST_STEP; pvpRenderMe();
+  });
+  const mb = document.getElementById('pvpMoreBtn');
+  if(mb) mb.onclick = ()=>{ pvpListLimit += PVP_LIST_STEP; pvpRenderMe(); };
+}
+
+/* ---- 联网：上传我的成绩 / 退出排行 ----
+   上传的是【逐只记录】，不是汇总值——服务端会自己从记录重算总分和欧非分，
+   客户端报的汇总值它一概不采信（见后端 pvp.js 的 recalcAggregates）。
+   物种榜要用的面板明细也一并带上，省得再开一个接口回查。 */
+function pvpSnapshotRecords(){
+  const all = pvpBuildMyStats();
+  const out = [];
+  ['normal','shiny'].forEach(g=>{
+    all[g].list.forEach(r=>{
+      const e = r.entry;
+      out.push({
+        shiny: g==='shiny' ? 1 : 0,
+        dex: e.dex, name: e.name || '', level: e.level,
+        // future 记录传的是【能达到的那个档位】而不是当前档位：分数本来就是按未来档位折半算的，
+        // 传当前档位(必然是不合格=0分)会让后端的 score===PVP_SCORE[grade]/2 校验对不上、整单被拒
+        grade: r.future || r.cat,
+        future: r.future ? 1 : 0,
+        score: r.score, eff: r.eff,
+        detail: JSON.stringify({
+          nick: e.nickname || '', sel: e.selected || [],
+          inc: e.incAttr || null, dec: e.decAttr || null,
+          i2: e.ingChoice2 || null, i3: e.ingChoice3 || null,
+        }),
+      });
+    });
+  });
+  return out;
+}
+var pvpBoardCache = null, pvpBoardBusy = false;
+async function pvpPushMine(){
+  return authApi('/api/pvp/me', {method:'PUT', auth:true, body:{
+    catchTotal: userPrefs.pvpCatchTotal,
+    records: pvpSnapshotRecords(),
+  }});
+}
+async function pvpLeaveBoard(){
+  return authApi('/api/pvp/me', {method:'DELETE', auth:true});
+}
+
+/* ---- 「大家的榜」视图 ----
+   三个榜：总分榜/欧非榜是跨人比总量，物种榜是"同一只宝可梦谁练得好"。
+   物种榜跟前两个口径故意不同：总分是所有个体累加(盒子规模也算战力)，
+   物种榜每人只上榜自己最好的一只(否则一个人能把前十占满)。 */
+var pvpBoardKind = 'total';   // 'total' | 'luck' | 'species'
+var pvpSpeciesSel = null;     // 物种榜里点进去的那个 dex，null=还在物种网格
+var pvpIndexCache = null, pvpSpeciesCache = null;
+function pvpRenderBoard(){
+  const el = document.getElementById('pvpPaneBoard'); if(!el) return;
+  if(!authLoggedIn()){
+    el.innerHTML = `<div class="pvp-card"><div class="pvp-empty">排行榜要登录后才能看。<br>去「更多设置」登录一下。</div></div>`;
+    return;
+  }
+  const shiny = pvpShinyView==='shiny' ? 1 : 0;
+  const head = `
+    <div class="pvp-seg">
+      <div class="pvp-seg-b${pvpShinyView==='normal'?' active':''}" data-pvpshiny="normal">不闪光</div>
+      <div class="pvp-seg-b${pvpShinyView==='shiny'?' active':''}" data-pvpshiny="shiny">✨闪光</div>
+    </div>
+    <div class="pvp-seg">
+      <div class="pvp-seg-b${pvpBoardKind==='total'?' active':''}" data-pvpkind="total">总分榜</div>
+      <div class="pvp-seg-b${pvpBoardKind==='luck'?' active':''}" data-pvpkind="luck">欧非榜</div>
+      <div class="pvp-seg-b${pvpBoardKind==='species'?' active':''}" data-pvpkind="species">物种榜</div>
+    </div>`;
+  const bind = ()=>{
+    el.querySelectorAll('[data-pvpshiny]').forEach(b=> b.onclick = ()=>{
+      pvpShinyView=b.getAttribute('data-pvpshiny');
+      pvpBoardCache=null; pvpIndexCache=null; pvpSpeciesCache=null; pvpRenderBoard();
+    });
+    el.querySelectorAll('[data-pvpkind]').forEach(b=> b.onclick = ()=>{
+      pvpBoardKind=b.getAttribute('data-pvpkind');
+      pvpSpeciesSel=null; pvpBoardCache=null; pvpRenderBoard();
+    });
+  };
+  if(pvpBoardKind==='species'){ pvpRenderSpecies(el, head, bind, shiny); return; }
+  const key = pvpBoardKind+'|'+shiny;
+  if(!pvpBoardCache || pvpBoardCache.key!==key){
+    el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">加载中…</div></div>`;
+    bind();
+    if(pvpBoardBusy) return;
+    pvpBoardBusy = true;
+    authApi(`/api/pvp/board?kind=${pvpBoardKind}&shiny=${shiny}&limit=50`, {auth:true})
+      .then(d=>{ pvpBoardCache = Object.assign({key}, d); })
+      .catch(e=>{ pvpBoardCache = {key, error: e.message||'加载失败'}; })
+      .then(()=>{ pvpBoardBusy = false; pvpRenderBoard(); });
+    return;
+  }
+  const d = pvpBoardCache;
+  if(d.error){
+    el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`;
+    bind(); return;
+  }
+  const showNames = userPrefs.pvpShowNamesOn !== false;
+  const isLuck = pvpBoardKind==='luck';
+  const fmt = v => isLuck ? pvpFmt(v,1) : pvpFmtScore(v);
+  const rowsHtml = (d.list||[]).map(r=>{
+    // 隐藏人名时，只有自己那一行仍然显示"我"，否则用户根本找不到自己在哪
+    const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
+    return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
+      <div class="pvp-row-rank">${r.rank}</div>
+      <div class="pvp-row-main">
+        <div class="pvp-row-name">${who}</div>
+        <div class="pvp-row-sub">${r.rated} 只计分${isLuck?(' · 分母 '+r.catchTotal):''}</div>
+      </div>
+      <div class="pvp-pt" style="width:auto">${fmt(r.score)}</div>
+    </div>`;
+  }).join('');
+  const meHtml = d.me
+    ? `<div class="pvp-score-row" style="margin-bottom:10px">
+         <div class="pvp-score-box"><div class="pvp-score-v">#${d.me.rank}</div><div class="pvp-score-k">我的名次</div><div class="pvp-score-sub">共 ${d.participants} 人</div></div>
+         <div class="pvp-score-box"><div class="pvp-score-v">${pvpFmt(d.me.percentile,0)}%</div><div class="pvp-score-k">百分位</div><div class="pvp-score-sub">超过了这么多人</div></div>
+       </div>`
+    : `<div class="isl-hint" style="margin-bottom:10px">你还没参加排行${isLuck?'，或者没填总捕捉数':''}，所以榜上没有你。去「设置」里打开。</div>`;
+  el.innerHTML = head + `<div class="pvp-card">
+      <div class="pvp-card-t">${pvpShinyView==='shiny'?'闪光':'不闪光'}${isLuck?'欧非榜':'总分榜'}（${d.participants} 人）</div>
+      ${meHtml}
+      ${isLuck?`<div class="isl-hint" style="margin-bottom:8px">欧非分 ＝ 总分 ÷ 总捕捉数 × 100。分母是各人自填的，仅供娱乐。</div>`:''}
+      ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
+    </div>`;
+  bind();
+}
+
+/* ---- 物种榜：先出一张头像网格（只列真有人上榜的物种，免得点进去一片空），点进去看单个物种的榜 ---- */
+function pvpRenderSpecies(el, head, bind, shiny){
+  // 二级页：某个物种的榜
+  if(pvpSpeciesSel){
+    const key = pvpSpeciesSel+'|'+shiny;
+    if(!pvpSpeciesCache || pvpSpeciesCache.key!==key){
+      el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">加载中…</div></div>`;
+      bind();
+      if(pvpBoardBusy) return;
+      pvpBoardBusy = true;
+      authApi(`/api/pvp/species?dex=${encodeURIComponent(pvpSpeciesSel)}&shiny=${shiny}&limit=50`, {auth:true})
+        .then(d=>{ pvpSpeciesCache = Object.assign({key}, d); })
+        .catch(e=>{ pvpSpeciesCache = {key, error:e.message||'加载失败'}; })
+        .then(()=>{ pvpBoardBusy=false; pvpRenderBoard(); });
+      return;
+    }
+    const d = pvpSpeciesCache;
+    const backBtn = `<button type="button" class="pvp-more-btn" id="pvpSpBack" style="margin:0 0 10px">‹ 返回物种列表</button>`;
+    if(d.error){ el.innerHTML = head + backBtn + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`; bind(); pvpWireSpeciesBack(); return; }
+    const showNames = userPrefs.pvpShowNamesOn !== false;
+    const spName = (d.list && d.list[0]) ? d.list[0].name : pvpSpeciesSel;
+    const rowsHtml = (d.list||[]).map(r=>{
+      const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
+      const label = r.future ? ('未来'+r.grade) : r.grade;
+      return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
+        <div class="pvp-row-rank">${r.rank}</div>
+        <div class="pvp-av">${capB64Img(r.name)}</div>
+        <div class="pvp-row-main">
+          <div class="pvp-row-name">${who}</div>
+          <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}</div>
+        </div>
+        <span class="pvp-grade" style="background:${r.future?'#1291d6':pvpCatColor(r.grade)}">${label}</span>
+        <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
+      </div>`;
+    }).join('');
+    el.innerHTML = head + backBtn + `<div class="pvp-card">
+      <div class="pvp-card-t">${spName}${shiny?'（闪光）':''}榜</div>
+      <div class="isl-hint" style="margin-bottom:8px">每人只上榜自己最强的那一只，同分按效率值排。</div>
+      ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">这只还没有人上榜</div>`}
+    </div>`;
+    bind(); pvpWireSpeciesBack();
+    return;
+  }
+  // 一级页：物种网格
+  const key = 'idx|'+shiny;
+  if(!pvpIndexCache || pvpIndexCache.key!==key){
+    el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">加载中…</div></div>`;
+    bind();
+    if(pvpBoardBusy) return;
+    pvpBoardBusy = true;
+    authApi(`/api/pvp/index?shiny=${shiny}`, {auth:true})
+      .then(d=>{ pvpIndexCache = Object.assign({key}, d); })
+      .catch(e=>{ pvpIndexCache = {key, error:e.message||'加载失败'}; })
+      .then(()=>{ pvpBoardBusy=false; pvpRenderBoard(); });
+    return;
+  }
+  const d = pvpIndexCache;
+  if(d.error){ el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`; bind(); return; }
+  const gridHtml = (d.species||[]).map(s=>
+    `<div class="pvp-sp" data-pvpdex="${s.dex}">
+       <div class="pvp-av">${capB64Img(s.name)}</div>
+       <div class="pvp-sp-n">${s.name}</div>
+       <div class="pvp-sp-c">${s.players} 人</div>
+     </div>`).join('');
+  el.innerHTML = head + `<div class="pvp-card">
+    <div class="pvp-card-t">物种榜（${(d.species||[]).length} 种有人上榜）</div>
+    <div class="isl-hint" style="margin-bottom:10px">点一只看它的榜。只列出真有人上传过的物种。</div>
+    ${gridHtml ? `<div class="pvp-grid">${gridHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
+  </div>`;
+  bind();
+  el.querySelectorAll('[data-pvpdex]').forEach(c=> c.onclick = ()=>{
+    pvpSpeciesSel = c.getAttribute('data-pvpdex'); pvpSpeciesCache = null; pvpRenderBoard();
+  });
+}
+// 返回按钮绑定：上面两处分支都要用，抽出来避免在分支里重复定义同名函数
+function pvpWireSpeciesBack(){
+  const b = document.getElementById('pvpSpBack');
+  if(b) b.onclick = ()=>{ pvpSpeciesSel = null; pvpSpeciesCache = null; pvpRenderBoard(); };
+}
+
+/* ---- 「设置」视图：参加排行 + 是否显示人名 ---- */
+function pvpRenderSet(){
+  const el = document.getElementById('pvpPaneSet'); if(!el) return;
+  const joined = !!userPrefs.pvpJoinOn;
+  const names = userPrefs.pvpShowNamesOn !== false;
+  const catches = userPrefs.pvpCatchTotal;
+  const boxN = (typeof boxData!=='undefined') ? boxData.length : 0;
+  el.innerHTML = `
+    <div class="pvp-card">
+      <div class="pvp-card-t">总捕捉数（欧非分的分母）</div>
+      <input type="number" class="pvp-input" id="pvpCatchInput" min="0" step="1"
+             placeholder="填你的总捕捉数，闪光和不闪光共用这一个数"
+             value="${catches!=null?catches:''}">
+      <div class="isl-hint" style="margin-top:9px">
+        欧非分 ＝ 总分 ÷ 总捕捉数 × 100，读作"每 100 次捕捉攒下多少战力"。
+        用捕捉数而不是"盒子里录了几只"当分母，是因为差的宝可梦大家根本不会录进来，
+        拿录入数当分母等于"录得越认真分越低"。<br>
+        这个数没法验证，全靠自觉。两道兜底：分母不会低于你盒子里的只数（现在是 ${boxN} 只，
+        填得比这还小会自动抬上去）；总捕捉数不到 ${PVP_CATCH_MIN} 的不参与欧非榜。
+        榜单上会连分母一起显示，填得离谱大家都看得见。
+      </div>
+    </div>
+    <div class="pvp-card">
+      <div class="pvp-card-t">参加排行</div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">把我的成绩放进排行榜</div>
+          <div class="mf-toggle-hint" id="pvpJoinHint">${joined?'已参加':'未参加（默认）'}</div>
+        </div>
+        <div class="mf-switch${joined?' on':''}" id="pvpJoinSwitch"></div>
+      </div>
+      <div class="isl-hint" style="margin-top:9px">
+        默认不参加。打开后会把盒子里每一只能判出档位的宝可梦的成绩快照（物种、等级、档位、
+        效率、副技能与性格）和你的账号名一起上传，供其他人在榜单里看到。
+        关掉即从服务器彻底删除，不留残留。不打开也可以照常看榜，只是自己不出现在里面。
+      </div>
+      ${userPrefs.pvpJoinOn ? `<button type="button" class="pvp-more-btn" id="pvpRefreshBtn">重新上传我的成绩</button>
+      <div class="isl-hint" style="margin-top:7px">盒子或总捕捉数改过之后，榜上还是上次上传的成绩，点这里同步。</div>` : ''}
+    </div>
+    <div class="pvp-card">
+      <div class="pvp-card-t">我想看到多少</div>
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">榜单显示人名</div>
+          <div class="mf-toggle-hint" id="pvpNamesHint">${names?'显示人名':'只看位次和百分位'}</div>
+        </div>
+        <div class="mf-switch${names?' on':''}" id="pvpNamesSwitch"></div>
+      </div>
+      <div class="isl-hint" style="margin-top:9px">
+        关掉之后榜单只剩名次、分数和你的百分位，所有人名都会隐藏——包括比你强的和比你弱的。
+        这个开关只改你自己看到的样子，不影响别人看不看得到你（那个由上面的「参加排行」决定）。
+      </div>
+    </div>`;
+  const js = document.getElementById('pvpJoinSwitch');
+  if(js) js.onclick = async ()=>{
+    if(!authLoggedIn()){ alert('参加排行需要先登录（在「更多设置」里）。'); return; }
+    const want = !userPrefs.pvpJoinOn;
+    js.classList.toggle('on', want);
+    const hint = document.getElementById('pvpJoinHint');
+    if(hint) hint.textContent = want ? '上传中…' : '退出中…';
+    try{
+      // 先跟服务器确认成功再落本地开关。反过来的话网络一失败，本地显示"已参加"
+      // 而库里其实没有你，用户以为自己在榜上、实际没有——这个方向的错更难发现
+      if(want) await pvpPushMine(); else await pvpLeaveBoard();
+      userPrefs.pvpJoinOn = want;
+      saveUserPrefs();
+      pvpBoardCache = null;
+    }catch(e){
+      alert((want?'加入排行失败：':'退出排行失败：') + (e.message||'出错了'));
+    }
+    pvpRenderSet(); pvpRenderBoard();
+  };
+  const ns = document.getElementById('pvpNamesSwitch');
+  if(ns) ns.onclick = ()=>{
+    userPrefs.pvpShowNamesOn = !(userPrefs.pvpShowNamesOn !== false);
+    saveUserPrefs(); pvpRenderSet(); pvpRenderBoard();
+  };
+  const rb = document.getElementById('pvpRefreshBtn');
+  if(rb) rb.onclick = async ()=>{
+    rb.disabled = true; rb.textContent = '上传中…';
+    try{ const d = await pvpPushMine(); pvpBoardCache = null; rb.textContent = '已上传 '+d.saved+' 只'; }
+    catch(e){ alert('上传失败：'+(e.message||'出错了')); rb.textContent = '重新上传我的成绩'; }
+    setTimeout(()=>{ rb.disabled = false; pvpRenderSet(); }, 1500);
+  };
+  const ci = document.getElementById('pvpCatchInput');
+  if(ci) ci.onchange = ()=>{
+    const v = ci.value.trim();
+    const n = v==='' ? null : Math.max(0, Math.floor(Number(v)));
+    userPrefs.pvpCatchTotal = (n!=null && isFinite(n)) ? n : null;
+    saveUserPrefs();
+    // 分母变了，"我的战绩"那两个欧非分要跟着重算——不重渲染的话切回去还是旧值
+    pvpRenderSet();
+  };
+}
+
+const PVP_TABS = [['me','我的战绩'],['board','大家的榜'],['set','设置']];
+function pvpRenderTabs(){
+  const el = document.getElementById('pvpTabs'); if(!el) return;
+  el.innerHTML = PVP_TABS.map(t=> `<div class="isl-tab${pvpPane===t[0]?' active':''}" data-pvptab="${t[0]}">${t[1]}</div>`).join('');
+  el.querySelectorAll('[data-pvptab]').forEach(t=> t.onclick = ()=>{ pvpPane = t.getAttribute('data-pvptab'); pvpRenderAll(); });
+}
+function pvpRenderAll(){
+  pvpRenderTabs();
+  const me = document.getElementById('pvpPaneMe'), bd = document.getElementById('pvpPaneBoard'), se = document.getElementById('pvpPaneSet');
+  if(!me || !bd || !se) return;
+  me.style.display = pvpPane==='me' ? '' : 'none';
+  bd.style.display = pvpPane==='board' ? '' : 'none';
+  se.style.display = pvpPane==='set' ? '' : 'none';
+  if(pvpPane==='me') pvpRenderMe();
+  else if(pvpPane==='board') pvpRenderBoard();
+  else pvpRenderSet();
+}
 
 /* ============ 宝可梦盒：首次渲染 ============ */
 renderBoxFilterRow();
