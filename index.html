@@ -2266,6 +2266,7 @@
    只有露给用户看的文案叫「土王PVP」——改标识符纯属churn，还要跟已部署的后端对齐 */
 .mf-hub-ic-pvp{ background:#c2554b; }
 .mf-hub-ic-friend{ background:#2f8f5e; }
+.mf-hub-ic-spwr{ background:#3f7fbf; }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
 .pvp-disclaimer{
@@ -2378,14 +2379,8 @@
   background:var(--paper); border:1.5px solid var(--line); border-radius:9px;
   padding:9px 12px; font-size:15px; font-weight:800; color:var(--ink);
 }
-/* 常驻岛屿多选：选中态高亮，未选中态压暗——跟站内其它多选按钮组一个调性 */
-.friend-isl-grid{ display:flex; flex-wrap:wrap; gap:7px; }
-.friend-isl-btn{
-  font-family:inherit; cursor:pointer; padding:7px 11px; border-radius:9px;
-  font-size:12px; font-weight:800; background:var(--paper); border:1.5px solid var(--line);
-  color:#8a8375; opacity:.6;
-}
-.friend-isl-btn.selected{ opacity:1; background:var(--accent); border-color:var(--accent); color:#fff; }
+/* 常驻岛屿多选：v3.31 改成跟睡意之力计算同款的地图背景按钮，直接复用 .spwr-isl-* 那套
+   CSS(3列定宽网格，不会横向滑动)，选中态复用它的 .active，不用再单独维护一份视觉规则 */
 .friend-isl-all-btn{
   font-family:inherit; cursor:pointer; padding:7px 11px; border-radius:9px;
   font-size:11.5px; font-weight:800; background:none; border:1px dashed var(--line); color:var(--accent-dk);
@@ -2433,6 +2428,52 @@
   color:var(--accent-dk); text-align:right; letter-spacing:.5px;
 }
 .friend-empty{ text-align:center; color:#9a927f; padding:30px 10px; font-size:13px; font-weight:700; }
+
+/* ============ v3.30 睡意之力计算 ============ */
+/* 岛屿按钮直接拿地图截图(island_assets/mapN.png)做背景，跟岛屿评分子页那套纯色标签不是一回事 */
+.spwr-isl-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:16px; }
+.spwr-isl-btn{
+  position:relative; aspect-ratio:1/1; border-radius:10px; border:2px solid transparent;
+  background-size:cover; background-position:center; overflow:hidden; padding:0;
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.spwr-isl-btn::after{
+  content:''; position:absolute; left:0; right:0; bottom:0; height:60%;
+  background:linear-gradient(to top, rgba(0,0,0,.75), rgba(0,0,0,0)); pointer-events:none;
+}
+.spwr-isl-btn.active{ border-color:var(--accent); box-shadow:0 0 0 2px var(--accent) inset; }
+.spwr-isl-name{
+  position:absolute; left:6px; right:6px; bottom:6px; z-index:1;
+  color:#fff; font-size:12px; font-weight:900; text-shadow:0 1px 3px rgba(0,0,0,.6);
+  text-align:left; line-height:1.25;
+}
+.spwr-isl-btn.spwr-isl-nodata{ opacity:.5; cursor:not-allowed; }
+.spwr-isl-badge{
+  position:absolute; top:6px; right:6px; z-index:1; background:rgba(0,0,0,.55); color:#fff;
+  font-size:10px; font-weight:800; padding:2px 6px; border-radius:6px;
+}
+.spwr-inputs{ margin-bottom:14px; }
+.spwr-input-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:10px; }
+.spwr-lab{ font-size:12.5px; font-weight:800; color:#7a7568; flex:0 0 auto; }
+.spwr-input{
+  flex:1 1 auto; max-width:160px; text-align:right; font-size:14px; font-weight:800;
+  border:1px solid var(--line); border-radius:8px; padding:7px 10px; color:var(--ink); background:var(--paper);
+}
+.spwr-calc-btn{
+  width:100%; padding:11px; border-radius:10px; border:none; background:var(--accent); color:#fff;
+  font-size:14px; font-weight:900; cursor:pointer;
+}
+.spwr-result-card{ margin-top:14px; }
+.spwr-sec-t{ font-size:12.5px; font-weight:900; color:var(--ink); margin:14px 0 6px; }
+.spwr-sec-t:first-child{ margin-top:0; }
+.spwr-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:8px 2px; border-bottom:1px solid var(--line);
+}
+.spwr-row:last-child{ border-bottom:none; }
+.spwr-row-k{ font-size:12.5px; font-weight:900; color:var(--ink); flex:0 0 auto; }
+.spwr-row-v{ font-size:12.5px; font-weight:800; color:#6a6558; text-align:right; }
+.spwr-row-warn{ color:#c0392b; }
 
 /* ============ v3.19 岛屿评分 ============ */
 .isl-tabs{ display:flex; gap:6px; margin-bottom:12px; }
@@ -3128,6 +3169,14 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="spwr">
+        <span class="mf-hub-ic mf-hub-ic-spwr"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C9 6.5 6.5 10 6.5 13.5A5.5 5.5 0 0 0 12 19a5.5 5.5 0 0 0 5.5-5.5C17.5 10 15 6.5 12 3Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 21.5v-2.6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">睡意之力计算</span>
+          <span class="mf-hub-d">选岛屿、填当前睡意之力，算出各组队规模的分数和起床时间</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
     </div>
   </div>
 
@@ -3413,6 +3462,15 @@
     <div id="friendPaneHall"></div>
     <div id="friendPaneSet" style="display:none;"></div>
   </div><!-- /#mfSubFriend -->
+
+  <!-- v3.30 睡意之力计算：选岛屿+填当前睡意之力/倍率，算各组队规模分数、起床时间、拆觉能量 -->
+  <div class="mf-sub" id="mfSubSpwr" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">睡意之力计算</span>
+    </div>
+    <div id="spwrRoot"></div>
+  </div><!-- /#mfSubSpwr -->
 
   </div><!-- /#page2 -->
 
@@ -14330,7 +14388,9 @@ function updatePageActionBar(){
   const onPvp = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'pvp';
   // v3.29：好友帖同理，交友大厅/信息设置都用不到这两颗按钮
   const onFriend = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'friend';
-  const show = !(inDetail || inBox || onHub || onSettings || onPvp || onFriend || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
+  // v3.30：睡意之力计算同理，没有可调的计算参数
+  const onSpwr = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'spwr';
+  const show = !(inDetail || inBox || onHub || onSettings || onPvp || onFriend || onSpwr || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -16889,7 +16949,8 @@ function mfShowSub(sub){
   const plan = document.getElementById('mfSubPlan');
   const pvp = document.getElementById('mfSubPvp');
   const friend = document.getElementById('mfSubFriend');
-  if(!hub || !effi || !rank || !island || !plan || !pvp || !friend) return;
+  const spwr = document.getElementById('mfSubSpwr');
+  if(!hub || !effi || !rank || !island || !plan || !pvp || !friend || !spwr) return;
   hub.style.display = mfSubView ? 'none' : '';
   effi.style.display = mfSubView === 'effi' ? '' : 'none';
   rank.style.display = mfSubView === 'rank' ? '' : 'none';
@@ -16897,10 +16958,12 @@ function mfShowSub(sub){
   plan.style.display = mfSubView === 'plan' ? '' : 'none';
   pvp.style.display = mfSubView === 'pvp' ? '' : 'none';
   friend.style.display = mfSubView === 'friend' ? '' : 'none';
+  spwr.style.display = mfSubView === 'spwr' ? '' : 'none';
   if(mfSubView === 'island') islandRenderAll();
   else if(mfSubView === 'plan') planRenderAll();
   else if(mfSubView === 'pvp') pvpRenderAll();
   else if(mfSubView === 'friend') friendRenderAll();
+  else if(mfSubView === 'spwr') spwrRenderAll();
   else if(mfSubView === 'rank'){
     // 排名对比原来是独立主页面(page3)时的进场逻辑，挪进 hub 子页后原样保留：
     // 排名计算较重，先弹"排名计算中"再算，避免白屏卡顿；没选过面板就没数据可算，直接渲染即可
@@ -19694,14 +19757,18 @@ function friendRenderSet(){
     return;
   }
   const d = friendDraft;
-  const islGrid = FRIEND_ISLAND_TAGS.map(t=>
-    `<div class="friend-isl-btn${d.islands.includes(t.id)?' selected':''}" data-friendisl="${t.id}">${t.name}</div>`
-  ).join('');
+  // v3.31：岛屿按钮直接复用「睡意之力计算」那套地图背景网格（3列定宽，9个正好3行，不滑动）
+  const islGrid = FRIEND_ISLAND_TAGS.map(t=>{
+    const meta = SPWR_ISLANDS.find(x=>x.id===t.id);
+    return `<button type="button" class="spwr-isl-btn${d.islands.includes(t.id)?' active':''}" data-friendisl="${t.id}" style="background-image:url('island_assets/${meta?meta.img:''}.png')">
+      <span class="spwr-isl-name">${t.name}</span>
+    </button>`;
+  }).join('');
   el.innerHTML = `
     <div class="friend-card">
       <div class="friend-card-t">好友码</div>
       <div class="friend-field">
-        <input type="text" class="friend-code-input" id="friendCodeInput" inputmode="numeric"
+        <input type="text" class="friend-code-input" id="friendCodeInput" inputmode="numeric" autocomplete="off"
                placeholder="0000-0000-0000" maxlength="14" value="${friendFmtCode(d.friendCode)}">
       </div>
     </div>
@@ -19716,11 +19783,11 @@ function friendRenderSet(){
       </div>
       <div class="friend-field">
         <span class="friend-field-lab">登入天数</span>
-        <input type="number" class="friend-days-input" id="friendDaysInput" min="0" max="9999" value="${d.loginDays}">
+        <input type="number" class="friend-days-input" id="friendDaysInput" min="0" max="9999" autocomplete="off" value="${d.loginDays}">
       </div>
       <div class="friend-field">
         <span class="friend-field-lab">常驻岛屿（不选＝全部岛屿）</span>
-        <div class="friend-isl-grid" id="friendIslGrid">${islGrid}</div>
+        <div class="spwr-isl-grid" id="friendIslGrid">${islGrid}</div>
       </div>
     </div>
     <div class="friend-card">
@@ -19888,6 +19955,173 @@ function friendRenderAll(){
   hall.style.display = friendPane==='hall' ? '' : 'none';
   set.style.display = friendPane==='set' ? '' : 'none';
   if(friendPane==='hall') friendRenderHall(); else friendRenderSet();
+}
+
+/* ============ v3.30 睡意之力计算 ============
+   给定岛屿 + 组队规模(3~8只)，玩家私人贡献的"当前睡意之力"落在哪个能量区间对应多少分(0~100)，
+   以及要睡多久/几点能睡到这个分。数据来自站主自己整理的表，跟寶可夢盒官方"研究分数"是同一套东西。
+   六岛/七岛/一EX(萌绿之岛EX)/二EX(天青沙滩EX) 四档数值经确认全部相同(不是复制粘贴漏改)，
+   属于游戏本身的设计——这四座岛按门槛难度是同一档。 */
+const SPWR_ISLANDS = [
+  {id:'1',   name:'萌绿之岛',     img:'map1'},
+  {id:'2',   name:'天青沙滩',     img:'map2'},
+  {id:'3',   name:'灰褐洞窟',     img:'map3'},
+  {id:'4',   name:'白花雪原',     img:'map4'},
+  {id:'5',   name:'宝蓝湖畔',     img:'map5'},
+  {id:'6',   name:'黄金旧发电厂', img:'map6'},
+  {id:'7',   name:'琥珀溪谷',     img:'map7'},
+  {id:'EX1', name:'萌绿之岛EX',   img:'map10001'},
+  {id:'EX2', name:'天青沙滩EX',   img:'map10002'},
+];
+const SPWR_TIERS = {
+  '1':  {'3':[0,965230],   '4':[965232,2073694],  '5':[2073695,4626378],  '6':[4626380,8331415],  '7':[8331417,19563552], '8':[19563553,null]},
+  '2':  {'3':[0,1574329],  '4':[1574330,3511233], '5':[3511234,7162380],  '6':[7162381,13488262], '7':[13488264,30491709],'8':[30491710,null]},
+  '3':  {'3':[0,1829446],  '4':[1829448,4626378], '5':[4626380,9935822],  '6':[9935824,19563552], '7':[19563553,43706481],'8':[43706487,null]},
+  '4':  {'3':[0,2821379],  '4':[2821380,7162380], '5':[7162381,15469182], '6':[15469184,28772755],'7':[28772756,65693394],'8':[65693395,null]},
+  '5':  {'3':[0,3153519],  '4':[3153520,7730433], '5':[7730435,16659805], '6':[16659808,30491709],'7':[30491710,68664242],'8':[68664245,null]},
+  '6':  {'3':[0,6010228],  '4':[6010340,14339724],'5':[14339760,30491702],'6':[30491720,49915440],'7':[49915476,97371659],'8':[97371672,null]},
+  '7':  {'3':[0,6010228],  '4':[6010340,14339724],'5':[14339760,30491702],'6':[30491720,49915440],'7':[49915476,97371659],'8':[97371672,null]},
+  'EX1':{'3':[0,6010228],  '4':[6010340,14339724],'5':[14339760,30491702],'6':[30491720,49915440],'7':[49915476,97371659],'8':[97371672,null]},
+  'EX2':{'3':[0,6010228],  '4':[6010340,14339724],'5':[14339760,30491702],'6':[30491720,49915440],'7':[49915476,97371659],'8':[97371672,null]},
+};
+const SPWR_ORDER = ['3','4','5','6','7','8'];
+var spwrIsland = '1';
+var spwrEnergyStr = '';
+var spwrMultStr = '1';
+var spwrFinalEnergy = null;
+var spwrResult = null;      // {mainRows,secondRows,splitRows} | {error} | null(还没算过)
+
+function spwrFmt(n){ return Math.round(n).toLocaleString('zh-CN'); }
+function spwrWakeUpTime(score){
+  const totalTime = score * 5.1;
+  let detail = Math.floor(totalTime/60) + 'h' + Math.ceil(totalTime%60).toString().padStart(2,'0') + 'm， ';
+  const newDate = new Date(Date.now() + totalTime*1000*60);
+  detail += newDate.getHours().toString().padStart(2,'0') + ':' + newDate.getMinutes().toString().padStart(2,'0');
+  return detail;
+}
+// 逐档算分/算拆觉，算法照抄站主原脚本——包括那处"energy 和 energy*100 两种单位混用"的写法：
+// 正常游戏数值下 energy*100 永远远大于任何门槛，这条分支只在能量填得极小时才会触发，是防御性写法不是笔误
+function spwrCompute(islandId, energy){
+  const map = SPWR_TIERS[islandId];
+  if(!map) return null;
+  let mainRows = [], secondRows = [], stopFlag = false;
+  for(const k of SPWR_ORDER){
+    const pkEnergy = map[k];
+    if(pkEnergy[1]!=null && energy > pkEnergy[1]) continue;
+    if(stopFlag) continue;
+    const minEnergy = pkEnergy[0];
+    if(energy*100 < minEnergy){
+      stopFlag = true;
+      const need = Math.ceil(minEnergy/100);
+      mainRows.push({count:k, need:true, needEnergy:need, short:need-energy});
+    } else {
+      const score = Math.ceil(minEnergy/energy);
+      mainRows.push({count:k, need:false, score, wake:spwrWakeUpTime(score)});
+      if(score<=50) secondRows.push({count:k, score:100-score, wake:spwrWakeUpTime(100-score)});
+    }
+  }
+  const sixEne = map['6'][0], sevenEne = map['7'][0], eightEne = map['8'][0];
+  const combos = [['7+6',sevenEne+sixEne],['7+7',sevenEne+sevenEne],['8+6',eightEne+sixEne],['8+7',eightEne+sevenEne],['8+8',eightEne+eightEne]];
+  let splitRows = [];
+  if(energy*100 < eightEne*2){
+    combos.forEach(([label,pkEnergy])=>{
+      if(energy*100 > pkEnergy) return;
+      if(energy*100 < pkEnergy){
+        const need = Math.ceil(pkEnergy/100);
+        splitRows.push({label, needEnergy:need, short:need-energy});
+      }
+    });
+  }
+  return {mainRows, secondRows, splitRows};
+}
+function spwrDoCalc(){
+  const eInput = document.getElementById('spwrEnergyInput');
+  const mInput = document.getElementById('spwrMultInput');
+  const e = Number(eInput && eInput.value);
+  const m = Number(mInput && mInput.value);
+  if(!eInput || !eInput.value || !isFinite(e) || e<=0){
+    spwrResult = {error:'先填一下"当前睡意之力"，得是个大于 0 的数'};
+    spwrRenderResult();
+    return;
+  }
+  const mult = (isFinite(m) && m>0) ? m : 1;
+  spwrFinalEnergy = Math.round(e*mult);
+  spwrResult = spwrCompute(spwrIsland, spwrFinalEnergy);
+  spwrRenderResult();
+}
+function spwrRenderResult(){
+  const box = document.getElementById('spwrResultBox');
+  if(!box) return;
+  if(!spwrResult){ box.innerHTML = ''; return; }
+  if(spwrResult.error){ box.innerHTML = `<div class="isl-hint">${spwrResult.error}</div>`; return; }
+  const meta = SPWR_ISLANDS.find(x=>x.id===spwrIsland);
+  const r = spwrResult;
+  let html = `<div class="spwr-result-card">`;
+  html += `<div class="isl-hint">${meta?meta.name:''} · 最终睡意之力 ${spwrFmt(spwrFinalEnergy)}</div>`;
+  html += `<div class="spwr-sec-t">组队规模对应分数</div>`;
+  r.mainRows.forEach(row=>{
+    if(row.need){
+      html += `<div class="spwr-row"><span class="spwr-row-k">${row.count}只</span><span class="spwr-row-v spwr-row-warn">还差 ${spwrFmt(row.short)}（共需 ${spwrFmt(row.needEnergy)}）</span></div>`;
+    } else {
+      html += `<div class="spwr-row"><span class="spwr-row-k">${row.count}只</span><span class="spwr-row-v">${row.score}分， ${row.wake}</span></div>`;
+    }
+  });
+  if(r.secondRows.length){
+    html += `<div class="spwr-sec-t">二觉拆觉（第二段建议）</div>`;
+    r.secondRows.forEach(row=>{
+      html += `<div class="spwr-row"><span class="spwr-row-k">${row.count}只</span><span class="spwr-row-v">${row.score}分， ${row.wake}</span></div>`;
+    });
+  }
+  if(r.splitRows.length){
+    html += `<div class="spwr-sec-t">拆觉能量（两段睡眠凑组合）</div>`;
+    r.splitRows.forEach(row=>{
+      html += `<div class="spwr-row"><span class="spwr-row-k">${row.label}</span><span class="spwr-row-v spwr-row-warn">还差 ${spwrFmt(row.short)}（共需 ${spwrFmt(row.needEnergy)}）</span></div>`;
+    });
+  }
+  html += `</div>`;
+  box.innerHTML = html;
+}
+function spwrRenderAll(){
+  const root = document.getElementById('spwrRoot');
+  if(!root) return;
+  const gridHtml = SPWR_ISLANDS.map(x=>{
+    const noData = !SPWR_TIERS[x.id];
+    const sel = spwrIsland===x.id;
+    return `<button type="button" class="spwr-isl-btn${sel?' active':''}${noData?' spwr-isl-nodata':''}"
+      data-spwrisl="${x.id}" style="background-image:url('island_assets/${x.img}.png')"${noData?' disabled':''}>
+      <span class="spwr-isl-name">${x.name}</span>
+      ${noData?'<span class="spwr-isl-badge">数据征集中</span>':''}
+    </button>`;
+  }).join('');
+  root.innerHTML = `
+    <div class="spwr-isl-grid">${gridHtml}</div>
+    <div class="spwr-inputs">
+      <div class="spwr-input-row">
+        <span class="spwr-lab">当前睡意之力</span>
+        <input type="number" class="spwr-input" id="spwrEnergyInput" placeholder="例如 50000" min="0" step="1" value="${spwrEnergyStr}">
+      </div>
+      <div class="spwr-input-row">
+        <span class="spwr-lab">睡意之力倍率</span>
+        <input type="number" class="spwr-input" id="spwrMultInput" placeholder="默认 1" min="0" step="0.01" value="${spwrMultStr}">
+      </div>
+      <button type="button" class="spwr-calc-btn" id="spwrCalcBtn">开始计算</button>
+    </div>
+    <div id="spwrResultBox"></div>`;
+  root.querySelectorAll('[data-spwrisl]').forEach(btn=>{
+    btn.onclick = ()=>{
+      if(btn.hasAttribute('disabled')) return;
+      spwrIsland = btn.getAttribute('data-spwrisl');
+      spwrResult = null;
+      spwrRenderAll();
+    };
+  });
+  const eInput = document.getElementById('spwrEnergyInput');
+  const mInput = document.getElementById('spwrMultInput');
+  if(eInput) eInput.oninput = ()=>{ spwrEnergyStr = eInput.value; };
+  if(mInput) mInput.oninput = ()=>{ spwrMultStr = mInput.value; };
+  const calcBtn = document.getElementById('spwrCalcBtn');
+  if(calcBtn) calcBtn.onclick = spwrDoCalc;
+  spwrRenderResult();
 }
 
 /* ============ 宝可梦盒：首次渲染 ============ */
