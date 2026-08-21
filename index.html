@@ -2265,6 +2265,7 @@
 /* 代码里的标识符一律保留 pvp 前缀（函数、CSS 类、/api/pvp 接口、数据库表名都是），
    只有露给用户看的文案叫「土王PVP」——改标识符纯属churn，还要跟已部署的后端对齐 */
 .mf-hub-ic-pvp{ background:#c2554b; }
+.mf-hub-ic-friend{ background:#2f8f5e; }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
 .pvp-disclaimer{
@@ -2335,6 +2336,16 @@
 /* 榜单里自己那一行高亮，隐藏人名时这是唯一能定位自己的线索 */
 .pvp-row-me{ background:#f3ecfa; border-radius:8px; }
 .pvp-row-me .pvp-row-name{ color:var(--accent-dk); }
+/* 分支进化"选分支"小按钮 + 弹出的选择气泡（伊布最多8个选项，气泡内部换行成网格） */
+.pvp-branch-btn{
+  flex:0 0 auto; font-family:inherit; cursor:pointer; align-self:center;
+  background:var(--paper); border:1px solid var(--accent); color:var(--accent-dk);
+  border-radius:8px; padding:4px 8px; font-size:10.5px; font-weight:800; white-space:nowrap;
+}
+.pvp-branch-bubble{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; pointer-events:auto; max-width:220px; }
+.pvp-branch-opt{ display:flex; flex-direction:column; align-items:center; gap:2px; cursor:pointer; width:46px; }
+.pvp-branch-opt .pvp-av{ width:34px; height:34px; }
+.pvp-branch-opt span{ font-size:9.5px; font-weight:800; color:var(--ink); text-align:center; line-height:1.15; }
 .pvp-input{
   width:100%; box-sizing:border-box; font-family:inherit;
   background:var(--paper); border:1px solid var(--line); border-radius:9px;
@@ -2345,6 +2356,83 @@
   background:var(--paper); border:1px solid var(--line); border-radius:9px;
   padding:8px; font-size:12px; font-weight:800; color:var(--accent-dk);
 }
+
+/* ============ v3.29 土王好友帖 ============ */
+.friend-card{
+  background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:14px; margin-bottom:12px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+}
+.friend-card-t{ font-size:13px; font-weight:900; color:var(--ink); margin-bottom:10px; }
+.friend-field{ margin-bottom:14px; }
+.friend-field:last-child{ margin-bottom:0; }
+.friend-field-lab{ font-size:12px; font-weight:800; color:#7a7568; margin-bottom:6px; display:block; }
+/* 好友码：单个输入框但视觉上按 xxxx-xxxx-xxxx 分组，用等宽字体+字间距撑出分段感，
+   比拆三个input框省事也不容易因为焦点切换丢内容 */
+.friend-code-input{
+  width:100%; box-sizing:border-box; font-family:'Consolas',monospace; letter-spacing:2px;
+  background:var(--paper); border:1.5px solid var(--line); border-radius:9px;
+  padding:11px 12px; font-size:16px; font-weight:800; color:var(--ink); text-align:center;
+}
+.friend-days-input{
+  width:100%; box-sizing:border-box; font-family:inherit;
+  background:var(--paper); border:1.5px solid var(--line); border-radius:9px;
+  padding:9px 12px; font-size:15px; font-weight:800; color:var(--ink);
+}
+/* 常驻岛屿多选：选中态高亮，未选中态压暗——跟站内其它多选按钮组一个调性 */
+.friend-isl-grid{ display:flex; flex-wrap:wrap; gap:7px; }
+.friend-isl-btn{
+  font-family:inherit; cursor:pointer; padding:7px 11px; border-radius:9px;
+  font-size:12px; font-weight:800; background:var(--paper); border:1.5px solid var(--line);
+  color:#8a8375; opacity:.6;
+}
+.friend-isl-btn.selected{ opacity:1; background:var(--accent); border-color:var(--accent); color:#fff; }
+.friend-isl-all-btn{
+  font-family:inherit; cursor:pointer; padding:7px 11px; border-radius:9px;
+  font-size:11.5px; font-weight:800; background:none; border:1px dashed var(--line); color:var(--accent-dk);
+}
+.friend-save-btn{
+  width:100%; font-family:inherit; cursor:pointer; margin-top:4px;
+  background:var(--accent); border:none; border-radius:10px; color:#fff;
+  padding:12px; font-size:14px; font-weight:900;
+}
+.friend-save-btn:disabled{ opacity:.55; }
+/* 交友大厅筛选工具条 */
+.friend-filter-row{ display:flex; gap:6px; margin-bottom:10px; overflow-x:auto; padding-bottom:2px; }
+.friend-filter-btn{
+  flex:0 0 auto; font-family:inherit; cursor:pointer; white-space:nowrap;
+  padding:7px 12px; border-radius:9px; font-size:12px; font-weight:800;
+  background:var(--panel); border:1.5px solid var(--line); color:#8a8375;
+}
+.friend-filter-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+/* 大厅列表行：头像占两行高度，中间姓名+信息两行，右侧好友码占两行竖直居中、右对齐 */
+.friend-row{
+  display:flex; align-items:center; gap:10px; padding:10px 4px; border-bottom:1px solid var(--line);
+  cursor:pointer; -webkit-tap-highlight-color:transparent;
+}
+.friend-row:last-child{ border-bottom:none; }
+.friend-row:active{ background:var(--paper); }
+.friend-av{
+  flex:0 0 auto; width:44px; height:44px; border-radius:12px; overflow:hidden;
+  background:#f4effa; border:1.5px solid var(--line);
+  display:flex; align-items:center; justify-content:center;
+}
+.friend-av img{ width:100%; height:100%; object-fit:cover; }
+.friend-main{ flex:1 1 auto; min-width:0; }
+.friend-name{ font-size:13.5px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.friend-info{ display:flex; align-items:center; gap:6px; margin-top:3px; font-size:11px; font-weight:800; flex-wrap:wrap; }
+.friend-candy{ display:inline-flex; align-items:center; gap:3px; }
+.friend-candy-dot{ width:7px; height:7px; border-radius:50%; }
+.friend-candy.need{ color:#c0392b; }
+.friend-candy.need .friend-candy-dot{ background:#c0392b; }
+.friend-candy.nopref{ color:#1f8a3d; }
+.friend-candy.nopref .friend-candy-dot{ background:#1f8a3d; }
+.friend-info-sep{ color:#cfc8b8; }
+.friend-days, .friend-islands{ color:#8a8375; }
+.friend-code-cell{
+  flex:0 0 auto; font-family:'Consolas',monospace; font-size:12.5px; font-weight:900;
+  color:var(--accent-dk); text-align:right; letter-spacing:.5px;
+}
+.friend-empty{ text-align:center; color:#9a927f; padding:30px 10px; font-size:13px; font-weight:700; }
 
 /* ============ v3.19 岛屿评分 ============ */
 .isl-tabs{ display:flex; gap:6px; margin-bottom:12px; }
@@ -2645,6 +2733,14 @@
   border:1.5px solid var(--line); border-radius:8px; padding:7px 9px; font-size:14px;
   font-weight:800; font-family:inherit; color:var(--ink); background:#fff; width:100%; box-sizing:border-box;
 }
+/* 手动条目专属的"昵称/种族"两格：种族输入要横跨两列，装得下下拉列表 */
+.plan-field-wide{ grid-column:1 / -1; }
+/* 「加入培养」气泡：跟 .cap-jump-bubble 同一个骨架（弹出气泡的通用两按钮竖排样式），
+   手动输入那颗换个颜色，跟"我的盒子"区分开，不然两颗长得一样容易点错 */
+.plan-add-bubble{ display:flex; flex-direction:column; gap:6px; pointer-events:auto; min-width:104px; }
+.plan-add-bubble .cap-jump-btn{ width:100%; }
+.plan-add-bubble .plan-add-manual{ background:#3f8a44; }
+.plan-add-bubble .plan-add-manual:active{ background:#2e6a33; }
 .plan-evo-lab{ font-size:11px; font-weight:800; color:#7a7568; margin-bottom:5px; display:flex; align-items:center; gap:8px; }
 /* v3.21：整条进化链自由点两只当"现状/目标"，重置按钮就近放在标题行右边 */
 .plan-evo-reset{ margin-left:auto; font-size:10.5px; font-weight:800; color:var(--accent); cursor:pointer; text-decoration:underline; }
@@ -3024,6 +3120,14 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
+      <button type="button" class="mf-hub-btn" data-mfsub="friend">
+        <span class="mf-hub-ic mf-hub-ic-friend"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="17" cy="9.5" r="2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.6 20c.6-4.4 3.6-6.6 7.4-6.6s6.8 2.2 7.4 6.6M15.6 14.6c3 .3 4.9 2.1 5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">土王好友帖</span>
+          <span class="mf-hub-d">交友大厅认识新朋友，登记好友码、选糖要求和常驻岛屿</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
     </div>
   </div>
 
@@ -3262,7 +3366,7 @@
     </div>
     <div class="isl-tabs" id="planTabs"></div>
     <div id="planPaneList">
-      <div class="plan-hint">点右下角「加入培养」从盒子里挑宝可梦。点条目左侧的标签位打标签，点条目其余部分展开编辑。优先级数字越小排得越靠上。</div>
+      <div class="plan-hint">点右下角「加入培养」，从盒子里挑或手动填一只都行。点条目左侧的标签位打标签，点条目其余部分展开编辑。优先级数字越小排得越靠上。</div>
       <div class="plan-tool-row" id="planToolRow">
         <button type="button" class="plan-tool-btn plan-tool-danger" id="planRemoveBtn">移出培养</button>
         <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
@@ -3298,6 +3402,17 @@
     <div id="pvpPaneBoard" style="display:none;"></div>
     <div id="pvpPaneSet" style="display:none;"></div>
   </div><!-- /#mfSubPvp -->
+
+  <!-- v3.29 土王好友帖：交友大厅(读别人) + 信息设置(填自己)两个页签 -->
+  <div class="mf-sub" id="mfSubFriend" style="display:none;">
+    <div class="mf-sub-head">
+      <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
+      <span class="mf-sub-title">土王好友帖</span>
+    </div>
+    <div class="isl-tabs" id="friendTabs"></div>
+    <div id="friendPaneHall"></div>
+    <div id="friendPaneSet" style="display:none;"></div>
+  </div><!-- /#mfSubFriend -->
 
   </div><!-- /#page2 -->
 
@@ -5768,7 +5883,7 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     // 管不到），触发时产出的是额外能量（树果剧增/能量填充/龙星群三组），数据在 CAP_ENERGY_SKILL 里，
     // 跟 capEnergyEnergy() 用的是同一份——之前这里没读这份数据，导致产能分析技能区对能量型宝可梦
     // 只显示了触发次数，没把这部分能量产出带出来
-    let energyPerTrigger = null;
+    let energyPerTrigger = null, staminaDeduct = null;
     if(x.dtype==='能量'){
       const sk = CAP_ENERGY_SKILL[x.name];
       if(sk){
@@ -5777,8 +5892,14 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
         else if(sk.kind==='fruit') energyPerTrigger = (ctrl.direction==='reverse'?sk.reverse:sk.normal) * capBerryPerBerry(x.attr, level);
         else if(sk.kind==='dragon'){ let m = sk.table[ctrl.dragon]||sk.table.solo; if(ctrl.latias) m += 10; energyPerTrigger = m * capBerryPerBerry(x.attr, level); }
       }
+    } else if(spec && spec.kind==='energy'){
+      // 达克莱伊/巨锻匠：dtype 是树果不是能量，技能数据在 CAP_SKILL_SPECIAL_OUTPUT 里，
+      // 固定值，不吃 direction/dragon 这套。2026-08-21 起改成跟能量型一致，技能能量单独
+      // 显示在这个"技能"卡片里，不再并进 renderYieldAnalysis 的"树果"总数
+      energyPerTrigger = spec.energyPerTrigger;
+      if(spec.staminaDeduct!=null) staminaDeduct = spec.staminaDeduct;
     }
-    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null, specialIngredients, specialDream, energyPerTrigger};
+    return {kind:'skill', skillCat:x.skillCat, count, byEffect, effect: byEffect ? count*(x.skillEff||0) : null, specialIngredients, specialDream, energyPerTrigger, staminaDeduct};
   }
   return null;
 }
@@ -5803,6 +5924,9 @@ function capSkillEffectHtml(base, e){
   let html='';
   if(base.byEffect) html += `<span class="cap-val cap-eff">${capSkillIcon(CAP_SKILL_ICON[base.skillCat])}<b>${capFmt(Math.round(base.effect*e),0)}</b></span>`;
   if(base.energyPerTrigger!=null) html += `<span class="cap-val cap-eff">${capFlameImg()}<b>${capFmt(Math.round(base.energyPerTrigger*base.count*e),0)}</b></span>`;
+  // 达克莱伊专属：技能触发同时扣活力，紧跟在技能能量后面用红色奶妈图标标"-数字"，
+  // 跟原来挂在"树果"卡片上的那个红色扣除标一个视觉语言（现在挪到这里，见 capPageBaseYield 的 staminaDeduct）
+  if(base.staminaDeduct!=null) html += `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(Math.round(base.staminaDeduct*base.count*e),0)}</b></span>`;
   if(base.specialIngredients){
     base.specialIngredients.forEach(it=>{
       const icon = ING_ICONS[it.name];
@@ -9986,18 +10110,14 @@ function renderYieldAnalysis(pfx){
   // （满包阶段每次帮忙都只出树果、不再按食材概率折算，所以这里不是简单乘一个系数）
   const realFruitCount = carry ? carry.fruitCount : (realHelpsPerDay * unitPerCatch * ingFrac);
   const realBerryEnergy = realFruitCount * capBerryPerBerry(x.attr, level);
-  let totalEnergy = realBerryEnergy;
-  let specialStaminaDeduct = null;
-  if(spec && spec.kind==='energy'){
-    const triggerCountReal = capSkillCount(x, level, medal, pityEligible?state.pityOn:false) * eSkillEff;
-    totalEnergy += spec.energyPerTrigger * triggerCountReal;
-    if(spec.staminaDeduct!=null) specialStaminaDeduct = spec.staminaDeduct * triggerCountReal;
-  }
+  // 2026-08-21：树果卡片只保留纯树果本体的能量。技能触发额外产的能量（含达克莱伊/巨锻匠这类
+  // CAP_SKILL_SPECIAL_OUTPUT kind:'energy'，也含勇士雄鹰/拉帝欧斯等 CAP_ENERGY_SKILL 那批）
+  // 统一单独显示在下面「技能」卡片自己的数字里（capSkillEffectHtml 的 energyPerTrigger/
+  // staminaDeduct 分支），不再跟树果合并——两类技能能量机制不同，但用户要求视觉上一致对待。
   const fruitHtml = `<div class="yield-section yield-section-fruit"><div class="yield-section-title">树果</div>`
     + `<div class="yield-section-mid">`
     + `<span class="cap-val yield-fruit-count"><b>${capFmt(realFruitCount,1)}</b><span class="yield-unit">个/天</span></span>`
-    + `<span class="cap-val">${capFlameImg()}<b>${capFmt(Math.round(totalEnergy),0)}</b></span>`
-    + (specialStaminaDeduct!=null ? `<span class="cap-val cap-stamina-deduct">${capSkillIcon('nanny','cap-skill-icon-red')}<b>-${capFmt(specialStaminaDeduct,0)}</b></span>` : '')
+    + `<span class="cap-val">${capFlameImg()}<b>${capFmt(Math.round(realBerryEnergy),0)}</b></span>`
     + `</div>`
     + `<div class="yield-section-right">`
     + `<span class="yield-stat"><span class="yield-stat-label">帮忙间隔</span><b>${capFmt(realInterval,0)}</b><span class="yield-unit">秒</span></span>`
@@ -14208,7 +14328,9 @@ function updatePageActionBar(){
   // v3.28：PVP 子页没有任何可调的计算参数，也没借用这两颗按钮，整条收起
   // （新增顶层页/子页都要在这里排除一次，漏了会让切换栏看起来被顶起来）
   const onPvp = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'pvp';
-  const show = !(inDetail || inBox || onHub || onSettings || onPvp || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
+  // v3.29：好友帖同理，交友大厅/信息设置都用不到这两颗按钮
+  const onFriend = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'friend';
+  const show = !(inDetail || inBox || onHub || onSettings || onPvp || onFriend || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -14458,8 +14580,10 @@ document.getElementById('pageActPanelBtn').onclick = ()=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
   // v3.20 培养计划：多选态下这颗是「取消」，正常态才是「加入培养」
+  // v3.28：正常态改成先弹「我的盒子 / 手动输入」二选一气泡，不再直接开盒子
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
-    if(planRemoveMode || planSumMode) planFooterCancel(); else planStartPickFromBox();
+    if(planRemoveMode || planSumMode) planFooterCancel();
+    else planOpenAddBubble(document.getElementById('pageActPanelBtn'));
     return;
   }
   const page4 = document.getElementById('page4');
@@ -14476,9 +14600,10 @@ document.getElementById('boxActCreateBtn').onclick = ()=> openDashboardForNewEnt
 document.getElementById('fabPanel').onclick = ()=>{
   const page2El = document.getElementById('page2');
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='island'){ islandExitBatchMode(); return; }
-  // v3.20 培养计划：多选态下这颗是「取消」，正常态才是「加入培养」
+  // v3.20 培养计划：多选态下这颗是「取消」，正常态才是「加入培养」（同上，改成先弹二选一气泡）
   if(page2El && page2El.classList.contains('active-page') && mfSubView==='plan'){
-    if(planRemoveMode || planSumMode) planFooterCancel(); else planStartPickFromBox();
+    if(planRemoveMode || planSumMode) planFooterCancel();
+    else planOpenAddBubble(document.getElementById('fabPanel'));
     return;
   }
   const page4 = document.getElementById('page4');
@@ -16763,16 +16888,19 @@ function mfShowSub(sub){
   const island = document.getElementById('mfSubIsland');
   const plan = document.getElementById('mfSubPlan');
   const pvp = document.getElementById('mfSubPvp');
-  if(!hub || !effi || !rank || !island || !plan || !pvp) return;
+  const friend = document.getElementById('mfSubFriend');
+  if(!hub || !effi || !rank || !island || !plan || !pvp || !friend) return;
   hub.style.display = mfSubView ? 'none' : '';
   effi.style.display = mfSubView === 'effi' ? '' : 'none';
   rank.style.display = mfSubView === 'rank' ? '' : 'none';
   island.style.display = mfSubView === 'island' ? '' : 'none';
   plan.style.display = mfSubView === 'plan' ? '' : 'none';
   pvp.style.display = mfSubView === 'pvp' ? '' : 'none';
+  friend.style.display = mfSubView === 'friend' ? '' : 'none';
   if(mfSubView === 'island') islandRenderAll();
   else if(mfSubView === 'plan') planRenderAll();
   else if(mfSubView === 'pvp') pvpRenderAll();
+  else if(mfSubView === 'friend') friendRenderAll();
   else if(mfSubView === 'rank'){
     // 排名对比原来是独立主页面(page3)时的进场逻辑，挪进 hub 子页后原样保留：
     // 排名计算较重，先弹"排名计算中"再算，避免白屏卡顿；没选过面板就没数据可算，直接渲染即可
@@ -17332,6 +17460,12 @@ let planPickedIds = new Set();   // 两种多选态共用这一份勾选集合�
 function genPlanId(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function planEsc(s){
   return String(s).replace(/[&<>"']/g, c=> ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+// 手动条目在填完种族之前 entry.dex/name 都是空的——直接塞进原来那句模板会显示成
+// 字面量 "null"，改成统一走这个函数，没种族时显示醒目的橙色提示
+function planSpeciesLabelHtml(entry){
+  if(!entry.dex) return `<span class="plan-species plan-species-none">未选择种族</span>`;
+  return `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`;
 }
 function planTrimTagName(raw){ return boxTakeChars((raw==null?'':String(raw)).trim(), PLAN_TAG_NAME_MAX); }
 function planClampPrio(v){
@@ -17902,7 +18036,10 @@ function planArrowHtml(r, e, mini){
   // v3.22：午睡岛不再单开一行，挪进糖果/万能糖那一行，跟在万能糖右边一起排
   const napHtml = planNapDaysHtml(e, mini);
   let top = '', bot = '';
-  if(noTgt)      top = `<span class="plan-res-todo">未设目标等级</span>` + napHtml;
+  // 手动条目没填种族之前，种族倍率/进化消耗都算不出来（planSpeciesMult 会静默回落成默认值 1，
+  // 数字不是错的但没意义），优先提示"先选种族"，比显示一个看着正常实则不对的数字要诚实
+  if(!e.dex)     top = `<span class="plan-res-todo">未选择种族</span>` + napHtml;
+  else if(noTgt) top = `<span class="plan-res-todo">未设目标等级</span>` + napHtml;
   else if(done)  top = `<span class="plan-res-done">已达成</span>` + napHtml;
   else if(r){
     top = `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
@@ -18111,7 +18248,7 @@ function planRenderList(){
     rmBtn.style.opacity = planSumMode ? '.45' : '';
   }
   if(!planData.length){
-    el.innerHTML = `<div class="plan-empty">培养计划还是空的。<br>点右下角「加入培养」从盒子里挑几只吧。</div>`;
+    el.innerHTML = `<div class="plan-empty">培养计划还是空的。<br>点右下角「加入培养」，从盒子里挑或手动填都行。</div>`;
     const nb = document.getElementById('planBoostNote'); if(nb) nb.style.display='none';
     return;
   }
@@ -18163,7 +18300,7 @@ function planRenderList(){
           `<div class="plan-head">`+
             `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
             (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
-            `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+            planSpeciesLabelHtml(entry)+
           `</div>`+
           planArrowHtml(r, entry, true)+
         `</div>`+
@@ -18226,7 +18363,7 @@ function planBuildSumCard(group, tag, all, dup){
       `<div class="plan-head">`+
         `<span class="plan-nick">${planEsc(entry.nickname)}</span>`+
         (dup.has(entry.id)?'<span class="plan-dup">重复</span>':'')+
-        `<span class="plan-species">${planEsc(entry.name)} <span style="opacity:.6">${planEsc(entry.dex)}</span></span>`+
+        planSpeciesLabelHtml(entry)+
       `</div>`+
       planArrowHtml(r, entry, true)+
       `<div class="plan-check${picked?' on':''}">${picked?checkIconSvg('#fff',3.6,12):''}</div>`+
@@ -18266,8 +18403,32 @@ function planOpenEditModal(id){
   planEditId = id;
   let pop = document.getElementById('planEditModal');
   if(!pop){ pop = document.createElement('div'); pop.id='planEditModal'; pop.className='cap-ctrl-overlay'; document.body.appendChild(pop); }
+  // 手动条目(e.manual)才显示"昵称/种族"这两个输入——盒子来的条目种族是固定的，
+  // 允许改会跟"单向快照"这条设计原则打架（见本模块开头注释：加入之后两边完全独立）
+  const manualFieldsHtml = e.manual ? `
+    <div class="plan-field-grid plan-manual-fields">
+      <div class="plan-field"><span class="plan-field-lab">昵称</span>
+        <input type="text" class="plan-field-in" id="planFNick" maxlength="${BOX_NICK_MAX||20}" value="${planEsc(e.nickname==='未命名'?'':e.nickname)}" placeholder="不填就用种族名"></div>
+      <div class="plan-field plan-field-wide"><span class="plan-field-lab">种族</span>
+        <div class="pk-search-wrap">
+          <input type="text" id="planFSpecies" class="pk-search-input-underline" placeholder="请输入宝可梦" autocomplete="off" value="${e.dex?planEsc(e.name):''}">
+          <div class="pk-dropdown" id="planFSpeciesDropdown"></div>
+        </div>
+      </div>
+    </div>` : '';
+  // 没选种族之前，进化/性格这些跟种族强相关的区块全部收起换成一句提示——
+  // 硬要渲染的话 planEvoFamily(null) 会算出一堆看着正常实则毫无意义的选项
+  const speciesReady = !!e.dex;
+  const evoSectionHtml = speciesReady ? `
+    <div class="plan-evo-lab" id="planNatureLab">性格 exp（种族倍率 ${planSpeciesMult(planCurrentEvoDex(e))}×）</div>
+    <div class="plan-nature-seg" id="planNatureSeg"></div>
+    <div class="plan-evo-lab">现状 / 目标形态<span class="plan-evo-reset" id="planEvoResetBtn">重置为不进化</span></div>
+    <div class="plan-evo-hint">在整条进化链里点两只：阶数低的自动当现状，阶数高的当目标；只点一只就是把现状本身改成它。</div>
+    <div class="plan-evo-pick" id="planEvoPick"></div>` : `
+    <div class="plan-evo-hint plan-evo-hint-warn">先在上面选一只宝可梦，才能设置性格 exp 和进化形态。</div>`;
   pop.innerHTML = `<div class="cap-ctrl-box plan-modal-box">
     <div class="cap-ctrl-head">${planEsc(e.nickname)}<span class="cap-ctrl-close" id="planEditClose">✕</span></div>
+    ${manualFieldsHtml}
     <div class="plan-field-grid">
       <div class="plan-field"><span class="plan-field-lab">当前等级（1~${PLAN_LEVEL_MAX}）</span>
         <input type="number" class="plan-field-in" id="planFCur" min="1" max="${PLAN_LEVEL_MAX}" value="${levelRealOf(e)}"></div>
@@ -18280,11 +18441,7 @@ function planOpenEditModal(id){
       <div class="plan-field"><span class="plan-field-lab">同优先级内排序（1~${PLAN_SORT_MAX}，越小越靠前）</span>
         <input type="number" class="plan-field-in" id="planFSort" min="${PLAN_SORT_MIN}" max="${PLAN_SORT_MAX}" value="${planSortNumOf(e)}"></div>
     </div>
-    <div class="plan-evo-lab" id="planNatureLab">性格 exp（种族倍率 ${planSpeciesMult(planCurrentEvoDex(e))}×）</div>
-    <div class="plan-nature-seg" id="planNatureSeg"></div>
-    <div class="plan-evo-lab">现状 / 目标形态<span class="plan-evo-reset" id="planEvoResetBtn">重置为不进化</span></div>
-    <div class="plan-evo-hint">在整条进化链里点两只：阶数低的自动当现状，阶数高的当目标；只点一只就是把现状本身改成它。</div>
-    <div class="plan-evo-pick" id="planEvoPick"></div>
+    ${evoSectionHtml}
     <div class="plan-arrow-wrap" id="planArrowWrap"></div>
     <div class="plan-modal-note" id="planModalNote"></div>
     <div class="isl-modal-acts">
@@ -18301,15 +18458,59 @@ function planOpenEditModal(id){
     const el = document.getElementById(fid);
     if(el) el.oninput = ()=>{ planEditCollect(e); planEditRefresh(e); };
   });
-  document.getElementById('planEvoResetBtn').onclick = ()=>{
-    e.evoPicks = [];
-    planEditRenderEvoPick(e); planEditRefresh(e);
-    const lab = document.getElementById('planNatureLab');
-    if(lab) lab.textContent = '性格 exp（种族倍率 '+planSpeciesMult(planCurrentEvoDex(e))+'×）';
-  };
-  planEditRenderNatureSeg(e);
-  planEditRenderEvoPick(e);
+  if(e.manual) planEditWireManualFields(e);
+  if(speciesReady){
+    const resetBtn = document.getElementById('planEvoResetBtn');
+    if(resetBtn) resetBtn.onclick = ()=>{
+      e.evoPicks = [];
+      planEditRenderEvoPick(e); planEditRefresh(e);
+      const lab = document.getElementById('planNatureLab');
+      if(lab) lab.textContent = '性格 exp（种族倍率 '+planSpeciesMult(planCurrentEvoDex(e))+'×）';
+    };
+    planEditRenderNatureSeg(e);
+    planEditRenderEvoPick(e);
+  }
   planEditRefresh(e);
+}
+// 手动条目专属：昵称输入框 + 种族搜索下拉。选定种族后要重新渲染整个弹窗——
+// 从"没种族"切到"有种族"这一刻，性格/进化那几块要从占位提示变成真正可交互的区块，
+// 不是简单改几个字段能带过去的，索性重开一次 planOpenEditModal 最省事也最不容易漏状态
+function planEditWireManualFields(e){
+  const nickIn = document.getElementById('planFNick');
+  // 昵称字数上限跟盒子昵称是同一套口径（12字），不能借用限20字的标签名裁剪函数——
+  // 输入框 maxlength 本身按 BOX_NICK_MAX 写的，两处不一致就是本地能打进去、保存时被悄悄砍掉
+  if(nickIn) nickIn.oninput = ()=>{ e.nickname = boxTrimNickname(nickIn.value) || (e.name || '未命名'); };
+  const spIn = document.getElementById('planFSpecies');
+  const dd = document.getElementById('planFSpeciesDropdown');
+  if(!spIn || !dd) return;
+  spIn.addEventListener('input', ()=>{
+    const q = spIn.value.trim();
+    if(!q){ dd.classList.remove('open'); dd.innerHTML=''; return; }
+    let matches = POKEMON_DEX_DATA.filter(r=>r[1].includes(q));
+    if(matches.length===0){ const byNum = findPokemonByDexQuery(q); if(byNum) matches=[byNum]; }
+    dd.innerHTML = matches.length
+      ? matches.map(r=>`<div class="pk-dropdown-item" data-dex="${r[0]}"><span class="dex">${r[0]}</span><span>${r[1]}</span></div>`).join('')
+      : `<div class="pk-dropdown-empty">没有找到匹配的宝可梦</div>`;
+    dd.classList.add('open');
+    dd.querySelectorAll('.pk-dropdown-item').forEach(item=>{
+      item.onclick = ()=>{
+        const dex = item.getAttribute('data-dex');
+        const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
+        if(!rec) return;
+        e.dex = dex; e.name = rec[1];
+        // 昵称还没被用户碰过（仍是初始的"未命名"或跟种族名相同）时，顺手把昵称也补成种族名，
+        // 免得列表上一直挂着"未命名"——碰过就不再覆盖，尊重用户已经填的内容
+        if(!e.nickname || e.nickname==='未命名' || e.nickname===e.name) e.nickname = rec[1];
+        // 换种族后原来选的进化链形态大概率对不上了，直接清空重选，比留着一个可能非法的
+        // evoPicks 更安全
+        e.evoPicks = [];
+        dd.classList.remove('open'); dd.innerHTML='';
+        planRenderList();
+        planOpenEditModal(e.id);   // 重开弹窗：这一刻性格/进化区块要从占位提示变成真正可用
+      };
+    });
+  });
+  spIn.addEventListener('blur', ()=>{ setTimeout(()=>{ dd.classList.remove('open'); }, 150); });
 }
 // 把弹窗里几个输入框的当前值收进条目对象（不落盘，落盘只在点保存时）
 function planEditCollect(e){
@@ -18673,6 +18874,59 @@ function planRenderAll(){
   else planRenderTags();
 }
 
+/* ---- 「加入培养」的两条路：从盒子挑 / 手动建空白条目 ----
+   点「加入培养」先弹个气泡二选一，不再直接开盒子。手动那条是给"盒子里没录、
+   但想排进培养计划"的宝可梦用的（比如还没抓到、或者懒得先录进盒子）。 */
+function planAddBubbleHtml(){
+  return `<div class="plan-add-bubble">`+
+    `<button type="button" class="cap-jump-btn" data-planadd="box">我的盒子</button>`+
+    `<button type="button" class="cap-jump-btn plan-add-manual" data-planadd="manual">手动输入</button>`+
+  `</div>`;
+}
+function planOpenAddBubble(anchorEl){
+  planEnsureLoaded();
+  if(planData.length >= PLAN_MAX_ENTRIES){ alert('培养计划最多 '+PLAN_MAX_ENTRIES+' 条，先移出几条再加。'); return; }
+  capShowBubble(anchorEl, planAddBubbleHtml());
+  document.querySelectorAll('#capBubble [data-planadd]').forEach(b=>{
+    b.onclick = (ev)=>{
+      ev.stopPropagation();
+      const mode = b.getAttribute('data-planadd');
+      capHideBubble();
+      if(mode==='box') planStartPickFromBox();
+      else planAddManualEntry();
+    };
+  });
+}
+// 手动条目：先落一条空白的进列表，再直接把编辑弹窗打开让用户填种族和其它信息。
+// dex 留 null（而不是随便预设一只），这样列表上"未选择宝可梦"的提示是真实状态，
+// 不会出现"我明明没选，怎么已经是妙蛙种子了"
+function planEntryBlank(){
+  return {
+    id: genPlanId(),
+    srcBoxId: null,
+    manual: true,               // 手动条目标记：编辑弹窗据此多给"昵称/种族"两行
+    dex: null, name: '',
+    nickname: '未命名',
+    shiny: false,
+    level: levelTierOf(1), levelReal: 1,
+    incAttr: null, decAttr: null,
+    tagId: null,
+    addedAt: Date.now(),
+    targetLevel: null, remainExp: null, candyOwned: 0, evoDex: null,
+    natureExp: '0',
+    sortNum: planNextSortNum(Infinity),
+  };
+}
+function planAddManualEntry(){
+  planEnsureLoaded();
+  if(planData.length >= PLAN_MAX_ENTRIES){ alert('培养计划最多 '+PLAN_MAX_ENTRIES+' 条，先移出几条再加。'); return; }
+  const e = planEntryBlank();
+  planData.push(e);
+  planSaveState();
+  planRenderList();
+  planOpenEditModal(e.id);
+}
+
 /* ---- 从盒子多选加入 ---- */
 function planStartPickFromBox(){
   planEnsureLoaded();
@@ -18740,7 +18994,7 @@ const PVP_SCORE_TABLE = [
 ];
 const PVP_SCORE_MAP = PVP_SCORE_TABLE.reduce((m,r)=>{ m[r[0]]=r[1]; return m; }, {});
 // 十档以外这几个另类档位的配色：TIER_STYLE 里没有它们
-const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375'};
+const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375', '不推荐使用':'#9a9484'};
 function pvpCatColor(cat){
   if(PVP_EXTRA_COLOR[cat]) return PVP_EXTRA_COLOR[cat];
   const st = (typeof tierStyleOf==='function') ? tierStyleOf(cat) : null;
@@ -18792,6 +19046,31 @@ function pvpFutureHalfScore(entry){
   return {score: best/2, grade: bestGrade};
 }
 
+/* "不推荐使用"的宝可梦（POKEMON_DEX_DATA 的 rec[4] 有值，比如拉帝亚斯"弱"）按 1/4 分计入总分。
+   ⚠️ 范围只认 rec[4] 这个【物种级别】的红字标，不含食材型 aba/abc 结构性判废、
+   aaa/abb"组合不可用"这些【面板/组合级别】的判废——那些走的还是原来 0 分/未来可期半价那条路，
+   跟这里是两套不同的口径，不要混。
+   boxEntryGradeCategory 只要 rec[4] 有值就直接 struck→'其他'，压根不会往下算真实档位，
+   得自己单独跑一遍 boxEntryGraduationGrade（跟 pvpFutureHalfScore 绕开 struck 的做法同一个套路）。
+   注意：食材型/功能型的"不推荐使用"如果同时满足邪修门槛，boxEntryGradeCategory 会在 struck
+   判定之前就先判成邪修（见 boxXiexiuEligible 里 rec[4] 直接 return true 那行）——那种情况
+   pvpCategoryOf 早就拿到"邪修"这个真实分类了，根本不会流到这个函数，不会跟 1/4 规则冲突。 */
+function pvpIsUnrecommended(entry){
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  return !!(rec && rec[4]);
+}
+function pvpUnrecommendedQuarterScore(entry){
+  if(!pvpIsUnrecommended(entry)) return {score:0, grade:null};
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  const dtype = DEX_TYPE_MAP[rec[3]];
+  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
+  if(!dtype || !x) return {score:0, grade:null};
+  let grade = null;
+  try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
+  const base = grade ? PVP_SCORE_MAP[grade] : null;
+  return base!=null ? {score: base/4, grade} : {score:0, grade:null};
+}
+
 /* 把一组条目汇总成一份战绩。站长要求【所有个体都计分，不按物种合并】——
    同一个物种养了三只大毕业就是三份分，盒子本身的规模也是战力的一部分。 */
 /* 欧非分（第二个榜）＝ 总分 ÷ 捕捉次数 × 100，读作"每 100 次捕捉攒下多少战力"。
@@ -18828,6 +19107,34 @@ function pvpAggregate(rows, unrated, boxCount, catchCount, floorN){
   const luck = pvpLuckScore(total, floorN, catchCount);
   return { list, total, dist, unrated, boxCount, ratedCount, luck };
 }
+/* 物种榜要求"只列最终形态"：盒子里养的是幼态(比如伊布)时，自动并入它进化链的最终形态计分/上榜；
+   遇到分支进化(呆呆兽/伊布/拉鲁拉丝-奇鲁莉安/懒人獭/小福蛋，POKEMON_FINAL_DEX_MAP 里 value 数组
+   长度>1 的那 6 个)就让用户自己选进哪个最终形态的榜，选择存在盒子条目自己的 pvpBranchPick 字段上
+   （没选之前默认用 finals[0]，跟 boxEffectiveFinalDex 原有的默认行为一致，不选也能正常算分）。
+   这个解析结果同时驱动"计分用哪只的档位表"和"上传到哪个物种榜"——两件事必须用同一个答案，
+   不然物种榜显示的物种跟你实际拿到的档位分对不上。 */
+function pvpEntryFinals(entry){
+  const finals = (typeof POKEMON_FINAL_DEX_MAP!=='undefined') ? POKEMON_FINAL_DEX_MAP[entry.dex] : null;
+  return (finals && finals.length>1) ? finals : null;
+}
+function pvpEntryNeedsBranchPick(entry){
+  const finals = pvpEntryFinals(entry);
+  return !!(finals && !(entry.pvpBranchPick && finals.includes(entry.pvpBranchPick)));
+}
+function pvpFinalDexOf(entry){
+  const finals = pvpEntryFinals(entry);
+  if(finals) return (entry.pvpBranchPick && finals.includes(entry.pvpBranchPick)) ? entry.pvpBranchPick : finals[0];
+  return boxEffectiveFinalDex(entry.dex) || entry.dex;
+}
+// 把 dex/name 换成解析出来的最终形态，其余字段（昵称/等级/副技能/性格/闪光……）原样保留。
+// boxEffectiveFinalDex 对"已经是终形态"的 dex 是安全的 no-op（POKEMON_FINAL_DEX_MAP 只收幼态做键），
+// 所以正常盒子条目（本来就是终形态）传进来 dex 不会变，不用先判断要不要转
+function pvpResolvedEntry(entry){
+  const finalDex = pvpFinalDexOf(entry);
+  if(finalDex === entry.dex) return entry;
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===finalDex);
+  return Object.assign({}, entry, {dex: finalDex, name: rec ? rec[1] : entry.name});
+}
 /* 闪光和不闪光完全分开算两套分、两个榜——闪光是稀有度而不是强度，混在一起
    既让闪光党的分虚高、也让非闪光党没法比。两边各自独立累计总分/均分。 */
 function pvpBuildMyStats(){
@@ -18838,15 +19145,28 @@ function pvpBuildMyStats(){
     if(!entry || !entry.dex) return;
     const g = entry.shiny ? 'shiny' : 'normal';
     boxCount[g]++;
-    const cat = pvpCategoryOf(entry);
+    // re：按分支选择（或默认finals[0]）解析出的最终形态，物种榜/计分/效率全部按它算，
+    // 不再看盒子里原始记的那个幼态 dex；branchOf 留一份原始条目引用，只用来判断/回填分支选择
+    const re = pvpResolvedEntry(entry);
+    const cat = pvpCategoryOf(re);
     const base = cat==null ? null : PVP_SCORE_MAP[cat];
-    if(base == null){ unrated[g]++; return; }
+    if(base == null){
+      // pvpCategoryOf 返回 null 有两种情况：副技能没选满/物种没识别/组合判废（真判不出，沉底）；
+      // 或者是"不推荐使用"（rec[4]）触发的 struck→'其他'——后者按 1/4 规则给分，不直接沉底
+      const q = pvpUnrecommendedQuarterScore(re);
+      if(q.score > 0){
+        rows[g].push({entry:re, branchOf:entry, cat:'不推荐使用', score:q.score, future:null, unrecommended:q.grade, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
+      } else {
+        unrated[g]++;
+      }
+      return;
+    }
     let score = base, future = null;
     if(score === 0){
-      const f = pvpFutureHalfScore(entry);
+      const f = pvpFutureHalfScore(re);
       if(f.score > 0){ score = f.score; future = f.grade; }
     }
-    rows[g].push({entry, cat, score, future, shiny:(g==='shiny'), eff: pvpEntryEff(entry)});
+    rows[g].push({entry:re, branchOf:entry, cat, score, future, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
   });
   // 闪光和不闪光的分数各算各的，但欧非分共用同一个分母(总捕捉数)——游戏里没有"闪光捕捉数"。
   // 分母下限用整盒只数(闪光+不闪光一起)：每一只都是抓来的，都占捕捉次数
@@ -18862,6 +19182,19 @@ function pvpEntryEff(entry){
   try{ return boxEntryEfficiency(entry) || 0; }catch(e){ return 0; }
 }
 function pvpFmt(n, dec){ return Number(n).toFixed(dec==null?0:dec); }
+// capB64Img 只有普通图那一路（pair[0]），闪光榜/闪光行需要 pair[1]——照抄 planPortraitHtml
+// 的取法，不改 capB64Img 本身，那个函数被非PVP的一大堆地方在用，不能动它的签名
+// 榜单用：后端只存 dex+shiny（跟"更多设置"头像框同一份数据），这里反查成名字再喂给 pvpAvatarImg。
+// 没选过头像(avatarDex为空)时给个跟盒子/捕捉推荐同款的占位问号，不留空白
+function pvpPlayerAvatarImg(avatarDex, avatarShiny){
+  const rec = avatarDex ? POKEMON_DEX_DATA.find(r=>r[0]===avatarDex) : null;
+  return rec ? pvpAvatarImg(rec[1], avatarShiny) : `<span class="cap-portrait-q">?</span>`;
+}
+function pvpAvatarImg(name, shiny){
+  const pair = POKEMON_PORTRAITS[name];
+  const b64 = pair ? (shiny ? pair[1] : pair[0]) : null;
+  return b64 ? `<img src="data:image/webp;base64,${b64}" alt="${name}">` : `<span class="cap-portrait-q">?</span>`;
+}
 
 // 分数可能带 .5（未来可期是半价分），整数就不显示小数点
 function pvpFmtScore(n){ return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10); }
@@ -18890,16 +19223,23 @@ function pvpRenderMe(){
   const rowsHtml = shown.map((r,i)=>{
     const e = r.entry;
     const nm = e.nickname && e.nickname!==e.name ? `${e.nickname}<span style="color:#a49c8b;font-weight:700">（${e.name}）</span>` : (e.name||'—');
-    // 未来可期的那些：档位牌显示"未来XX"，分数右上角标个"半"提示是半价
-    const label = r.future ? ('未来'+r.future) : r.cat;
+    // 未来可期：档位牌显示"未来XX"；不推荐使用(拉帝亚斯这类)：档位牌显示实际档位、右下角挂1/4提示
+    const label = r.future ? ('未来'+r.future) : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat);
+    const badgeColor = r.future ? '#1291d6' : (r.unrecommended ? pvpCatColor(r.cat) : pvpCatColor(r.cat));
+    const subExtra = r.future ? ' · 当前不合格，按未来档位半价计分' : (r.unrecommended ? ' · 不推荐使用，按实际档位1/4计分' : '');
+    // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
+    // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
+    const needsPick = pvpEntryNeedsBranchPick(r.branchOf);
+    const branchBtn = needsPick ? `<button type="button" class="pvp-branch-btn" data-branchid="${r.branchOf.id}">选分支</button>` : '';
     return `<div class="pvp-row">
       <div class="pvp-row-rank">${i+1}</div>
-      <div class="pvp-av">${capB64Img(e.name)}</div>
+      <div class="pvp-av">${pvpAvatarImg(e.name, e.shiny)}</div>
       <div class="pvp-row-main">
         <div class="pvp-row-name">${nm}</div>
-        <div class="pvp-row-sub">Lv.${e.level}${r.future?' · 当前不合格，按未来档位半价计分':''}</div>
+        <div class="pvp-row-sub">Lv.${e.level}${subExtra}${needsPick?' · 分支进化按默认计分':''}</div>
       </div>
-      <span class="pvp-grade" style="background:${r.future?'#1291d6':pvpCatColor(r.cat)}">${label}</span>
+      ${branchBtn}
+      <span class="pvp-grade" style="background:${badgeColor}">${label}</span>
       <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
     </div>`;
   }).join('');
@@ -18937,6 +19277,33 @@ function pvpRenderMe(){
   });
   const mb = document.getElementById('pvpMoreBtn');
   if(mb) mb.onclick = ()=>{ pvpListLimit += PVP_LIST_STEP; pvpRenderMe(); };
+  el.querySelectorAll('[data-branchid]').forEach(btn=> btn.onclick = (ev)=>{
+    ev.stopPropagation(); pvpOpenBranchPicker(btn, btn.getAttribute('data-branchid'));
+  });
+}
+// 分支进化选择气泡：伊布(8个)/呆呆兽/拉鲁拉丝-奇鲁莉安/懒人獭/小福蛋，每个选项一个头像+名字
+function pvpBranchBubbleHtml(entry){
+  const finals = pvpEntryFinals(entry) || [];
+  return `<div class="pvp-branch-bubble">${finals.map(dex=>{
+    const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
+    const name = rec ? rec[1] : dex;
+    return `<div class="pvp-branch-opt" data-branchdex="${dex}">
+      <div class="pvp-av">${pvpAvatarImg(name, entry.shiny)}</div>
+      <span>${name}</span>
+    </div>`;
+  }).join('')}</div>`;
+}
+function pvpOpenBranchPicker(anchorEl, entryId){
+  const entry = boxGetEntry(entryId); if(!entry) return;
+  capShowBubble(anchorEl, pvpBranchBubbleHtml(entry));
+  document.querySelectorAll('#capBubble [data-branchdex]').forEach(opt=>{
+    opt.onclick = ()=>{
+      entry.pvpBranchPick = opt.getAttribute('data-branchdex');
+      saveBoxData();
+      capHideBubble();
+      pvpRenderMe();
+    };
+  });
 }
 
 /* ---- 联网：上传我的成绩 / 退出排行 ----
@@ -18953,9 +19320,12 @@ function pvpSnapshotRecords(){
         shiny: g==='shiny' ? 1 : 0,
         dex: e.dex, name: e.name || '', level: e.level,
         // future 记录传的是【能达到的那个档位】而不是当前档位：分数本来就是按未来档位折半算的，
-        // 传当前档位(必然是不合格=0分)会让后端的 score===PVP_SCORE[grade]/2 校验对不上、整单被拒
-        grade: r.future || r.cat,
+        // 传当前档位(必然是不合格=0分)会让后端的 score===PVP_SCORE[grade]/2 校验对不上、整单被拒。
+        // unrecommended(拉帝亚斯这类"不推荐使用"按1/4计分)同理，r.cat 在这种行上是"不推荐使用"
+        // 这个前端自用的展示分组标签、不是真档位，真档位在 r.unrecommended 里，得传那个
+        grade: r.future || r.unrecommended || r.cat,
         future: r.future ? 1 : 0,
+        quarter: r.unrecommended ? 1 : 0,
         score: r.score, eff: r.eff,
         detail: JSON.stringify({
           nick: e.nickname || '', sel: e.selected || [],
@@ -18971,6 +19341,10 @@ var pvpBoardCache = null, pvpBoardBusy = false;
 async function pvpPushMine(){
   return authApi('/api/pvp/me', {method:'PUT', auth:true, body:{
     catchTotal: userPrefs.pvpCatchTotal,
+    // 头像跟"更多设置"页头像框是同一份数据，本来就有，直接带上传给后端存一份，
+    // 查榜时不用再反查一次用户设置
+    avatarDex: userPrefs.avatarDex || null,
+    avatarShiny: !!userPrefs.avatarShiny,
     records: pvpSnapshotRecords(),
   }});
 }
@@ -19034,10 +19408,13 @@ function pvpRenderBoard(){
   const isLuck = pvpBoardKind==='luck';
   const fmt = v => isLuck ? pvpFmt(v,1) : pvpFmtScore(v);
   const rowsHtml = (d.list||[]).map(r=>{
-    // 隐藏人名时，只有自己那一行仍然显示"我"，否则用户根本找不到自己在哪
+    // 隐藏人名时，只有自己那一行仍然显示"我"，否则用户根本找不到自己在哪；
+    // 头像跟人名同一条隐藏规则——只藏名字不藏头像，等于留了个软性身份标识，没意义
     const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
+    const avShow = r.isMe || showNames;
     return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
       <div class="pvp-row-rank">${r.rank}</div>
+      <div class="pvp-av">${avShow ? pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny) : `<span class="cap-portrait-q">?</span>`}</div>
       <div class="pvp-row-main">
         <div class="pvp-row-name">${who}</div>
         <div class="pvp-row-sub">${r.rated} 只计分${isLuck?(' · 分母 '+r.catchTotal):''}</div>
@@ -19083,15 +19460,16 @@ function pvpRenderSpecies(el, head, bind, shiny){
     const spName = (d.list && d.list[0]) ? d.list[0].name : pvpSpeciesSel;
     const rowsHtml = (d.list||[]).map(r=>{
       const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
-      const label = r.future ? ('未来'+r.grade) : r.grade;
+      const label = r.future ? ('未来'+r.grade) : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
+      const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.quarter?'不推荐使用':r.grade);
       return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
         <div class="pvp-row-rank">${r.rank}</div>
-        <div class="pvp-av">${capB64Img(r.name)}</div>
+        <div class="pvp-av">${pvpAvatarImg(r.name, shiny)}</div>
         <div class="pvp-row-main">
           <div class="pvp-row-name">${who}</div>
           <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}</div>
         </div>
-        <span class="pvp-grade" style="background:${r.future?'#1291d6':pvpCatColor(r.grade)}">${label}</span>
+        <span class="pvp-grade" style="background:${badgeColor}">${label}</span>
         <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
       </div>`;
     }).join('');
@@ -19120,7 +19498,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
   if(d.error){ el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`; bind(); return; }
   const gridHtml = (d.species||[]).map(s=>
     `<div class="pvp-sp" data-pvpdex="${s.dex}">
-       <div class="pvp-av">${capB64Img(s.name)}</div>
+       <div class="pvp-av">${pvpAvatarImg(s.name, shiny)}</div>
        <div class="pvp-sp-n">${s.name}</div>
        <div class="pvp-sp-c">${s.players} 人</div>
      </div>`).join('');
@@ -19251,6 +19629,265 @@ function pvpRenderAll(){
   if(pvpPane==='me') pvpRenderMe();
   else if(pvpPane==='board') pvpRenderBoard();
   else pvpRenderSet();
+}
+
+/* ============ v3.29 土王好友帖 ============
+   两个页签：交友大厅(读别人的资料，可按选糖要求/常驻岛屿筛选)、信息设置(填自己的资料并保存)。
+   信息设置这几个字段(好友码/选糖要求/登入天数/常驻岛屿)是纯手填偏好，不是从盒子派生的数据，
+   所以走"编辑草稿→点保存才提交"这套，不像 PVP 那样每改一个开关就立刻推一次。
+   头像复用"更多设置"页头像框的数据(userPrefs.avatarDex/avatarShiny)，保存时顺手带上传，
+   跟土王PVP头像同一个来源、同一份数据，两处不用用户分别设置。 */
+const FRIEND_ISLAND_TAGS = [
+  {id:'1', name:'萌绿之岛'}, {id:'2', name:'天青沙滩'}, {id:'3', name:'灰褐洞窟'},
+  {id:'4', name:'白花雪原'}, {id:'5', name:'宝蓝湖畔'}, {id:'6', name:'黄金旧发电厂'},
+  {id:'7', name:'琥珀溪谷'}, {id:'EX1', name:'萌绿之岛EX'}, {id:'EX2', name:'天青沙滩EX'},
+];
+var friendPane = 'hall';         // 'hall' | 'set'
+var friendHallCache = null, friendHallBusy = false;
+var friendDraft = null;          // 信息设置的编辑草稿；null=还没从服务器拉过
+var friendMeLoading = false;
+var friendFilterCandy = null;    // null=不限, 1=需要选糖, 0=无需选糖
+var friendFilterIsland = null;   // null=不限，否则是某个岛屿 id
+
+function friendFmtCode(digits){
+  const d = String(digits||'').replace(/\D/g,'').slice(0,12);
+  return [d.slice(0,4), d.slice(4,8), d.slice(8,12)].filter(Boolean).join('-');
+}
+// 岛屿角标：直接复用捕捉推荐页 capIslandsHtml 那一套配色/样式(.cap-isl-n*/.cap-isl-ex*/.cap-isl-all)，
+// 用户原话"把捕捉推荐的岛屿标签搬过来"，这里是真的搬同一套 CSS 类，不是另起一份新样式
+function friendIslandBadgesHtml(islands){
+  if(!islands || !islands.length) return `<span class="cap-isl cap-isl-all">全部</span>`;
+  return islands.map(id=>{
+    if(id.indexOf('EX')===0) return `<span class="cap-isl cap-isl-ex${id.slice(2)}">EX${id.slice(2)}</span>`;
+    return `<span class="cap-isl cap-isl-n${id}">${id}</span>`;
+  }).join('');
+}
+function friendIslandsSummary(islands){
+  if(!islands || !islands.length) return '全部';
+  return islands.map(id=>{ const t=FRIEND_ISLAND_TAGS.find(x=>x.id===id); return t?t.name:id; }).join('·');
+}
+
+/* ---- 信息设置：加载/保存 ---- */
+async function friendLoadMe(){
+  if(!authLoggedIn()){ friendDraft = null; return; }
+  friendMeLoading = true;
+  try{
+    const d = await authApi('/api/friend/me', {auth:true});
+    friendDraft = d.exists ? {
+      friendCode: d.friendCode||'', candyPref: !!d.candyPref, loginDays: d.loginDays||0,
+      islands: d.islands||[], inHall: !!d.inHall,
+    } : { friendCode:'', candyPref:false, loginDays:0, islands:[], inHall:false };
+  }catch(e){
+    friendDraft = { friendCode:'', candyPref:false, loginDays:0, islands:[], inHall:false, loadError:e.message||'加载失败' };
+  }
+  friendMeLoading = false;
+}
+function friendRenderSet(){
+  const el = document.getElementById('friendPaneSet'); if(!el) return;
+  if(!authLoggedIn()){
+    el.innerHTML = `<div class="friend-card"><div class="friend-empty">信息设置要登录后才能保存。<br>去「更多设置」登录一下。</div></div>`;
+    return;
+  }
+  if(friendDraft==null){
+    el.innerHTML = `<div class="friend-card"><div class="friend-empty">加载中…</div></div>`;
+    if(!friendMeLoading) friendLoadMe().then(friendRenderSet);
+    return;
+  }
+  const d = friendDraft;
+  const islGrid = FRIEND_ISLAND_TAGS.map(t=>
+    `<div class="friend-isl-btn${d.islands.includes(t.id)?' selected':''}" data-friendisl="${t.id}">${t.name}</div>`
+  ).join('');
+  el.innerHTML = `
+    <div class="friend-card">
+      <div class="friend-card-t">好友码</div>
+      <div class="friend-field">
+        <input type="text" class="friend-code-input" id="friendCodeInput" inputmode="numeric"
+               placeholder="0000-0000-0000" maxlength="14" value="${friendFmtCode(d.friendCode)}">
+      </div>
+    </div>
+    <div class="friend-card">
+      <div class="friend-card-t">我的信息</div>
+      <div class="mf-toggle-row" style="margin-bottom:14px;">
+        <div>
+          <div class="mf-toggle-label">对选糖有无要求</div>
+          <div class="mf-toggle-hint" id="friendCandyHint">${d.candyPref?'有要求':'无要求'}</div>
+        </div>
+        <div class="mf-switch${d.candyPref?' on':''}" id="friendCandySwitch"></div>
+      </div>
+      <div class="friend-field">
+        <span class="friend-field-lab">登入天数</span>
+        <input type="number" class="friend-days-input" id="friendDaysInput" min="0" max="9999" value="${d.loginDays}">
+      </div>
+      <div class="friend-field">
+        <span class="friend-field-lab">常驻岛屿（不选＝全部岛屿）</span>
+        <div class="friend-isl-grid" id="friendIslGrid">${islGrid}</div>
+      </div>
+    </div>
+    <div class="friend-card">
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">加入大厅</div>
+          <div class="mf-toggle-hint" id="friendInHallHint">${d.inHall?'已投放到交友大厅':'未加入（默认）'}</div>
+        </div>
+        <div class="mf-switch${d.inHall?' on':''}" id="friendInHallSwitch"></div>
+      </div>
+      <div class="isl-hint" style="margin-top:9px">打开后，上面这些信息（含头像、用户名、好友码）会展示在交友大厅里，任何人都能看到并一键复制你的好友码。关掉即从大厅移除，但已填的内容会保留，方便下次直接重新打开。</div>
+    </div>
+    <button type="button" class="friend-save-btn" id="friendSaveBtn">保存设置</button>
+    ${d.loadError ? `<div class="isl-hint" style="margin-top:8px;color:#c0392b">上次加载失败：${d.loadError}</div>` : ''}
+  `;
+  document.getElementById('friendCandySwitch').onclick = ()=>{
+    d.candyPref = !d.candyPref; friendRenderSet();
+  };
+  document.getElementById('friendInHallSwitch').onclick = ()=>{
+    d.inHall = !d.inHall; friendRenderSet();
+  };
+  document.getElementById('friendDaysInput').oninput = (e)=>{
+    const n = Math.max(0, Math.min(9999, Math.floor(Number(e.target.value))||0));
+    d.loginDays = n;
+  };
+  const codeIn = document.getElementById('friendCodeInput');
+  codeIn.oninput = ()=>{
+    const digits = codeIn.value.replace(/\D/g,'').slice(0,12);
+    d.friendCode = digits;
+    const pos = codeIn.selectionStart;
+    codeIn.value = friendFmtCode(digits);
+    // 格式化会改变字符串长度，光标简单挪到末尾就好——这类分段输入框光标体验很难做到完美，
+    // 优先保证不崩、内容对，光标位置退而求其次
+    codeIn.setSelectionRange(codeIn.value.length, codeIn.value.length);
+  };
+  document.querySelectorAll('#friendIslGrid [data-friendisl]').forEach(btn=>{
+    btn.onclick = ()=>{
+      const id = btn.getAttribute('data-friendisl');
+      const idx = d.islands.indexOf(id);
+      if(idx>=0) d.islands.splice(idx,1); else d.islands.push(id);
+      // 9 个全选中跟"一个都没选"是同一个状态(都代表全部岛屿)，选满了就直接清空数组，
+      // 避免存一份"9个都选中"的数据跟"空数组"表达同一个意思却是两种字符串，筛选/显示两头都要判断
+      if(d.islands.length === FRIEND_ISLAND_TAGS.length) d.islands = [];
+      friendRenderSet();
+    };
+  });
+  const saveBtn = document.getElementById('friendSaveBtn');
+  saveBtn.onclick = async ()=>{
+    saveBtn.disabled = true; saveBtn.textContent = '保存中…';
+    try{
+      await authApi('/api/friend/me', {method:'PUT', auth:true, body:{
+        friendCode: d.friendCode, candyPref: d.candyPref, loginDays: d.loginDays, islands: d.islands, inHall: d.inHall,
+        avatarDex: userPrefs.avatarDex || null, avatarShiny: !!userPrefs.avatarShiny,
+      }});
+      friendHallCache = null; // 大厅列表可能因为这次保存而变化，下次打开重新拉
+      showBoxToastOk('已保存');
+    }catch(e){
+      alert('保存失败：'+(e.message||'出错了'));
+    }
+    saveBtn.disabled = false; saveBtn.textContent = '保存设置';
+  };
+}
+
+/* ---- 交友大厅：列表 + 筛选 + 点击复制好友码 ---- */
+function friendRenderFilterBar(){
+  const candyOpts = [[null,'不限选糖'],[0,'无需选糖'],[1,'需要选糖']];
+  const candyHtml = candyOpts.map(([v,label])=>
+    `<div class="friend-filter-btn${friendFilterCandy===v?' active':''}" data-friendfcandy="${v}">${label}</div>`).join('');
+  const islHtml = [['不限岛屿',null]].concat(FRIEND_ISLAND_TAGS.map(t=>[t.name,t.id])).map(([label,v])=>
+    `<div class="friend-filter-btn${friendFilterIsland===v?' active':''}" data-friendfisl="${v==null?'':v}">${label}</div>`).join('');
+  return `<div class="friend-filter-row">${candyHtml}</div><div class="friend-filter-row">${islHtml}</div>`;
+}
+async function friendCopyCode(code, rowEl){
+  const text = friendFmtCode(code);
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText) await navigator.clipboard.writeText(text);
+    else{
+      // 旧内核/非安全上下文兜底：临时 textarea + execCommand，用完即删
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    }
+    showBoxToastOk('好友码已复制：'+text);
+  }catch(e){
+    alert('复制失败，好友码是：'+text);
+  }
+}
+function friendRenderHall(){
+  const el = document.getElementById('friendPaneHall'); if(!el) return;
+  if(!authLoggedIn()){
+    el.innerHTML = `<div class="friend-card"><div class="friend-empty">交友大厅要登录后才能看。<br>去「更多设置」登录一下。</div></div>`;
+    return;
+  }
+  const filterBar = friendRenderFilterBar();
+  const bindFilters = ()=>{
+    document.querySelectorAll('[data-friendfcandy]').forEach(b=> b.onclick = ()=>{
+      const v = b.getAttribute('data-friendfcandy');
+      friendFilterCandy = v==='null' ? null : Number(v);
+      friendHallCache = null; friendRenderHall();
+    });
+    document.querySelectorAll('[data-friendfisl]').forEach(b=> b.onclick = ()=>{
+      const v = b.getAttribute('data-friendfisl');
+      friendFilterIsland = v===''? null : v;
+      friendHallCache = null; friendRenderHall();
+    });
+  };
+  const key = friendFilterCandy+'|'+friendFilterIsland;
+  if(!friendHallCache || friendHallCache.key!==key){
+    el.innerHTML = filterBar + `<div class="friend-card"><div class="friend-empty">加载中…</div></div>`;
+    bindFilters();
+    if(friendHallBusy) return;
+    friendHallBusy = true;
+    const qs = [];
+    if(friendFilterCandy!=null) qs.push('candyPref='+friendFilterCandy);
+    if(friendFilterIsland!=null) qs.push('island='+encodeURIComponent(friendFilterIsland));
+    authApi('/api/friend/hall'+(qs.length?'?'+qs.join('&'):''), {auth:true})
+      .then(d=>{ friendHallCache = {key, list:d.list||[]}; })
+      .catch(e=>{ friendHallCache = {key, error:e.message||'加载失败'}; })
+      .then(()=>{ friendHallBusy=false; friendRenderHall(); });
+    return;
+  }
+  const c = friendHallCache;
+  if(c.error){
+    el.innerHTML = filterBar + `<div class="friend-card"><div class="friend-empty">${c.error}</div></div>`;
+    bindFilters(); return;
+  }
+  const rowsHtml = c.list.map((r,i)=>{
+    const candyHtml = r.candyPref
+      ? `<span class="friend-candy need"><span class="friend-candy-dot"></span>需要选糖</span>`
+      : `<span class="friend-candy nopref"><span class="friend-candy-dot"></span>无需选糖</span>`;
+    return `<div class="friend-row" data-friendcode="${r.friendCode}" data-friendidx="${i}">
+      <div class="friend-av">${pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny)}</div>
+      <div class="friend-main">
+        <div class="friend-name">${r.isMe?'<b>我</b> · ':''}${r.username}</div>
+        <div class="friend-info">
+          ${candyHtml}<span class="friend-info-sep">·</span>
+          <span class="friend-days">${r.loginDays}天</span><span class="friend-info-sep">·</span>
+          ${friendIslandBadgesHtml(r.islands)}
+        </div>
+      </div>
+      <div class="friend-code-cell">${friendFmtCode(r.friendCode)}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = filterBar + `<div class="friend-card">
+    <div class="friend-card-t">交友大厅（${c.list.length} 人）</div>
+    <div class="isl-hint" style="margin-bottom:8px">点一条记录，一键复制对方的好友码。</div>
+    ${c.list.length ? `<div class="friend-list">${rowsHtml}</div>` : `<div class="friend-empty">这个筛选条件下还没有人</div>`}
+  </div>`;
+  bindFilters();
+  document.querySelectorAll('#friendPaneHall [data-friendcode]').forEach(row=>{
+    row.onclick = ()=> friendCopyCode(row.getAttribute('data-friendcode'), row);
+  });
+}
+
+const FRIEND_TABS = [['hall','交友大厅'],['set','信息设置']];
+function friendRenderTabs(){
+  const el = document.getElementById('friendTabs'); if(!el) return;
+  el.innerHTML = FRIEND_TABS.map(t=> `<div class="isl-tab${friendPane===t[0]?' active':''}" data-friendtab="${t[0]}">${t[1]}</div>`).join('');
+  el.querySelectorAll('[data-friendtab]').forEach(t=> t.onclick = ()=>{ friendPane = t.getAttribute('data-friendtab'); friendRenderAll(); });
+}
+function friendRenderAll(){
+  friendRenderTabs();
+  const hall = document.getElementById('friendPaneHall'), set = document.getElementById('friendPaneSet');
+  if(!hall || !set) return;
+  hall.style.display = friendPane==='hall' ? '' : 'none';
+  set.style.display = friendPane==='set' ? '' : 'none';
+  if(friendPane==='hall') friendRenderHall(); else friendRenderSet();
 }
 
 /* ============ 宝可梦盒：首次渲染 ============ */
