@@ -15,6 +15,190 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#efe9d8">
 <style>
+/* 首屏加载遮罩：整站数据+逻辑塞在一个5MB+的单文件里，首次访问(尤其是从宝睡小当家授权
+   页跳回来这种没有浏览器缓存的场景)下载解析要花上几秒，期间原来是一片空白，容易被
+   当成"卡住了"。遮罩是 body 里的第一个元素，配套的启动脚本也紧跟其后、排在后面几千行
+   HTML和主 <script> 之前，不需要等那些东西就能立刻描画+开始动画，等 window.load
+   (主脚本已跑完、首屏已渲染)触发后再收走 */
+#bootLoadingMask{
+  position:fixed; inset:0; z-index:9999;
+  background:linear-gradient(180deg,#efe9d8 0%, #e7e0cc 100%);
+  display:flex; align-items:center; justify-content:center;
+}
+#bootLoadingInner{ display:flex; flex-direction:column; align-items:center; gap:28px; padding:24px; }
+#bootLoadingSite{ font-size:13px; font-weight:700; letter-spacing:.12em; color:var(--accent-dk); opacity:.75; margin-bottom:-14px; }
+#bootLoadingLogo{ width:148px; height:148px; border-radius:22px; object-fit:cover; box-shadow:0 8px 22px rgba(0,0,0,.2); }
+/* 固定预留高度(按"土王智商高！"那个更大的字号+字重量出来的，比加载中那行小字更高)，
+   两种文字共用同一个盒子，不管现在显示哪种文字，盒子高度都不变——避免文字变大时
+   撑高这一行，把上面的logo和下面的gif群往两边挤开 */
+#bootLoadingText{
+  height:38px; display:flex; align-items:center; justify-content:center;
+  font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em;
+}
+#bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
+/* 旧域名(mplayerleo.github.io)兜底跳转提示：两行加粗文字，替掉原本的"加载中"单行，
+   点哪都跳转新址，遮罩永不打开——旧站从用户视角只剩这一屏 */
+#bootLoadingMask.boot-oldsite{ cursor:pointer; }
+#bootLoadingText.boot-oldsite-notice{
+  height:auto; flex-direction:column; gap:6px; font-size:15px; line-height:1.5;
+  font-weight:800; color:var(--accent); text-align:center; max-width:280px;
+}
+/* "土王智商高！"像盖印章一样，从屏幕外(正对着屏幕、离得很近很大)径直怼下来，不是沿屏幕
+   从上往下滑——所以不带 translateY，纯靠缩放从很大猛地缩小；落地前有一点点"压扁"回弹
+   （scale 略小于1再弹回1），模拟盖章砸下去的冲击感，跟之前那种飘落式的回弹(scale大于1)
+   感觉不一样 */
+#bootLoadingText.boot-slogan-drop{
+  font-size:27px; font-weight:900; color:var(--accent);
+  animation:bootSloganDrop .5s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes bootSloganDrop{
+  0%{ transform:scale(4.4); opacity:0; }
+  40%{ opacity:1; }
+  72%{ transform:scale(.92); opacity:1; }
+  100%{ transform:scale(1); opacity:1; }
+}
+#bootLoadingMascots{ position:relative; width:210px; height:64px; }
+.boot-mascot{ position:absolute; bottom:0; image-rendering:pixelated; }
+.boot-mascot-wooper{ left:9px; width:52px; height:40px; z-index:2; transform:scaleX(-1); }
+.boot-mascot-quagsire{ left:37px; width:70px; height:62px; z-index:1; transform:scaleX(-1); }
+.boot-mascot-clodsire{ left:96px; width:82px; height:62px; z-index:2; }
+.boot-mascot-paldea{ left:158px; width:50px; height:40px; z-index:2; }
+/* 旧域名专用的"导出盒子"入口：localStorage 是按源(origin)隔离的，旧站
+   (mplayerleo.github.io)上存的宝可梦盒新站(iqdooh.top)根本读不到，用户不自己导一份
+   就等于丢了。所以旧站这一屏在检测到本地确实还有盒子数据时，才在吉祥物下方补出这块
+   备注+按钮；本地没数据就整块不出现（不能无脑显示，否则等于骗用户去点一个空文件）。
+   导出逻辑是自带的、不调用主脚本里的 boxExportToFile——主脚本要下载解析 5MB+ 的单文件，
+   用户很可能在它跑完之前就点了；直接读 localStorage 自己拼 JSON 才是从这一屏可用的 */
+#bootOldsiteExport{ display:none; flex-direction:column; align-items:center; gap:10px; margin-top:-10px; }
+#bootLoadingMask.boot-oldsite #bootOldsiteExport.on{ display:flex; }
+#bootOldsiteExportNote{ font-size:13px; font-weight:700; color:var(--accent-dk); opacity:.85; }
+#bootOldsiteExportBtn{
+  font-family:inherit; border:none; border-radius:12px; padding:10px 24px;
+  font-size:14px; font-weight:800; color:#fff; background:var(--accent);
+  cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.18);
+}
+#bootOldsiteExportBtn:active{ transform:translateY(1px); }
+#bootOldsiteExportBtn.done{ background:#3f9d5a; }
+</style>
+
+</head>
+<body>
+<div id="bootLoadingMask" aria-hidden="true" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#efe9d8 0%,#e7e0cc 100%);display:flex;align-items:center;justify-content:center;">
+  <div id="bootLoadingInner" style="display:flex;flex-direction:column;align-items:center;gap:28px;padding:24px;">
+    <div id="bootLoadingSite">IQDOOH.TOP</div>
+    <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
+    <div id="bootLoadingText" style="font-size:16px;font-weight:800;color:#4f3167;">土王智商加载中<span id="bootLoadingDots">.</span></div>
+    <div id="bootLoadingMascots">
+      <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
+      <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
+      <img class="boot-mascot boot-mascot-clodsire" src="box_assets/normal/clodsire.gif" alt="">
+      <img class="boot-mascot boot-mascot-paldea" src="box_assets/normal/wooper-paldea.gif" alt="">
+    </div>
+    <!-- 只在旧域名、且本地确实还存着盒子数据时才显示，见上面 CSS 注释 -->
+    <div id="bootOldsiteExport">
+      <div id="bootOldsiteExportNote">还有盒子数据留在旧版？</div>
+      <button type="button" id="bootOldsiteExportBtn">导出盒子</button>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  var mask = document.getElementById('bootLoadingMask');
+  var textEl = document.getElementById('bootLoadingText');
+  // 旧域名(mplayerleo.github.io，仓库同时给GitHub Pages和Cloudflare Pages两边供源，
+  // 不能直接改整个仓库)：停在这一屏当跳转页用，不跑加载动画、不揭开遮罩
+  if(location.hostname === 'mplayerleo.github.io'){
+    textEl.textContent = '';
+    textEl.classList.add('boot-oldsite-notice');
+    var l1 = document.createElement('div'); l1.textContent = '您现在正在使用旧版土王智商高';
+    var l2 = document.createElement('div'); l2.textContent = '点击画面任意位置跳转新版';
+    textEl.appendChild(l1); textEl.appendChild(l2);
+    mask.classList.add('boot-oldsite');
+    mask.addEventListener('click', function(){ location.href = 'https://iqdooh.top/'; });
+    // 旧站本地还留着盒子数据的话，给一个自带的导出入口（原理见样式表里 #bootOldsiteExport 的注释）
+    (function(){
+      var wrapEl = document.getElementById('bootOldsiteExport');
+      var btn = document.getElementById('bootOldsiteExportBtn');
+      if(!wrapEl || !btn) return;
+      var entries = null;
+      try{
+        var raw = localStorage.getItem('effiprobcalc_box_v1');
+        if(raw){
+          var parsed = JSON.parse(raw);
+          if(Array.isArray(parsed) && parsed.length) entries = parsed;
+        }
+      }catch(e){ entries = null; } // 隐私模式下 localStorage 会直接抛，当没数据处理
+      if(!entries) return;
+      wrapEl.classList.add('on');
+      // 整块吞掉冒泡：点备注/点按钮都不该触发"点画面任意位置跳新版"，否则一按就被弹走
+      wrapEl.addEventListener('click', function(ev){ ev.stopPropagation(); });
+      btn.addEventListener('click', function(){
+        // 字段格式跟主脚本的 boxExportToFile 保持一致，导出的文件能直接被新站"导入盒子"吃下
+        var payload = {version:1, exportedAt:Date.now(), entries:entries};
+        var url = URL.createObjectURL(new Blob([JSON.stringify(payload)], {type:'application/json'}));
+        var t = new Date(), pad = function(n){ return String(n).padStart(2,'0'); };
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = '宝可梦盒备份_' + t.getFullYear() + pad(t.getMonth()+1) + pad(t.getDate())
+                   + '_' + pad(t.getHours()) + pad(t.getMinutes()) + '.json';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+        btn.textContent = '已导出 ' + entries.length + ' 只';
+        btn.classList.add('done');
+        setTimeout(function(){ btn.textContent = '导出盒子'; btn.classList.remove('done'); }, 2400);
+      });
+    })();
+    return;
+  }
+  var dotsEl = document.getElementById('bootLoadingDots');
+  var n = 1;
+  var dotTimer = setInterval(function(){
+    n = n % 3 + 1;
+    if(dotsEl) dotsEl.textContent = '.'.repeat(n);
+  }, 450);
+  var done = false;
+  // "从中间开圆洞并向四周扩散打开"：用 mask-image 的径向渐变控制遮罩自身的可见度——
+  // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
+  // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
+  // farthest-corner为100%基准，天然保证涨满时四个角都已经露出来)
+  function openMaskHole(mask){
+    var start = null, dur = 650;
+    function step(ts){
+      if(!mask.parentNode) return;
+      if(start===null) start = ts;
+      var p = Math.min(1, (ts-start)/dur);
+      var eased = 1 - Math.pow(1-p, 3);
+      var r = eased * 102;
+      var edge = Math.min(r+2, 100);
+      var grad = 'radial-gradient(circle at 50% 50%, transparent 0%, transparent '+r+'%, #000 '+edge+'%, #000 100%)';
+      mask.style.webkitMaskImage = grad;
+      mask.style.maskImage = grad;
+      if(p < 1) requestAnimationFrame(step);
+      else mask.remove();
+    }
+    requestAnimationFrame(step);
+    // 兜底：极端情况下(比如动画期间标签页切到后台，rAF被挂起)也不能把用户永远挡在外面
+    setTimeout(function(){ if(mask.parentNode) mask.remove(); }, dur + 2500);
+  }
+  function finish(){
+    if(done) return; done = true;
+    clearInterval(dotTimer);
+    var mask = document.getElementById('bootLoadingMask');
+    if(!mask) return;
+    if(textEl){
+      textEl.textContent = '土王智商高！';
+      textEl.classList.add('boot-slogan-drop');
+    }
+    // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开
+    setTimeout(function(){ openMaskHole(mask); }, 700);
+  }
+  if(document.readyState === 'complete') finish();
+  else window.addEventListener('load', finish);
+  // 兜底：极端情况下 load 一直不触发，别让遮罩把用户永远挡在外面
+  setTimeout(finish, 20000);
+})();
+</script>
+<style>
   :root{
     --gold-bg:#e8c15a; --gold-bd:#a97e12; --gold-tx:#4a3600;
     --blue-bg:#8fb8e8; --blue-bd:#2e5fa3; --blue-tx:#0d2a4d;
@@ -2157,71 +2341,6 @@
 .psc-sync-hint{ font-size:11px; color:#9a9484; text-align:center; margin-top:6px; line-height:1.5; }
 .psc-resync-link{ font-size:11px; color:#3a7fd5; text-align:center; margin-top:8px; font-weight:700; cursor:pointer; text-decoration:underline; }
 .cap-panel-modal-hint{ font-size:11px; color:#9a9484; text-align:center; margin:2px 4px 12px; line-height:1.6; }
-/* 首屏加载遮罩：整站数据+逻辑塞在一个5MB+的单文件里，首次访问(尤其是从宝睡小当家授权
-   页跳回来这种没有浏览器缓存的场景)下载解析要花上几秒，期间原来是一片空白，容易被
-   当成"卡住了"。遮罩是 body 里的第一个元素，配套的启动脚本也紧跟其后、排在后面几千行
-   HTML和主 <script> 之前，不需要等那些东西就能立刻描画+开始动画，等 window.load
-   (主脚本已跑完、首屏已渲染)触发后再收走 */
-#bootLoadingMask{
-  position:fixed; inset:0; z-index:9999;
-  background:linear-gradient(180deg,#efe9d8 0%, #e7e0cc 100%);
-  display:flex; align-items:center; justify-content:center;
-}
-#bootLoadingInner{ display:flex; flex-direction:column; align-items:center; gap:28px; padding:24px; }
-#bootLoadingSite{ font-size:13px; font-weight:700; letter-spacing:.12em; color:var(--accent-dk); opacity:.75; margin-bottom:-14px; }
-#bootLoadingLogo{ width:148px; height:148px; border-radius:22px; object-fit:cover; box-shadow:0 8px 22px rgba(0,0,0,.2); }
-/* 固定预留高度(按"土王智商高！"那个更大的字号+字重量出来的，比加载中那行小字更高)，
-   两种文字共用同一个盒子，不管现在显示哪种文字，盒子高度都不变——避免文字变大时
-   撑高这一行，把上面的logo和下面的gif群往两边挤开 */
-#bootLoadingText{
-  height:38px; display:flex; align-items:center; justify-content:center;
-  font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em;
-}
-#bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
-/* 旧域名(mplayerleo.github.io)兜底跳转提示：两行加粗文字，替掉原本的"加载中"单行，
-   点哪都跳转新址，遮罩永不打开——旧站从用户视角只剩这一屏 */
-#bootLoadingMask.boot-oldsite{ cursor:pointer; }
-#bootLoadingText.boot-oldsite-notice{
-  height:auto; flex-direction:column; gap:6px; font-size:15px; line-height:1.5;
-  font-weight:800; color:var(--accent); text-align:center; max-width:280px;
-}
-/* "土王智商高！"像盖印章一样，从屏幕外(正对着屏幕、离得很近很大)径直怼下来，不是沿屏幕
-   从上往下滑——所以不带 translateY，纯靠缩放从很大猛地缩小；落地前有一点点"压扁"回弹
-   （scale 略小于1再弹回1），模拟盖章砸下去的冲击感，跟之前那种飘落式的回弹(scale大于1)
-   感觉不一样 */
-#bootLoadingText.boot-slogan-drop{
-  font-size:27px; font-weight:900; color:var(--accent);
-  animation:bootSloganDrop .5s cubic-bezier(.16,1,.3,1) both;
-}
-@keyframes bootSloganDrop{
-  0%{ transform:scale(4.4); opacity:0; }
-  40%{ opacity:1; }
-  72%{ transform:scale(.92); opacity:1; }
-  100%{ transform:scale(1); opacity:1; }
-}
-#bootLoadingMascots{ position:relative; width:210px; height:64px; }
-.boot-mascot{ position:absolute; bottom:0; image-rendering:pixelated; }
-.boot-mascot-wooper{ left:9px; width:52px; height:40px; z-index:2; transform:scaleX(-1); }
-.boot-mascot-quagsire{ left:37px; width:70px; height:62px; z-index:1; transform:scaleX(-1); }
-.boot-mascot-clodsire{ left:96px; width:82px; height:62px; z-index:2; }
-.boot-mascot-paldea{ left:158px; width:50px; height:40px; z-index:2; }
-/* 旧域名专用的"导出盒子"入口：localStorage 是按源(origin)隔离的，旧站
-   (mplayerleo.github.io)上存的宝可梦盒新站(iqdooh.top)根本读不到，用户不自己导一份
-   就等于丢了。所以旧站这一屏在检测到本地确实还有盒子数据时，才在吉祥物下方补出这块
-   备注+按钮；本地没数据就整块不出现（不能无脑显示，否则等于骗用户去点一个空文件）。
-   导出逻辑是自带的、不调用主脚本里的 boxExportToFile——主脚本要下载解析 5MB+ 的单文件，
-   用户很可能在它跑完之前就点了；直接读 localStorage 自己拼 JSON 才是从这一屏可用的 */
-#bootOldsiteExport{ display:none; flex-direction:column; align-items:center; gap:10px; margin-top:-10px; }
-#bootLoadingMask.boot-oldsite #bootOldsiteExport.on{ display:flex; }
-#bootOldsiteExportNote{ font-size:13px; font-weight:700; color:var(--accent-dk); opacity:.85; }
-#bootOldsiteExportBtn{
-  font-family:inherit; border:none; border-radius:12px; padding:10px 24px;
-  font-size:14px; font-weight:800; color:#fff; background:var(--accent);
-  cursor:pointer; box-shadow:0 4px 12px rgba(0,0,0,.18);
-}
-#bootOldsiteExportBtn:active{ transform:translateY(1px); }
-#bootOldsiteExportBtn.done{ background:#3f9d5a; }
-
 /* ============ v3.19 更多功能页（原效率概率页）============ */
 /* 页2 拆成 hub + 若干子页：hub 是满宽大按钮列表，子页各自带一条返回栏。
    子页的显隐只切 display，DOM 常驻，效率概率那套渲染函数不用管自己在不在屏上 */
@@ -2313,6 +2432,8 @@
 .pvp-row-main{ flex:1 1 auto; min-width:0; }
 .pvp-row-name{ font-size:12.5px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pvp-row-sub{ font-size:10.5px; font-weight:700; color:#8a8375; margin-top:1px; }
+.pvp-combo-icons{ display:inline-flex; vertical-align:-3px; gap:1px; }
+.pvp-combo-ic{ width:13px; height:13px; }
 .pvp-grade{
   flex:0 0 auto; padding:3px 8px; border-radius:8px;
   font-size:11px; font-weight:900; color:#fff; white-space:nowrap;
@@ -2849,123 +2970,6 @@
 .plan-arrow-mini .plan-mid-top, .plan-arrow-mini .plan-mid-bot{ font-size:12px; gap:8px; }
 </style>
 
-</head>
-<body>
-<div id="bootLoadingMask" aria-hidden="true">
-  <div id="bootLoadingInner">
-    <div id="bootLoadingSite">IQDOOH.TOP</div>
-    <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
-    <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
-    <div id="bootLoadingMascots">
-      <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
-      <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
-      <img class="boot-mascot boot-mascot-clodsire" src="box_assets/normal/clodsire.gif" alt="">
-      <img class="boot-mascot boot-mascot-paldea" src="box_assets/normal/wooper-paldea.gif" alt="">
-    </div>
-    <!-- 只在旧域名、且本地确实还存着盒子数据时才显示，见上面 CSS 注释 -->
-    <div id="bootOldsiteExport">
-      <div id="bootOldsiteExportNote">还有盒子数据留在旧版？</div>
-      <button type="button" id="bootOldsiteExportBtn">导出盒子</button>
-    </div>
-  </div>
-</div>
-<script>
-(function(){
-  var mask = document.getElementById('bootLoadingMask');
-  var textEl = document.getElementById('bootLoadingText');
-  // 旧域名(mplayerleo.github.io，仓库同时给GitHub Pages和Cloudflare Pages两边供源，
-  // 不能直接改整个仓库)：停在这一屏当跳转页用，不跑加载动画、不揭开遮罩
-  if(location.hostname === 'mplayerleo.github.io'){
-    textEl.textContent = '';
-    textEl.classList.add('boot-oldsite-notice');
-    var l1 = document.createElement('div'); l1.textContent = '您现在正在使用旧版土王智商高';
-    var l2 = document.createElement('div'); l2.textContent = '点击画面任意位置跳转新版';
-    textEl.appendChild(l1); textEl.appendChild(l2);
-    mask.classList.add('boot-oldsite');
-    mask.addEventListener('click', function(){ location.href = 'https://iqdooh.top/'; });
-    // 旧站本地还留着盒子数据的话，给一个自带的导出入口（原理见样式表里 #bootOldsiteExport 的注释）
-    (function(){
-      var wrapEl = document.getElementById('bootOldsiteExport');
-      var btn = document.getElementById('bootOldsiteExportBtn');
-      if(!wrapEl || !btn) return;
-      var entries = null;
-      try{
-        var raw = localStorage.getItem('effiprobcalc_box_v1');
-        if(raw){
-          var parsed = JSON.parse(raw);
-          if(Array.isArray(parsed) && parsed.length) entries = parsed;
-        }
-      }catch(e){ entries = null; } // 隐私模式下 localStorage 会直接抛，当没数据处理
-      if(!entries) return;
-      wrapEl.classList.add('on');
-      // 整块吞掉冒泡：点备注/点按钮都不该触发"点画面任意位置跳新版"，否则一按就被弹走
-      wrapEl.addEventListener('click', function(ev){ ev.stopPropagation(); });
-      btn.addEventListener('click', function(){
-        // 字段格式跟主脚本的 boxExportToFile 保持一致，导出的文件能直接被新站"导入盒子"吃下
-        var payload = {version:1, exportedAt:Date.now(), entries:entries};
-        var url = URL.createObjectURL(new Blob([JSON.stringify(payload)], {type:'application/json'}));
-        var t = new Date(), pad = function(n){ return String(n).padStart(2,'0'); };
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = '宝可梦盒备份_' + t.getFullYear() + pad(t.getMonth()+1) + pad(t.getDate())
-                   + '_' + pad(t.getHours()) + pad(t.getMinutes()) + '.json';
-        document.body.appendChild(a); a.click(); a.remove();
-        setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
-        btn.textContent = '已导出 ' + entries.length + ' 只';
-        btn.classList.add('done');
-        setTimeout(function(){ btn.textContent = '导出盒子'; btn.classList.remove('done'); }, 2400);
-      });
-    })();
-    return;
-  }
-  var dotsEl = document.getElementById('bootLoadingDots');
-  var n = 1;
-  var dotTimer = setInterval(function(){
-    n = n % 3 + 1;
-    if(dotsEl) dotsEl.textContent = '.'.repeat(n);
-  }, 450);
-  var done = false;
-  // "从中间开圆洞并向四周扩散打开"：用 mask-image 的径向渐变控制遮罩自身的可见度——
-  // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
-  // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
-  // farthest-corner为100%基准，天然保证涨满时四个角都已经露出来)
-  function openMaskHole(mask){
-    var start = null, dur = 650;
-    function step(ts){
-      if(!mask.parentNode) return;
-      if(start===null) start = ts;
-      var p = Math.min(1, (ts-start)/dur);
-      var eased = 1 - Math.pow(1-p, 3);
-      var r = eased * 102;
-      var edge = Math.min(r+2, 100);
-      var grad = 'radial-gradient(circle at 50% 50%, transparent 0%, transparent '+r+'%, #000 '+edge+'%, #000 100%)';
-      mask.style.webkitMaskImage = grad;
-      mask.style.maskImage = grad;
-      if(p < 1) requestAnimationFrame(step);
-      else mask.remove();
-    }
-    requestAnimationFrame(step);
-    // 兜底：极端情况下(比如动画期间标签页切到后台，rAF被挂起)也不能把用户永远挡在外面
-    setTimeout(function(){ if(mask.parentNode) mask.remove(); }, dur + 2500);
-  }
-  function finish(){
-    if(done) return; done = true;
-    clearInterval(dotTimer);
-    var mask = document.getElementById('bootLoadingMask');
-    if(!mask) return;
-    if(textEl){
-      textEl.textContent = '土王智商高！';
-      textEl.classList.add('boot-slogan-drop');
-    }
-    // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开
-    setTimeout(function(){ openMaskHole(mask); }, 700);
-  }
-  if(document.readyState === 'complete') finish();
-  else window.addEventListener('load', finish);
-  // 兜底：极端情况下 load 一直不触发，别让遮罩把用户永远挡在外面
-  setTimeout(finish, 20000);
-})();
-</script>
 <div class="wrap">
   <div class="site-header-row">
     <h1>土王智商高 · 宝睡图鉴</h1>
@@ -19500,6 +19504,50 @@ function pvpRenderBoard(){
   bind();
 }
 
+/* ---- 物种榜·食材序列标注 ----
+   每条记录上传时 detail 里已经带了 i2/i3(entry.ingChoice2/3，第1位恒定是a，见 pvpSnapshotRecords)，
+   食材型物种据此拼出这个人实际用的组合(aaa/abb/aac/abc)，用捕捉推荐同一份 ING_ICONS 画图标——
+   跟 capComboIconsHtml 画的是同一种小图标，只是这里给的是真实吃到的组合，不是"这个物种推荐用哪个" */
+function pvpRowCombo(r){
+  if(r.__comboCache !== undefined) return r.__comboCache;
+  let combo = null;
+  try{
+    const detail = r.detail ? JSON.parse(r.detail) : null;
+    if(detail && detail.i2 && detail.i3) combo = 'a'+detail.i2+detail.i3;
+  }catch(e){}
+  r.__comboCache = combo;
+  return combo;
+}
+function pvpRowComboHtml(r){
+  const combo = pvpRowCombo(r);
+  if(!combo) return '';
+  const x = (typeof capFindDex==='function') ? capFindDex(r.dex) : null;
+  if(!x || !x.ingA) return '';
+  const letterIng = {a:x.ingA, b:x.ingB, c:x.ingC};
+  let icons = '';
+  combo.split('').forEach(ltr=>{
+    const ing = letterIng[ltr]; const ic = ing ? ING_ICONS[ing] : null;
+    icons += ic ? `<img src="${ic}" class="pvp-combo-ic" title="${ing}">` : '';
+  });
+  return icons ? ` <span class="pvp-combo-icons">${icons}</span>` : '';
+}
+// 同分同效率时，若这个物种的 aaa/abb 都是正经可用组合(不是瞎凑的邪修)，aaa 排前面、abb 排后面；
+// aac/abc 或没解出组合的行不受影响，维持原本按 score/eff 来的顺序（后端已经按这个排好，这里只是稳定排序）
+function pvpFoodComboSort(list){
+  return list.slice().sort((a,b)=>{
+    if(b.score!==a.score || b.eff!==a.eff) return 0; // 非同分同效率的相对顺序不动，交给下面的稳定排序保留原序
+    const ca = pvpRowCombo(a), cb = pvpRowCombo(b);
+    if(!ca || !cb || ca===cb) return 0;
+    if((ca==='aaa'&&cb==='abb') || (ca==='abb'&&cb==='aaa')){
+      const x = (typeof capFindDex==='function') ? capFindDex(a.dex) : null;
+      if(x && typeof capComboUsable==='function' && capComboUsable(x,'aaa') && capComboUsable(x,'abb')){
+        return ca==='aaa' ? -1 : 1;
+      }
+    }
+    return 0;
+  });
+}
+
 /* ---- 物种榜：先出一张头像网格（只列真有人上榜的物种，免得点进去一片空），点进去看单个物种的榜 ---- */
 function pvpRenderSpecies(el, head, bind, shiny){
   // 二级页：某个物种的榜
@@ -19520,17 +19568,24 @@ function pvpRenderSpecies(el, head, bind, shiny){
     const backBtn = `<button type="button" class="pvp-more-btn" id="pvpSpBack" style="margin:0 0 10px">‹ 返回物种列表</button>`;
     if(d.error){ el.innerHTML = head + backBtn + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`; bind(); pvpWireSpeciesBack(); return; }
     const showNames = userPrefs.pvpShowNamesOn !== false;
-    const spName = (d.list && d.list[0]) ? d.list[0].name : pvpSpeciesSel;
-    const rowsHtml = (d.list||[]).map(r=>{
+    // 南瓜精/南瓜怪人合并榜：标题用不带尺寸后缀的族名，行内单独标一个"(大/中/小/巨)"——
+    // 目前只有这两个物种的名字带括号后缀，直接正则剥掉就是族名，不用专门判断 dex
+    const spNameRaw = (d.list && d.list[0]) ? d.list[0].name : pvpSpeciesSel;
+    const spName = spNameRaw.replace(/\([^)]*\)$/, '');
+    const rowList = pvpFoodComboSort((d.list||[]).slice());
+    const rowsHtml = rowList.map(r=>{
       const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
       const label = r.future ? ('未来'+r.grade) : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
       const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.quarter?'不推荐使用':r.grade);
+      const sizeM = r.name.match(/\(([^)]*)\)$/);
+      const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
+      const comboHtml = pvpRowComboHtml(r);
       return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
         <div class="pvp-row-rank">${r.rank}</div>
         <div class="pvp-av">${pvpAvatarImg(r.name, shiny)}</div>
         <div class="pvp-row-main">
           <div class="pvp-row-name">${who}</div>
-          <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}</div>
+          <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}</div>
         </div>
         <span class="pvp-grade" style="background:${badgeColor}">${label}</span>
         <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
@@ -19559,9 +19614,12 @@ function pvpRenderSpecies(el, head, bind, shiny){
   }
   const d = pvpIndexCache;
   if(d.error){ el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`; bind(); return; }
+  // 南瓜精/南瓜怪人合并成一格后 s.name 是不带尺寸的族名，POKEMON_PORTRAITS 只认带后缀的
+  // 全名，头像图单独接一个"(中)"去查图，跟格子里显示的族名文字互不影响
+  const PVP_PUMPKIN_AVATAR = {'#710':'南瓜精(中)', '#711':'南瓜怪人(中)'};
   const gridHtml = (d.species||[]).map(s=>
     `<div class="pvp-sp" data-pvpdex="${s.dex}">
-       <div class="pvp-av">${pvpAvatarImg(s.name, shiny)}</div>
+       <div class="pvp-av">${pvpAvatarImg(PVP_PUMPKIN_AVATAR[s.dex]||s.name, shiny)}</div>
        <div class="pvp-sp-n">${s.name}</div>
        <div class="pvp-sp-c">${s.players} 人</div>
      </div>`).join('');
