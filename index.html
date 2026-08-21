@@ -12302,13 +12302,19 @@ function capBuildBerryEnergy(){
   const fullBagOn = userPrefs.capFullBagOn !== false;
   pool.forEach(x=>{
     const val = (medal, fullBag) => real ? capBEEnergyReal(x,capState.level,medal,capState.ctrl,real,fullBag) : capBEEnergy(x,capState.level,medal,capState.ctrl,fullBag);
+    // 满包开关开启时"全体树果型"一起按满包算，绝不能只让个别几只免扣食材概率去跟其他扣了的比——
+    // 那样基准不一致，帮忙间隔相近的两只能凭空拉开 20% 差距（2026-08-21 巨锻匠 vs 皮可西 一事）。
+    // 能量型不存在满包，capBEEnergy 分发时就不吃 fullBag，恒按不满包算
+    const bagged = fullBagOn && x.dtype!=='能量';
     // 达克莱伊/巨锻匠这类"主技能直接产能量"的树果型，满包与否结果差异巨大（满包多出树果、但技能一次
-    // 都不触发），单给一个数会误导，所以满包开关开启时把两个状态都列进榜单各占一行、各自参与排序，
-    // 满包那条在头像上打个角标区分。能量型不存在满包（capBEEnergy 里就不吃 fullBag），不拆行
-    const dualState = fullBagOn && x.dtype!=='能量' && CAP_SKILL_SPECIAL_OUTPUT[x.dex] && CAP_SKILL_SPECIAL_OUTPUT[x.dex].kind==='energy';
+    // 都不触发），只给一个数会误导，所以满包开关开启时把两个状态都列进榜单各占一行、各自参与排序，
+    // 满包那条在头像上打个角标跟同名的不满包那条区分开
+    const dualState = bagged && CAP_SKILL_SPECIAL_OUTPUT[x.dex] && CAP_SKILL_SPECIAL_OUTPUT[x.dex].kind==='energy';
     const push = medal => {
-      recs.push({x,medal,value:val(medal,false),fullBag:false});
-      if(dualState) recs.push({x,medal,value:val(medal,true),fullBag:true});
+      // dual 标记只给"同一只拆成两行"的那两只：满包开关开着时整张榜单都是满包口径，
+      // 逐行都挂角标纯属噪音，只有需要跟自己的孪生行区分时才挂
+      recs.push({x,medal,value:val(medal,bagged),fullBag:bagged,dual:dualState});
+      if(dualState) recs.push({x,medal,value:val(medal,false),fullBag:false,dual:true});
     };
     push(false);
     if(x.stage==='徽章') push(true);
@@ -12655,8 +12661,9 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   else reco = capRecoFromGH(x.reco,x.avail);
   const pct = maxVal>0 ? Math.max(0,Math.min(100, rec.value/maxVal*100)) : 0;
   const medalBadge = rec.medal ? `<img class="cap-medal" src="${CAP_ICONS.medal}" alt="睡饱饱奖章">` : '';
-  // 满包角标：同一只宝可梦的"满包"那一行才挂，用来跟紧挨着的"不满包"行区分（见 capBuildBerryEnergy）
-  const fullBagBadge = rec.fullBag ? `<span class="cap-fullbag" title="满包状态：只出树果、主技能不触发">满</span>` : '';
+  // 满包角标：只有被拆成"满包/不满包"两行的那两只(达克莱伊/巨锻匠)的满包行才挂，用来跟同名的
+  // 不满包行区分；其余条目跟随全局满包开关、口径本来就一致，不需要逐行标注（见 capBuildBerryEnergy）
+  const fullBagBadge = (rec.dual && rec.fullBag) ? `<span class="cap-fullbag" title="满包状态：只出树果、主技能不触发">满</span>` : '';
   const babySlot = showBaby ? `<div class="cap-av cap-av-baby">${capB64Img(x.baby)}</div>` : `<div class="cap-av-baby cap-av-none">不进化</div>`;
   const nameHtml = x.name;
   const sleepInfo = capSleepTypeOf(x);
