@@ -14092,6 +14092,13 @@ function pageSwitchAnimateTo(targetId){
     // 捕捉推荐页优先在自己的三个子标签（树果/能量→食材→功能）里左右切换；只有已经切到
     // 两端、这次滑动会越界时（树果再向右滑 / 功能再向左滑），才把手势交给大页面切换
     const activeEl = document.querySelector('.app-page.active-page');
+    // 「更多功能」子页里左右滑不再当页面切换：右滑(step=-1)退回更多功能主界面（相当于返回上一层），
+    // 左滑(step=+1)不做任何事——子页内容大多自己占满一屏、还有需要横滑操作的控件（面板天梯/物种榜筛选等），
+    // 跟顶层翻页手势抢起来体验很差。只有停在更多功能主界面(mfSubView为null)时左右滑才照旧走顶层翻页
+    if(activeEl && activeEl.id === 'page2' && typeof mfSubView!=='undefined' && mfSubView){
+      if(step === -1) mfShowSub(null);
+      return;
+    }
     if(activeEl && activeEl.id === 'page4'){
       const capIdx = CAP_TYPE_ORDER.indexOf(capState.type);
       const capNextIdx = capIdx + step;
@@ -14990,11 +14997,16 @@ function boxEffectiveFinalDex(dex){
   // 跟普通皮卡丘属性都是电，退回去查皮卡丘的进化链没问题）。但像冰九尾(#038-1，冰属性)这种地区
   // 变种，自己已经是查不到 POKEMON_FINAL_DEX_MAP 的最终形态，退回去只会查到普通九尾(#038，火属性)
   // ——根本是两只完全不同的宝可梦，只是编号连号，误退回去会把毕业判定/树果搭配全部张冠李戴到
-  // 普通九尾身上。用属性(attr)是否一致做判据：不一致就说明不是"同一只换皮"，原样返回自己，不退化
+  // 普通九尾身上。用属性(attr)是否一致做判据：不一致就说明不是"同一只换皮"，原样返回自己，不退化。
+  // 2026-08-22 修：光比 attr 不够——海豹球（佳节）#363-1 是"功能"型、"不进化"，属性跟基础海豹球
+  // #363（树果型）一样都是冰，attr 判据放过了它，结果被退回去查到 POKEMON_FINAL_DEX_MAP["#363"]=
+  // "#365"(帝牙海狮，树果型)，PVP 里就被当成树果算分。皮卡丘（佳节）#025-2、伊布（佳节）#133-1 是
+  // 同一种坑（attr 跟基础形态一样，但 dtype 换了档）。这三只在 CAP_DEX 里本来就有自己独立的
+  // "不进化"词条，不该被并回基础进化链——dtype 也不一致就说明同样不是"同一只换皮"
   if(baseDex!==dex && typeof POKEMON_DEX_DATA!=='undefined'){
     const selfRow = POKEMON_DEX_DATA.find(r=>r[0]===dex);
     const baseRow = POKEMON_DEX_DATA.find(r=>r[0]===baseDex);
-    if(selfRow && baseRow && selfRow[2]!==baseRow[2]) return dex;
+    if(selfRow && baseRow && (selfRow[2]!==baseRow[2] || selfRow[3]!==baseRow[3])) return dex;
   }
   if(typeof POKEMON_FINAL_DEX_MAP!=='undefined' && POKEMON_FINAL_DEX_MAP[baseDex]) return POKEMON_FINAL_DEX_MAP[baseDex][0];
   return baseDex;
