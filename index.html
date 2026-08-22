@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.json?v=2">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="效率计算器">
+<meta name="apple-mobile-web-app-title" content="土王智商高">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#efe9d8">
@@ -19263,35 +19263,43 @@ function pvpCategoryOf(entry){
   return cat;
 }
 
-/* "现在不合格、但升级之后能到某档位"的半价分。
-   把条目等级临时换成 70/80 再判一次档，取能达到的最高档的一半。
-   只有当前判成不合格的才追未来——已经有分的不再叠加，避免同一只既拿现价又拿半价。
+/* PVP 评分要跟用户自选等级彻底脱钩：游戏现在还没开放80级，谁也真练不到，一律按70级的
+   窗口去判档位——不管盒子里这条记录本人实际填的是25级还是80级，练度高低都不影响这一步。
+   如果换到80级窗口（副技能/食材覆盖多算一格）会让档位比70级更高，那部分"多出来的强度"
+   现在还兑现不了，但也不能装看不见：按70级和80级两档分数各半，算作对"开放后大概率能拿到"
+   的折扣分；两档一样就还是70级原分，不打折。低于70级的同理按70级的窗口给分——不因为
+   懒得练/来不及练而吃亏。
+   2026-08-22 需求：取代原来"当前不合格、按能到的档位打五折"的 pvpFutureHalfScore——
+   那条老逻辑以【条目真实等级】为基准判"现在"够不够格，新逻辑下"现在"已经不存在了，
+   70级永远是评分地板，两条逻辑没法共存。
 
-   ⚠️ 这里必须走 pvpCategoryOf（＝ boxEntryGradeCategory 那条完整判定链），
-   不能图省事直接调 boxEntryGraduationGrade。后者只做"效率→档位"这一步，会绕过全部
-   结构性判废规则：abc/aba 强制不合格、组合不可用的删除线、能量型没选树果数量S的删除线。
-   这些是【组合本身不行】，不是【等级不够】，升到 80 级也救不回来。
-   2026-08-21 修：abc 组合的食材型因此被算成"未来金帮超级毕业"白拿 50 分。 */
-function pvpFutureHalfScore(entry){
-  let best = 0, bestGrade = null;
-  [70, 80].forEach(lv=>{
-    if(lv <= entry.level) return;                       // 已经到这个等级了就不算"未来"
-    const probe = Object.assign({}, entry, {level: lv});
-    let cat = null;
-    try{ cat = pvpCategoryOf(probe); }catch(e){ cat = null; }
-    const s = cat ? PVP_SCORE_MAP[cat] : null;
-    if(s != null && s > best){ best = s; bestGrade = cat; }
-  });
-  return {score: best/2, grade: bestGrade};
+   ⚠️ 跟老函数一样，必须走 pvpCategoryOf（＝ boxEntryGradeCategory 完整判定链），不能图省事
+   直接调 boxEntryGraduationGrade——后者只做"效率→档位"这一步，会绕开 abc/aba 强制不合格、
+   组合不可用删除线等【组合本身不行】的结构性判废，那些换到 80 级窗口也救不回来。 */
+function pvpLevelNormalizedGrade(entry){
+  const e70 = Object.assign({}, entry, {level: 70});
+  const e80 = Object.assign({}, entry, {level: 80});
+  let cat70 = null, cat80 = null;
+  try{ cat70 = pvpCategoryOf(e70); }catch(e){ cat70 = null; }
+  try{ cat80 = pvpCategoryOf(e80); }catch(e){ cat80 = null; }
+  if(cat70 == null) return null;
+  const s70 = PVP_SCORE_MAP[cat70];
+  if(s70 == null) return null;
+  if(cat80 != null && cat80 !== cat70){
+    const s80 = PVP_SCORE_MAP[cat80];
+    if(s80 != null) return {cat: cat70, score: (s70+s80)/2, bumpGrade: cat80};
+  }
+  return {cat: cat70, score: s70, bumpGrade: null};
 }
 
 /* "不推荐使用"的宝可梦（POKEMON_DEX_DATA 的 rec[4] 有值，比如穿山鼠"弱"）按 1/4 分计入总分；
    拉帝亚斯（#380）v3.29 起单独享受 1/2（她的"不推荐"是相对拉帝欧斯而言，不是纯粹弱）。
    ⚠️ 范围只认 rec[4] 这个【物种级别】的红字标，不含食材型 aba/abc 结构性判废、
-   aaa/abb"组合不可用"这些【面板/组合级别】的判废——那些走的还是原来 0 分/未来可期半价那条路，
+   aaa/abb"组合不可用"这些【面板/组合级别】的判废——那些走的还是原来 0 分/70-80均分那条路，
    跟这里是两套不同的口径，不要混。
    boxEntryGradeCategory 只要 rec[4] 有值就直接 struck→'其他'，压根不会往下算真实档位，
-   得自己单独跑一遍 boxEntryGraduationGrade（跟 pvpFutureHalfScore 绕开 struck 的做法同一个套路）。
+   得自己单独跑一遍 boxEntryGraduationGrade（跟 pvpLevelNormalizedGrade 绕开 struck 的做法
+   同一个套路），同样固定按70级判、80级不同就均分——练度对这条路径也不该生效。
    注意：食材型/功能型的"不推荐使用"如果同时满足邪修门槛，boxEntryGradeCategory 会在 struck
    判定之前就先判成邪修（见 boxXiexiuEligible 里 rec[4] 直接 return true 那行）——那种情况
    pvpCategoryOf 早就拿到"邪修"这个真实分类了，根本不会流到这个函数，不会跟 1/4 规则冲突。 */
@@ -19300,17 +19308,24 @@ function pvpIsUnrecommended(entry){
   return !!(rec && rec[4]);
 }
 function pvpUnrecommendedQuarterScore(entry){
-  if(!pvpIsUnrecommended(entry)) return {score:0, grade:null};
+  if(!pvpIsUnrecommended(entry)) return {score:0, grade:null, bumpGrade:null};
   const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
   const dtype = DEX_TYPE_MAP[rec[3]];
   const x = capFindDex(boxEffectiveFinalDex(entry.dex));
-  if(!dtype || !x) return {score:0, grade:null};
-  let grade = null;
-  try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
-  const base = grade ? PVP_SCORE_MAP[grade] : null;
+  if(!dtype || !x) return {score:0, grade:null, bumpGrade:null};
+  let grade70 = null, grade80 = null;
+  try{ grade70 = boxEntryGraduationGrade(Object.assign({}, entry, {level:70}), x, dtype); }catch(e){ grade70 = null; }
+  try{ grade80 = boxEntryGraduationGrade(Object.assign({}, entry, {level:80}), x, dtype); }catch(e){ grade80 = null; }
+  const base70 = grade70 ? PVP_SCORE_MAP[grade70] : null;
+  if(base70 == null) return {score:0, grade:null, bumpGrade:null};
   // v3.29：拉帝亚斯单独享受 1/2 折算（其余"不推荐使用"物种仍是 1/4）
   const divisor = rec[0]==='#380' ? 2 : 4;
-  return base!=null ? {score: base/divisor, grade} : {score:0, grade:null};
+  let base = base70, bumpGrade = null;
+  if(grade80 && grade80 !== grade70){
+    const base80 = PVP_SCORE_MAP[grade80];
+    if(base80 != null){ base = (base70+base80)/2; bumpGrade = grade80; }
+  }
+  return {score: base/divisor, grade: grade70, bumpGrade};
 }
 
 /* 把一组条目汇总成一份战绩。站长要求【所有个体都计分，不按物种合并】——
@@ -19342,7 +19357,7 @@ function pvpAggregate(rows, unrated, boxCount, catchCount, floorN){
   const total = list.reduce((s,r)=> s+r.score, 0);
   const dist = new Map();        // 档位名 -> 只数（未来半价的单独归一类）
   list.forEach(r=>{
-    const k = r.future ? '未来可期' : r.cat;
+    const k = r.cat;
     dist.set(k, (dist.get(k)||0) + 1);
   });
   const ratedCount = list.length;
@@ -19390,25 +19405,20 @@ function pvpBuildMyStats(){
     // re：按分支选择（或默认finals[0]）解析出的最终形态，物种榜/计分/效率全部按它算，
     // 不再看盒子里原始记的那个幼态 dex；branchOf 留一份原始条目引用，只用来判断/回填分支选择
     const re = pvpResolvedEntry(entry);
-    const cat = pvpCategoryOf(re);
-    const base = cat==null ? null : PVP_SCORE_MAP[cat];
-    if(base == null){
-      // pvpCategoryOf 返回 null 有两种情况：副技能没选满/物种没识别/组合判废（真判不出，沉底）；
+    // 不看条目真实等级，一律按 pvpLevelNormalizedGrade 的70/80归一化结果算分
+    const norm = pvpLevelNormalizedGrade(re);
+    if(norm == null){
+      // pvpLevelNormalizedGrade 返回 null 有两种情况：副技能没选满/物种没识别/组合判废（真判不出，沉底）；
       // 或者是"不推荐使用"（rec[4]）触发的 struck→'其他'——后者按 1/4 规则给分，不直接沉底
       const q = pvpUnrecommendedQuarterScore(re);
       if(q.score > 0){
-        rows[g].push({entry:re, branchOf:entry, cat:'不推荐使用', score:q.score, future:null, unrecommended:q.grade, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
+        rows[g].push({entry:re, branchOf:entry, cat:'不推荐使用', score:q.score, bumpGrade:q.bumpGrade, unrecommended:q.grade, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
       } else {
         unrated[g]++;
       }
       return;
     }
-    let score = base, future = null;
-    if(score === 0){
-      const f = pvpFutureHalfScore(re);
-      if(f.score > 0){ score = f.score; future = f.grade; }
-    }
-    rows[g].push({entry:re, branchOf:entry, cat, score, future, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
+    rows[g].push({entry:re, branchOf:entry, cat:norm.cat, score:norm.score, bumpGrade:norm.bumpGrade, unrecommended:null, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
   });
   // 闪光和不闪光的分数各算各的，但欧非分共用同一个分母(总捕捉数)——游戏里没有"闪光捕捉数"。
   // 分母下限用整盒只数(闪光+不闪光一起)：每一只都是抓来的，都占捕捉次数
@@ -19468,10 +19478,11 @@ function pvpRenderMe(){
     // 未来可期：档位牌显示"未来XX"；不推荐使用(穿山鼠这类)：档位牌显示实际档位、右下角挂1/4提示（拉帝亚斯是1/2，见 subExtra）。
     // 恐怖宝可梦（future/unrecommended 分数恒为0分支，永远不会跟它撞上）不能原样显示内部代号，
     // 换成占位文字+彩虹流光牌子，跟盒子列表那边的处理保持一致
-    const isTerror = !r.future && !r.unrecommended && r.cat === '恐怖宝可梦';
-    const label = isTerror ? PVP_TERROR_LABEL : (r.future ? ('未来'+r.future) : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat));
-    const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.cat);
-    const subExtra = r.future ? ' · 当前不合格，按未来档位半价计分' : (r.unrecommended ? (' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分') : '');
+    const isTerror = !r.unrecommended && r.cat === '恐怖宝可梦';
+    const label = isTerror ? PVP_TERROR_LABEL : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat);
+    const badgeColor = pvpCatColor(r.cat);
+    const bumpNote = r.bumpGrade ? ` · 80级可到${r.bumpGrade}，按70/80两档均分计分` : '';
+    const subExtra = (r.unrecommended ? ' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分' : '') + bumpNote;
     // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
     // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
     const needsPick = pvpEntryNeedsBranchPick(r.branchOf);
@@ -19564,13 +19575,14 @@ function pvpSnapshotRecords(){
       out.push({
         shiny: g==='shiny' ? 1 : 0,
         dex: e.dex, name: e.name || '', level: e.level,
-        // future 记录传的是【能达到的那个档位】而不是当前档位：分数本来就是按未来档位折半算的，
-        // 传当前档位(必然是不合格=0分)会让后端的 score===PVP_SCORE[grade]/2 校验对不上、整单被拒。
-        // unrecommended(穿山鼠这类"不推荐使用"按1/4计分，拉帝亚斯例外按1/2)同理，r.cat 在这种行上是"不推荐使用"
-        // 这个前端自用的展示分组标签、不是真档位，真档位在 r.unrecommended 里，得传那个
-        grade: r.future || r.unrecommended || r.cat,
-        future: r.future ? 1 : 0,
+        // grade 固定传【70级判出来的档位】——不推荐使用(quarter)的行例外，r.cat 在那种行上是
+        // "不推荐使用"这个前端自用的展示分组标签、不是真档位，真档位在 r.unrecommended 里，得传那个。
+        // bumpGrade 有值时代表80级窗口会跳到更高一档，score 已经是70/80两档均分后的数，
+        // 后端要靠 bumpGrade 复核这个均分对不对——见 pvp.js 的 want 公式
+        grade: r.unrecommended || r.cat,
         quarter: r.unrecommended ? 1 : 0,
+        bump: r.bumpGrade ? 1 : 0,
+        bumpGrade: r.bumpGrade || null,
         score: r.score, eff: r.eff,
         detail: JSON.stringify({
           nick: e.nickname || '', sel: e.selected || [],
@@ -19755,9 +19767,10 @@ function pvpRenderSpecies(el, head, bind, shiny){
       const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
       // 恐怖宝可梦是内部代号（见 pvpDisplayLabel 定义处注释），物种榜是给所有人看的公共展示，
       // r.grade 直接来自后端存的原始档位字符串，不能就这么原样印出来
-      const isTerror = !r.future && !r.quarter && r.grade === '恐怖宝可梦';
-      const label = isTerror ? PVP_TERROR_LABEL : (r.future ? ('未来'+r.grade) : (r.quarter ? ('不推荐·'+r.grade) : r.grade));
-      const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.quarter?'不推荐使用':r.grade);
+      const isTerror = !r.quarter && r.grade === '恐怖宝可梦';
+      const label = isTerror ? PVP_TERROR_LABEL : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
+      const badgeColor = pvpCatColor(r.quarter?'不推荐使用':r.grade);
+      const bumpNote = r.bump && r.bumpGrade ? ` · 80级可到${r.bumpGrade}` : '';
       const sizeM = r.name.match(/\(([^)]*)\)$/);
       const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
       const comboHtml = pvpRowComboHtml(r);
@@ -19766,7 +19779,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
         <div class="pvp-av">${pvpAvatarImg(r.name, shiny)}</div>
         <div class="pvp-row-main">
           <div class="pvp-row-name">${who}</div>
-          <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}</div>
+          <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}${bumpNote}</div>
         </div>
         <span class="pvp-grade${isTerror?' pvp-grade-terror':''}"${isTerror?'':` style="background:${badgeColor}"`}>${label}</span>
         <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
