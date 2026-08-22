@@ -36,7 +36,7 @@
    两种文字共用同一个盒子，不管现在显示哪种文字，盒子高度都不变——避免文字变大时
    撑高这一行，把上面的logo和下面的gif群往两边挤开 */
 #bootLoadingText{
-  height:38px; display:flex; align-items:center; justify-content:center;
+  height:57px; display:flex; align-items:center; justify-content:center;
   font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em;
 }
 #bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
@@ -52,7 +52,7 @@
    （scale 略小于1再弹回1），模拟盖章砸下去的冲击感，跟之前那种飘落式的回弹(scale大于1)
    感觉不一样 */
 #bootLoadingText.boot-slogan-drop{
-  font-size:27px; font-weight:900; color:var(--accent);
+  font-size:40.5px; font-weight:900; color:var(--accent);
   animation:bootSloganDrop .5s cubic-bezier(.16,1,.3,1) both;
 }
 @keyframes bootSloganDrop{
@@ -91,7 +91,7 @@
   <div id="bootLoadingInner" style="display:flex;flex-direction:column;align-items:center;gap:28px;padding:24px;">
     <div id="bootLoadingSite">IQDOOH.TOP</div>
     <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
-    <div id="bootLoadingText" style="font-size:16px;font-weight:800;color:#4f3167;">土王智商加载中<span id="bootLoadingDots">.</span></div>
+    <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
     <div id="bootLoadingMascots">
       <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
       <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
@@ -5394,6 +5394,16 @@ const GRAD_RANK = {'不合格':0,'和解':1,'毕业':2,'大毕业':3,'超级毕�
   '金帮不合格':0,'金帮和解':1,'金帮毕业':2,'金帮大毕业':3,'金帮超级毕业':4};
 // 这5只功能型宝可梦的原和解区间整体下移视为毕业，并在更低处划出新的和解区间（见 GRAD_TABLE 的 skillSpecial 字段）
 const SPECIAL_SKILL_GRAD_MONS = new Set(['咚咚鼠','雷公','炎帝','水君','克雷色利亚']);
+// v3.29：雷公/炎帝/水君/克雷色利亚/拉帝亚斯这5只，当前已解锁面板（selected 数组里落在 windowSizeOf(level) 窗口内的槽位）
+// 带树果s时，在原本判定档位基础上再升一档（金帮/非金帮各自升，封顶就是本组最高档，升不动就原样返回）——
+// 跟 skillSpecial 那条降门槛的规则各自独立，两条可以同时命中同一只
+const FRUIT_S_GRAD_BOOST_MONS = new Set(['雷公','炎帝','水君','克雷色利亚','拉帝亚斯']);
+function applyFruitSGradBoost(row, name, selected, level){
+  if(!row || !name || !FRUIT_S_GRAD_BOOST_MONS.has(name)) return row;
+  const ws = windowSizeOf(level);
+  if(!(selected||[]).slice(0, ws).includes('fruitS')) return row;
+  return GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===GRAD_RANK[row.grade]+1) || row;
+}
 // 通用版（非萌新版）把偏高的档位标签整体下调一档展示：毕业→和解、大毕业→毕业、超级毕业→大毕业、金帮毕业→金帮和解（空出来的档位不补）
 // 仅树果型生效（食材型/功能型/能量型不下调，此前误把所有类型都下调过一次，已改回）
 const NORMAL_GRADE_SHIFT = {'毕业':'和解','大毕业':'毕业','超级毕业':'大毕业','金帮毕业':'金帮和解'};
@@ -8954,7 +8964,9 @@ const GRAD_STD_TABS = [
         ['1.55 ~ 1.7',  G('金帮毕业'),     G('金帮毕业（B+ 级）','金帮毕业')],
         ['1.7 ~ 1.9',   G('金帮大毕业'),   G('金帮大毕业（A+ 级）','金帮大毕业')],
         ['1.9 以上',    G('金帮超级毕业'), G('金帮超级毕业（SSS 级）','金帮超级毕业')],
-      ]);
+      ])
+    + gstdH('五只特例宝可梦：带树果 S 再升一档')
+    + gstdP('<b>雷公、炎帝、水君、克雷色利亚、拉帝亚斯</b>这五只，如果当前已解锁的副技能面板里带<b>树果 S</b>，会在上面算出的判定档位基础上<b>再升一档</b>（金帮升金帮，非金帮升非金帮），封顶就是本组最高档，升不动就维持原判定。举例：和解带树果 S 变毕业，金帮大毕业带树果 S 变金帮超级毕业。这条规则跟上面"门槛整体下移"那条各自独立，可以同时命中同一只。');
   }},
   {key:'energy', label:'能量', tone:'energy', html:function(){ return ''
     + gstdP('能量型<b>不看效率门槛表，改看排名</b>，档位名通用版和萌新版一致。')
@@ -8984,6 +8996,7 @@ const GRAD_STD_TABS = [
     + gstdH('「不推荐使用」')
     + gstdP('数据表里被标记为不推荐的宝可梦，判定结果会加删除线、变红字，并显示该宝可梦的专属短评，下方附一行：')
     + gstdNote('*不推荐使用建议仅出于强度考量，真爱党请随意')
+    + gstdP('<b>拉帝亚斯</b>是例外：评语换成「如无毕业拉帝欧斯 / 不推荐使用」——她的不推荐是相对拉帝欧斯而言，不是纯粹数值弱。PVP 计分上，一般「不推荐使用」的宝可梦按实际档位的 <b>1/4</b> 分计入总分，拉帝亚斯单独享受 <b>1/2</b>。')
     + gstdH('闪光')
     + gstdP('勾选闪光后，档位名前面会加「闪光」二字，评语也换成另一套专为闪光准备的词（例如毕业的「中流砥柱 栋梁之材」→「鹰击长空 鱼翔浅底」）。')
     + gstdH('50 级会额外预测 70 / 80 级')
@@ -9280,7 +9293,10 @@ function getGradOverrideInfo(){
   const mappedType = DEX_TYPE_MAP[rec[3]];
 
   if(unavailReason){
-    return {kind:'unavailable', heading:'不推荐使用', comment: weakComment || ''};
+    // v3.29：拉帝亚斯专属文案——她的"不推荐使用"是相对拉帝欧斯而言的，不是泛泛的弱，
+    // 换成"如无毕业拉帝欧斯 不推荐使用"两行，其余不推荐使用的宝可梦不受影响
+    const heading = rec[0]==='#380' ? '如无毕业拉帝欧斯<br>不推荐使用' : '不推荐使用';
+    return {kind:'unavailable', heading, comment: weakComment || ''};
   }
 
   if(mappedType==='food' && state.type==='food'){
@@ -9666,6 +9682,7 @@ function renderGraduation(pfx){
   const eff = computeEfficiency(labels, state.type, state.level, persona); // 精确原始效率，不含同队金帮加成
   const isSpecialSkillMon = state.type==='skill' && gradRec && SPECIAL_SKILL_GRAD_MONS.has(gradRec[1]);
   let row = classifyGrade(state.type, hasHelper, eff, isSpecialSkillMon);
+  row = applyFruitSGradBoost(row, gradRec && gradRec[1], state.selected, state.level);
   // 食材型：原毕业标准与食谱覆盖率120%二选一达标即可，和解/金帮和解在任一食材覆盖率达120%时上调为毕业/金帮毕业；
   // 反过来，覆盖率不足105%时不管面板本身算出来是什么，都封顶降级为和解/金帮和解（沿用和解/金帮和解自己的评语）
   // 展示框始终用当前等级的覆盖率；判定规则本身：50级改用60级食谱覆盖率判断，60/70/80各自用自己当前等级的覆盖率判断
@@ -9735,8 +9752,10 @@ function renderGraduation(pfx){
 
     const eff70 = computeEfficiency(labels, state.type, 70, persona);
     const eff80 = computeEfficiency(labels, state.type, 80, persona);
-    const row70 = classifyGrade(state.type, hasHelper70, eff70, isSpecialSkillMon);
-    const row80 = classifyGrade(state.type, hasHelper80, eff80, isSpecialSkillMon);
+    let row70 = classifyGrade(state.type, hasHelper70, eff70, isSpecialSkillMon);
+    let row80 = classifyGrade(state.type, hasHelper80, eff80, isSpecialSkillMon);
+    row70 = applyFruitSGradBoost(row70, gradRec && gradRec[1], state.selected, 70);
+    row80 = applyFruitSGradBoost(row80, gradRec && gradRec[1], state.selected, 80);
     const baseGold = !!row.gold;
     const isUnavail = gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable');
     const show70 = row70 && row70[field70] && isGradeUpgrade(baseRank, baseGold, GRAD_RANK[row70.grade], row70.gold);
@@ -12861,6 +12880,7 @@ function boxEntryGraduationGrade(entry, x, dtype){
   const eff = computeEfficiency(labels, dtype, level, persona);
   const isSpecialSkillMon = dtype==='skill' && SPECIAL_SKILL_GRAD_MONS.has(x.name);
   let row = classifyGrade(dtype, hasHelper, eff, isSpecialSkillMon);
+  row = applyFruitSGradBoost(row, x.name, entry.selected, level);
   if(!row) return null;
 
   if(dtype==='food' && !LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(x.dex)){
@@ -16522,7 +16542,8 @@ function boxEntryGradeScore(entry){
     for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper = true; break; } }
     const eff = computeEfficiency(labels, dtype, entry.level, persona);
     const isSpecial = dtype==='skill' && SPECIAL_SKILL_GRAD_MONS.has(rec[1]);
-    const row = classifyGrade(dtype, hasHelper, eff, isSpecial);
+    let row = classifyGrade(dtype, hasHelper, eff, isSpecial);
+    row = applyFruitSGradBoost(row, rec[1], entry.selected, entry.level);
     if(!row) return null;
     return GRAD_RANK[row.grade]*2 + (row.gold ? 0 : 1);
   }catch(e){ return null; }
@@ -19226,7 +19247,8 @@ function pvpFutureHalfScore(entry){
   return {score: best/2, grade: bestGrade};
 }
 
-/* "不推荐使用"的宝可梦（POKEMON_DEX_DATA 的 rec[4] 有值，比如拉帝亚斯"弱"）按 1/4 分计入总分。
+/* "不推荐使用"的宝可梦（POKEMON_DEX_DATA 的 rec[4] 有值，比如穿山鼠"弱"）按 1/4 分计入总分；
+   拉帝亚斯（#380）v3.29 起单独享受 1/2（她的"不推荐"是相对拉帝欧斯而言，不是纯粹弱）。
    ⚠️ 范围只认 rec[4] 这个【物种级别】的红字标，不含食材型 aba/abc 结构性判废、
    aaa/abb"组合不可用"这些【面板/组合级别】的判废——那些走的还是原来 0 分/未来可期半价那条路，
    跟这里是两套不同的口径，不要混。
@@ -19248,7 +19270,9 @@ function pvpUnrecommendedQuarterScore(entry){
   let grade = null;
   try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
   const base = grade ? PVP_SCORE_MAP[grade] : null;
-  return base!=null ? {score: base/4, grade} : {score:0, grade:null};
+  // v3.29：拉帝亚斯单独享受 1/2 折算（其余"不推荐使用"物种仍是 1/4）
+  const divisor = rec[0]==='#380' ? 2 : 4;
+  return base!=null ? {score: base/divisor, grade} : {score:0, grade:null};
 }
 
 /* 把一组条目汇总成一份战绩。站长要求【所有个体都计分，不按物种合并】——
@@ -19403,13 +19427,13 @@ function pvpRenderMe(){
   const rowsHtml = shown.map((r,i)=>{
     const e = r.entry;
     const nm = e.nickname && e.nickname!==e.name ? `${e.nickname}<span style="color:#a49c8b;font-weight:700">（${e.name}）</span>` : (e.name||'—');
-    // 未来可期：档位牌显示"未来XX"；不推荐使用(拉帝亚斯这类)：档位牌显示实际档位、右下角挂1/4提示。
+    // 未来可期：档位牌显示"未来XX"；不推荐使用(穿山鼠这类)：档位牌显示实际档位、右下角挂1/4提示（拉帝亚斯是1/2，见 subExtra）。
     // 恐怖宝可梦（future/unrecommended 分数恒为0分支，永远不会跟它撞上）不能原样显示内部代号，
     // 换成占位文字+彩虹流光牌子，跟盒子列表那边的处理保持一致
     const isTerror = !r.future && !r.unrecommended && r.cat === '恐怖宝可梦';
     const label = isTerror ? PVP_TERROR_LABEL : (r.future ? ('未来'+r.future) : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat));
     const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.cat);
-    const subExtra = r.future ? ' · 当前不合格，按未来档位半价计分' : (r.unrecommended ? ' · 不推荐使用，按实际档位1/4计分' : '');
+    const subExtra = r.future ? ' · 当前不合格，按未来档位半价计分' : (r.unrecommended ? (' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分') : '');
     // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
     // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
     const needsPick = pvpEntryNeedsBranchPick(r.branchOf);
@@ -19504,7 +19528,7 @@ function pvpSnapshotRecords(){
         dex: e.dex, name: e.name || '', level: e.level,
         // future 记录传的是【能达到的那个档位】而不是当前档位：分数本来就是按未来档位折半算的，
         // 传当前档位(必然是不合格=0分)会让后端的 score===PVP_SCORE[grade]/2 校验对不上、整单被拒。
-        // unrecommended(拉帝亚斯这类"不推荐使用"按1/4计分)同理，r.cat 在这种行上是"不推荐使用"
+        // unrecommended(穿山鼠这类"不推荐使用"按1/4计分，拉帝亚斯例外按1/2)同理，r.cat 在这种行上是"不推荐使用"
         // 这个前端自用的展示分组标签、不是真档位，真档位在 r.unrecommended 里，得传那个
         grade: r.future || r.unrecommended || r.cat,
         future: r.future ? 1 : 0,
