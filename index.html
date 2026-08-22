@@ -24,6 +24,10 @@
   position:fixed; inset:0; z-index:9999;
   background:linear-gradient(180deg,#efe9d8 0%, #e7e0cc 100%);
   display:flex; align-items:center; justify-content:center;
+  /* 全站 :root 的 font-family 声明在第二个 <style> 块里（紧跟在这段启动脚本后面），
+     首帧描画时那个块还没解析到，这里必须自己再声明一份同款字体栈，否则文字会先用
+     浏览器默认字体画一下，等第二个 style 块解析完才跳变成正确字体 */
+  font-family: "Zen Kaku Gothic New","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
 }
 #bootLoadingInner{ display:flex; flex-direction:column; align-items:center; gap:28px; padding:24px; }
 #bootLoadingSite{ font-size:13px; font-weight:700; letter-spacing:.12em; color:var(--accent-dk); opacity:.75; margin-bottom:-14px; }
@@ -675,6 +679,8 @@
     position:fixed; left:0; right:0; bottom:63px; z-index:1090;
     align-items:stretch;
     background:transparent;
+    /* 跟下面 .tabbar 同款合成层加固，两条本来是视觉相接的一整条，只固定一条会在滚动时错位 */
+    transform:translateZ(0); will-change:transform;
   }
   .page-act-side{
     flex:1 1 0; min-width:0; display:flex; padding:5px 5px 1px;
@@ -783,6 +789,11 @@
     position:fixed; left:0; right:0; bottom:0; z-index:1100;
     background:var(--panel); border-top:1px solid var(--line);
     box-shadow:0 -2px 10px rgba(0,0,0,.1);
+    /* PVP 页排行榜数据异步到位后会把内容撑高，触发一次 reflow；手机浏览器（尤其
+       iOS Safari）在惯性滚动过程中遇到 reflow，偶尔会把 position:fixed 元素重新按
+       文档流位置算一次，导致这条吸底切换栏跟着滚一段才归位。强制单独开一个合成层
+       能让它不再跟着那次 reflow 重算，稳稳贴底 */
+    transform:translateZ(0); will-change:transform;
     /* 不直接用 env(safe-area-inset-bottom)（iPhone 上常有 30+px），会在页面切换栏下方留出一大条空白"下巴"；
        改用固定 6px，配合下面 .tab-item 缩小的自身高度，让整条切换栏更贴近屏幕底部的圆角。
        写在这里（不放进 .tabbar-merged 里）是因为这条高度规则和按钮条要不要融合是两回事——
@@ -2209,8 +2220,18 @@
 .settings-avatar-frame img{ width:100%; height:100%; object-fit:contain; }
 .settings-avatar-q{ font-size:22px; font-weight:900; color:#c3bdae; }
 .settings-account-info{ min-width:0; flex:1 1 auto; }
+/* v3.29：用户名旁边加一颗小铅笔按钮改"显示名称"（PVP/好友帖给别人看的名字，跟登录用户名分开） */
+.settings-account-name-row{ display:flex; align-items:center; gap:6px; min-width:0; }
 .settings-account-name{ font-size:16px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.settings-name-edit-btn{
+  flex:0 0 auto; width:20px; height:20px; border:none; border-radius:50%;
+  background:var(--paper); color:#8a8375; font-size:11px; line-height:20px; text-align:center;
+  padding:0; cursor:pointer;
+}
+.settings-name-edit-btn:hover{ background:var(--line); color:var(--accent-dk); }
 .settings-account-email{ font-size:12px; font-weight:700; color:#8a8375; margin-top:3px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.settings-name-hint{ font-size:12px; color:#8a8375; font-weight:700; margin:10px 0 8px; line-height:1.5; }
+.settings-name-err{ font-size:12px; color:#c0392b; font-weight:700; margin-top:6px; }
 /* 没登录时账号卡片整块换成这个：提示 + 登录/注册入口，比原来浮窗里"直接隐掉整块"更友好——
    毕竟现在是常驻页面，进来啥都看不见容易让人以为坏了 */
 .settings-login-card{
@@ -2437,6 +2458,12 @@
 .pvp-grade{
   flex:0 0 auto; padding:3px 8px; border-radius:8px;
   font-size:11px; font-weight:900; color:#fff; white-space:nowrap;
+}
+/* 恐怖宝可梦牌子：跟盒子列表里 .cap-reco-terror 同款彩虹流光渐变，不用纯色底 */
+.pvp-grade-terror{
+  background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4) !important;
+  background-size:400% 400%; animation:shinyMove 2s ease infinite;
+  text-shadow:0 0 4px rgba(0,0,0,.4);
 }
 .pvp-pt{ flex:0 0 auto; width:26px; text-align:right; font-size:13px; font-weight:900; color:var(--accent-dk); }
 .pvp-empty{ text-align:center; color:#9a927f; padding:26px 10px; font-size:13px; font-weight:700; }
@@ -3488,7 +3515,10 @@
       <span class="settings-avatar-q">?</span>
     </div>
     <div class="settings-account-info">
-      <div class="settings-account-name" id="settingsAccountName"></div>
+      <div class="settings-account-name-row">
+        <span class="settings-account-name" id="settingsAccountName"></span>
+        <button type="button" class="settings-name-edit-btn" id="settingsNameEditBtn" title="修改显示名称">✎</button>
+      </div>
       <div class="settings-account-email" id="settingsAccountEmail"></div>
     </div>
   </div>
@@ -4273,6 +4303,19 @@
     <div class="isl-modal-acts">
       <button type="button" class="isl-modal-btn isl-modal-cancel" id="avatarPickCancelBtn">取消</button>
       <button type="button" class="isl-modal-btn isl-modal-save" id="avatarPickConfirmBtn">确认</button>
+    </div>
+  </div>
+</div>
+<!-- v3.29 显示名称：跟登录用户名分开，PVP/好友帖给别人看的名字改这个 -->
+<div class="cap-ctrl-overlay" id="displayNameModal">
+  <div class="cap-ctrl-box" style="width:min(320px,92vw)">
+    <div class="cap-ctrl-head">修改显示名称<span class="cap-ctrl-close" id="displayNameClose">✕</span></div>
+    <div class="settings-name-hint">这是 PVP 排行榜、好友帖等地方给别人看到的名字，跟登录用的用户名互不影响。2~16 个字，不能有空格或 @，留空就恢复显示用户名。</div>
+    <input type="text" id="displayNameInput" class="pk-search-input-underline" maxlength="16" placeholder="不填就显示用户名" autocomplete="off">
+    <div class="settings-name-err" id="displayNameErr" style="display:none;"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="displayNameCancelBtn">取消</button>
+      <button type="button" class="isl-modal-btn isl-modal-save" id="displayNameSaveBtn">保存</button>
     </div>
   </div>
 </div>
@@ -8160,8 +8203,9 @@ function renderMoreSettingsPage(){
   if(logged){
     const nameEl = document.getElementById('settingsAccountName');
     const emailEl = document.getElementById('settingsAccountEmail');
-    // 用户名/邮箱是用户自己填的，一律走 textContent
-    if(nameEl) nameEl.textContent = u.username || '';
+    // 用户名/邮箱是用户自己填的，一律走 textContent。这里显示的是"显示名称"（没自定义过就
+    // 回落成用户名，见 handleLogin/handleRegister/handleSetDisplayName 三处口径一致）
+    if(nameEl) nameEl.textContent = u.displayName || u.username || '';
     if(emailEl) emailEl.textContent = u.email || '';
     renderSettingsAvatar();
   }
@@ -8239,10 +8283,66 @@ document.getElementById('avatarPickConfirmBtn').onclick = ()=>{
   if(typeof saveUserPrefs==='function') saveUserPrefs();
   renderSettingsAvatar();
   closeAvatarPickModal();
+  // 头像是纯展示字段，但 PVP 排行榜/交友大厅存的是各自服务器上那份快照，只有"重新上传我的成绩"/
+  // "保存设置"才会带上最新头像——换头像的人不会想到还要再点一次不相关的按钮，这里顺手同步一次，
+  // 已经加入的那边才需要同步，没加入的不用管（下次加入时自然会带上最新头像）
+  if(userPrefs.pvpJoinOn && typeof pvpPushMine==='function') pvpPushMine().catch(()=>{});
+  if(friendDraft && friendDraft.inHall){
+    authApi('/api/friend/me', {method:'PUT', auth:true, body:{
+      friendCode: friendDraft.friendCode, candyPref: friendDraft.candyPref, loginDays: friendDraft.loginDays,
+      islands: friendDraft.islands, inHall: friendDraft.inHall,
+      avatarDex: userPrefs.avatarDex || null, avatarShiny: !!userPrefs.avatarShiny,
+    }}).catch(()=>{});
+  }
 };
 document.getElementById('avatarPickModal').onclick = (e)=>{ if(e.target.id==='avatarPickModal') closeAvatarPickModal(); };
 document.getElementById('settingsAvatarFrame').onclick = openAvatarPickModal;
 document.getElementById('settingsLoginBtn').onclick = ()=> openAuthModal('login');
+
+/* ---- v3.29 显示名称：跟登录用户名分开的公开展示名，PVP/好友帖读这个。
+   校验（长度/违规词）以后端为准，这里只负责收集输入+把后端报错显示出来，不重复维护一份词库 ---- */
+function openDisplayNameModal(){
+  const u = authState.user || {};
+  const custom = u.displayName && u.displayName !== u.username;
+  document.getElementById('displayNameInput').value = custom ? u.displayName : '';
+  const err = document.getElementById('displayNameErr');
+  err.style.display = 'none'; err.textContent = '';
+  document.getElementById('displayNameModal').style.display = 'flex';
+}
+function closeDisplayNameModal(){ document.getElementById('displayNameModal').style.display = 'none'; }
+document.getElementById('displayNameClose').onclick = closeDisplayNameModal;
+document.getElementById('displayNameCancelBtn').onclick = closeDisplayNameModal;
+document.getElementById('displayNameModal').onclick = (e)=>{ if(e.target.id==='displayNameModal') closeDisplayNameModal(); };
+document.getElementById('displayNameSaveBtn').onclick = async ()=>{
+  const btn = document.getElementById('displayNameSaveBtn');
+  const input = document.getElementById('displayNameInput');
+  const err = document.getElementById('displayNameErr');
+  const val = input.value.trim();
+  err.style.display = 'none';
+  btn.disabled = true; btn.textContent = '保存中…';
+  try{
+    const d = await authApi('/api/account/display-name', {method:'PUT', auth:true, body:{displayName: val}});
+    const u = authState.user || (authState.user = {});
+    u.displayName = d.displayName || u.username;
+    saveAuthState();
+    renderMoreSettingsPage();
+    closeDisplayNameModal();
+    // 显示名称是纯展示字段，PVP/好友帖存的是各自服务器上的快照，只有已经"参加排行"/"加入大厅"
+    // 的人才需要顺手同步一次——跟头像那边的处理完全一个套路（见 avatarPickConfirmBtn 的注释）
+    if(userPrefs.pvpJoinOn && typeof pvpPushMine==='function') pvpPushMine().catch(()=>{});
+    if(typeof friendDraft!=='undefined' && friendDraft && friendDraft.inHall){
+      authApi('/api/friend/me', {method:'PUT', auth:true, body:{
+        friendCode: friendDraft.friendCode, candyPref: friendDraft.candyPref, loginDays: friendDraft.loginDays,
+        islands: friendDraft.islands, inHall: friendDraft.inHall,
+        avatarDex: userPrefs.avatarDex || null, avatarShiny: !!userPrefs.avatarShiny,
+      }}).catch(()=>{});
+    }
+  }catch(e){
+    err.textContent = e.message || '保存失败'; err.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = '保存';
+};
+document.getElementById('settingsNameEditBtn').onclick = openDisplayNameModal;
 
 /* ---- v3.18 宝睡小当家（PSC）联动：我方作为第三方客户端接入对方的 OIDC ----
    全套 OAuth2 细节（client_secret / PKCE verifier / access token / refresh token）
@@ -18516,10 +18616,17 @@ function planOpenEditModal(id){
       <button type="button" class="isl-modal-btn isl-modal-save" id="planEditSave">保存</button>
     </div></div>`;
   pop.style.display = 'flex';
-  const close = ()=>{ blurActiveInput(); pop.style.display='none'; planEditId=null; };
+  // ⚠️ 性格 exp / 进化链选择这两块是点了就直接写进 e（=planData 里的活引用），不是等保存
+  // 才收进去的输入框草稿——"关闭"以前跳过 collect+落盘+重画列表，这两块选完就直接点关闭
+  // (而不是"保存")的话，弹窗里看着改对了，其实从没存进 localStorage，列表也没刷新，
+  // 退出重进就打回原样，效果跟没点过一样。这里统一成"关闭"和"保存"做一样的事，不再区分
+  const close = ()=>{
+    blurActiveInput(); planEditCollect(e); planSaveState(); planRenderList();
+    pop.style.display='none'; planEditId=null;
+  };
   document.getElementById('planEditClose').onclick = close;
   document.getElementById('planEditCancel').onclick = close;
-  document.getElementById('planEditSave').onclick = ()=>{ planEditCollect(e); planSaveState(); close(); planRenderList(); };
+  document.getElementById('planEditSave').onclick = close;
   // 任一字段改动都即时重算右侧结果，不用等保存
   ['planFCur','planFExp','planFOwn','planFTgt','planFSort'].forEach(fid=>{
     const el = document.getElementById(fid);
@@ -19062,6 +19169,12 @@ const PVP_SCORE_TABLE = [
 const PVP_SCORE_MAP = PVP_SCORE_TABLE.reduce((m,r)=>{ m[r[0]]=r[1]; return m; }, {});
 // 十档以外这几个另类档位的配色：TIER_STYLE 里没有它们
 const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375', '不推荐使用':'#9a9484'};
+// 「恐怖宝可梦」是内部代号（见 boxTerrorInfo 那条链路的注释：页面上任何地方都不出现这四个字），
+// PVP 这条计分线复用了同一套档位名字算分/配色，但排行榜是给所有人看的公共展示——之前直接把
+// r.cat/r.grade 原样塞进牌子文字，等于把这个内部代号原样广播给了全站用户，破坏了这条底线。
+// 显示层一律换成这个占位文本，跟页1"毕业判定"那边同款彩虹流光配色呼应，但不带任何字面意思
+const PVP_TERROR_LABEL = '？？？';
+function pvpDisplayLabel(cat){ return cat==='恐怖宝可梦' ? PVP_TERROR_LABEL : cat; }
 function pvpCatColor(cat){
   if(PVP_EXTRA_COLOR[cat]) return PVP_EXTRA_COLOR[cat];
   const st = (typeof tierStyleOf==='function') ? tierStyleOf(cat) : null;
@@ -19283,16 +19396,19 @@ function pvpRenderMe(){
   const distArr = [...st.dist.entries()]
     .sort((a,b)=> (PVP_SCORE_MAP[b[0]]==null?-1:PVP_SCORE_MAP[b[0]]) - (PVP_SCORE_MAP[a[0]]==null?-1:PVP_SCORE_MAP[a[0]]));
   const distHtml = st.ratedCount
-    ? `<div class="pvp-dist">${distArr.map(([k,n])=> `<div class="pvp-dist-seg" style="width:${n/st.ratedCount*100}%;background:${pvpCatColor(k)}" title="${k} ${n}只"></div>`).join('')}</div>
-       <div class="pvp-legend">${distArr.map(([k,n])=> `<span class="pvp-legend-i"><span class="pvp-legend-dot" style="background:${pvpCatColor(k)}"></span>${k} ${n}</span>`).join('')}</div>`
+    ? `<div class="pvp-dist">${distArr.map(([k,n])=> `<div class="pvp-dist-seg" style="width:${n/st.ratedCount*100}%;background:${pvpCatColor(k)}" title="${pvpDisplayLabel(k)} ${n}只"></div>`).join('')}</div>
+       <div class="pvp-legend">${distArr.map(([k,n])=> `<span class="pvp-legend-i"><span class="pvp-legend-dot" style="background:${pvpCatColor(k)}"></span>${pvpDisplayLabel(k)} ${n}</span>`).join('')}</div>`
     : '';
   const shown = st.list.slice(0, pvpListLimit);
   const rowsHtml = shown.map((r,i)=>{
     const e = r.entry;
     const nm = e.nickname && e.nickname!==e.name ? `${e.nickname}<span style="color:#a49c8b;font-weight:700">（${e.name}）</span>` : (e.name||'—');
-    // 未来可期：档位牌显示"未来XX"；不推荐使用(拉帝亚斯这类)：档位牌显示实际档位、右下角挂1/4提示
-    const label = r.future ? ('未来'+r.future) : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat);
-    const badgeColor = r.future ? '#1291d6' : (r.unrecommended ? pvpCatColor(r.cat) : pvpCatColor(r.cat));
+    // 未来可期：档位牌显示"未来XX"；不推荐使用(拉帝亚斯这类)：档位牌显示实际档位、右下角挂1/4提示。
+    // 恐怖宝可梦（future/unrecommended 分数恒为0分支，永远不会跟它撞上）不能原样显示内部代号，
+    // 换成占位文字+彩虹流光牌子，跟盒子列表那边的处理保持一致
+    const isTerror = !r.future && !r.unrecommended && r.cat === '恐怖宝可梦';
+    const label = isTerror ? PVP_TERROR_LABEL : (r.future ? ('未来'+r.future) : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat));
+    const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.cat);
     const subExtra = r.future ? ' · 当前不合格，按未来档位半价计分' : (r.unrecommended ? ' · 不推荐使用，按实际档位1/4计分' : '');
     // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
     // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
@@ -19306,7 +19422,7 @@ function pvpRenderMe(){
         <div class="pvp-row-sub">Lv.${e.level}${subExtra}${needsPick?' · 分支进化按默认计分':''}</div>
       </div>
       ${branchBtn}
-      <span class="pvp-grade" style="background:${badgeColor}">${label}</span>
+      <span class="pvp-grade${isTerror?' pvp-grade-terror':''}"${isTerror?'':` style="background:${badgeColor}"`}>${label}</span>
       <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
     </div>`;
   }).join('');
@@ -19575,7 +19691,10 @@ function pvpRenderSpecies(el, head, bind, shiny){
     const rowList = pvpFoodComboSort((d.list||[]).slice());
     const rowsHtml = rowList.map(r=>{
       const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
-      const label = r.future ? ('未来'+r.grade) : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
+      // 恐怖宝可梦是内部代号（见 pvpDisplayLabel 定义处注释），物种榜是给所有人看的公共展示，
+      // r.grade 直接来自后端存的原始档位字符串，不能就这么原样印出来
+      const isTerror = !r.future && !r.quarter && r.grade === '恐怖宝可梦';
+      const label = isTerror ? PVP_TERROR_LABEL : (r.future ? ('未来'+r.grade) : (r.quarter ? ('不推荐·'+r.grade) : r.grade));
       const badgeColor = r.future ? '#1291d6' : pvpCatColor(r.quarter?'不推荐使用':r.grade);
       const sizeM = r.name.match(/\(([^)]*)\)$/);
       const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
@@ -19587,7 +19706,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
           <div class="pvp-row-name">${who}</div>
           <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}</div>
         </div>
-        <span class="pvp-grade" style="background:${badgeColor}">${label}</span>
+        <span class="pvp-grade${isTerror?' pvp-grade-terror':''}"${isTerror?'':` style="background:${badgeColor}"`}>${label}</span>
         <div class="pvp-pt">${pvpFmtScore(r.score)}</div>
       </div>`;
     }).join('');
