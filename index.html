@@ -4810,6 +4810,12 @@ function startLevelCustomInput(cb, real, onPick){
   inp.focus(); inp.select();
 }
 function windowSizeOf(level){ if(level===50||level===60) return 3; return level===70?4:5; }
+// 能量型70/80档"毕业判定"专用：只吃面板（副技能选择）本身，不吃纯等级带来的树果/固定技能产出天然增长。
+// 树果能量(pokemonFruitEAtLevel)随等级涨，但技能固定产出型能量宝可梦(音波龙系等)的技能伤害不随等级变，
+// 同一面板换个等级档位效率值会自己涨，直接拿真实等级算效率会导致"什么都没多选就跳档"，
+// 跟"判定只看面板"的初衷矛盾。统一按70级的树果/技能产出基准算效率去跟50级门槛比，
+// 80级多出来的第5技能槽只有真被用上(改变sums)时才会让判定变化。50/60/70级不受影响，原样返回。
+function energyGradeBasisLevel(level){ return level===80 ? 70 : level; }
 // f 字段是这次给捕捉推荐页"加入面板"新加的（食材概率副技能实际影响食材产量要用到）；
 // 老调用点都不读 .f，加这个字段不影响它们
 function sumsToFloat(sums){ return {h: Number(sums.h.n)/Number(sums.h.d), f: Number(sums.f.n)/Number(sums.f.d), s: Number(sums.s.n)/Number(sums.s.d), hasFruit: sums.hasFruit}; }
@@ -9598,9 +9604,10 @@ function renderGraduation(pfx){
     const sums = sumsToFloat(windowSums(labels, ws));
     const eff = computeEnergyEfficiency(pk, sums, persona, state.level, options); // 精确原始效率，不含同队金帮加成
     const {rank, total} = getEnergyRank(state.energyPokemon, state.level, eff, options, hasHelper);
+    const gradeEff = state.level===energyGradeBasisLevel(state.level) ? eff : computeEnergyEfficiency(pk, sums, persona, energyGradeBasisLevel(state.level), options);
     const gradeName = state.level===50
       ? energyGradeFromRank(rank, hasHelper)
-      : energyGradeFrom50Boundary(state.energyPokemon, eff, options, hasHelper);
+      : energyGradeFrom50Boundary(state.energyPokemon, gradeEff, options, hasHelper);
     updateGradQuickBar(pfx, gradeName);
     maybeShowGradeEasterEgg(pfx, gradeName);
     const gradeRow = GRAD_TABLE.find(r=>r.grade===gradeName);
@@ -9629,7 +9636,7 @@ function renderGraduation(pfx){
       const sums70 = sumsToFloat(windowSums(labels,4));
       const sums80 = sumsToFloat(windowSums(labels,5));
       const eff70 = computeEnergyEfficiency(pk, sums70, persona, 70, options);
-      const eff80 = computeEnergyEfficiency(pk, sums80, persona, 80, options);
+      const eff80 = computeEnergyEfficiency(pk, sums80, persona, energyGradeBasisLevel(80), options);
       const grade70 = energyGradeFrom50Boundary(state.energyPokemon, eff70, options, hasHelper70);
       const grade80 = energyGradeFrom50Boundary(state.energyPokemon, eff80, options, hasHelper80);
       const row70 = GRAD_TABLE.find(r=>r.grade===grade70);
@@ -12900,7 +12907,9 @@ function boxEntryGraduationGrade(entry, x, dtype){
     const sums = sumsToFloat(windowSums(labels, ws));
     const eff = computeEnergyEfficiency(pk, sums, persona, level, options);
     const {rank} = getEnergyRank(pkId, level, eff, options, hasHelper);
-    return level===50 ? energyGradeFromRank(rank, hasHelper) : energyGradeFrom50Boundary(pkId, eff, options, hasHelper);
+    if(level===50) return energyGradeFromRank(rank, hasHelper);
+    const gradeEff = level===energyGradeBasisLevel(level) ? eff : computeEnergyEfficiency(pk, sums, persona, energyGradeBasisLevel(level), options);
+    return energyGradeFrom50Boundary(pkId, gradeEff, options, hasHelper);
   }
 
   const eff = computeEfficiency(labels, dtype, level, persona);
