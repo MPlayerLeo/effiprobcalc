@@ -18196,6 +18196,15 @@ const PLAN_UP_SVG = '<svg class="plan-up-ic" viewBox="0 0 24 24" aria-hidden="tr
 // 午睡岛图标：照抄岛屿评分头图那颗椰子树小岛矢量（树+沙丘+海浪三层），跟着 currentColor 走
 const PLAN_ISLAND_SVG = '<svg class="plan-nap-ic" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><g transform="translate(5.28,2.528) scale(0.78)"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g><path d="M9 38.6C11.8 33.9 17.1 31.5 24 31.5C30.9 31.5 36.2 33.9 39 38.6Z"/></g><path d="M4.6 46.6C7.83 46.6 11.07 43.4 14.3 43.4C17.53 43.4 20.77 46.6 24 46.6C27.23 46.6 30.47 43.4 33.7 43.4C36.93 43.4 40.17 46.6 43.4 46.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
 const PLAN_NAP_EXP_PER_DAY = 150, PLAN_NAP_EXP_PER_DAY_TICKET = 600;
+// 午睡岛的性格 exp 只在"+exp"档生效（游戏里对固定产出只加不减，没有 -exp 惩罚）：
+// +exp 每天 150→150×1.18、600→600×1.18；无影响和 -exp 两档保持原值不变
+function planNapExpPerDay(e){
+  const plus = planNatureKeyOf(e) === '+';
+  return {
+    no: plus ? PLAN_NAP_EXP_PER_DAY * 1.18 : PLAN_NAP_EXP_PER_DAY,
+    tk: plus ? PLAN_NAP_EXP_PER_DAY_TICKET * 1.18 : PLAN_NAP_EXP_PER_DAY_TICKET,
+  };
+}
 // 现在到目标等级还差多少原始 exp（不受性格/糖果影响，纯粹是等级表里的经验差）——
 // remainExp 是"当前这一级还差多少"，再往后每一级都按整级的表内经验算，累加起来就是总差额
 function planExpGapToTarget(e){
@@ -18213,8 +18222,9 @@ function planExpGapToTarget(e){
 // 跟糖果/碎片那套升级模拟完全独立，两边不共用任何中间结果
 function planNapDaysHtml(e, mini){
   const gap = planExpGapToTarget(e);
-  const noN = gap==null ? '－' : Math.max(0, Math.ceil(gap / PLAN_NAP_EXP_PER_DAY));
-  const tkN = gap==null ? '－' : Math.max(0, Math.ceil(gap / PLAN_NAP_EXP_PER_DAY_TICKET));
+  const {no: perDay, tk: perDayTk} = planNapExpPerDay(e);
+  const noN = gap==null ? '－' : Math.max(0, Math.ceil(gap / perDay));
+  const tkN = gap==null ? '－' : Math.max(0, Math.ceil(gap / perDayTk));
   return `<div class="plan-nap-row${mini?' plan-nap-row-mini':''}">`+
     PLAN_ISLAND_SVG+
     `<span class="plan-nap-n">${noN}<span class="plan-nap-slash">/</span><span class="plan-nap-tk">${tkN}</span></span>`+
