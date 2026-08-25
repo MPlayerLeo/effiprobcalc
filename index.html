@@ -190,7 +190,21 @@
     var mask = document.getElementById('bootLoadingMask');
     if(!mask) return;
     if(textEl){
-      textEl.textContent = '土王智商高！';
+      // 以"智"字为轴心居中，不是按全句"土王智商高！"的总宽度居中——外层 flex 只把
+      // pivot（智）这一个 span 当作参与居中的内容，土王/商高！两截用 right:100%/left:100%
+      // 紧贴在 pivot 左右两侧、脱离文档流，不占尺寸也就不影响居中的基准
+      textEl.textContent = '';
+      var pivot = document.createElement('span');
+      pivot.style.position = 'relative'; pivot.style.display = 'inline-block';
+      pivot.textContent = '智';
+      var left = document.createElement('span');
+      left.style.position = 'absolute'; left.style.right = '100%'; left.style.top = '0';
+      left.style.whiteSpace = 'nowrap'; left.textContent = '土王';
+      var right = document.createElement('span');
+      right.style.position = 'absolute'; right.style.left = '100%'; right.style.top = '0';
+      right.style.whiteSpace = 'nowrap'; right.textContent = '商高！';
+      pivot.appendChild(left); pivot.appendChild(right);
+      textEl.appendChild(pivot);
       textEl.classList.add('boot-slogan-drop');
     }
     // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开
@@ -721,6 +735,19 @@
   .plan-sum-bar.on{ display:flex; }
   .plan-sum-item{ display:inline-flex; align-items:center; gap:4px; }
   .plan-sum-n{ font-size:11px; font-weight:800; color:#7a7568; }
+  /* 小圆浮窗模式下资源总计条原本单排居中的四项文字，正好被叠在切换栏正中间凸起的
+     宝可梦盒圆球（.tab-item-bubble，视觉直径约60px）盖住一截。这个模式下把内容拆成
+     两组，糖果+万能糖归左边、梦碎+已选数量归右边——按钮条模式完全不受影响，还是
+     原来的单排居中。
+     两组左右不等宽（"已选 N 只"比另一边长），不能靠 flex 定宽 gap 居中空档——两组
+     宽度一变，gap 的视觉中点就跟着偏，球两侧空当忽宽忽窄，甚至偏到盖住内容。改成
+     绝对定位，两组各自的内侧边缘锚定在条子正中央（球心所在处）往外固定 34px（半球
+     30px+4px余量），不管两组内容多宽，球两侧的空当永远对称、永远够宽 */
+  .plan-sum-bar.plan-sum-split{ min-height:32px; }
+  .plan-sum-bar.plan-sum-split .plan-sum-side{ position:absolute; top:50%; transform:translateY(-50%); }
+  .plan-sum-bar.plan-sum-split .plan-sum-side:first-child{ right:calc(50% + 34px); }
+  .plan-sum-bar.plan-sum-split .plan-sum-side:last-child{ left:calc(50% + 34px); }
+  .plan-sum-side{ display:inline-flex; align-items:center; gap:14px; white-space:nowrap; }
   /* v3.24：资源总计条下方到切换栏（含中间凸起的宝可梦盒球体）之间那截缝，之前只补了
      按钮条中间 50px 那道透明空档，边上和小圆浮窗模式下量出来的位置总有些没堵严实的角落。
      改成不管三七二十一铺一条满屏宽的白条，从条子底边一路盖到切换栏顶边——球和切换栏
@@ -2606,7 +2633,7 @@
    不影响交友大厅那边仍然用原来的正方形样式。 */
 .spwr-isl-grid2{ display:grid; grid-template-columns:repeat(3,1fr); gap:7px; margin-bottom:16px; }
 .spwr-isl-btn2{
-  position:relative; height:58px; border-radius:9px; border:2px solid transparent;
+  position:relative; height:29px; border-radius:9px; border:2px solid transparent;
   background-size:cover; background-position:center; overflow:hidden; padding:0;
   cursor:pointer; -webkit-tap-highlight-color:transparent;
 }
@@ -19071,6 +19098,8 @@ function planRenderSumBar(){
   bar.classList.add('on');
   planPositionSumBar(bar);
   planPositionSumBarFill();
+  const circleMode = !!userPrefs.fabCircleModeOn;
+  bar.classList.toggle('plan-sum-split', circleMode);
   if(!planPickedIds.size){
     bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
     return;
@@ -19081,11 +19110,23 @@ function planRenderSumBar(){
     const r = all[id]; if(!r) return;
     candy += r.needCandy; handy += r.handyCandy; shards += r.shards;
   });
-  bar.innerHTML =
-    `<span class="plan-sum-item">${planIcon('candy')}${planFmtNum(candy)}</span>`+
-    `<span class="plan-sum-item">${planIcon('handy')}${planFmtNum(handy)}</span>`+
-    `<span class="plan-sum-item">${planIcon('shard')}${planFmtNum(shards)}</span>`+
-    `<span class="plan-sum-n">已选 ${planPickedIds.size} 只</span>`;
+  if(circleMode){
+    bar.innerHTML =
+      `<span class="plan-sum-side">`+
+        `<span class="plan-sum-item">${planIcon('candy')}${planFmtNum(candy)}</span>`+
+        `<span class="plan-sum-item">${planIcon('handy')}${planFmtNum(handy)}</span>`+
+      `</span>`+
+      `<span class="plan-sum-side">`+
+        `<span class="plan-sum-item">${planIcon('shard')}${planFmtNum(shards)}</span>`+
+        `<span class="plan-sum-n">已选 ${planPickedIds.size} 只</span>`+
+      `</span>`;
+  } else {
+    bar.innerHTML =
+      `<span class="plan-sum-item">${planIcon('candy')}${planFmtNum(candy)}</span>`+
+      `<span class="plan-sum-item">${planIcon('handy')}${planFmtNum(handy)}</span>`+
+      `<span class="plan-sum-item">${planIcon('shard')}${planFmtNum(shards)}</span>`+
+      `<span class="plan-sum-n">已选 ${planPickedIds.size} 只</span>`;
+  }
 }
 let planInited = false;
 function planRenderAll(){
@@ -20263,6 +20304,8 @@ var spwrFinalEnergy = null;
 var spwrResult = null;      // {mainRows,secondRows,splitRows} | {error} | null(还没算过)
 
 function spwrFmt(n){ return Math.round(n).toLocaleString('zh-CN'); }
+// 睡意之力输入框每三位加一个逗号，方便玩家读大数；只格式化"当前"这个整数输入框，倍率是小数不处理
+function spwrCommaizeDigits(digits){ return digits ? digits.replace(/\B(?=(\d{3})+(?!\d))/g, ',') : ''; }
 function spwrWakeUpTime(score){
   const totalTime = score * 5.1;
   let detail = Math.floor(totalTime/60) + 'h' + Math.ceil(totalTime%60).toString().padStart(2,'0') + 'm， ';
@@ -20308,9 +20351,10 @@ function spwrCompute(islandId, energy){
 function spwrDoCalc(){
   const eInput = document.getElementById('spwrEnergyInput');
   const mInput = document.getElementById('spwrMultInput');
-  const e = Number(eInput && eInput.value);
+  const eRaw = eInput ? eInput.value.replace(/[^\d]/g,'') : '';
+  const e = Number(eRaw);
   const m = Number(mInput && mInput.value);
-  if(!eInput || !eInput.value || !isFinite(e) || e<=0){
+  if(!eInput || !eRaw || !isFinite(e) || e<=0){
     spwrResult = {error:'先填一下"当前睡意之力"，得是个大于 0 的数'};
     spwrRenderResult();
     return;
@@ -20370,7 +20414,7 @@ function spwrRenderAll(){
       <div class="spwr-input-row spwr-input-row-combo">
         <span class="spwr-input-grp">
           <span class="spwr-lab">当前</span>
-          <input type="number" inputmode="numeric" class="spwr-input" id="spwrEnergyInput" placeholder="睡意之力" min="0" step="1" value="${spwrEnergyStr}">
+          <input type="text" inputmode="numeric" class="spwr-input" id="spwrEnergyInput" placeholder="睡意之力" value="${spwrCommaizeDigits(spwrEnergyStr)}">
         </span>
         <span class="spwr-input-grp">
           <span class="spwr-lab">倍率</span>
@@ -20390,7 +20434,27 @@ function spwrRenderAll(){
   });
   const eInput = document.getElementById('spwrEnergyInput');
   const mInput = document.getElementById('spwrMultInput');
-  if(eInput) eInput.oninput = ()=>{ spwrEnergyStr = eInput.value; };
+  if(eInput) eInput.oninput = ()=>{
+    const el = eInput;
+    const cursor = el.selectionStart == null ? el.value.length : el.selectionStart;
+    const digitsBeforeCursor = el.value.slice(0, cursor).replace(/[^\d]/g,'').length;
+    const digits = el.value.replace(/[^\d]/g,'');
+    spwrEnergyStr = digits;
+    const formatted = spwrCommaizeDigits(digits);
+    el.value = formatted;
+    let pos = formatted.length;
+    if(digitsBeforeCursor <= 0){ pos = 0; }
+    else {
+      let seen = 0;
+      for(let i=0;i<formatted.length;i++){
+        if(/\d/.test(formatted[i])){
+          seen++;
+          if(seen===digitsBeforeCursor){ pos = i+1; break; }
+        }
+      }
+    }
+    el.setSelectionRange(pos,pos);
+  };
   if(mInput) mInput.oninput = ()=>{ spwrMultStr = mInput.value; };
   const calcBtn = document.getElementById('spwrCalcBtn');
   if(calcBtn) calcBtn.onclick = spwrDoCalc;
