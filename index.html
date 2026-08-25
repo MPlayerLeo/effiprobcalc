@@ -4439,6 +4439,7 @@
   <div class="cap-ctrl-box" style="width:min(340px,92vw)">
     <div class="cap-ctrl-head"><span id="pwaGuideTitle">添加到桌面</span><span class="cap-ctrl-close" id="pwaGuideClose">✕</span></div>
     <div class="settings-name-hint" id="pwaGuideBody" style="white-space:pre-line;"></div>
+    <img id="pwaGuideImg" src="ios-add-guide.jpg?v=1" alt="iOS添加到主屏幕步骤图" style="display:none;width:100%;border-radius:10px;margin-top:10px;cursor:zoom-in;">
     <div class="isl-modal-acts">
       <button type="button" class="isl-modal-btn isl-modal-save" id="pwaGuideOkBtn" style="width:100%;">知道了</button>
     </div>
@@ -8382,13 +8383,14 @@ async function pwaInstallClick(){
     return;
   }
   if(isIOS){
-    openPwaGuideModal('iOS 系统不支持一键添加，需要手动几步：\n\n1. 点底部工具栏的「分享」按钮（方框+箭头）\n2. 下滑找到「添加到主屏幕」\n3. 点右上角「添加」');
+    openPwaGuideModal('iOS 系统不支持一键添加，需要手动几步：\n\n1. 点底部工具栏的「分享」按钮（方框+箭头）\n2. 下滑找到「添加到主屏幕」\n3. 点右上角「添加」\n\n点击下方图片可以查看大图，对照图上标的步骤操作', true);
     return;
   }
   openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。');
 }
-function openPwaGuideModal(text){
+function openPwaGuideModal(text, showImage){
   document.getElementById('pwaGuideBody').textContent = text;
+  document.getElementById('pwaGuideImg').style.display = showImage ? '' : 'none';
   document.getElementById('pwaGuideModal').style.display = 'flex';
 }
 function closePwaGuideModal(){ document.getElementById('pwaGuideModal').style.display = 'none'; }
@@ -8396,6 +8398,8 @@ document.getElementById('pwaInstallBtn').onclick = pwaInstallClick;
 document.getElementById('pwaGuideClose').onclick = closePwaGuideModal;
 document.getElementById('pwaGuideOkBtn').onclick = closePwaGuideModal;
 document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaGuideModal') closePwaGuideModal(); };
+// 点图片直接开新标签看原图（1920宽，弹窗里只是缩小展示），方便照着图上标的1/2/3步操作
+document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); window.open('ios-add-guide.jpg', '_blank'); };
 
 /* ---- 全站下拉刷新：手指在任意页面拉到顶（含宝可梦盒自己的滚动列表）之后继续往下拉，
    露出顶部这条 #ptrBar，松手够阈值就硬刷新(location.reload)，配合下面开屏遮罩那段
