@@ -216,6 +216,27 @@
   setTimeout(finish, 20000);
 })();
 </script>
+<script>
+// "添加到桌面"功能的两个前置动作，越早注册越好——beforeinstallprompt 这类事件浏览器
+// 只在满足条件的那一刻触发一次，监听器晚绑就会错过，只能等下次刷新。旧域名(见上面那段
+// IIFE)整屏就是个跳转提示，不需要能被安装，跳过
+(function(){
+  if(location.hostname === 'mplayerleo.github.io') return;
+  window.__pwaDeferredPrompt = null;
+  window.addEventListener('beforeinstallprompt', function(e){
+    e.preventDefault();
+    window.__pwaDeferredPrompt = e;
+    if(typeof updatePwaInstallUI === 'function') updatePwaInstallUI();
+  });
+  window.addEventListener('appinstalled', function(){
+    window.__pwaDeferredPrompt = null;
+    if(typeof updatePwaInstallUI === 'function') updatePwaInstallUI();
+  });
+  if('serviceWorker' in navigator){
+    navigator.serviceWorker.register('sw.js').catch(function(){});
+  }
+})();
+</script>
 <style>
   :root{
     --gold-bg:#e8c15a; --gold-bd:#a97e12; --gold-tx:#4a3600;
@@ -734,7 +755,10 @@
   }
   .plan-sum-bar.on{ display:flex; }
   .plan-sum-item{ display:inline-flex; align-items:center; gap:4px; }
-  .plan-sum-n{ font-size:11px; font-weight:800; color:#7a7568; }
+  /* display:inline-flex+align-items:center 让这段纯文字在自己(被 .plan-sum-bar 的
+     align-items:stretch 撑高的)盒子里垂直居中——不加的话文字会贴在盒子顶部，跟旁边
+     图标+文字的 .plan-sum-item（自己就是 align-items:center）对不齐 */
+  .plan-sum-n{ font-size:11px; font-weight:800; color:#7a7568; display:inline-flex; align-items:center; }
   /* 小圆浮窗模式下资源总计条原本单排居中的四项文字，正好被叠在切换栏正中间凸起的
      宝可梦盒圆球（.tab-item-bubble，视觉直径约60px）盖住一截。这个模式下把内容拆成
      两组，糖果+万能糖归左边、梦碎+已选数量归右边——按钮条模式完全不受影响，还是
@@ -3586,6 +3610,9 @@
     <button type="button" class="account-btn account-btn-blue" id="settingsLoginBtn">登录 / 注册</button>
   </div>
 
+  <div class="account-btns" id="pwaInstallRow" style="margin-bottom:16px;">
+    <button type="button" class="account-btn account-btn-blue" id="pwaInstallBtn">添加到桌面</button>
+  </div>
   <div class="mf-io-row">
     <button type="button" class="box-tool-btn box-tool-blue" id="boxImportBtn">导入盒子</button>
     <button type="button" class="box-tool-btn box-tool-yellow" id="boxExportBtn">导出盒子</button>
@@ -4375,6 +4402,15 @@
     <div class="isl-modal-acts">
       <button type="button" class="isl-modal-btn isl-modal-cancel" id="displayNameCancelBtn">取消</button>
       <button type="button" class="isl-modal-btn isl-modal-save" id="displayNameSaveBtn">保存</button>
+    </div>
+  </div>
+</div>
+<div class="cap-ctrl-overlay" id="pwaGuideModal">
+  <div class="cap-ctrl-box" style="width:min(340px,92vw)">
+    <div class="cap-ctrl-head"><span id="pwaGuideTitle">添加到桌面</span><span class="cap-ctrl-close" id="pwaGuideClose">✕</span></div>
+    <div class="settings-name-hint" id="pwaGuideBody" style="white-space:pre-line;"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-save" id="pwaGuideOkBtn" style="width:100%;">知道了</button>
     </div>
   </div>
 </div>
@@ -8285,7 +8321,51 @@ function renderMoreSettingsPage(){
     renderSettingsAvatar();
   }
   syncMoreFuncSwitches();
+  updatePwaInstallUI();
 }
+/* ---- 添加到桌面：安卓/桌面 Chrome 能靠 beforeinstallprompt 一键弹系统安装框，
+   iOS Safari 和微信内置浏览器根本没有这个 API，只能弹说明引导用户手动操作。
+   已经是桌面模式打开(standalone)时这颗按钮直接隐藏，没必要再点一次 */
+function pwaIsStandalone(){
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+function updatePwaInstallUI(){
+  const row = document.getElementById('pwaInstallRow');
+  if(!row) return;
+  row.style.display = pwaIsStandalone() ? 'none' : '';
+}
+async function pwaInstallClick(){
+  if(pwaIsStandalone()) return;
+  const ua = navigator.userAgent || '';
+  const isWeChat = /MicroMessenger/i.test(ua);
+  const isIOS = /iP(hone|ad|od)/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if(isWeChat){
+    openPwaGuideModal('微信打开的话没法一键安装，先跳到系统浏览器：\n\n1. 点右上角「···」\n2. 选「在浏览器中打开」\n3. 到了浏览器里再点一次这颗「添加到桌面」');
+    return;
+  }
+  const evt = window.__pwaDeferredPrompt;
+  if(evt){
+    window.__pwaDeferredPrompt = null;
+    evt.prompt();
+    try{ await evt.userChoice; }catch(e){}
+    updatePwaInstallUI();
+    return;
+  }
+  if(isIOS){
+    openPwaGuideModal('iOS 系统不支持一键添加，需要手动几步：\n\n1. 点底部工具栏的「分享」按钮（方框+箭头）\n2. 下滑找到「添加到主屏幕」\n3. 点右上角「添加」');
+    return;
+  }
+  openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。');
+}
+function openPwaGuideModal(text){
+  document.getElementById('pwaGuideBody').textContent = text;
+  document.getElementById('pwaGuideModal').style.display = 'flex';
+}
+function closePwaGuideModal(){ document.getElementById('pwaGuideModal').style.display = 'none'; }
+document.getElementById('pwaInstallBtn').onclick = pwaInstallClick;
+document.getElementById('pwaGuideClose').onclick = closePwaGuideModal;
+document.getElementById('pwaGuideOkBtn').onclick = closePwaGuideModal;
+document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaGuideModal') closePwaGuideModal(); };
 // 头像框：没选过就是占位问号，选过就按 avatarDex/avatarShiny 从内嵌头像表里取图
 function renderSettingsAvatar(){
   const frame = document.getElementById('settingsAvatarFrame');
