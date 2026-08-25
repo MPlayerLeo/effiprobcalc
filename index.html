@@ -727,6 +727,10 @@
     /* 跟下面 .tabbar 同款合成层加固，两条本来是视觉相接的一整条，只固定一条会在滚动时错位 */
     transform:translateZ(0); will-change:transform;
   }
+  /* 电脑端加宽窗口后内容跟切换栏(.tabbar-inner)一样封顶640px居中，按钮保持手机那种紧凑
+     宽度、贴在这条640px区域两侧边缘内侧，不再跟着 .page-action-bar(left:0;right:0) 那层
+     铺满整个浏览器窗口被拉得又宽又扁——跟 .tabbar-inner 用的是同一套写法，两条边缘天然对齐 */
+  .page-act-inner{ display:flex; align-items:stretch; width:100%; max-width:640px; margin:0 auto; }
   .page-act-side{
     flex:1 1 0; min-width:0; display:flex; padding:5px 5px 1px;
     background:var(--panel);
@@ -3109,7 +3113,7 @@
 <div class="wrap">
   <div class="site-header-row">
     <h1>土王智商高 · 宝睡图鉴</h1>
-    <div class="site-tagline"><span>宝可梦睡眠捕捉筛选对比攻略站</span><button type="button" class="credit-btn" id="creditBtn">鸣谢</button></div>
+    <div class="site-tagline"><span>宝可梦睡眠捕捉筛选对比攻略站</span><button type="button" class="credit-btn" id="creditBtn">鸣谢</button><button type="button" class="credit-btn" id="headerRefreshBtn">刷新</button></div>
     <div class="site-mascot-cluster" id="siteMascotCluster">
       <img class="site-mascot site-mascot-wooper" data-mascot-file="wooper">
       <img class="site-mascot site-mascot-quagsire" data-mascot-file="quagsire">
@@ -3706,16 +3710,18 @@
 </div>
 
 <div class="page-action-bar" id="pageActionBar">
-  <div class="page-act-side page-act-side-left">
-    <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
-    <button type="button" class="page-act-btn page-act-btn-plain" id="pageActSelAllBtn" style="display:none">取消全选</button>
-  </div>
-  <div class="page-act-gap"></div>
-  <div class="page-act-side page-act-side-right">
-    <button type="button" class="page-act-btn" id="pageActPanelBtn">
-      <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
-      <span id="pageActPanelLabel">修改面板</span>
-    </button>
+  <div class="page-act-inner">
+    <div class="page-act-side page-act-side-left">
+      <button type="button" class="page-act-btn" id="pageActControlsBtn">控制参数</button>
+      <button type="button" class="page-act-btn page-act-btn-plain" id="pageActSelAllBtn" style="display:none">取消全选</button>
+    </div>
+    <div class="page-act-gap"></div>
+    <div class="page-act-side page-act-side-right">
+      <button type="button" class="page-act-btn" id="pageActPanelBtn">
+        <div class="page-panel-mon-bubble" id="pagePanelMonBubble"></div>
+        <span id="pageActPanelLabel">修改面板</span>
+      </button>
+    </div>
   </div>
 </div>
 <div class="plan-sum-bar" id="planSumBar"></div>
@@ -8410,6 +8416,11 @@ document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); win
   const icon = document.getElementById('ptrIcon');
   const label = document.getElementById('ptrLabel');
   if(!bar || !icon || !label) return;
+  // 手势只在标题区域（.site-header-row，"宝可梦睡眠捕捉筛选对比攻略站"那行下沿以上）
+  // 起手才算数，避免用户在正文区域下拉时误触发——判断只看起手点的屏幕Y坐标是否落在
+  // 这块区域的几何范围内，跟宝可梦盒浮层是否盖住了它无关（浮层盖住时底下这块区域的
+  // 位置依然存在，只是视觉上不可见，起手点落在同一块屏幕区域仍然算数）
+  const headerEl = document.querySelector('.site-header-row');
   const MODAL_SEL = '.cap-ctrl-overlay,.dashboard-overlay,.box-info-bubble-overlay,.box-filter-pop-overlay,.box-spedit-overlay,.rank-calc-overlay,.terror-ask-overlay,.sb-overlay';
   let startY = 0, active = false, barH = 50, resisted = 0, ready = false;
   function anyModalOpen(){
@@ -8473,7 +8484,10 @@ document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); win
   }
   function onStart(e){
     if(anyModalOpen() || scrollCtxTop() > 0){ active = false; return; }
-    startY = e.touches[0].clientY;
+    const y = e.touches[0].clientY;
+    const hRect = headerEl ? headerEl.getBoundingClientRect() : null;
+    if(!hRect || y > hRect.bottom){ active = false; return; }
+    startY = y;
     barH = bar.getBoundingClientRect().height || barH;
     active = true; resisted = 0; ready = false;
   }
@@ -8487,31 +8501,36 @@ document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); win
     ready = resisted >= hideDist();
     label.textContent = ready ? '松手刷新' : '下拉刷新';
   }
+  // 触发刷新的完整流程：手势松手够阈值、和标题区域那颗「刷新」按钮点击，都走这一条，
+  // 保证两个入口效果完全一致（胶囊弹出+转圈+反向遮罩+还原现场那一整套）
+  function triggerRefresh(){
+    label.textContent = '刷新中';
+    icon.classList.add('ptr-spin');
+    icon.style.transform = '';
+    bar.style.transition = 'transform .18s ease';
+    bar.style.transform = 'translateX(-50%) translateY(0px)';
+    try{
+      // 记一笔"刷新前停在哪"，reload 后的开场逻辑(ptrApplyRestoreOnBoot)会在开屏遮罩
+      // 揭开之前把用户摆回原来的页面/子页，不会先闪一下默认的"毕业判定"再跳过去
+      const boxOv = document.getElementById('boxOverlay');
+      const boxOpen = boxOv && getComputedStyle(boxOv).display !== 'none';
+      let curPage = 'page1';
+      if(boxOpen) curPage = 'box';
+      else{
+        const activeEl = document.querySelector('.app-page.active-page');
+        if(activeEl) curPage = activeEl.id;
+      }
+      const snap = {page: curPage};
+      if(curPage === 'page2' && typeof mfSubView !== 'undefined' && mfSubView) snap.mfSub = mfSubView;
+      sessionStorage.setItem('iqdoohPtrRestore', JSON.stringify(snap));
+    }catch(e){}
+    try{ sessionStorage.setItem('iqdoohPtrRefresh', '1'); }catch(e){}
+    playCloseMask(function(){ location.reload(); });
+  }
   function onEnd(){
     if(!active) return;
     if(ready){
-      label.textContent = '刷新中';
-      icon.classList.add('ptr-spin');
-      icon.style.transform = '';
-      bar.style.transition = 'transform .18s ease';
-      bar.style.transform = 'translateX(-50%) translateY(0px)';
-      try{
-        // 记一笔"刷新前停在哪"，reload 后的开场逻辑(ptrApplyRestoreOnBoot)会在开屏遮罩
-        // 揭开之前把用户摆回原来的页面/子页，不会先闪一下默认的"毕业判定"再跳过去
-        const boxOv = document.getElementById('boxOverlay');
-        const boxOpen = boxOv && getComputedStyle(boxOv).display !== 'none';
-        let curPage = 'page1';
-        if(boxOpen) curPage = 'box';
-        else{
-          const activeEl = document.querySelector('.app-page.active-page');
-          if(activeEl) curPage = activeEl.id;
-        }
-        const snap = {page: curPage};
-        if(curPage === 'page2' && typeof mfSubView !== 'undefined' && mfSubView) snap.mfSub = mfSubView;
-        sessionStorage.setItem('iqdoohPtrRestore', JSON.stringify(snap));
-      }catch(e){}
-      try{ sessionStorage.setItem('iqdoohPtrRefresh', '1'); }catch(e){}
-      playCloseMask(function(){ location.reload(); });
+      triggerRefresh();
     } else {
       reset();
     }
@@ -8528,6 +8547,8 @@ document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); win
   document.addEventListener('touchmove', onMove, {passive:false});
   document.addEventListener('touchend', onEnd, {passive:true});
   document.addEventListener('touchcancel', onCancel, {passive:true});
+  const refreshBtn = document.getElementById('headerRefreshBtn');
+  if(refreshBtn) refreshBtn.onclick = function(){ if(!active) triggerRefresh(); };
 })();
 // 头像框：没选过就是占位问号，选过就按 avatarDex/avatarShiny 从内嵌头像表里取图
 function renderSettingsAvatar(){
@@ -14986,6 +15007,35 @@ function updateFabCircles(){
     if(fcLabel && !onPlan) fcLabel.innerHTML = onIsland ? '批量<br>选择' : '控制<br>参数';
   }
 }
+/* 圆形浮窗电脑端停靠位置：窗口够宽、内容区(.tabbar-inner，跟 .wrap 同一套 max-width:640px
+   居中)两侧有空的话，让浮窗贴在内容区外侧（离内容区边缘16px缝），不再无脑贴浏览器窗口
+   本身的左下/右下角——宽屏时那样贴等于离正文内容一大截，显得吊在天边。空间不够（含全部
+   手机场景）就清掉行内覆盖，退回 CSS 默认的 right:24px/left:24px 贴内侧角落，跟以前一样。
+   用 getBoundingClientRect 现测现算而不是纯 CSS vw 单位，是因为 100vw 在有滚动条的桌面
+   浏览器里比实际可用宽度多算出滚动条那几像素，直接会导致算出来的位置和内容区真实边缘对不上 */
+function updateFabDockPosition(){
+  const ref = document.querySelector('.tabbar-inner');
+  if(!ref) return;
+  const r = ref.getBoundingClientRect();
+  // position:fixed 元素的 right/left 是相对"初始包含块"（html 的内容区，不含滚动条）算的，
+  // window.innerWidth 在有纵向滚动条时会比这个宽出滚动条那几像素——量出来的间距会跟着偏，
+  // 必须用 clientWidth 才是 right/left 真正生效时用的那个宽度基准
+  const vw = document.documentElement.clientWidth;
+  const GAP = 16, FAB = 48, MIN_OUTER = 20;
+  const outsideRight = vw - r.right - GAP - FAB;
+  const outsideLeft = r.left - GAP - FAB;
+  const useOutsideRight = outsideRight >= MIN_OUTER;
+  const useOutsideLeft = outsideLeft >= MIN_OUTER;
+  ['fabPanel','fabControls','fabCreate'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.style.right = useOutsideRight ? outsideRight + 'px' : '';
+  });
+  ['fabMore','fabPlanClear'].forEach(id=>{
+    const el = document.getElementById(id); if(!el) return;
+    el.style.left = useOutsideLeft ? outsideLeft + 'px' : '';
+  });
+}
+window.addEventListener('resize', updateFabDockPosition, {passive:true});
 function openDashboard(){
   dashboardOpen = true;
   document.getElementById('dashboardOverlay').style.display = 'flex';
@@ -20747,6 +20797,7 @@ renderBoxFilterRow();
 renderAll();
 if(!islandApplyHashOnBoot() && !ptrApplyRestoreOnBoot()) mfShowSub(null);
 updatePageActionBar(); // v3.18：开场同步一次吸底按钮条（原来这里是 updateFabDocking()）
+updateFabDockPosition();
 </script>
 </body>
 </html>
