@@ -8436,6 +8436,37 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
     label.textContent = '下拉刷新';
     active = false; resisted = 0; ready = false;
   }
+  // 刷新前的"反向开屏遮罩"：跟开屏那道 openMaskHole 用同一个 mask-image 圆形挖洞技巧，
+  // 只是方向倒过来——洞从铺满全屏(102%)缩到0，从四周往中间合拢盖住页面，跟开屏遮罩裂开
+  // 露出页面正好是同一个动画倒着放的观感。开屏那个 mask 用完就整个删掉了，这里新建一个
+  // 一次性的，reload 前用完不用再管，页面马上就要整个换掉
+  function playCloseMask(done){
+    const mask = document.createElement('div');
+    mask.id = 'ptrCloseMask';
+    mask.style.cssText = 'position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#efe9d8 0%,#e7e0cc 100%);display:flex;align-items:center;justify-content:center;';
+    const logo = document.createElement('img');
+    logo.src = 'boot-logo.jpg';
+    logo.style.cssText = 'width:148px;height:148px;border-radius:22px;object-fit:cover;box-shadow:0 8px 22px rgba(0,0,0,.2);';
+    mask.appendChild(logo);
+    document.body.appendChild(mask);
+    let start = null, dur = 500, called = false;
+    function finishOnce(){ if(called) return; called = true; if(typeof done === 'function') done(); }
+    function step(ts){
+      if(start === null) start = ts;
+      const p = Math.min(1, (ts - start) / dur);
+      const eased = 1 - Math.pow(p, 3); // 跟开屏 openMaskHole 的缓动(1-(1-p)^3)时间对称，倒放起来手感一致
+      const r = eased * 102;
+      const edge = Math.min(r + 2, 100);
+      const grad = 'radial-gradient(circle at 50% 50%, transparent 0%, transparent ' + r + '%, #000 ' + edge + '%, #000 100%)';
+      mask.style.webkitMaskImage = grad;
+      mask.style.maskImage = grad;
+      if(p < 1) requestAnimationFrame(step);
+      else finishOnce();
+    }
+    requestAnimationFrame(step);
+    // 兜底：rAF 被挂起(比如动画途中标签页切后台)也不能让刷新永远卡住不触发
+    setTimeout(finishOnce, dur + 800);
+  }
   function onStart(e){
     if(anyModalOpen() || scrollCtxTop() > 0){ active = false; return; }
     startY = e.touches[0].clientY;
@@ -8476,7 +8507,7 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
         sessionStorage.setItem('iqdoohPtrRestore', JSON.stringify(snap));
       }catch(e){}
       try{ sessionStorage.setItem('iqdoohPtrRefresh', '1'); }catch(e){}
-      setTimeout(function(){ location.reload(); }, 260);
+      playCloseMask(function(){ location.reload(); });
     } else {
       reset();
     }
