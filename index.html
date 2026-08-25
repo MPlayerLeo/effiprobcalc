@@ -751,9 +751,9 @@
   /* 按钮条模式专属：条子整体上下各收窄1px（只改这个模式，:not(.plan-sum-split) 把小圆
      浮窗模式排除在外，那边高度/定位是靠 min-height+绝对定位算的，不吃这个 padding），
      文字再额外下移2px——两者是分开的两步调整，不是同一个数值 */
-  .plan-sum-bar:not(.plan-sum-split){ padding-top:7px; padding-bottom:7px; }
+  .plan-sum-bar:not(.plan-sum-split){ padding-top:2px; padding-bottom:2px; }
   .plan-sum-bar:not(.plan-sum-split) .plan-sum-item,
-  .plan-sum-bar:not(.plan-sum-split) .plan-sum-n{ position:relative; top:2px; }
+  .plan-sum-bar:not(.plan-sum-split) .plan-sum-n{ position:relative; top:5px; }
   /* v3.24：资源总计条下方到切换栏（含中间凸起的宝可梦盒球体）之间那截缝，之前只补了
      按钮条中间 50px 那道透明空档，边上和小圆浮窗模式下量出来的位置总有些没堵严实的角落。
      改成不管三七二十一铺一条满屏宽的白条，从条子底边一路盖到切换栏顶边——球和切换栏
