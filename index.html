@@ -8386,7 +8386,7 @@ async function pwaInstallClick(){
     openPwaGuideModal('iOS 系统不支持一键添加，需要手动几步：\n\n1. 点底部工具栏的「分享」按钮（方框+箭头）\n2. 下滑找到「添加到主屏幕」\n3. 点右上角「添加」\n\n点击下方图片可以查看大图，对照图上标的步骤操作', true);
     return;
   }
-  openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。');
+  openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。\n\n注意：vivo/oppo/小米等手机自带浏览器的这个菜单项很多是老式网页快捷方式，不认标准安装规范，加出来的图标可能是网页截图、打开也不是全屏——不是加失败，是这个浏览器本身不支持真正的一键安装。想要正常的图标和全屏效果，换成 Chrome 等主流浏览器打开本站再试。');
 }
 function openPwaGuideModal(text, showImage){
   document.getElementById('pwaGuideBody').textContent = text;
