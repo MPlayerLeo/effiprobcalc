@@ -19101,7 +19101,13 @@ function planRenderSumBar(){
   const circleMode = !!userPrefs.fabCircleModeOn;
   bar.classList.toggle('plan-sum-split', circleMode);
   if(!planPickedIds.size){
-    bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
+    if(circleMode){
+      bar.innerHTML =
+        `<span class="plan-sum-side"><span class="plan-sum-n">勾选条目后</span></span>`+
+        `<span class="plan-sum-side"><span class="plan-sum-n">在这里累计所需资源</span></span>`;
+    } else {
+      bar.innerHTML = `<span class="plan-sum-n">勾选条目后在这里累计所需资源</span>`;
+    }
     return;
   }
   const all = planComputeAll(planPickedIds);
