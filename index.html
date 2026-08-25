@@ -1325,16 +1325,17 @@
   }
   .box-toast.on{ opacity:1; }
 
-  /* 下拉刷新条：像QQ那样贴在视口最顶上，跟手指走(JS直接设transform)，松手不够就弹回去，
-     够了就锁定显示+图标转圈+触发硬刷新。静止态用 translateY(-100%) 完全藏到视口外，
-     JS拖动时改用像素值的 translateY 覆盖掉这条声明 */
+  /* 下拉刷新胶囊：独立浮在视口顶部中间的一颗胶囊(不是通栏)，跟手指走(JS直接设transform)，
+     松手不够就弹回去，够了就锁定显示+图标转圈+触发硬刷新。top 固定住胶囊露出来后该停的
+     位置，JS 只改 translateY 那截把它从藏在视口外拖下来——横向的 translateX(-50%) 跟
+     JS 拖动的 translateY 一起写在同一个 transform 里，两截缺一不可 */
   .ptr-bar{
-    position:fixed; left:0; right:0; top:0; z-index:1180;
+    position:fixed; left:50%; top:calc(8px + env(safe-area-inset-top,0px)); z-index:1180;
     display:flex; align-items:center; justify-content:center; gap:6px;
-    padding:10px 12px; padding-top:calc(10px + env(safe-area-inset-top,0px));
-    background:var(--paper); color:var(--accent-dk); font-size:13px; font-weight:800;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-    transform:translateY(-100%); pointer-events:none;
+    padding:9px 18px; border-radius:999px; white-space:nowrap;
+    background:var(--paper); color:var(--accent-dk); font-size:12.5px; font-weight:800;
+    box-shadow:0 4px 16px rgba(0,0,0,.18);
+    transform:translateX(-50%) translateY(-80px); pointer-events:none;
   }
   .ptr-icon{ display:flex; color:var(--accent); }
   .ptr-icon.ptr-spin{ animation:ptrSpin .7s linear infinite; }
@@ -8420,14 +8421,16 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
     }
     return document.scrollingElement ? document.scrollingElement.scrollTop : window.scrollY;
   }
+  // HIDE：胶囊完全藏到视口外要拖多远，量出胶囊自己的高度再加20px余量(盖住top那8px+安全区缝隙)
+  function hideDist(){ return barH + 20; }
   function setBar(px, spinning){
     bar.style.transition = 'none';
-    bar.style.transform = 'translateY(' + px + 'px)';
-    if(!spinning) icon.style.transform = 'rotate(' + Math.min(180, (resisted / (barH + 10)) * 180) + 'deg)';
+    bar.style.transform = 'translateX(-50%) translateY(' + px + 'px)';
+    if(!spinning) icon.style.transform = 'rotate(' + Math.min(180, (resisted / hideDist()) * 180) + 'deg)';
   }
   function reset(){
     bar.style.transition = 'transform .25s cubic-bezier(.2,.8,.2,1)';
-    bar.style.transform = 'translateY(-100%)';
+    bar.style.transform = 'translateX(-50%) translateY(-' + hideDist() + 'px)';
     icon.style.transform = 'rotate(0deg)';
     icon.classList.remove('ptr-spin');
     label.textContent = '下拉刷新';
@@ -8444,9 +8447,9 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
     const dy = e.touches[0].clientY - startY;
     if(dy <= 0 || scrollCtxTop() > 0 || anyModalOpen()){ reset(); return; }
     e.preventDefault();
-    resisted = Math.min(barH + 70, dy * 0.5);
-    setBar(resisted - barH, false);
-    ready = resisted >= barH + 8;
+    resisted = Math.min(hideDist() + 70, dy * 0.5);
+    setBar(resisted - hideDist(), false);
+    ready = resisted >= hideDist();
     label.textContent = ready ? '松手刷新' : '下拉刷新';
   }
   function onEnd(){
@@ -8456,7 +8459,22 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
       icon.classList.add('ptr-spin');
       icon.style.transform = '';
       bar.style.transition = 'transform .18s ease';
-      bar.style.transform = 'translateY(0px)';
+      bar.style.transform = 'translateX(-50%) translateY(0px)';
+      try{
+        // 记一笔"刷新前停在哪"，reload 后的开场逻辑(ptrApplyRestoreOnBoot)会在开屏遮罩
+        // 揭开之前把用户摆回原来的页面/子页，不会先闪一下默认的"毕业判定"再跳过去
+        const boxOv = document.getElementById('boxOverlay');
+        const boxOpen = boxOv && getComputedStyle(boxOv).display !== 'none';
+        let curPage = 'page1';
+        if(boxOpen) curPage = 'box';
+        else{
+          const activeEl = document.querySelector('.app-page.active-page');
+          if(activeEl) curPage = activeEl.id;
+        }
+        const snap = {page: curPage};
+        if(curPage === 'page2' && typeof mfSubView !== 'undefined' && mfSubView) snap.mfSub = mfSubView;
+        sessionStorage.setItem('iqdoohPtrRestore', JSON.stringify(snap));
+      }catch(e){}
       try{ sessionStorage.setItem('iqdoohPtrRefresh', '1'); }catch(e){}
       setTimeout(function(){ location.reload(); }, 260);
     } else {
@@ -8464,10 +8482,17 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
     }
     active = false;
   }
+  // touchcancel 语义是"手势被打断"（来电、系统手势抢走了触摸等），不等于用户主动松手，
+  // 不该顺着 onEnd 那条 ready 分支也去触发刷新——统一按"没达到阈值"处理，只弹回去
+  function onCancel(){
+    if(!active) return;
+    reset();
+    active = false;
+  }
   document.addEventListener('touchstart', onStart, {passive:true});
   document.addEventListener('touchmove', onMove, {passive:false});
   document.addEventListener('touchend', onEnd, {passive:true});
-  document.addEventListener('touchcancel', onEnd, {passive:true});
+  document.addEventListener('touchcancel', onCancel, {passive:true});
 })();
 // 头像框：没选过就是占位问号，选过就按 avatarDex/avatarShiny 从内嵌头像表里取图
 function renderSettingsAvatar(){
@@ -17659,6 +17684,31 @@ function islandApplyHashOnBoot(){
   mfShowSub('island');
   return true;
 }
+// 下拉刷新专用的开场还原：跟上面的 hash 还原是两套互不冲突的机制——岛屿评分子页
+// 一直在用 hash 存细粒度状态(具体停在哪个岛/哪个等级)，reload 后 hash 原样还在，
+// 交给 islandApplyHashOnBoot 处理就够了；这里补的是 hash 覆盖不到的其它页面/子页
+// (page1/page3/page4/宝可梦盒/培养计划等)，只在下拉刷新那一刻才会写这个标记，
+// 平时手动刷新浏览器/直接访问网址不会有这个 key，不会误触发
+function ptrApplyRestoreOnBoot(){
+  let snap = null;
+  try{
+    const raw = sessionStorage.getItem('iqdoohPtrRestore');
+    sessionStorage.removeItem('iqdoohPtrRestore');
+    if(raw) snap = JSON.parse(raw);
+  }catch(e){}
+  if(!snap || !snap.page) return false;
+  if(snap.page === 'box'){
+    if(typeof openBoxOverlay === 'function') openBoxOverlay();
+    return true;
+  }
+  if(snap.page !== 'page1' && document.getElementById(snap.page)){
+    switchPage(snap.page);
+  }
+  if(snap.page === 'page2' && snap.mfSub){
+    mfShowSub(snap.mfSub);
+  }
+  return true;
+}
 function islandMonGridHtml(mapId, lvIdx){
   return islandLevelStyles(mapId, lvIdx).map(st=>{
     const t = islandTagOf(st[0]);
@@ -20660,7 +20710,7 @@ function spwrRenderAll(){
 renderBoxFilterRow();
 
 renderAll();
-if(!islandApplyHashOnBoot()) mfShowSub(null);
+if(!islandApplyHashOnBoot() && !ptrApplyRestoreOnBoot()) mfShowSub(null);
 updatePageActionBar(); // v3.18：开场同步一次吸底按钮条（原来这里是 updateFabDocking()）
 </script>
 </body>
