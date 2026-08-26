@@ -4831,12 +4831,15 @@ function windowSums(labels, windowSize){
 }
 // 60级与50级槽位数相同（尚未解锁下一档副技能槽），面板天梯/排名对比才会开放选择60级
 /* ============ v3.20 等级自由化：真实等级 levelReal ⇄ 计算档位 level ============
-   全站几十处计算是直接拿 level 当档位用的（CAP_LEVEL_IDX[level]、CAP_LEVEL_FACTOR[level]、
+   全站几十处计算是直接拿 level 当档位用的（CAP_LEVEL_IDX[level]、capLevelFactor(level)、
    windowSizeOf(level)、各种排名缓存 key…），这些表本来就只有 50/60/70/80 四列。
    所以这里的做法是：level 字段【继续存档位值】，一行计算代码都不用改；真实等级另存 levelReal，
    只影响显示和培养计划。旧存档/旧盒子条目没有 levelReal，levelRealOf() 回落到 level 本身，天然兼容。
    刻意不对树果能量/帮忙间隔做逐级插值——站内没有逐级数据，插出来是假精度，
-   而且全站的排名/毕业判定都建立在这四个锚点上，插值会让效率值和排名对不上。 */
+   而且全站的排名/毕业判定都建立在这四个锚点上，插值会让效率值和排名对不上。
+   （v3.32：等级对帮忙间隔的系数本身改成了连续公式 capLevelFactor，见该函数定义处注释——
+   这条改动只影响50/60/70/80四个锚点的具体取值，不改变"level 字段只存档位值"这个架构，
+   日常调用依然只喂这四个锚点，不代表现在开始真的做逐级插值）*/
 const LEVEL_TIERS = [50,60,70,80];
 const LEVEL_REAL_MIN = 1, LEVEL_REAL_MAX = 99;   // 自定义输入限「最多两位整数」
 function levelTierOf(real){
@@ -5993,7 +5996,7 @@ function getEnergySquadRank(pokemonId, level, value, squadN, options){
    "树果剧增/龙星群"这类技能触发时产出的是额外树果，但统一按能量展示（不单独显示树果个数），
    所以这里不区分技能种类，一律把树果按该宝可梦属性对应的每树果能量值折算进来 */
 function energyRealInterval(baseInterval, level, medal, effH_capped, personaH){
-  let interval = baseInterval * 0.45 * CAP_LEVEL_FACTOR[level] * (medal ? 0.88 : 1);
+  let interval = baseInterval * 0.45 * capLevelFactor(level) * (medal ? 0.88 : 1);
   interval *= (1 - effH_capped);
   if(personaH===1) interval *= 0.9;
   else if(personaH===-1) interval *= 1.075;
@@ -12766,7 +12769,12 @@ const CAP_ENERGY_SKILL = {
   '拉帝欧斯':{kind:'dragon',table:{solo:51.6,d2:57.6,d3:65.4,d4:71.5,d5:78}},
 };
 const CAP_LEVELS = [50,60,70,80];
-const CAP_LEVEL_FACTOR = {50:0.9,60:0.88,70:0.86,80:0.84};
+// v3.32：等级对帮忙间隔的系数改成连续公式，不再是只覆盖50/60/70/80四档的静态表——
+// 老表 {50:0.9,60:0.88,70:0.86,80:0.84} 等价于 1-(等级/10)*0.02，每级斜率0.002；
+// 现在整体上调0.002/级（50→0.902、60→0.882、70→0.862、80→0.842），且用 (等级-1) 让
+// 公式对非整十等级也成立（如61级 = 1-(61-1)*0.002 = 0.88），不会再因为查表查不到非整十
+// 等级而算出 NaN
+function capLevelFactor(level){ return 1 - (level - 1) * 0.002; }
 const CAP_LEVEL_IDX = {50:0,60:1,70:2,80:3};
 const CAP_SKILL_SUBS = ['奶妈','梦碎','暴击','帮手加速','开锅'];
 const CAP_SKILL_ICON = {'奶妈':'nanny','梦碎':'dream','暴击':'crit','帮手加速':'helper','开锅':'pot'};
@@ -12839,7 +12847,7 @@ const CAP_TYPE_ORDER = ['berryEnergy','food','skill'];
 // ignoreCamping=true 时无视当前露营券开关，一律按未开启算（食谱覆盖率的毕业判定/邪修/aax/盒子档位
 // 这几处判定固定用这个口径，避免开着露营券时把不该转正的档位悄悄转正；展示框不传这个参数，照旧受开关影响）
 function capInterval(base, level, medal, ignoreCamping){
-  let interval = base * 0.45 * CAP_LEVEL_FACTOR[level] * (medal ? 0.88 : 1);
+  let interval = base * 0.45 * capLevelFactor(level) * (medal ? 0.88 : 1);
   if(userPrefs.campingTicket && !ignoreCamping) interval /= CAMPING_SPEED_MULT;
   return interval;
 }
