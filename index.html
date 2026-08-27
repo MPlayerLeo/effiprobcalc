@@ -1674,6 +1674,21 @@
     box-shadow: 0 0 10px 2px rgba(255,255,255,.7), 0 0 22px 5px rgba(120,115,245,.55), 0 0 30px 8px rgba(255,110,196,.35);
   }
   .pk-portrait-q{ font-size:34px; font-weight:900; color:#bfc4cc; }
+  /* 头像识别拿不准时的候选条 */
+  .ocr-cand-row{ margin:8px 0 2px; }
+  .ocr-cand-title{ font-size:11px; color:#8a8375; margin-bottom:6px; }
+  .ocr-cand-list{ display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; }
+  .ocr-cand-item{
+    flex:0 0 auto; width:60px; cursor:pointer; text-align:center;
+    border:2px solid transparent; border-radius:12px; padding:2px; background:none;
+  }
+  .ocr-cand-item:hover, .ocr-cand-item:focus-visible{ border-color:var(--accent); outline:none; }
+  .ocr-cand-item .ocr-cand-pic{
+    width:56px; height:56px; border-radius:10px; border:1px solid #e2ddd2;
+    background:#f4effa; display:flex; align-items:center; justify-content:center; overflow:hidden;
+  }
+  .ocr-cand-item .ocr-cand-pic img{ width:100%; height:100%; object-fit:cover; }
+  .ocr-cand-item .ocr-cand-name{ font-size:10px; color:#5c574d; margin-top:3px; line-height:1.2; word-break:break-all; }
   .pk-recommend-box{
     height:30px; box-sizing:border-box; border-radius:999px; display:flex; align-items:center; justify-content:center;
     font-size:11px; font-weight:800; text-align:center; padding:0 6px; white-space:nowrap; overflow:hidden;
@@ -4012,6 +4027,12 @@
           </div>
           <div class="pk-ing-row pk-ing-row-sm pk-ing-row-left" id="dash-pkIngRow"></div>
         </div>
+      </div>
+      <!-- 头像识别拿不准时的候选条：与其把种族留空让用户从245只里自己搜，不如把识别时排在
+           最前面的几个候选直接以头像形式摆出来点选。识别不确定≠毫无信息，前几名里通常就有正确答案 -->
+      <div class="ocr-cand-row" id="dashOcrCandRow" style="display:none;">
+        <div class="ocr-cand-title">没完全认准，可能是这几只（点一下选中）</div>
+        <div class="ocr-cand-list" id="dashOcrCandList"></div>
       </div>
       <div class="dash-shiny-level-row" id="dashShinyLevelRow">
         <div class="pk-recommend-box pk-recommend-box-sm" id="dash-pkRecommendBox"></div>
@@ -7117,6 +7138,8 @@ const state = {
   fruitDirection: 'normal',
   latiasActive: false,
   dragonCount: 'solo',
+  // 头像识别没认准时留下的"最像的前几只"，供修改面板摆成头像候选让用户点选；认准了就是 null
+  ocrCandidates: null,
   selectedDex: null,
   pkSearchText: '',
   ingChoice2: null,
@@ -10941,6 +10964,7 @@ function clearSelectedPokemon(){
   state.pkSearchText = '';
   state.ingChoice2 = null;
   state.ingChoice3 = null;
+  state.ocrCandidates = null; // 手动点了"清除"就是不要这次识别结果了，候选头像一并收起
   renderAll();
 }
 function renderPokemonModule(){
@@ -11131,12 +11155,43 @@ function renderPkDropdown(){
   renderPkDropdownGeneric('pkSearchInput', 'pkDropdown');
   renderPkDropdownGeneric('dash-pkSearchInput', 'dash-pkDropdown');
 }
+// 头像识别没认准时，把最像的前几只摆成头像候选让用户直接点——比让用户从245只里自己搜快得多。
+// 一旦选中（或用户自己搜到了别的），候选条就退场，不再占地方
+function renderOcrCandidates(){
+  const row = document.getElementById('dashOcrCandRow');
+  const list = document.getElementById('dashOcrCandList');
+  if(!row || !list) return;
+  const cands = (!state.selectedDex && state.ocrCandidates) ? state.ocrCandidates : null;
+  if(!cands || !cands.length){ row.style.display = 'none'; list.innerHTML = ''; return; }
+  row.style.display = '';
+  list.innerHTML = cands.map(cd=>{
+    const rec = DEX_BY_ID[cd.id];
+    if(!rec) return '';
+    const pair = POKEMON_PORTRAITS[rec[1]];
+    const b64 = pair ? (cd.shiny ? pair[1] : pair[0]) : null;
+    const pic = b64
+      ? `<img src="data:image/webp;base64,${b64}" alt="${rec[1]}">`
+      : `<span style="font-size:9px;font-weight:800;color:var(--accent-dk);">${rec[0]}</span>`;
+    return `<button type="button" class="ocr-cand-item" data-dex="${rec[0]}">`
+         + `<div class="ocr-cand-pic">${pic}</div>`
+         + `<div class="ocr-cand-name">${rec[1]}</div></button>`;
+  }).join('');
+  [...list.children].forEach(el=>{
+    const dex = el.getAttribute('data-dex');
+    if(!dex) return;
+    el.onclick = ()=>{
+      state.ocrCandidates = null; // 选完就收起候选条
+      selectPokemon(dex);
+    };
+  });
+}
 function renderPkDashCompact(){
   const rec = getSelectedPokemonRecord();
   const portraitEl = document.getElementById('dash-pkPortrait');
   if(portraitEl){
     renderPortraitInto(portraitEl, rec, 11);
   }
+  renderOcrCandidates();
   const searchInput = document.getElementById('dash-pkSearchInput');
   const recBoxSm = document.getElementById('dash-pkRecommendBox');
   const boxEntryLive = (typeof dashboardBoxEditContext!=='undefined' && dashboardBoxEditContext) ? boxGetEntry(dashboardBoxEditContext.entryId) : null;
@@ -11767,6 +11822,17 @@ function cropRegionToCanvas(img, region){
   ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
   return canvas;
 }
+// 调试用：把裁剪出来的小图直接画进控制台（Chrome DevTools的console.log支持用
+// background-image的CSS技巧内联显示图片），不用另外找地方展示，也不用手动导出文件——
+// 在控制台里点开这一行就能直接看到裁到的到底是不是想要的内容。
+// 提到全局作用域（原来嵌在 runOcrOnFile 内部），因为头像识别那套顶层函数也要用它
+function logCanvasPreview(label, canvas){
+  try{
+    const url = canvas.toDataURL('image/png');
+    console.log('%c'+label+'（'+canvas.width+'x'+canvas.height+'）', 'font-weight:bold;color:#2a7;');
+    console.log('%c ', 'padding:'+Math.round(canvas.height/2)+'px '+Math.round(canvas.width/2)+'px;line-height:0;background:url('+url+') no-repeat;background-size:'+canvas.width+'px '+canvas.height+'px;font-size:1px;');
+  }catch(e){ console.log(label+' 预览生成失败：', e.message); }
+}
 
 // ============ 食材图标/数量徽章的动态定位 ============
 // OCR_REGIONS 是写死的比例坐标，只在跟量出它时用的那张截图分辨率/滚动位置很接近时才准。
@@ -12038,6 +12104,439 @@ async function matchIngredientIcon(canvas, candidateNames){
   return {name: first.name, dist: first.dist, ranking, confident};
 }
 
+// ============ 头像识别物种：名字左边那个带金圈的头像图标 ============
+// 起因：名字OCR死磕"读文字"，玩家一改昵称就抓瞎，只能退回"主技能+数量"签名反查，
+// 链路长、容错窄。头像是游戏画的固定图案，不受改名影响——反过来当识别物种的主信号。
+// 参考图来自 pks.raenonx.cc（第三方宝可梦睡眠攻略站）的 portrait 素材，独立扒到本地
+// 存成 部署仓库/species_icons/{normal,shiny}/{去掉#的id}.webp，共245只里242只配到图
+// （#037-1冰六尾/#038-1冰九尾/#194-1毒乌波这3只阿罗拉地区形态暂时没找到对应素材，
+// 缺了这3只不影响其它——退回原有的名字OCR/签名反查兜底，不算回归）。
+// 独立文件、不内嵌进主HTML：只有点"截图识别"的人才需要背这份下载/计算成本，
+// 不能让全站访客每次打开网页都多付出好几MB，参考 [[project-embedded-portraits]] 反面案例。
+const SPECIES_ICON_BASE = 'species_icons/';
+const SPECIES_ICON_GRID = 32; // 参考图和截图裁出来的图标统一缩到这个网格再比对，比纯颜色直方图多保留"形状/轮廓"这维信息
+// 目前唯一登记过备选配色的条目：#025-1 皮卡丘（万圣节）在raenonx上分橘色/紫色两个配色，
+// 我方数据不分色，两张都留作参考模板一起比，谁分数低算谁
+const SPECIES_ICON_ALT_IDS = ['#025-1'];
+
+// ============ 头像抠图：把"角色本体"从截图背景里剥出来 ============
+// 目的：参考图（webp透明底）角色本体本来就顶满整张图，而截图裁出来的头像框自带一圈米白圆
+// 背景+白卡片+投影。两边"角色占画框的比例"天生不一致，网格逐像素比对对这种没对齐极其敏感，
+// 必须两边都收紧到"角色本体刚好顶满画框"，才是同口径比较。
+//
+// 截图侧的背景是两种精确纯色（74张真机截图完全一致）：白卡片(254,254,254) 和头像浅黄圆
+// (254,254,238)，出现次数远超其它任何颜色（3万/1万，第三名只有几百），所以直接取出现频次
+// 最高的两色当"背景种子"自适应标定，比写死颜色更能跟着不同机型/主题走。
+//
+// 这里踩过两个大坑，都别再犯：
+//  1) 原先判背景用的是"够浅就算背景"（min(r,g,b)>205）。白色/浅色宝可梦——七夕青鸟的白云、
+//     小福蛋的白肚子——会被连着背景一起吃掉，抠出来只剩爪子那一小条（实测前景框只有58×71，
+//     而画框有234×205），比对必然歪。判定必须收紧到"跟背景种子色几乎完全相等"，靠泛洪的
+//     连通性来保证只有真背景被删，而不是靠"浅"这个太宽的特征。
+//  2) 曾经加过"阴影 = 背景色被整体压暗"的规则，想顺手去掉宝可梦脚下那圈灰影。结果把灰色系的
+//     小拳石/锹农炮虫整只当成阴影吃光了，剩下的最大连通块变成裁剪框里蹭进来的卡片描边，
+//     前景框直接等于整张图（234×205），排名彻底是噪声。这条规则已删除，不要再加回来。
+const PORTRAIT_BG_TOL = 2;
+// 容差阶梯：正常截图2就够（背景是无损PNG里的精确纯色）。但如果截图被转过JPEG/缩放过，
+// 平整背景会长出噪点，容差2会认不出背景→整张图都算前景。检测到"前景框大得离谱"就放宽重试。
+// 74张真机截图里前景框占比最大的也只有0.52，用0.80当"抠糊了"的判据留足了余量。
+const PORTRAIT_BG_TOL_LADDER = [2, 5, 10, 18];
+const PORTRAIT_BBOX_SANE_RATIO = 0.80;
+// 打分权重：颜色均方差 × (1 + 形状权重×轮廓不匹配率) + 直方图权重 × 前景配色差异。
+// 三个分量的分工：颜色管"哪里是什么色"，轮廓管"外形对不对"，直方图管"整体配色像不像"
+// （跟位置无关，专治同一只宝可梦在截图里姿势/缩放略有偏差的情况）。
+// 这两个权重是拿74张真机截图扫出来的：在 lm∈[5,30]、lh∈[4,24] 这一大片区域里 top1 都稳定在
+// 65~70，不是尖峰，所以不用担心是过拟合出来的巧合值；选 20/12 是这片区域里 top3/top6/确信数
+// 同时最好的点。样本多了发现偏了，回来只动这两个数字即可。
+const SPECIES_ICON_SHAPE_W = 20;
+const SPECIES_ICON_HIST_W = 12;
+
+// 取出现频次最高的两种颜色当背景种子
+function portraitBgSeeds(d, w, h){
+  const cnt = new Map();
+  for(let i=0;i<w*h*4;i+=4){
+    const k = (d[i]<<16)|(d[i+1]<<8)|d[i+2];
+    cnt.set(k, (cnt.get(k)||0)+1);
+  }
+  return [...cnt.entries()].sort((a,b)=> b[1]-a[1]).slice(0,2)
+                           .map(([k])=> [(k>>16)&255, (k>>8)&255, k&255]);
+}
+// 截图侧的背景判定：alpha透明 / 贴近任一背景种子色 / 落在两个种子色的连线上（白卡片与浅黄圆
+// 交界处的抗锯齿过渡色就在这条线上，不单独放行的话会留下一圈假前景）/ 卡片珊瑚橙描边
+// （裁剪框左边缘会蹭进来一两像素，不删掉它就可能变成"最大连通块"）
+function makePortraitBgTest(seeds, tol){
+  return function(r, g, b, a){
+    if(a < 20) return true;
+    if(isCardBorderPixel(r,g,b)) return true;
+    for(const s of seeds){
+      if(Math.abs(r-s[0])<=tol && Math.abs(g-s[1])<=tol && Math.abs(b-s[2])<=tol) return true;
+    }
+    if(seeds.length >= 2){
+      const A = seeds[0], B = seeds[1], p = [r,g,b];
+      let num = 0, den = 0;
+      for(let k=0;k<3;k++){ const dk = B[k]-A[k]; num += (p[k]-A[k])*dk; den += dk*dk; }
+      let t = den ? num/den : 0;
+      if(t < 0) t = 0; else if(t > 1) t = 1;
+      let onSeg = true;
+      for(let k=0;k<3;k++){ if(Math.abs(p[k] - (A[k] + t*(B[k]-A[k]))) > tol){ onSeg = false; break; } }
+      if(onSeg) return true;
+    }
+    return false;
+  };
+}
+// 泛洪标出跟四条边相连的背景，再做连通域分析只保留"角色本体"这一个最大的前景连通块——
+// 截图裁剪边缘偶尔会带进卡片描边残色这类既不是背景、也不属于角色的孤立像素，
+// 直接取整体min/max当包围盒会被它们拉爆成整张画布，泛洪的功夫全白费。
+// 跟 findGoldBlobs 找×N徽章是同一个"取最大连通块，噪声不算数"的思路。
+function foregroundMaskFromData(d, w, h, isBg){
+  const bg = new Uint8Array(w*h), st = [];
+  const test = (idx)=>{ const i = idx*4; return isBg(d[i], d[i+1], d[i+2], d[i+3]); };
+  for(let x=0;x<w;x++){ for(const y of [0,h-1]){ const idx=y*w+x; if(!bg[idx]&&test(idx)){ bg[idx]=1; st.push(idx); } } }
+  for(let y=0;y<h;y++){ for(const x of [0,w-1]){ const idx=y*w+x; if(!bg[idx]&&test(idx)){ bg[idx]=1; st.push(idx); } } }
+  const nb4 = [[1,0],[-1,0],[0,1],[0,-1]];
+  while(st.length){
+    const idx = st.pop(), x = idx%w, y = (idx/w)|0;
+    for(const [dx,dy] of nb4){
+      const nx=x+dx, ny=y+dy;
+      if(nx<0||ny<0||nx>=w||ny>=h) continue;
+      const ni = ny*w+nx;
+      if(!bg[ni] && test(ni)){ bg[ni]=1; st.push(ni); }
+    }
+  }
+  const visited = new Uint8Array(w*h);
+  let best = null, bestPix = null, bestArea = 0;
+  for(let start=0; start<w*h; start++){
+    if(bg[start] || visited[start]) continue;
+    const stack = [start]; visited[start] = 1;
+    const pix = [start];
+    let minx=w, maxx=-1, miny=h, maxy=-1;
+    while(stack.length){
+      const idx = stack.pop(), x = idx%w, y = (idx/w)|0;
+      if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y;
+      for(const [dx,dy] of nb4){
+        const nx=x+dx, ny=y+dy;
+        if(nx<0||ny<0||nx>=w||ny>=h) continue;
+        const ni = ny*w+nx;
+        if(!bg[ni] && !visited[ni]){ visited[ni]=1; stack.push(ni); pix.push(ni); }
+      }
+    }
+    if(pix.length > bestArea){ bestArea = pix.length; best = {minx,maxx,miny,maxy}; bestPix = pix; }
+  }
+  if(!best) return null;
+  const mask = new Uint8Array(w*h);
+  for(const p of bestPix) mask[p] = 1;
+  return { mask, bbox: best, area: bestArea };
+}
+// 抠出本体（本体以外 alpha 清零）→ 按包围盒拉伸到 grid×grid。
+// 背景清成透明这一步是整套方案的关键：gridDistance 里"任一方透明就跳过"的规则，只有在
+// 两边都只剩本体时才有意义。以前截图侧背景是不透明的米白色，比对时相当于拿"米白背景"去跟
+// 参考图的本体像素比，谁的本体是一大坨浅色（波克比、小拳石、三合一磁怪）谁就万能匹配，
+// 这就是之前那批"无厘头误判"的真正来源。
+function maskedGridFromCanvas(canvas, isBg, grid){
+  const w = canvas.width, h = canvas.height;
+  const sctx = canvas.getContext('2d');
+  const im = sctx.getImageData(0, 0, w, h);
+  const r = foregroundMaskFromData(im.data, w, h, isBg);
+  if(!r) return null;
+  for(let p=0; p<w*h; p++){ if(!r.mask[p]) im.data[p*4+3] = 0; }
+  const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+  tmp.getContext('2d').putImageData(im, 0, 0);
+  const b = r.bbox;
+  const out = document.createElement('canvas'); out.width = grid; out.height = grid;
+  const octx = out.getContext('2d');
+  octx.imageSmoothingQuality = 'high';
+  octx.drawImage(tmp, b.minx, b.miny, b.maxx-b.minx+1, b.maxy-b.miny+1, 0, 0, grid, grid);
+  return { data: octx.getImageData(0,0,grid,grid).data, bbox: b, area: r.area, cropW: w, cropH: h };
+}
+// 截图侧：容差从紧到松逐级重试，第一个抠出"大小合理"的结果就用
+function portraitGridFromShot(canvas, grid){
+  const w = canvas.width, h = canvas.height;
+  const seeds = portraitBgSeeds(canvas.getContext('2d').getImageData(0,0,w,h).data, w, h);
+  let last = null;
+  for(const tol of PORTRAIT_BG_TOL_LADDER){
+    const g = maskedGridFromCanvas(canvas, makePortraitBgTest(seeds, tol), grid);
+    if(!g) continue;
+    last = g;
+    const ratio = ((g.bbox.maxx-g.bbox.minx+1) * (g.bbox.maxy-g.bbox.miny+1)) / (w*h);
+    if(ratio <= PORTRAIT_BBOX_SANE_RATIO) return g;
+  }
+  return last;
+}
+// 参考图侧：webp本来就是透明底，只看 alpha 就够了。绝对不能在这边也按"浅色算背景"判——
+// 那样参考图里的白云/白肚子会跟截图侧一样被吃掉，两边一起错还看不出来
+function refGridFromCanvas(canvas, grid){
+  return maskedGridFromCanvas(canvas, (r,g,b,a)=> a<20, grid);
+}
+function loadImageAsGrid(src, grid){
+  return new Promise((resolve)=>{
+    const img = new Image();
+    img.onload = ()=>{
+      try{
+        const full = document.createElement('canvas'); full.width=img.naturalWidth; full.height=img.naturalHeight;
+        full.getContext('2d').drawImage(img, 0, 0);
+        const g = refGridFromCanvas(full, grid);
+        resolve(g ? g.data : null);
+      }catch(e){ resolve(null); }
+    };
+    img.onerror = ()=> resolve(null); // 素材缺失（比如那3只阿罗拉形态）就是没有参考图，不算错误
+    img.src = src;
+  });
+}
+// 前景配色直方图：每通道压成4档 → 4×4×4=64桶，只统计不透明像素并归一化。
+// 这是跟位置完全无关的一维信号，专门补"同一只宝可梦在截图里姿势/缩放略有偏差"时
+// 逐像素比对会吃亏的场景——实测单靠它 top1 就有50/74，比单靠逐像素颜色(46)还高。
+function gridColorHist(d, grid){
+  const H = new Float64Array(64);
+  let n = 0;
+  for(let i=0;i<grid*grid*4;i+=4){
+    if(d[i+3] < 80) continue;
+    H[((d[i]>>6)<<4) | ((d[i+1]>>6)<<2) | (d[i+2]>>6)]++;
+    n++;
+  }
+  if(n) for(let k=0;k<64;k++) H[k] /= n;
+  return H;
+}
+function histDistance(a, b){
+  let s = 0;
+  for(let k=0;k<64;k++){ const d = a[k]-b[k]; s += d*d; }
+  return s;
+}
+let speciesIconRefCache = null;
+// 惰性加载：只有真正点了"截图识别"才会调用到这里，跟 Tesseract 引擎本身的懒加载是同一个原则——
+// 静态资源摆在页面里不用不花钱，用到了才付出下载成本
+async function getSpeciesIconRefs(){
+  if(speciesIconRefCache) return speciesIconRefCache;
+  const entries = [];
+  const jobs = POKEMON_DEX_DATA.map(async (row)=>{
+    const id = row[0];
+    const suffixes = SPECIES_ICON_ALT_IDS.includes(id) ? ['', '-alt'] : [''];
+    for(const suf of suffixes){
+      const bare = id.slice(1) + suf; // 去掉"#"
+      const [normal, shiny] = await Promise.all([
+        loadImageAsGrid(SPECIES_ICON_BASE+'normal/'+bare+'.webp', SPECIES_ICON_GRID),
+        loadImageAsGrid(SPECIES_ICON_BASE+'shiny/'+bare+'.webp', SPECIES_ICON_GRID),
+      ]);
+      if(normal) entries.push({id, shiny:false, grid:normal, hist:gridColorHist(normal, SPECIES_ICON_GRID)});
+      if(shiny) entries.push({id, shiny:true, grid:shiny, hist:gridColorHist(shiny, SPECIES_ICON_GRID)});
+    }
+  });
+  await Promise.all(jobs);
+  speciesIconRefCache = entries;
+  console.log('头像参考图加载完成，共', entries.length, '张（含正常+闪光两态，理论上限约'+(POKEMON_DEX_DATA.length*2+2)+'）');
+  return entries;
+}
+// 逐像素比较两个同尺寸网格：两边都不透明的位置算颜色差，只有一边不透明的位置算"轮廓不匹配"。
+// 两边都透明的位置什么都不算——那是画框的空白，不该左右结论。
+// 注意这个函数只有在"截图侧的背景已经被抠成透明"的前提下才成立，见 maskedGridFromCanvas 的说明。
+function gridDistanceParts(a, b, grid){
+  let s = 0, nOverlap = 0, nMismatch = 0;
+  for(let i=0;i<grid*grid*4;i+=4){
+    const oa = a[i+3] >= 80, ob = b[i+3] >= 80;
+    if(oa && ob){
+      const dr=a[i]-b[i], dg=a[i+1]-b[i+1], db=a[i+2]-b[i+2];
+      s += dr*dr+dg*dg+db*db; nOverlap++;
+    } else if(oa || ob) nMismatch++;
+  }
+  const union = nOverlap + nMismatch;
+  return {
+    color: nOverlap ? s/nOverlap : 999999,
+    mismatch: union ? nMismatch/union : 1,
+  };
+}
+// 同一条进化链归一：把任意形态映射到它那条链的最终形态。分歧进化（伊布那种一只能进化成
+// 八种）不做归一——那些分支彼此是完全不同的宝可梦，绝不能混为一谈，所以只在"只有唯一
+// 最终形态"时才折叠（finals.length===1）
+function speciesFamilyKey(dex){
+  const finals = POKEMON_FINAL_DEX_MAP[dex];
+  return (finals && finals.length===1) ? finals[0] : dex;
+}
+async function matchSpeciesIcon(iconCanvas){
+  const refs = await getSpeciesIconRefs();
+  if(!refs.length) return {pkId:null, ranking:[], confident:false, shiny:false, candidates:[]};
+  // 跟参考图走同一套"抠出本体、背景清透明、收紧到包围盒再缩到网格"，两边口径一致才能比
+  const g = portraitGridFromShot(iconCanvas, SPECIES_ICON_GRID);
+  if(!g) return {pkId:null, ranking:[], confident:false, shiny:false, candidates:[]};
+  const target = g.data;
+  const targetHist = gridColorHist(target, SPECIES_ICON_GRID);
+  const ranking = refs.map(r=>{
+    const p = gridDistanceParts(target, r.grid, SPECIES_ICON_GRID);
+    const score = p.color * (1 + SPECIES_ICON_SHAPE_W * p.mismatch)
+                + SPECIES_ICON_HIST_W * histDistance(targetHist, r.hist) * 10000;
+    return {id:r.id, shiny:r.shiny, dist: Math.round(score)};
+  }).sort((a,b)=> a.dist-b.dist);
+  const first = ranking[0];
+  // 置信度判断跟 matchIngredientIcon 同一个思路（最优候选要明显甩开第二名），但候选池从
+  // "3选1/19选1"变成了"245选1"，比值阈值需要拿真实截图重新调。拿 Downloads/测试图片 里
+  // 74张真机截图对着比值做过阈值扫描：0.55 是"确信的全部判对"（55张确信、0张错）里
+  // 收得最多的点，再往上0.60开始混进错的。这组数字是从这一批测试截图里扫出来的，
+  // 不是绝对定律，后续样本多了发现偏了再回来调这一个数字
+  const secondDiffSpecies = ranking.find(r=> r.id!==first.id);
+  let confident = true;
+  if(secondDiffSpecies){ const denom = secondDiffSpecies.dist || 1; confident = (first.dist/denom) < 0.55; }
+  // 前两名同属一条进化链时不必再纠结：同链各形态本来就长得像（小拳石/隆隆石/隆隆岩就是
+  // 典型，靠32×32缩略图分辨率天生分不开），而它们在本站的效率数据是按最终形态算的，
+  // 选谁其实等价。直接取最终形态、判定为确信，把"分不清同一家族的哪一阶"这类无意义的
+  // 犹豫从弃权名单里摘出去——这跟 identifyBySignature 收尾处"同链数据完全相同就选最终形态"
+  // 是同一个口径
+  let pkId = first.id, shiny = first.shiny;
+  if(!confident && secondDiffSpecies && speciesFamilyKey(first.id)===speciesFamilyKey(secondDiffSpecies.id)){
+    pkId = speciesFamilyKey(first.id);
+    confident = true;
+    console.log('头像识别：前两名（'+first.id+'/'+secondDiffSpecies.id+'）同属一条进化链，直接取最终形态', pkId);
+  }
+  // 拿不准时给调用方一份"最像的前几只"（按物种去重），用来在修改面板里摆出头像candidates让用户点选
+  const candidates = [];
+  const seen = new Set();
+  for(const r of ranking){
+    if(seen.has(r.id)) continue;
+    seen.add(r.id);
+    candidates.push({id:r.id, dist:r.dist, shiny:r.shiny});
+    if(candidates.length>=6) break;
+  }
+  return {pkId, dist:first.dist, ranking, confident, shiny, candidates};
+}
+// ============ 名字卡片定位：头像 + 等级文字共用同一个锚点 ============
+// 最初以为头像圆圈自带一圈金黄色描边，可以照搬×N徽章那套(isGoldPixel+连通域)去定位——
+// 拿真机截图核对后发现不是这样：头像背景只是极浅的米白色（跟纯白卡片背景只差个位数灰度，
+// 色差太小没法可靠地用颜色阈值单独抠出来），真正醒目、稳定可识别的是整块名字卡片本身
+// 那圈珊瑚橙描边（实测颜色稳定在(254,121,88)附近，8张不同宝可梦截图一致）。
+// 改用这个当锚点：先定位卡片整体的外框范围，头像和"Lv.NN"等级文字都按相对卡片的
+// 固定比例往里取——这两块内容都在卡片里，不需要各自单独找一次形状。
+// 下面这套比例是拿 Downloads/测试图片 里的真机截图（1320×2868，7只宝可梦）量出来的，
+// 不是拍脑袋的初值；如果以后遇到分辨率差异很大的截图定位跑偏，回来重新量这几个数字。
+function isCardBorderPixel(r,g,b){
+  return r>230 && g>90 && g<160 && b<130 && (r-b)>90 && (r-g)>60;
+}
+function locateNameCardBox(img){
+  const W = img.naturalWidth, H = img.naturalHeight;
+  // 卡片贴在截图最顶部（状态栏下方），完全没必要扫全图——只看前25%高度，减少计算量
+  const scanH = Math.min(H, Math.round(H*0.25));
+  const workW = Math.min(600, W);
+  const scale = workW/W;
+  const workH = Math.max(1, Math.round(scanH*scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = workW; canvas.height = workH;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, scanH, 0, 0, workW, workH);
+  // 跟 findGreenBandRows 同一个套路：逐行数橙色像素占比，超过阈值的行收集起来按"连续"合并成band，
+  // 第一条band=卡片顶边框，最后一条=卡片底边框
+  const bandRows = [];
+  for(let y=0;y<workH;y++){
+    const d = ctx.getImageData(0,y,workW,1).data;
+    let cnt=0;
+    for(let x=0;x<workW;x++){ const i=x*4; if(isCardBorderPixel(d[i],d[i+1],d[i+2])) cnt++; }
+    if(cnt/workW > 0.35) bandRows.push(y);
+  }
+  if(bandRows.length<2) return null;
+  const bands=[]; let start=bandRows[0], prev=bandRows[0];
+  for(let i=1;i<bandRows.length;i++){
+    const y=bandRows[i];
+    if(y-prev<=3){ prev=y; } else { bands.push({start,end:prev}); start=y; prev=y; }
+  }
+  bands.push({start,end:prev});
+  if(bands.length<2) return null;
+  const top=bands[0], bot=bands[bands.length-1];
+  // 左右边界：在顶边框band的中点那一行扫列
+  const midY = Math.round((top.start+top.end)/2);
+  const rowData = ctx.getImageData(0, midY, workW, 1).data;
+  let x0=null, x1=null;
+  for(let x=0;x<workW;x++){ const i=x*4; if(isCardBorderPixel(rowData[i],rowData[i+1],rowData[i+2])){ if(x0===null) x0=x; x1=x; } }
+  if(x0===null) return null;
+  return { x0: x0/scale/W, x1: (x1+1)/scale/W, y0: top.start/scale/H, y1: (bot.end+1)/scale/H };
+}
+// 头像在卡片内的相对位置——量出来的原始bbox是x[6.0%,38.0%] y[1.9%,98.1%](相对卡片自身宽高)，
+// 右边界收紧到32%避免蹭到旁边SP图标的边缘（实测原始bbox偶尔会带进SP胶囊左边缘1~2像素）
+function portraitRegionFromCard(card){
+  const cw = card.x1-card.x0, ch = card.y1-card.y0;
+  return { x: card.x0+0.060*cw, y: card.y0+0.019*ch, w: 0.320*cw, h: 0.962*ch };
+}
+// 头像识别主入口：定位卡片失败/参考图没匹配上都返回null，交给调用方退回其它兜底路径，
+// 不在这一层抛错——头像识别本来就是"能识别最好，识别不了还有别的路"，不是唯一命脉
+async function identifyByPortraitIcon(img, card){
+  card = card || locateNameCardBox(img);
+  if(!card){ console.log('名字卡片定位失败（没找到珊瑚橙描边），头像识别+等级识别都跳过'); return null; }
+  const region = portraitRegionFromCard(card);
+  const iconCanvas = cropRegionToCanvas(img, region);
+  logCanvasPreview('头像裁剪区（点开看裁到的是不是头像本身）', iconCanvas);
+  const m = await matchSpeciesIcon(iconCanvas);
+  if(!m.pkId){ console.log('头像比对没有可用参考图，跳过'); return null; }
+  console.log('头像识别候选（前5，越小越接近）：', m.ranking.slice(0,5).map(r=> r.id+(r.shiny?'(闪)':'')+':'+r.dist).join('  '));
+  const pkRec = DEX_BY_ID[m.pkId];
+  if(!pkRec) return null;
+  return {pkRec, confident:m.confident, shiny:m.shiny, dist:m.dist, ranking:m.ranking, candidates:m.candidates};
+}
+
+// ============ "Lv.NN"当前等级识别 ============
+// 这行文字是纯净的单一绿色(实测(52,208,101)附近，8张截图一致)，直接按颜色二值化
+// （是这个绿→黑字，不是→白底）比灰阶阈值更干净——颜色本身就是最强的区分信号，
+// 不需要像×N徽章那样多阈值投票。定位同样靠动态找这个绿色的像素级包围盒（而不是
+// 写死比例）：左边界稳定，右边界随数字位数变化，動態包围盒天然能跟着伸缩，
+// 比猜一个固定宽度更可靠。
+function isLevelGreenPixel(r,g,b){
+  return r<180 && g>150 && b<190 && (g-r)>40 && (g-b)>25;
+}
+function locateLevelTextRegion(img, card){
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const cw = card.x1-card.x0, ch = card.y1-card.y0;
+  // 搜索范围：卡片里头像右侧、SP行下方那一整条——比实际文字范围宽松不少，
+  // 目的只是圈定搜索范围避免扫到卡片外的其它绿色元素，不是精确裁剪本身
+  const sx0 = Math.round((card.x0 + 0.30*cw) * W);
+  const sx1 = Math.round((card.x0 + 0.65*cw) * W);
+  const sy0 = Math.round((card.y0 + 0.50*ch) * H);
+  const sy1 = Math.round((card.y0 + 0.90*ch) * H);
+  const sw = Math.max(1,sx1-sx0), sh = Math.max(1,sy1-sy0);
+  const canvas = document.createElement('canvas');
+  canvas.width = sw; canvas.height = sh;
+  canvas.getContext('2d').drawImage(img, sx0, sy0, sw, sh, 0, 0, sw, sh);
+  const d = canvas.getContext('2d').getImageData(0,0,sw,sh).data;
+  let minx=sw,maxx=0,miny=sh,maxy=0,found=false;
+  for(let y=0;y<sh;y++){
+    for(let x=0;x<sw;x++){
+      const i=(y*sw+x)*4;
+      if(isLevelGreenPixel(d[i],d[i+1],d[i+2])){
+        found=true;
+        if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y;
+      }
+    }
+  }
+  if(!found) return null;
+  const padX = Math.round(sw*0.02), padY = Math.round(sh*0.06);
+  return {
+    x:(sx0+Math.max(0,minx-padX))/W, y:(sy0+Math.max(0,miny-padY))/H,
+    w:(Math.min(sw,maxx+padX)-Math.max(0,minx-padX))/W, h:(Math.min(sh,maxy+padY)-Math.max(0,miny-padY))/H,
+  };
+}
+// 读到就返回1~99范围内的真实等级（clampLevelReal已处理越界），读不到返回null交给调用方保留默认档位。
+// 拆成"裁剪"和"解析OCR结果"两半——裁剪不需要worker，可以在批量并行调度之前先做完，
+// 把真正的识别（recognize调用）交给统一的并行任务队列，不再单独占用一个worker
+function buildLevelCanvas(img, card){
+  if(!card) return null;
+  const region = locateLevelTextRegion(img, card);
+  if(!region){ console.log('等级文字（绿色"Lv."）定位失败，跳过等级识别，保留按类型给的默认等级'); return null; }
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const upscale = 4; // 这行字在原图里不大，放大些再识别
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(region.w*W*upscale));
+  canvas.height = Math.max(1, Math.round(region.h*H*upscale));
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, region.x*W, region.y*H, region.w*W, region.h*H, 0, 0, canvas.width, canvas.height);
+  const imgData = ctx.getImageData(0,0,canvas.width,canvas.height);
+  const dd = imgData.data;
+  for(let i=0;i<dd.length;i+=4){
+    const v = isLevelGreenPixel(dd[i],dd[i+1],dd[i+2]) ? 0 : 255;
+    dd[i]=dd[i+1]=dd[i+2]=v;
+  }
+  ctx.putImageData(imgData,0,0);
+  logCanvasPreview('等级裁剪区（点开看是不是"Lv.NN"这行字）', canvas);
+  return canvas;
+}
+function parseLevelFromOcrText(rawText){
+  const raw = (rawText||'').trim();
+  const m = raw.match(/(\d{1,2})/);
+  console.log('等级区域原始文字：', JSON.stringify(raw), '→ 提取到的数字：', m?m[1]:'（没提取到，保留默认等级）');
+  return m ? clampLevelReal(m[1]) : null;
+}
+
 const PK_SIG_QTY = {"#001":{"s":"食材获取s","a":["蜜",5,7],"b":["番茄",4,7],"c":["土豆",null,6]},"#002":{"s":"食材获取S","a":["蜜",5,7],"b":["番茄",4,7],"c":["土豆",null,6]},"#003":{"s":"食材获取S","a":["蜜",5,7],"b":["番茄",4,7],"c":["土豆",null,6]},"#004":{"s":"食材获取S","a":["肠",5,7],"b":["姜",4,7],"c":["叶子",null,6]},"#005":{"s":"食材获取S","a":["肠",5,7],"b":["姜",4,7],"c":["叶子",null,6]},"#006":{"s":"食材获取S","a":["肠",5,7],"b":["姜",4,7],"c":["叶子",null,6]},"#007":{"s":"食材获取S","a":["奶",5,7],"b":["可可",3,5],"c":["肠",null,7]},"#008":{"s":"食材获取S","a":["奶",5,7],"b":["可可",3,5],"c":["肠",null,7]},"#009":{"s":"食材获取S","a":["奶",5,7],"b":["可可",3,5],"c":["肠",null,7]},"#010":{"s":"食材获取S","a":["蜜",2,4],"b":["番茄",2,3],"c":["豆",null,4]},"#011":{"s":"食材获取S","a":["蜜",2,4],"b":["番茄",2,3],"c":["豆",null,4]},"#012":{"s":"食材获取S","a":["蜜",2,4],"b":["番茄",2,3],"c":["豆",null,4]},"#019":{"s":"活力填充S","a":["苹果",2,4],"b":["豆",2,3],"c":["肠",null,3]},"#020":{"s":"活力填充S","a":["苹果",2,4],"b":["豆",2,3],"c":["肠",null,3]},"#023":{"s":"活力填充S","a":["肠",2,4],"b":["蛋",2,3],"c":["叶子",null,3]},"#024":{"s":"活力填充S","a":["肠",2,4],"b":["蛋",2,3],"c":["叶子",null,3]},"#025":{"s":"能量填充S","a":["苹果",2,4],"b":["姜",2,3],"c":["蛋",null,3]},"#025-1":{"s":"能量填充S","a":["苹果",2,4],"b":["姜",2,3],"c":["蛋",null,3]},"#025-2":{"s":"梦之碎片获取S","a":["苹果",2,4],"b":["姜",2,3],"c":["蛋",null,3]},"#026":{"s":"能量填充S","a":["苹果",2,4],"b":["姜",2,3],"c":["蛋",null,3]},"#027":{"s":"食材精选S","a":["南瓜",2,4],"b":["玉米",4,6],"c":["土豆",null,7]},"#028":{"s":"食材精选S","a":["南瓜",2,4],"b":["玉米",4,6],"c":["土豆",null,7]},"#035":{"s":"挥指","a":["苹果",2,4],"b":["蜜",2,3],"c":["豆",null,3]},"#036":{"s":"挥指","a":["苹果",2,4],"b":["蜜",2,3],"c":["豆",null,3]},"#037":{"s":"活力疗愈S","a":["豆",2,4],"b":["玉米",2,3],"c":["土豆",null,3]},"#037-1":{"s":"帮手支援S","a":["豆",2,4],"b":["玉米",2,3],"c":["土豆",null,3]},"#038":{"s":"活力疗愈S","a":["豆",2,4],"b":["玉米",2,3],"c":["土豆",null,3]},"#038-1":{"s":"帮手支援S","a":["豆",2,4],"b":["玉米",2,3],"c":["土豆",null,3]},"#039":{"s":"活力全体疗愈S","a":["蜜",2,4],"b":["油",2,3],"c":["可可",null,2]},"#040":{"s":"活力全体疗愈S","a":["蜜",2,4],"b":["油",2,3],"c":["可可",null,2]},"#050":{"s":"能量填充S","a":["番茄",5,7],"b":["葱",3,4],"c":["豆",null,8]},"#051":{"s":"能量填充S","a":["番茄",5,7],"b":["葱",3,4],"c":["豆",null,8]},"#052":{"s":"梦之碎片获取S","a":["奶",2,4],"b":["肠",2,3],"c":["肠",null,null]},"#053":{"s":"梦之碎片获取S","a":["奶",2,4],"b":["肠",2,3],"c":["肠",null,null]},"#054":{"s":"能量填充S","a":["可可",2,4],"b":["苹果",4,6],"c":["肠",null,5]},"#055":{"s":"能量填充S","a":["可可",2,4],"b":["苹果",4,6],"c":["肠",null,5]},"#056":{"s":"能量填充S","a":["肠",2,4],"b":["蘑菇",1,2],"c":["蜜",null,4]},"#057":{"s":"能量填充S","a":["肠",2,4],"b":["蘑菇",1,2],"c":["蜜",null,4]},"#058":{"s":"帮手支援S","a":["叶子",2,4],"b":["肠",3,5],"c":["奶",null,5]},"#059":{"s":"帮手支援S","a":["叶子",2,4],"b":["肠",3,5],"c":["奶",null,5]},"#069":{"s":"活力填充S","a":["番茄",5,7],"b":["土豆",4,6],"c":["葱",null,4]},"#070":{"s":"活力填充S","a":["番茄",5,7],"b":["土豆",4,6],"c":["葱",null,4]},"#071":{"s":"活力填充S","a":["番茄",5,7],"b":["土豆",4,6],"c":["葱",null,4]},"#074":{"s":"能量填充S","a":["豆",5,7],"b":["土豆",4,6],"c":["蘑菇",null,4]},"#075":{"s":"能量填充S","a":["豆",5,7],"b":["土豆",4,6],"c":["蘑菇",null,4]},"#076":{"s":"能量填充S","a":["豆",5,7],"b":["土豆",4,6],"c":["蘑菇",null,4]},"#079":{"s":"活力疗愈S","a":["可可",2,4],"b":["尾巴",1,2],"c":["番茄",null,5]},"#080":{"s":"活力疗愈S","a":["可可",2,4],"b":["尾巴",1,2],"c":["番茄",null,5]},"#081":{"s":"料理强化S","a":["油",2,4],"b":["叶子",2,3],"c":["叶子",null,null]},"#082":{"s":"料理强化S","a":["油",2,4],"b":["叶子",2,3],"c":["叶子",null,null]},"#083":{"s":"能量填充S","a":["葱",5,7],"b":["肠",8,13],"c":["姜",null,12]},"#084":{"s":"活力填充S","a":["豆",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#085":{"s":"活力填充S","a":["豆",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#092":{"s":"能量填充S","a":["叶子",5,7],"b":["蘑菇",4,6],"c":["油",null,8]},"#093":{"s":"能量填充S","a":["叶子",5,7],"b":["蘑菇",4,6],"c":["油",null,8]},"#094":{"s":"能量填充S","a":["叶子",5,7],"b":["蘑菇",4,6],"c":["油",null,8]},"#095":{"s":"食材获取S","a":["番茄",2,4],"b":["肠",2,4],"c":["土豆",null,3]},"#104":{"s":"活力填充S","a":["姜",2,4],"b":["可可",2,3],"c":["可可",null,null]},"#105":{"s":"活力填充S","a":["姜",2,4],"b":["可可",2,3],"c":["可可",null,null]},"#113":{"s":"活力全体疗愈S","a":["蛋",5,7],"b":["土豆",4,7],"c":["蜜",null,8]},"#115":{"s":"食材获取S","a":["姜",5,7],"b":["土豆",4,6],"c":["豆",null,8]},"#122":{"s":"模仿（技能复制）","a":["番茄",5,7],"b":["土豆",4,6],"c":["葱",null,4]},"#127":{"s":"能量填充M","a":["蜜",5,7],"b":["苹果",5,8],"c":["肠",null,7]},"#132":{"s":"变身（技能复制）","a":["油",5,7],"b":["葱",3,5],"c":["尾巴",null,3]},"#133":{"s":"食材获取S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#133-1":{"s":"梦之碎片获取S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#133-2":{"s":"食材获取S","a":["南瓜",2,4],"b":["可可",4,6],"c":["肠",null,9]},"#134":{"s":"食材获取S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#135":{"s":"帮手支援S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#136":{"s":"料理强化S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#147":{"s":"活力填充S","a":["叶子",5,7],"b":["玉米",4,7],"c":["油",null,8]},"#148":{"s":"活力填充S","a":["叶子",5,7],"b":["玉米",4,7],"c":["油",null,8]},"#149":{"s":"活力填充S","a":["叶子",5,7],"b":["玉米",4,7],"c":["油",null,8]},"#151":{"s":"十项全能"},"#152":{"s":"能量填充S","a":["可可",2,4],"b":["蜜",3,5],"c":["葱",null,3]},"#153":{"s":"能量填充S","a":["可可",2,4],"b":["蜜",3,5],"c":["葱",null,3]},"#154":{"s":"能量填充S","a":["可可",2,4],"b":["蜜",3,5],"c":["葱",null,3]},"#155":{"s":"能量填充S","a":["姜",2,4],"b":["叶子",2,3],"c":["油",null,3]},"#156":{"s":"能量填充S","a":["姜",2,4],"b":["叶子",2,3],"c":["油",null,3]},"#157":{"s":"能量填充S","a":["姜",2,4],"b":["叶子",2,3],"c":["油",null,3]},"#158":{"s":"能量填充S","a":["肠",2,4],"b":["油",2,3],"c":["油",null,null]},"#159":{"s":"能量填充S","a":["肠",2,4],"b":["油",2,3],"c":["油",null,null]},"#160":{"s":"能量填充S","a":["肠",2,4],"b":["油",2,3],"c":["油",null,null]},"#172":{"s":"能量填充S","a":["苹果",2,4],"b":["姜",2,3],"c":["蛋",null,3]},"#173":{"s":"挥指","a":["苹果",2,4],"b":["蜜",2,3],"c":["豆",null,3]},"#174":{"s":"活力全体疗愈S","a":["蜜",2,4],"b":["油",2,3],"c":["可可",null,2]},"#175":{"s":"挥指","a":["蛋",2,4],"b":["姜",2,4],"c":["可可",null,3]},"#176":{"s":"挥指","a":["蛋",2,4],"b":["姜",2,4],"c":["可可",null,3]},"#177":{"s":"食材获取S","a":["蛋",2,4],"b":["可可",2,3],"c":["苹果",null,5]},"#178":{"s":"食材获取S","a":["蛋",2,4],"b":["可可",2,3],"c":["苹果",null,5]},"#179":{"s":"能量填充M","a":["叶子",2,4],"b":["蛋",3,4],"c":["蛋",null,null]},"#180":{"s":"能量填充M","a":["叶子",2,4],"b":["蛋",3,4],"c":["蛋",null,null]},"#181":{"s":"能量填充M","a":["叶子",2,4],"b":["蛋",3,4],"c":["蛋",null,null]},"#185":{"s":"能量填充M","a":["番茄",2,4],"b":["豆",2,4],"c":["蘑菇",null,2]},"#194":{"s":"活力填充S","a":["蘑菇",5,7],"b":["土豆",6,10],"c":["肠",null,12]},"#194-1":{"s":"活力填充S","a":["可可",5,7],"b":["咖啡",4,7],"c":["土豆",null,9]},"#195":{"s":"活力填充S","a":["蘑菇",5,7],"b":["土豆",6,10],"c":["肠",null,12]},"#196":{"s":"能量填充M","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#197":{"s":"月光（活力填充S）","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#198":{"s":"超幸运（食材精选S）","a":["咖啡",2,4],"b":["豆",3,6],"c":["叶子",null,4]},"#199":{"s":"活力疗愈S","a":["可可",2,4],"b":["尾巴",1,2],"c":["番茄",null,5]},"#202":{"s":"活力疗愈S","a":["苹果",2,4],"b":["蘑菇",1,2],"c":["油",null,3]},"#208":{"s":"食材获取S","a":["番茄",2,4],"b":["肠",2,4],"c":["土豆",null,3]},"#213":{"s":"树果汁（活力全体疗愈S）","a":["油",2,4],"b":["咖啡",2,3],"c":["蜜",null,4]},"#214":{"s":"健美（料理辅助S）","a":["蜜",2,4],"b":["蘑菇",1,2],"c":["肠",null,4]},"#215":{"s":"料理成功S","a":["肠",2,4],"b":["蛋",2,3],"c":["豆",null,4]},"#225":{"s":"礼物（食材获取S）","a":["蛋",5,7],"b":["苹果",6,9],"c":["可可",null,5]},"#228":{"s":"能量填充M","a":["叶子",2,4],"b":["姜",3,4],"c":["葱",null,3]},"#229":{"s":"能量填充M","a":["叶子",2,4],"b":["姜",3,4],"c":["葱",null,3]},"#242":{"s":"活力全体疗愈S","a":["蛋",5,7],"b":["土豆",4,7],"c":["蜜",null,8]},"#243":{"s":"帮手加速","a":["肠",2,4],"b":["叶子",2,3],"c":["葱",null,2]},"#244":{"s":"帮手加速","a":["油",2,4],"b":["番茄",2,4],"c":["蘑菇",null,3]},"#245":{"s":"帮手加速","a":["苹果",2,4],"b":["油",2,3],"c":["玉米",null,2]},"#246":{"s":"活力填充S","a":["姜",5,7],"b":["豆",5,8],"c":["肠",null,8]},"#247":{"s":"活力填充S","a":["姜",5,7],"b":["豆",5,8],"c":["肠",null,8]},"#248":{"s":"活力填充S","a":["姜",5,7],"b":["豆",5,8],"c":["肠",null,8]},"#252":{"s":"树果剧增","a":["蛋",2,4],"b":["咖啡",2,3],"c":["葱",null,2]},"#253":{"s":"树果剧增","a":["蛋",2,4],"b":["咖啡",2,3],"c":["葱",null,2]},"#254":{"s":"树果剧增","a":["蛋",2,4],"b":["咖啡",2,3],"c":["葱",null,2]},"#255":{"s":"活力填充S","a":["蘑菇",2,4],"b":["豆",4,6],"c":["油",null,5]},"#256":{"s":"活力填充S","a":["蘑菇",2,4],"b":["豆",4,6],"c":["油",null,5]},"#257":{"s":"活力填充S","a":["蘑菇",2,4],"b":["豆",4,6],"c":["油",null,5]},"#258":{"s":"料理成功S","a":["玉米",2,4],"b":["奶",3,5],"c":["蘑菇",null,3]},"#259":{"s":"料理成功S","a":["玉米",2,4],"b":["奶",3,5],"c":["蘑菇",null,3]},"#260":{"s":"料理成功S","a":["玉米",2,4],"b":["奶",3,5],"c":["蘑菇",null,3]},"#280":{"s":"活力全体疗愈S","a":["苹果",2,4],"b":["玉米",1,2],"c":["葱",null,2]},"#281":{"s":"活力全体疗愈S","a":["苹果",2,4],"b":["玉米",1,2],"c":["葱",null,2]},"#282":{"s":"活力全体疗愈S","a":["苹果",2,4],"b":["玉米",1,2],"c":["葱",null,2]},"#287":{"s":"食材获取S","a":["番茄",2,4],"b":["蜜",2,4],"c":["苹果",null,4]},"#288":{"s":"食材获取S","a":["番茄",2,4],"b":["蜜",2,4],"c":["苹果",null,4]},"#289":{"s":"食材获取S","a":["番茄",2,4],"b":["蜜",2,4],"c":["苹果",null,4]},"#302":{"s":"梦之碎片获取S","a":["油",2,4],"b":["蘑菇",2,3],"c":["可可",null,3]},"#303":{"s":"怪力钳（食材精选S）","a":["油",5,7],"b":["玉米",4,6],"c":["番茄",null,8]},"#304":{"s":"活力填充S","a":["肠",5,7],"b":["咖啡",3,5],"c":["豆",null,7]},"#305":{"s":"活力填充S","a":["肠",5,7],"b":["咖啡",3,5],"c":["豆",null,7]},"#306":{"s":"活力填充S","a":["肠",5,7],"b":["咖啡",3,5],"c":["豆",null,7]},"#311":{"s":"正电（食材获取S）","a":["咖啡",2,4],"b":["葱",2,3],"c":["奶",null,6]},"#312":{"s":"负电（料理强化S)","a":["蜜",2,4],"b":["蛋",2,3],"c":["奶",null,4]},"#316":{"s":"梦之碎片获取S","a":["豆",2,4],"b":["蘑菇",1,2],"c":["蜜",null,4]},"#317":{"s":"梦之碎片获取S","a":["豆",2,4],"b":["蘑菇",1,2],"c":["蜜",null,4]},"#328":{"s":"能量填充S","a":["牛油果",5,7],"b":["叶子",6,9],"c":["豆",null,12]},"#329":{"s":"能量填充S","a":["牛油果",5,7],"b":["叶子",6,9],"c":["豆",null,12]},"#330":{"s":"能量填充S","a":["牛油果",5,7],"b":["叶子",6,9],"c":["豆",null,12]},"#333":{"s":"活力填充S","a":["蛋",2,4],"b":["豆",3,4],"c":["苹果",null,5]},"#334":{"s":"活力填充S","a":["蛋",2,4],"b":["豆",3,4],"c":["苹果",null,5]},"#353":{"s":"能量填充S","a":["油",2,4],"b":["姜",2,4],"c":["蘑菇",null,3]},"#354":{"s":"能量填充S","a":["油",2,4],"b":["姜",2,4],"c":["蘑菇",null,3]},"#359":{"s":"能量填充M","a":["可可",5,7],"b":["苹果",8,12],"c":["蘑菇",null,7]},"#360":{"s":"活力疗愈S","a":["苹果",2,4],"b":["蘑菇",1,2],"c":["油",null,3]},"#363":{"s":"食材获取S","a":["油",2,4],"b":["肠",3,4],"c":["姜",null,4]},"#363-1":{"s":"料理成功S","a":["油",2,4],"b":["肠",3,4],"c":["姜",null,4]},"#364":{"s":"食材获取S","a":["油",2,4],"b":["肠",3,4],"c":["姜",null,4]},"#365":{"s":"食材获取S","a":["油",2,4],"b":["肠",3,4],"c":["姜",null,4]},"#371":{"s":"料理强化S","a":["土豆",2,4],"b":["姜",3,4],"c":["肠",null,4]},"#372":{"s":"料理强化S","a":["土豆",2,4],"b":["姜",3,4],"c":["肠",null,4]},"#373":{"s":"料理强化S","a":["土豆",2,4],"b":["姜",3,4],"c":["肠",null,4]},"#380":{"s":"治愈波动（活力疗愈S）","a":["番茄",2,4],"b":["南瓜",1,2],"c":["蘑菇",null,2]},"#381":{"s":"流星群（树果剧增）","a":["番茄",2,4],"b":["蛋",2,3],"c":["奶",null,4]},"#387":{"s":"活力全体疗愈S","a":["蘑菇",2,4],"b":["土豆",3,5],"c":["姜",null,6]},"#388":{"s":"活力全体疗愈S","a":["蘑菇",2,4],"b":["土豆",3,5],"c":["姜",null,6]},"#389":{"s":"活力全体疗愈S","a":["蘑菇",2,4],"b":["土豆",3,5],"c":["姜",null,6]},"#390":{"s":"树果剧增","a":["叶子",2,4],"b":["姜",3,4],"c":["咖啡",null,3]},"#391":{"s":"树果剧增","a":["叶子",2,4],"b":["姜",3,4],"c":["咖啡",null,3]},"#392":{"s":"树果剧增","a":["叶子",2,4],"b":["姜",3,4],"c":["咖啡",null,3]},"#393":{"s":"帮手支援S","a":["蛋",2,4],"b":["葱",1,2],"c":["蜜",null,4]},"#394":{"s":"帮手支援S","a":["蛋",2,4],"b":["葱",1,2],"c":["蜜",null,4]},"#395":{"s":"帮手支援S","a":["蛋",2,4],"b":["葱",1,2],"c":["蜜",null,4]},"#403":{"s":"料理强化S","a":["番茄",5,7],"b":["油",4,7],"c":["咖啡",null,5]},"#404":{"s":"料理强化S","a":["番茄",5,7],"b":["油",4,7],"c":["咖啡",null,5]},"#405":{"s":"料理强化S","a":["番茄",5,7],"b":["油",4,7],"c":["咖啡",null,5]},"#425":{"s":"蓄力（能量填充S）","a":["玉米",2,4],"b":["油",3,4],"c":["土豆",null,4]},"#426":{"s":"蓄力（能量填充S）","a":["玉米",2,4],"b":["油",3,4],"c":["土豆",null,4]},"#430":{"s":"超幸运（食材精选S）","a":["咖啡",2,4],"b":["豆",3,6],"c":["叶子",null,4]},"#438":{"s":"能量填充M","a":["番茄",2,4],"b":["豆",2,4],"c":["蘑菇",null,2]},"#439":{"s":"模仿（技能复制）","a":["番茄",5,7],"b":["土豆",4,6],"c":["葱",null,4]},"#440":{"s":"活力全体疗愈S","a":["蛋",5,7],"b":["土豆",4,7],"c":["蜜",null,8]},"#442":{"s":"帮手支援S","a":["蘑菇",5,7],"b":["南瓜",3,5],"c":["葱",null,6]},"#447":{"s":"梦之碎片获取S","a":["油",2,4],"b":["土豆",2,4],"c":["蛋",null,4]},"#448":{"s":"梦之碎片获取S","a":["油",2,4],"b":["土豆",2,4],"c":["蛋",null,4]},"#453":{"s":"能量填充S","a":["油",5,7],"b":["肠",5,8],"c":["肠",null,null]},"#454":{"s":"能量填充S","a":["油",5,7],"b":["肠",5,8],"c":["肠",null,null]},"#459":{"s":"能量填充S","a":["番茄",5,7],"b":["蛋",4,7],"c":["蘑菇",null,5]},"#460":{"s":"能量填充S","a":["番茄",5,7],"b":["蛋",4,7],"c":["蘑菇",null,5]},"#461":{"s":"料理成功S","a":["肠",2,4],"b":["蛋",2,3],"c":["豆",null,4]},"#462":{"s":"料理强化S","a":["油",2,4],"b":["叶子",2,3],"c":["叶子",null,null]},"#468":{"s":"挥指","a":["蛋",2,4],"b":["姜",2,4],"c":["可可",null,3]},"#470":{"s":"活力疗愈S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#471":{"s":"料理强化S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#475":{"s":"帮手支援S","a":["苹果",2,4],"b":["玉米",1,2],"c":["葱",null,2]},"#488":{"s":"新月祈祷（活力全体疗愈S）","a":["姜",2,4],"b":["可可",2,3],"c":["番茄",null,4]},"#491":{"s":"梦魇（能量填充M)"},"#517":{"s":"梦之碎片获取S","a":["奶",2,4],"b":["蜜",2,3],"c":["咖啡",null,2]},"#518":{"s":"梦之碎片获取S","a":["奶",2,4],"b":["蜜",2,3],"c":["咖啡",null,2]},"#557":{"s":"食材精选S","a":["牛油果",2,4],"b":["土豆",3,5],"c":["油",null,5]},"#558":{"s":"食材精选S","a":["牛油果",2,4],"b":["土豆",3,5],"c":["油",null,5]},"#627":{"s":"树果剧增","a":["肠",2,4],"b":["玉米",2,3],"c":["咖啡",null,2]},"#628":{"s":"树果剧增","a":["肠",2,4],"b":["玉米",2,3],"c":["咖啡",null,2]},"#696":{"s":"料理强化S","a":["肠",2,4],"b":["苹果",3,4],"c":["土豆",null,3]},"#697":{"s":"料理强化S","a":["肠",2,4],"b":["苹果",3,4],"c":["土豆",null,3]},"#700":{"s":"活力全体疗愈S","a":["奶",2,4],"b":["可可",1,2],"c":["肠",null,3]},"#702":{"s":"料理成功S","a":["苹果",2,4],"b":["可可",1,2],"c":["玉米",null,3]},"#710":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#711":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#714":{"s":"能量填充M","a":["苹果",2,4],"b":["葱",1,2],"c":["肠",null,3]},"#715":{"s":"能量填充M","a":["苹果",2,4],"b":["葱",1,2],"c":["肠",null,3]},"#736":{"s":"能量填充S","a":["咖啡",5,7],"b":["蘑菇",4,7],"c":["蜜",null,11]},"#737":{"s":"能量填充S","a":["咖啡",5,7],"b":["蘑菇",4,7],"c":["蜜",null,11]},"#738":{"s":"能量填充S","a":["咖啡",5,7],"b":["蘑菇",4,7],"c":["蜜",null,11]},"#742":{"s":"食材精选S","a":["蜜",5,7],"b":["油",4,6],"c":["玉米",null,5]},"#743":{"s":"食材精选S","a":["蜜",5,7],"b":["油",4,6],"c":["玉米",null,5]},"#759":{"s":"能量填充S","a":["玉米",5,7],"b":["肠",6,10],"c":["蛋",null,9]},"#760":{"s":"能量填充S","a":["玉米",5,7],"b":["肠",6,10],"c":["蛋",null,9]},"#764":{"s":"活力疗愈S","a":["玉米",5,7],"b":["姜",6,9],"c":["可可",null,7]},"#777":{"s":"蹭蹭脸颊（活力疗愈S）","a":["奶",2,4],"b":["牛油果",1,2],"c":["可可",null,2]},"#778":{"s":"画皮（树果剧增）","a":["苹果",2,4],"b":["咖啡",1,2],"c":["蘑菇",null,2]},"#780":{"s":"料理成功S","a":["豆",5,7],"b":["牛油果",3,4],"c":["肠",null,7]},"#845":{"s":"料理成功S","a":["油",5,7],"b":["土豆",4,7],"c":["蛋",null,8]},"#848":{"s":"食材获取S","a":["奶",2,4],"b":["苹果",2,4],"c":["葱",null,2]},"#849":{"s":"正电（食材获取S）或负电（料理强化S)","a":["奶",2,4],"b":["苹果",2,4],"c":["葱",null,2]},"#906":{"s":"料理强化S","a":["土豆",5,7],"b":["奶",6,9],"c":["姜",null,8]},"#907":{"s":"料理强化S","a":["土豆",5,7],"b":["奶",6,9],"c":["姜",null,8]},"#908":{"s":"料理强化S","a":["土豆",5,7],"b":["奶",6,9],"c":["姜",null,8]},"#909":{"s":"活力填充S","a":["苹果",5,7],"b":["肠",4,6],"c":["叶子",null,5]},"#910":{"s":"活力填充S","a":["苹果",5,7],"b":["肠",4,6],"c":["叶子",null,5]},"#911":{"s":"活力填充S","a":["苹果",5,7],"b":["肠",4,6],"c":["叶子",null,5]},"#912":{"s":"能量填充M","a":["豆",5,7],"b":["葱",2,4],"c":["油",null,6]},"#913":{"s":"能量填充M","a":["豆",5,7],"b":["葱",2,4],"c":["油",null,6]},"#914":{"s":"能量填充M","a":["豆",5,7],"b":["葱",2,4],"c":["油",null,6]},"#921":{"s":"活力全体疗愈S","a":["可可",2,4],"b":["奶",3,6],"c":["蛋",null,5]},"#922":{"s":"活力全体疗愈S","a":["可可",2,4],"b":["奶",3,6],"c":["蛋",null,5]},"#923":{"s":"活力全体疗愈S","a":["可可",2,4],"b":["奶",3,6],"c":["蛋",null,5]},"#974":{"s":"活力填充S","a":["土豆",5,7],"b":["肠",5,9],"c":["南瓜",null,4]},"#975":{"s":"活力填充S","a":["土豆",5,7],"b":["肠",5,9],"c":["南瓜",null,4]},"#980":{"s":"活力填充S","a":["可可",5,7],"b":["咖啡",4,7],"c":["土豆",null,9]},"#710-1":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#711-1":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#710-2":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#711-2":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#710-3":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]},"#711-3":{"s":"能量填充S","a":["南瓜",5,7],"b":["豆",11,18],"c":["土豆",null,15]}};
 
 // ============ 主技能 + 食材 + 数量 → 物种 的兜底识别 ============
@@ -12227,13 +12726,45 @@ async function runOcrOnFile(file, silent){
     await loadTesseract();
     const img = await loadImageFromFile(file);
 
-    const worker = await Tesseract.createWorker('chi_tra');
+    // 之前是单个worker把十几二十次识别串行跑完，一张图要60~90秒。这些识别任务
+    // （名字/性格/主技能/6格副技能×4阈值/等级/食材数量）互相之间没有先后依赖——都只
+    // 依赖裁剪好的图片区域，不依赖彼此的识别结果——所以能开几个worker分头并行跑。
+    // 池子大小按硬件并发数取，封顶4（怕低端手机内存吃紧，每个worker都要常驻一份语言模型），
+    // 保底2（哪怕hardwareConcurrency读不到也至少并行一点）
+    const POOL_SIZE = Math.max(2, Math.min(4, (navigator.hardwareConcurrency||4)));
+    const workerPool = await Promise.all(Array.from({length: POOL_SIZE}, ()=> Tesseract.createWorker('chi_tra')));
 
     function withTimeout(promise, ms, label){
       return Promise.race([
         promise,
         new Promise((_,reject)=> setTimeout(()=> reject(new Error(label+'识别超时（超过'+(ms/1000)+'秒），可能是图片太大或引擎异常')), ms)),
       ]);
+    }
+    // 统一的并行任务队列：每个worker各自从同一个游标里认领下一个任务（工作窃取），
+    // 谁先跑完手头这个就去领下一个，天然按耗时负载均衡，不用预先猜哪个worker分到哪几个任务
+    const jobs = [];
+    function pushJob(canvas, pageseg, whitelist, label){
+      jobs.push({canvas, params:{tessedit_pageseg_mode: pageseg, tessedit_char_whitelist: whitelist||''}, label});
+      return jobs.length-1;
+    }
+    async function runJobs(){
+      const results = new Array(jobs.length);
+      let next = 0;
+      async function loop(w){
+        while(true){
+          const i = next++;
+          if(i>=jobs.length) break;
+          const j = jobs[i];
+          await withTimeout(w.setParameters(j.params), 30000, j.label+'(setParams)');
+          results[i] = await withTimeout(w.recognize(j.canvas), 30000, j.label);
+        }
+      }
+      await Promise.all(workerPool.map(loop));
+      return results;
+    }
+    async function singleRecognize(w, canvas, pageseg, whitelist, label){
+      await w.setParameters({tessedit_pageseg_mode: pageseg, tessedit_char_whitelist: whitelist||''});
+      return await withTimeout(w.recognize(canvas), 30000, label);
     }
     function cropPixels(sx, sy, sw, sh, upscale){
       upscale = upscale || 2; // 放大后再交给OCR，小字体识别准确率明显更好
@@ -12267,37 +12798,6 @@ async function runOcrOnFile(file, silent){
       c.getContext('2d').drawImage(canvas, 0, 0);
       return c;
     }
-    // 调试用：把裁剪出来的小图直接画进控制台（Chrome DevTools的console.log支持用
-    // background-image的CSS技巧内联显示图片），不用另外找地方展示，也不用手动导出文件——
-    // 在控制台里点开这一行就能直接看到裁到的到底是不是想要的内容
-    function logCanvasPreview(label, canvas){
-      try{
-        const url = canvas.toDataURL('image/png');
-        console.log('%c'+label+'（'+canvas.width+'x'+canvas.height+'）', 'font-weight:bold;color:#2a7;');
-        console.log('%c ', 'padding:'+Math.round(canvas.height/2)+'px '+Math.round(canvas.width/2)+'px;line-height:0;background:url('+url+') no-repeat;background-size:'+canvas.width+'px '+canvas.height+'px;font-size:1px;');
-      }catch(e){ console.log(label+' 预览生成失败：', e.message); }
-    }
-    // 副技能列里，纯白底的锁定格子和彩色高亮的已解锁格子对二值化的反应正好相反：
-    // 高亮格子不二值化会被当成图形跳过，但锁定格子二值化后细笔画反而容易被阈值切掉。
-    // 所以两种版本都识别一遍，再用每个字/词在图片上的实际像素坐标（bbox）按"先上下、
-    // 同一行再左右"重新排序合并——不管哪个词是从原图版本还是二值化版本认出来的，
-    // 只要坐标对，顺序就不会乱，比二选一或者猜哪个格子该用哪种处理方式更可靠
-    function mergeWordsInReadingOrder(...results){
-      const words = [];
-      results.forEach(res=>{
-        ((res && res.data && res.data.words) || []).forEach(w=>{
-          if(w && w.text && w.text.trim() && w.bbox){
-            words.push({text:w.text, x:w.bbox.x0||0, y:w.bbox.y0||0});
-          }
-        });
-      });
-      if(words.length===0) return '';
-      words.sort((a,b)=> a.x-b.x); // 先按左右预排一遍
-      const rowBucket = 25; // 同一行内的y值允许的抖动范围（像素，针对2倍放大后的图）
-      words.sort((a,b)=> Math.round(a.y/rowBucket) - Math.round(b.y/rowBucket)); // 稳定排序，桶内保留上面按x排好的左右顺序
-      return words.map(w=>w.text).join('\n');
-    }
-
     // 用绿色标题条（"主技能／副技能" 和 "能力详情"）的像素位置定位副技能区和性格区，
     // 不同宝可梦主技能框高度不一样，动态定位比写死百分比更准
     statusEl.textContent = '正在定位区域…';
@@ -12337,11 +12837,12 @@ async function runOcrOnFile(file, silent){
     // 阈值特意比默认130高，否则锁定格那种约150灰度的字会被当成背景一起变白丢掉），
     // 两遍文字合并后交给 findAllSkillMatches 取第一个命中技能。
     // 逐格识别彻底避免左右串字；某格读不出（比如灰字对焦不清）就是 null，宁可留空不乱填。
-    let subCellTexts = ['','','','','','']; // [行1左,行1右, 行2左,行2右, 行3左,行3右]
+    // 6个格子×4档阈值＝最多24个任务，彼此独立（不同格子/不同阈值互不依赖），
+    // 这里只负责裁剪出每个任务的画布、登记进统一任务队列，真正的识别放到后面并行跑
+    const subCellJobIdx = [[],[],[],[],[],[]]; // 每格对应的job下标列表（4档阈值）
     if(subRowBands.length){
       statusEl.textContent = '正在识别副技能…';
-      await worker.setParameters({tessedit_pageseg_mode: '6'});
-      async function ocrSubCell(xFrac, top, bot){
+      function mkSubCellJobs(xFrac, top, bot){
         const pad = Math.round((bot-top)*0.08);
         const y = Math.max(0, top-pad), hh = (bot-top)+pad*2;
         const cOrig = cropPixels(xFrac*W, y, 0.46*W, hh, 3);
@@ -12350,64 +12851,56 @@ async function runOcrOnFile(file, silent){
         //           用150会把整块按钮连字带底一起压黑成乱码，必须降到130才把字和底分开）；
         //   150 —— 金色高亮格（深棕字+金底）；
         //   185 —— 锁定灰字格（浅底约150灰的字，阈值要高才不被当背景丢掉）。
-        let txt = '';
+        const idxs = [];
         for(const th of [null, 130, 150, 185]){
           const c = th==null ? cOrig : cloneCanvas(cOrig);
           if(th!=null) binarizeCanvas(c, th);
-          const r = await withTimeout(worker.recognize(c), 30000, '副技能格');
-          txt += (r.data.text||'') + '\n';
+          idxs.push(pushJob(c, '6', '', '副技能格'));
         }
-        return txt;
+        return idxs;
       }
       for(let i=0;i<3;i++){
         const rb = subRowBands[i];
         if(!rb) continue;
-        subCellTexts[i*2]   = await ocrSubCell(0.03, rb[0], rb[1]); // 左格
-        subCellTexts[i*2+1] = await ocrSubCell(0.51, rb[0], rb[1]); // 右格
+        subCellJobIdx[i*2]   = mkSubCellJobs(0.03, rb[0], rb[1]); // 左格
+        subCellJobIdx[i*2+1] = mkSubCellJobs(0.51, rb[0], rb[1]); // 右格
       }
-      await worker.setParameters({tessedit_pageseg_mode: '3'});
     }
 
     // 性格胶囊自带一圈绿色描边，默认的自动版面分析容易把它当成图形/图标而不是文字直接跳过，
     // 这里切换成"稀疏文本"模式（不假设有完整段落结构，逐块找文字），专门用于这类孤立的按钮状文字
     statusEl.textContent = '正在识别性格…';
-    await worker.setParameters({tessedit_pageseg_mode: '11'});
     binarizeCanvas(personaCanvas); // 二值化去掉胶囊描边/底色的干扰，只留文字
-    const personaRes = await withTimeout(worker.recognize(personaCanvas), 30000, '性格');
-    await worker.setParameters({tessedit_pageseg_mode: '3'}); // 切回默认自动版面，供后续名称识别使用
+    const personaJobIdx = pushJob(personaCanvas, '11', '', '性格');
 
-    // 性格箭头法：在橙色▲(inc)行和蓝色▼(dec)行各裁一条横带、OCR出属性名→字母
+    // 性格箭头法：在橙色▲(inc)行和蓝色▼(dec)行各裁一条横带、OCR出属性名→字母。
+    // detectStatArrowBands本身是纯像素定位，不用等OCR；这里只是把两条要识别的画布登记进队列
     let arrowInc=null, arrowDec=null, arrowDbg='未启用';
+    let statArrowBands=null, incJobIdx=null, decJobIdx=null;
     if(bands.length>=2){
-      const ab = detectStatArrowBands(img, personaCoords.sy, personaCoords.sh, W);
-      if(ab && ab.incY!=null && ab.decY!=null){
-        await worker.setParameters({tessedit_pageseg_mode: '7'});
+      statArrowBands = detectStatArrowBands(img, personaCoords.sy, personaCoords.sh, W);
+      if(statArrowBands && statArrowBands.incY!=null && statArrowBands.decY!=null){
         // 两行属性名（inc行/dec行）实际间距通常只有~60px，而固定halfH=H*0.02（约47px、总高94px）
         // 比这个间距还大，裁剪框必然会吃进相邻那一行的文字尾巴——PSM7单行模式会把两行内容强行
         // 拼成一行，OCR经常读出乱码（比如"幫忙速度"被读成"人天tt吉度vv"这种）导致箭头法误判失败。
         // 用incY/decY的实际间距反推安全高度：裁剪半高最多不超过"间距一半再留6px余量"，
         // 下限16px保证还能完整框住文字本身（不会因为裁太窄把字上下切掉）。
-        const gapHalf = Math.floor(Math.abs(ab.decY - ab.incY) / 2) - 6;
+        const gapHalf = Math.floor(Math.abs(statArrowBands.decY - statArrowBands.incY) / 2) - 6;
         const halfH = Math.max(16, Math.min(Math.round(H*0.02), gapHalf));
-        const ocrStatName = async (yc)=>{
+        const mkStatNameCanvas = (yc)=>{
           const c = cropPixels(0.45*W, yc-halfH, 0.40*W, halfH*2, 3);
           binarizeCanvas(c, 150);
-          const r = await withTimeout(worker.recognize(c), 30000, '属性名');
-          return r.data.text||'';
+          return c;
         };
-        const incTxt = await ocrStatName(ab.incY);
-        const decTxt = await ocrStatName(ab.decY);
-        arrowInc = statNameToLetter(incTxt);
-        arrowDec = statNameToLetter(decTxt);
-        await worker.setParameters({tessedit_pageseg_mode: '3'});
-        arrowDbg = 'incY='+ab.incY+' "'+incTxt.replace(/\s/g,'')+'"→'+arrowInc+' | decY='+ab.decY+' "'+decTxt.replace(/\s/g,'')+'"→'+arrowDec;
+        incJobIdx = pushJob(mkStatNameCanvas(statArrowBands.incY), '7', '', '属性名');
+        decJobIdx = pushJob(mkStatNameCanvas(statArrowBands.decY), '7', '', '属性名');
       } else { arrowDbg = '没找到橙/蓝箭头'; }
     }
 
     statusEl.textContent = '正在识别宝可梦名称…';
     const nameCoords = {sx:0, sy:0, sw:W, sh:H*0.16};
     const nameCanvas = cropPixels(0, 0, W, H*0.16);
-    const nameRes = await withTimeout(worker.recognize(nameCanvas), 30000, '名称');
+    const nameJobIdx = pushJob(nameCanvas, '3', '', '名称');
 
     // 主技能名（黄色框第一行文字）：单独整宽裁剪。它横跨屏幕中线、被上面副技能的左右半切
     // 从中间劈开了，所以不能复用skillsLeft/Right，得独立裁一条。仅在绿条定位成功时才做——
@@ -12418,23 +12911,13 @@ async function runOcrOnFile(file, silent){
     // 技能名+一行描述），用能处理多行的版面模式"，不再要求精确对齐单行——反正只要技能名整体
     // 完整出现在这坨文字里的某处，matchPersona同款的子串匹配（skillNamesMatch）就能从中挖出来，
     // 不需要精确切割成单行
-    let mainSkillText = '';
     let mainSkillCanvas = null;
+    let mainSkillJobIdx = null;
     if(bands.length >= 2){
       const mskTop = hdr1.end;
       mainSkillCanvas = cropPixels(W*0.20, mskTop, W*0.62, H*0.13, 2);
       binarizeCanvas(mainSkillCanvas); // 深棕字+浅黄底，二值化后只留文字黑色
-      await worker.setParameters({tessedit_pageseg_mode: '6'}); // 多行文本块模式，不强求单行对齐
-      const mskRes = await withTimeout(worker.recognize(mainSkillCanvas), 30000, '主技能');
-      await worker.setParameters({tessedit_pageseg_mode: '3'});
-      // 裁宽松了会把技能描述那几行也一起裁进来，但只要技能名本身、不要连着描述句子一起传出去——
-      // identifyBySignature里"精确匹配优先于子串匹配"是特意做的防呆（防止"梦魇（能量填充M)"
-      // 这种复合技能被"能量填充M"这个子串误撞到一堆不相关的普通宝可梦），如果把整段描述文字
-      // 都传进去，精确匹配基本不可能命中（技能名不可能等于"技能名+一堆描述"），会退化成
-      // 每次都靠子串匹配，防呆等于失效。技能名总是这段文字里最靠上的那一行（图标不是文字，
-      // 不会抢第一行），取第一个非空行就行，不需要精确对齐单行裁剪
-      const mskLines = (mskRes.data.text||'').split('\n').map(s=>s.trim()).filter(Boolean);
-      mainSkillText = mskLines[0] || '';
+      mainSkillJobIdx = pushJob(mainSkillCanvas, '6', '', '主技能'); // 多行文本块模式，不强求单行对齐
     }
 
     // 食材图标+数量徽章的区域：优先用动态定位（找"×N"金边胶囊的连通域，见locateIngredientBadges），
@@ -12449,50 +12932,91 @@ async function runOcrOnFile(file, silent){
 
     // 食材数量 ×N：纯数字，限定数字白名单+单行模式识别最稳（带上×反而会把数字本身读坏，
     // 比如"6"被读成"xx"——实测过，放弃×白名单）。
-    // 这两个数字不光用于兜底识别，还能反过来把主路径里"同色食材(土豆/姜)"的槽位定下来。
-    // 单一二值化阈值不可靠：同样"×2"这种内容，不同截图（不同设备/压缩率）对阈值的敏感区间
-    // 完全不一样，实测同一个阈值在这张截图上读得出、换一张就读成空的或读串位（比如"×2"读成"23"，
-    // 是×号在数字白名单下被强行归类成某个数字导致的）。改成"多组阈值+不二值化都各试一遍、
-    // 投票取出现次数最多的结果"——对着6张不同分辨率/设备的真实截图实测验证过，
-    // 单一阈值经常读错至少1~2个徽章，投票法把8个徽章全部读对
-    async function ocrQtyBadge(reg, label){
-      const threshList = [null, 190, 210, 120, 200, 175, 160, 140, 100]; // null=不二值化，直接用原图灰阶
-      // 先把"×N"里的×号连通簇切掉、只留数字（见 stripLeadingCross 的注释：否则"×4"常被误读成"2"）。
-      // 去×后的裁剪当主来源；万一去×失败/读空了，再退回原始整块裁剪，保证不会比以前更差。
-      async function voteOn(stripCross){
-        const votes = {};
-        let lastCanvas = null;
-        for(const th of threshList){
-          let c = cropPixels(reg.x*W, reg.y*H, reg.w*W, reg.h*H, 6); // 徽章很小，放大6倍
-          if(stripCross) c = stripLeadingCross(c, 150);
-          if(th!=null) binarizeCanvas(c, th);
-          lastCanvas = c;
-          const res = await withTimeout(worker.recognize(c), 30000, label);
-          let digits = (res.data.text || '').replace(/[^0-9]/g, '');
-          digits = digits.replace(/^0+/, ''); // 数量不可能是0，前导0是误判噪声（比如"3"被读成"03"），去掉
-          if(digits) votes[digits] = (votes[digits]||0) + 1;
-        }
-        return { votes, lastCanvas };
-      }
-      let { votes, lastCanvas } = await voteOn(true);   // 主路径：去×后只读数字
-      if(!Object.keys(votes).length){                    // 去×后一个都没读出来 → 退回原始整块
-        ({ votes, lastCanvas } = await voteOn(false));
-      }
-      const entries = Object.entries(votes).sort((a,b)=> b[1]-a[1]);
-      if(!entries.length) return { val: null, raw: '', canvas: lastCanvas, votes };
-      return { val: parseInt(entries[0][0],10), raw: entries[0][0], canvas: lastCanvas, votes };
+    // 不再做多阈值投票——现在名字认不出时还有头像识别+签名反查两条独立信号兜底，不需要
+    // 靠"多阈值投票"死扛数量这一项的准确率，换回速度更划算。改成一次到位：去×后不二值化
+    // （直接用原图灰阶，交给Tesseract自己的版面分析处理对比度），读不到才退一步用不去×的
+    // 原始整块再试一次——两步都失败就是真的读不出，留null交给手动填
+    function mkQtyCanvas(reg, stripCross){
+      let c = cropPixels(reg.x*W, reg.y*H, reg.w*W, reg.h*H, 6); // 徽章很小，放大6倍
+      if(stripCross) c = stripLeadingCross(c, 150); // 切掉"×N"里的×号连通簇，只留数字（否则"×4"常被误读成"2"）
+      return c;
     }
-    await worker.setParameters({tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: '7'});
-    const qty30 = await ocrQtyBadge(q30Region, '食材数量30');
-    const qty60 = await ocrQtyBadge(q60Region, '食材数量60');
-    await worker.setParameters({tessedit_char_whitelist: '', tessedit_pageseg_mode: '3'});
+    function parseQtyDigits(res){
+      let digits = (res.data.text || '').replace(/[^0-9]/g, '');
+      digits = digits.replace(/^0+/, ''); // 数量不可能是0，前导0是误判噪声（比如"3"被读成"03"），去掉
+      return digits;
+    }
+    const qty30PrimaryCanvas = mkQtyCanvas(q30Region, true);
+    const qty60PrimaryCanvas = mkQtyCanvas(q60Region, true);
+    const qty30JobIdx = pushJob(qty30PrimaryCanvas, '7', '0123456789', '食材数量30');
+    const qty60JobIdx = pushJob(qty60PrimaryCanvas, '7', '0123456789', '食材数量60');
 
     // 食材图标先把两个区域裁出来，真正的比对放到后面——要等名字认出物种后，
     // 才能把候选限定到该物种的a/b/c三种（"3选1"远比"19选1"准）
     const ing30Canvas = cropRegionToCanvas(img, ing30Region);
     const ing60Canvas = cropRegionToCanvas(img, ing60Region);
 
-    await worker.terminate();
+    // 名字卡片定位：头像识别（在下面 pkRec 没认出时才会用到）和这里的"Lv.NN"等级识别共用同一个锚点，
+    // 只算一次。裁剪不需要worker，登记进同一批任务队列即可
+    statusEl.textContent = '正在定位名字卡片…';
+    const nameCardBox = locateNameCardBox(img);
+    const levelCanvas = buildLevelCanvas(img, nameCardBox);
+    const levelJobIdx = levelCanvas!=null ? pushJob(levelCanvas, '7', '', 'Lv等级') : null;
+
+    // 前面全是纯像素裁剪/定位，一个worker都没占用——到这里才第一次真正把任务分发给worker池，
+    // 名字/性格/箭头属性名/主技能/6格副技能×4阈值/两个食材数量，全部在这一次调度里并行跑完。
+    // 不改statusEl文案——沿用上面"正在定位食材区域…"这条已经在BOX_OCR_STAGE_PCT里登记过的文案，
+    // 换成没登记过的新文案，进度条监听器会把它当成"未知阶段=已完成"直接跳100%，反而在真正耗时的
+    // 这一步把进度条显示成假的"已完成"
+    const jobResults = await runJobs();
+
+    // ---- 从并行结果里按job下标取回各自需要的东西 ----
+    const subCellTexts = ['','','','','','']; // [行1左,行1右, 行2左,行2右, 行3左,行3右]
+    subCellJobIdx.forEach((idxs, cellIdx)=>{
+      idxs.forEach(i=>{ subCellTexts[cellIdx] += (jobResults[i].data.text||'') + '\n'; });
+    });
+    const personaRes = jobResults[personaJobIdx];
+    if(statArrowBands && incJobIdx!=null && decJobIdx!=null){
+      const incTxt = jobResults[incJobIdx].data.text||'';
+      const decTxt = jobResults[decJobIdx].data.text||'';
+      arrowInc = statNameToLetter(incTxt);
+      arrowDec = statNameToLetter(decTxt);
+      arrowDbg = 'incY='+statArrowBands.incY+' "'+incTxt.replace(/\s/g,'')+'"→'+arrowInc+' | decY='+statArrowBands.decY+' "'+decTxt.replace(/\s/g,'')+'"→'+arrowDec;
+    }
+    const nameRes = jobResults[nameJobIdx];
+    let mainSkillText = '';
+    if(mainSkillJobIdx!=null){
+      // 裁宽松了会把技能描述那几行也一起裁进来，但只要技能名本身、不要连着描述句子一起传出去——
+      // identifyBySignature里"精确匹配优先于子串匹配"是特意做的防呆（防止"梦魇（能量填充M)"
+      // 这种复合技能被"能量填充M"这个子串误撞到一堆不相关的普通宝可梦），如果把整段描述文字
+      // 都传进去，精确匹配基本不可能命中（技能名不可能等于"技能名+一堆描述"），会退化成
+      // 每次都靠子串匹配，防呆等于失效。技能名总是这段文字里最靠上的那一行（图标不是文字，
+      // 不会抢第一行），取第一个非空行就行，不需要精确对齐单行裁剪
+      const mskLines = (jobResults[mainSkillJobIdx].data.text||'').split('\n').map(s=>s.trim()).filter(Boolean);
+      mainSkillText = mskLines[0] || '';
+    }
+    // 30级/60级两个槽的fallback是并行发起的（Promise.all）——如果两边都共用同一个worker实例，
+    // 两次setParameters+recognize会在同一个worker上互相插队，把worker的内部状态搅乱到直接卡死
+    // （实测复现：两槽同时读空触发fallback、都指给workerPool[0]，直接挂住不报错也不超时）。
+    // 池子保底有2个worker（POOL_SIZE下限=2），一边一个，物理上不可能撞同一个worker
+    async function resolveQty(reg, primaryJobIdx, label, fallbackWorker){
+      let digits = parseQtyDigits(jobResults[primaryJobIdx]);
+      let canvas = jobs[primaryJobIdx].canvas;
+      if(!digits){ // 去×后读空了，退一步用不去×的原始整块再单独试一次（这种情况很少见，不值得占并行队列）
+        const c2 = mkQtyCanvas(reg, false);
+        const fbRes = await singleRecognize(fallbackWorker, c2, '7', '0123456789', label);
+        digits = parseQtyDigits(fbRes);
+        canvas = c2;
+      }
+      return { val: digits ? parseInt(digits,10) : null, raw: digits, canvas };
+    }
+    const [qty30, qty60] = await Promise.all([
+      resolveQty(q30Region, qty30JobIdx, '食材数量30', workerPool[0]),
+      resolveQty(q60Region, qty60JobIdx, '食材数量60', workerPool[1]),
+    ]);
+    const ocrLevel = levelJobIdx!=null ? parseLevelFromOcrText(jobResults[levelJobIdx].data.text) : null;
+
+    await Promise.all(workerPool.map(w=> w.terminate()));
 
     // 每格文字各自取"第一个命中的技能"，按格子在网格里的固定位置对号入座填进5个槽——
     // 位置是几何确定的，不再靠"读出来的顺序"去猜等级，漏读一格只会让那一格为null、不会连锁错位
@@ -12514,17 +13038,91 @@ async function runOcrOnFile(file, silent){
       personaName = matchPersonaFromOcrText(personaRes.data.text || '');
       if(personaName){ const at=PERSONA_NAME_MAP[personaName]; if(at){ personaInc=at.inc; personaDec=at.dec; } }
     }
-    let pkRec = matchPokemonFromOcrText(nameRes.data.text || '');
+    const nameRec = matchPokemonFromOcrText(nameRes.data.text || '');
+    let pkRec = null;
 
-    // 名字区域没读到（比如改了昵称/被涂抹）→ 用"主技能+两槽数量+食材图标"签名反查：
-    // 要求主技能精确或子串匹配、并且两槽数量都对得上，双重验证，误判概率低。
-    // 这里【只】保留签名反查这一条兜底。以前还有一条"从副技能文字里扫宝可梦名字子串"的兜底，
-    // 实测它会在一大坨半调子乱码里撞上完全不相关的名字（真实案例：小火焰猴被认成"皮宝宝"），
-    // 已彻底去掉——签名也认不出时宁可判定"没认出"、弹示意图让用户手动选，也不要塞一个错答案。
+    // ============ 物种判定：头像优先，名字降级成交叉验证 ============
+    // 三条独立信号，误判原因基本不重叠：
+    //   · 头像：不受改名影响。拿74张真机截图量过，抠图重做之后 top1 = 68/74(91.9%)、
+    //     top3 = 72/74(97.3%)、达到确信门槛的 55 张全部判对（0误判）。这是目前最强的信号。
+    //   · 名字OCR：读到真名时几乎不会错，但玩家改了昵称就会读出别的东西，而且昵称里的
+    //     字很容易撞上别的宝可梦名字的子串（真实案例：昵称含"大嘴"的喷火龙被认成大嘴娃、
+    //     昵称"百变嘟嘟"的百变怪被认成嘟嘟）。所以它不能再像以前那样一读到就直接拍板。
+    //   · 签名反查：主技能+两槽食材数量，不受头像定位/裁剪误差影响。
+    //
+    // 判定顺序（头像权重最高）：
+    //   1. 名字OCR读出来的那只，出现在头像排名前三 → 两条独立信号互相印证，直接采纳。
+    //      头像 top3 命中率97.3%，所以"真名"几乎必然落在前三里；反过来，名字读出来的东西
+    //      连前三都进不去，基本就说明那是昵称、不是种族名。
+    //   2. 名字不在前三 → 以头像为准（前提是头像自己达到了确信门槛）。这一步专门解决
+    //      "昵称撞上别的宝可梦名字子串"这个老大难。
+    //   3. 头像也不确信 → 退回签名反查，且签名反查必须没有被头像唱反调才采纳。
+    //   4. 都不行 → 不硬猜，把头像最像的前几只摆出来让用户点（见 renderOcrCandidates）。
+    // 兜底：头像路径整个跑不通（卡片定位失败/没有参考图）时，名字OCR仍然是唯一可用信号，
+    // 照旧采纳——不能因为"头像优先"就把没有头像可比的情况一起废掉。
+    //
+    // 以前还有一条"从副技能文字里扫宝可梦名字子串"的兜底，实测会在半调子乱码里撞上完全不相关
+    // 的名字（真实案例：小火焰猴被认成"皮宝宝"），已彻底去掉，不在这里恢复。
     let identifiedBySig = false;
-    if(!pkRec){
-      pkRec = await identifyBySignature(mainSkillText, qty30.val, qty60.val, ing30Canvas, ing60Canvas);
-      if(pkRec) identifiedBySig = true;
+    let identifiedByPortrait = false;
+    let identifiedByName = false;
+    let portraitShiny = null;
+    let ocrPortraitCandidates = null;
+    {
+      const [portraitMatch, sigMatch] = await Promise.all([
+        identifyByPortraitIcon(img, nameCardBox),
+        identifyBySignature(mainSkillText, qty30.val, qty60.val, ing30Canvas, ing60Canvas),
+      ]);
+      // 不管最后认没认出来，都把头像最像的前几只留一份——没认出时用来在修改面板里
+      // 摆头像给用户点选（识别不确定≠毫无信息，正确答案通常就在这前几名里）
+      if(portraitMatch && portraitMatch.candidates) ocrPortraitCandidates = portraitMatch.candidates;
+
+      // 头像排名前三（按物种去重后取前三，同一只的正常/闪光两态算一个）
+      const top3 = [];
+      if(portraitMatch && portraitMatch.ranking){
+        for(const r of portraitMatch.ranking){
+          if(top3.includes(r.id)) continue;
+          top3.push(r.id);
+          if(top3.length>=3) break;
+        }
+      }
+      const nameInTop3 = nameRec && top3.some(id=> id===nameRec[0] || speciesFamilyKey(id)===speciesFamilyKey(nameRec[0]));
+
+      if(!portraitMatch){
+        // 头像这条路整个没跑通，退回原来的"名字 → 签名反查"顺序
+        if(nameRec){ pkRec = nameRec; identifiedByName = true; }
+        else if(sigMatch){ pkRec = sigMatch; identifiedBySig = true; }
+      } else if(nameInTop3){
+        pkRec = nameRec;
+        identifiedByName = true;
+        identifiedByPortrait = true;
+        // 闪光只在"头像第一名就是名字读到的这只"时才敢采信——名字排在头像第二/第三名时，
+        // 头像第一名是另一只，它的闪光标记跟当前这只没关系，拿来用就是张冠李戴
+        if(portraitMatch.pkRec[0]===nameRec[0]) portraitShiny = portraitMatch.shiny;
+        console.log('名字OCR读到「'+nameRec[1]+'」，且它就在头像排名前三里，两条信号互相印证，直接采纳');
+      } else if(portraitMatch.confident){
+        pkRec = portraitMatch.pkRec;
+        identifiedByPortrait = true;
+        portraitShiny = portraitMatch.shiny;
+        if(nameRec) console.log('名字OCR读到「'+nameRec[1]+'」但它连头像前三都没进（'+top3.join('/')+'），判定那是昵称，以头像为准：', pkRec[1]);
+      } else if(sigMatch){
+        // 头像没到"确信"的门槛，但只要它给出了候选、且这个候选跟签名反查对不上，说明至少有
+        // 一条独立信号在唱反调——哪怕头像本身不够自信，这也是实打实的反对票，不该被无视。
+        // 拿真机截图核对过：这类冲突里签名反查那边猜错的情况不少（比如把"班基拉斯"认成
+        // "沼王"、"自爆磁怪"认成"冰伊布"，两次头像其实都指向了别处），真正被这条规则拦下的
+        // 里只有极少数是头像自己也错但恰好跟签名反查撞在了一起——两边都错的巧合概率很低，
+        // 宁可为了拦下签名反查的误判多弃权几张，也不要在两条信号打架时假装没看见其中一条
+        if(portraitMatch.pkRec[0]!==sigMatch[0]){
+          console.log('签名反查给出「'+sigMatch[1]+'」，但头像识别（未达确信门槛）指向「'+portraitMatch.pkRec[1]+'」，两者不一致，不硬信签名反查，判定没认出');
+        } else {
+          pkRec = sigMatch; identifiedBySig = true;
+        }
+      }
+      // 名字OCR给了结果、但既没进头像前三、头像自己也不确信 → 两条信号都不硬气，
+      // 不采纳任何一个。把名字OCR那只也塞进候选列表首位，让用户一眼能点到
+      if(!pkRec && nameRec && ocrPortraitCandidates && !ocrPortraitCandidates.some(c=> c.id===nameRec[0])){
+        ocrPortraitCandidates = [{id:nameRec[0], dist:0, shiny:false}].concat(ocrPortraitCandidates).slice(0,6);
+      }
     }
 
     // 食材槽：只有在认出物种、且该物种有食材数据时才填（不再限定"食材型"——树果/功能/能量型
@@ -12552,11 +13150,17 @@ async function runOcrOnFile(file, silent){
     console.log('性格区域原始文字：', JSON.stringify(personaRes.data.text));
     console.log('主技能区域原始文字：', JSON.stringify(mainSkillText));
     console.log('食材区域定位：30级槽=', badgeLoc.badge30?'动态定位成功':'退回固定坐标兜底', ' 60级槽=', badgeLoc.badge60?'动态定位成功':'退回固定坐标兜底');
-    console.log('食材数量 ×N：30级槽=', qty30.val, '票数分布=', qty30.votes, ' 60级槽=', qty60.val, '票数分布=', qty60.votes);
+    console.log('食材数量 ×N：30级槽=', qty30.val, '原始数字=', JSON.stringify(qty30.raw), ' 60级槽=', qty60.val, '原始数字=', JSON.stringify(qty60.raw));
     if(!pkRec){
-      console.log('名字没认出→已尝试"主技能+数量+食材"兜底反查，结果：仍未认出');
+      console.log('物种未认出：名字OCR没进头像前三（或压根没读到）、头像自己也没到确信门槛、签名反查也没能独立佐证。已把最像的前几只留成候选，交给用户点选');
+    } else if(identifiedByName && identifiedByPortrait){
+      console.log('名字OCR与头像排名互相印证（名字读到的那只就在头像前三里），双重确认：', pkRec[1], pkRec[0], portraitShiny?'（闪光）':'');
+    } else if(identifiedByName){
+      console.log('头像路径没跑通（卡片没定位到/无参考图），退回名字OCR：', pkRec[1], pkRec[0]);
+    } else if(identifiedByPortrait){
+      console.log('以头像为准（名字OCR没读到、或读到的是撞名的昵称）：', pkRec[1], pkRec[0], portraitShiny?'（闪光）':'');
     } else if(identifiedBySig){
-      console.log('名字没认出→用"主技能+数量+食材"兜底反查到：', pkRec[1], pkRec[0]);
+      console.log('头像未达确信门槛→退回"主技能+数量+食材"签名反查命中：', pkRec[1], pkRec[0]);
     }
     if(pkHasIng){
       const sigDbg = PK_SIG_QTY[pkRec[0]];
@@ -12571,7 +13175,7 @@ async function runOcrOnFile(file, silent){
       console.log('没认出物种（可能改了昵称），跳过食材比对——食材留空交给手动选择');
     }
     console.log('性格箭头法：', arrowDbg, '→ 最终 inc/dec =', personaInc, '/', personaDec, '性格名=', personaName);
-    console.log('匹配结果：', {pkRec: pkRec ? pkRec[1] : null, identifiedBySig, personaName, skillMatches, slot30: slot30&&slot30.ing, slot60: slot60&&slot60.ing});
+    console.log('匹配结果：', {pkRec: pkRec ? pkRec[1] : null, identifiedByName, identifiedBySig, identifiedByPortrait, portraitShiny, ocrLevel, personaName, skillMatches, slot30: slot30&&slot30.ing, slot60: slot60&&slot60.ing});
     console.log('========================');
 
     // 直接把识别结果写进当前状态，再打开"修改面板"浮窗——用你已经熟悉的那套界面来确认/微调，
@@ -12584,10 +13188,16 @@ async function runOcrOnFile(file, silent){
     state.buildSource = 'ocr';
     state.gradeEasterEggShown = false;
     if(pkRec){
+      state.ocrCandidates = null; // 认出来了就不用再摆候选头像
       selectPokemon(pkRec[0]); // 内部会处理类型联动，该物种若无食材数据会自动清空食材选择
-      // 截图里读不到等级，按识别出来的类型给默认等级（树果/能量70、食材60、功能50）。
-      // selectPokemon 只在"类型变了"时才套默认值，识别是每张图都要重来一遍的，所以这里无条件再套一次
+      // 先按识别出来的类型给个默认等级（树果/能量70、食材60、功能50）兜底——
+      // selectPokemon 只在"类型变了"时才套默认值，识别是每张图都要重来一遍的，所以这里无条件再套一次。
+      // 下面读到"Lv.NN"的真实等级会覆盖掉这个默认值；读不到才保留这个默认档位
       if(TYPE_LEVEL_DEFAULT[state.type]) state.level = TYPE_LEVEL_DEFAULT[state.type];
+      // 头像识别顺带认出了闪光/普通（比对时normal/shiny两套参考图一起比，谁分数低就是谁）——
+      // 只在真的靠头像认出物种时才写，名字OCR直接命中的路径本来就没做闪光判定，不去动它，
+      // 避免在没有判断依据的情况下悄悄把闪光状态清掉
+      if(identifiedByPortrait && portraitShiny!=null) state.shiny = portraitShiny;
       if(pkHasIng){
         const sigApply = PK_SIG_QTY[pkRec[0]];
         const letterOf = (ingName)=>{
@@ -12604,12 +13214,19 @@ async function runOcrOnFile(file, silent){
         if(l3) state.ingChoice3 = l3;
       }
     } else {
-      // 截图里的名字识别不到具体物种（比如改过昵称），宝可梦和食材都留空，交给你自己在浮窗里选
+      // 截图里的名字识别不到具体物种（比如改过昵称），宝可梦和食材都留空，交给你自己在浮窗里选。
+      // 但"没认准"不等于"什么都不知道"——把头像比对里最像的前几只留下来，在修改面板上
+      // 直接摆成头像让你点，比让你从245只里自己搜快得多
       state.selectedDex = null;
       state.pkSearchText = '';
       state.ingChoice2 = null;
       state.ingChoice3 = null;
+      state.ocrCandidates = ocrPortraitCandidates || null;
     }
+    // "Lv.NN"等级识别跟认没认出物种无关，独立应用——哪怕物种没认出，等级读到了也先填上，
+    // 好过让用户在浮窗里连等级都要自己重新点一遍。state.level 是 levelReal 之上的访问器，
+    // 直接赋值即可，会自动 clamp 到 1~99（见 Object.defineProperty(state,'level',...)）
+    if(ocrLevel!=null) state.level = ocrLevel;
 
     renderAll();
     // 不管认没认出物种，都直接进修改面板：能认多少就填多少，物种/副技能没认出的就留空，
@@ -15278,6 +15895,7 @@ function openDashboardForNewEntry(){
   dashboardCreateMode = true;
   ensureDashTargetIsPanel1();
   state.selectedDex = null; state.pkSearchText = '';
+  state.ocrCandidates = null; // 手动新建条目跟上一次识别无关，别把上次的候选头像带过来
   state.selected = [null,null,null,null,null];
   state.incAttr = null; state.decAttr = null;
   state.ingChoice2 = null; state.ingChoice3 = null;
@@ -17581,6 +18199,7 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     state.selected = [null,null,null,null,null];
     state.incAttr = null; state.decAttr = null;
     state.selectedDex = null; state.pkSearchText = '';
+    state.ocrCandidates = null; // 每张图都从干净状态开始，不带上一张的候选
     state.ingChoice2 = null; state.ingChoice3 = null;
     let res;
     try{ res = await runOcrOnFile(files[i], true); }catch(err){ res = {ok:false, error:err}; }
