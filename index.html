@@ -3689,6 +3689,7 @@
   <div class="account-btns" id="settingsAccountBtns">
     <button type="button" class="account-btn account-btn-psc" id="mfPscBtn">宝睡小当家联动</button>
     <button type="button" class="account-btn account-btn-blue" id="mfChangePwdBtn">修改密码</button>
+    <button type="button" class="account-btn account-btn-blue" id="mfChangeEmailBtn">修改邮箱</button>
     <button type="button" class="account-btn account-btn-red" id="mfLogoutBtn">退出登录</button>
   </div>
 
@@ -4458,6 +4459,19 @@
     <div class="isl-modal-acts">
       <button type="button" class="isl-modal-btn isl-modal-cancel" id="displayNameCancelBtn">取消</button>
       <button type="button" class="isl-modal-btn isl-modal-save" id="displayNameSaveBtn">保存</button>
+    </div>
+  </div>
+</div>
+<!-- v3.33 修改邮箱：跟改密码同一个思路，登录中就能直接改，不用验证旧邮箱 -->
+<div class="cap-ctrl-overlay" id="emailModal">
+  <div class="cap-ctrl-box" style="width:min(320px,92vw)">
+    <div class="cap-ctrl-head">修改邮箱<span class="cap-ctrl-close" id="emailModalClose">✕</span></div>
+    <div class="settings-name-hint">找回密码等通知会发到这个邮箱，改完之后立刻生效。</div>
+    <input type="email" id="emailModalInput" class="pk-search-input-underline" placeholder="新邮箱" autocomplete="off">
+    <div class="settings-name-err" id="emailModalErr" style="display:none;"></div>
+    <div class="isl-modal-acts">
+      <button type="button" class="isl-modal-btn isl-modal-cancel" id="emailModalCancelBtn">取消</button>
+      <button type="button" class="isl-modal-btn isl-modal-save" id="emailModalSaveBtn">保存</button>
     </div>
   </div>
 </div>
@@ -8705,6 +8719,41 @@ document.getElementById('displayNameSaveBtn').onclick = async ()=>{
   btn.disabled = false; btn.textContent = '保存';
 };
 document.getElementById('settingsNameEditBtn').onclick = openDisplayNameModal;
+
+/* ---- v3.33 修改邮箱：跟改密码同一个思路，登录中直接改，不用验证旧邮箱 ---- */
+function openEmailModal(){
+  const u = authState.user || {};
+  document.getElementById('emailModalInput').value = u.email || '';
+  const err = document.getElementById('emailModalErr');
+  err.style.display = 'none'; err.textContent = '';
+  document.getElementById('emailModal').style.display = 'flex';
+}
+function closeEmailModal(){ document.getElementById('emailModal').style.display = 'none'; }
+document.getElementById('mfChangeEmailBtn').onclick = openEmailModal;
+document.getElementById('emailModalClose').onclick = closeEmailModal;
+document.getElementById('emailModalCancelBtn').onclick = closeEmailModal;
+document.getElementById('emailModal').onclick = (e)=>{ if(e.target.id==='emailModal') closeEmailModal(); };
+document.getElementById('emailModalSaveBtn').onclick = async ()=>{
+  const btn = document.getElementById('emailModalSaveBtn');
+  const input = document.getElementById('emailModalInput');
+  const err = document.getElementById('emailModalErr');
+  const val = input.value.trim();
+  err.style.display = 'none';
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)){ err.textContent = '邮箱格式不对'; err.style.display = ''; return; }
+  btn.disabled = true; btn.textContent = '保存中…';
+  try{
+    const d = await authApi('/api/account/email', {method:'PUT', auth:true, body:{email: val}});
+    const u = authState.user || (authState.user = {});
+    u.email = d.email;
+    saveAuthState();
+    renderMoreSettingsPage();
+    closeEmailModal();
+  }catch(e){
+    err.textContent = e.message || '保存失败'; err.style.display = '';
+  }
+  btn.disabled = false; btn.textContent = '保存';
+};
+document.getElementById('emailModalInput').addEventListener('keydown', e=>{ if(e.key==='Enter') document.getElementById('emailModalSaveBtn').click(); });
 
 /* ---- v3.18 宝睡小当家（PSC）联动：我方作为第三方客户端接入对方的 OIDC ----
    全套 OAuth2 细节（client_secret / PKCE verifier / access token / refresh token）
