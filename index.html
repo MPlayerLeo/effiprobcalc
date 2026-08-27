@@ -2280,6 +2280,8 @@
 .auth-submit:disabled{ opacity:.55; cursor:default; }
 .auth-switch{ margin-top:12px; text-align:center; font-size:12.5px; color:#8a8375; }
 .auth-switch b{ color:var(--accent); cursor:pointer; }
+/* v3.32 找回密码：登录框密码框下方一个小链接，跟找回密码浮窗共用 auth-fields/auth-msg/auth-submit 那套样式 */
+.auth-forgot-link{ margin-top:2px; text-align:right; font-size:12px; color:var(--accent); cursor:pointer; }
 
 /* 账号设置浮窗里的两颗按钮 */
 .account-info{ font-size:13px; color:var(--ink); line-height:1.7; margin-bottom:14px;
@@ -4284,11 +4286,29 @@
       <div class="auth-fields" id="authFieldsLogin" style="display:none;">
         <input type="text" id="authLoginAcc" placeholder="邮箱或用户名" autocomplete="username">
         <input type="password" id="authLoginPwd" placeholder="密码" autocomplete="current-password">
+        <div class="auth-forgot-link" id="authForgotLink">忘记密码？</div>
       </div>
     </form>
     <div class="auth-msg" id="authMsg"></div>
     <button type="button" class="auth-submit" id="authSubmitBtn">注册</button>
     <div class="auth-switch" id="authSwitchLine"></div>
+  </div>
+</div>
+
+<!-- v3.32 找回密码：登录页"忘记密码？"点开的第一步，只收邮箱，发送后不切页直接在原地
+     显示"已发送"提示；真正设置新密码的第二步复用下面的 #pwdModal（reset 模式），
+     由邮件里的链接带 ?resetToken=... 回站后自动弹出，不需要在这个浮窗里输入令牌 -->
+<div class="cap-ctrl-overlay auth-overlay" id="forgotPwdModal">
+  <div class="cap-ctrl-box auth-box">
+    <div class="cap-ctrl-head">找回密码<span class="cap-ctrl-close" id="forgotPwdModalClose">✕</span></div>
+    <div class="auth-brand-sub">输入注册邮箱，我们会发一封重置密码的邮件过去</div>
+    <form onsubmit="return false;">
+      <div class="auth-fields">
+        <input type="email" id="forgotPwdEmail" placeholder="注册邮箱" autocomplete="email">
+      </div>
+    </form>
+    <div class="auth-msg" id="forgotPwdMsg"></div>
+    <button type="button" class="auth-submit" id="forgotPwdSubmitBtn">发送重置邮件</button>
   </div>
 </div>
 
@@ -4393,7 +4413,7 @@
 
 <div class="cap-ctrl-overlay auth-overlay" id="pwdModal">
   <div class="cap-ctrl-box auth-box">
-    <div class="cap-ctrl-head">修改密码<span class="cap-ctrl-close" id="pwdModalClose">✕</span></div>
+    <div class="cap-ctrl-head"><span id="pwdModalTitle">修改密码</span><span class="cap-ctrl-close" id="pwdModalClose">✕</span></div>
     <form onsubmit="return false;">
       <div class="auth-fields">
         <input type="password" id="pwdNew1" placeholder="新密码（至少 6 位）" autocomplete="new-password">
@@ -8973,7 +8993,15 @@ async function oauthConsentBootstrap(){
   mk('psc-btn-deny', '拒绝', ()=> oauthDecide(false));
   mk('psc-btn-allow', checkIconSvg('#fff',3,13)+' 允许访问', ()=> oauthDecide(true));
 }
-function openPwdModal(){
+// v3.32：这个浮窗现在有两种模式——
+//   'change'：原来的"修改密码"，登录中，走 /api/password（带 Bearer token，不用验证旧密码）
+//   'reset'：邮箱找回密码的第二步，从重置邮件链接（?resetToken=...）回站后自动弹出，
+//            不要求已登录，走 /api/reset-password（带 token，不带 Bearer）
+let pwdModalMode = 'change';
+let resetPwdToken = null;
+function openPwdModal(mode){
+  pwdModalMode = mode || 'change';
+  document.getElementById('pwdModalTitle').textContent = pwdModalMode==='reset' ? '设置新密码' : '修改密码';
   document.getElementById('pwdNew1').value = '';
   document.getElementById('pwdNew2').value = '';
   const msg = document.getElementById('pwdMsg'); msg.textContent = ''; msg.classList.remove('ok');
@@ -8991,15 +9019,64 @@ async function pwdSubmit(){
   btn.disabled = true;
   msg.textContent = '正在修改…'; msg.classList.add('ok');
   try{
-    const data = await authApi('/api/password', {method:'POST', body:{password:p1}, auth:true});
-    if(data.token){ authState.token = data.token; saveAuthState(); } // 换新 token，本机不用重新登录
-    document.getElementById('pwdModal').style.display = 'none';
-    alert('密码已修改。');
+    if(pwdModalMode==='reset'){
+      if(!resetPwdToken){ throw new Error('重置链接已失效，请重新发起找回密码'); }
+      await authApi('/api/reset-password', {method:'POST', body:{token:resetPwdToken, password:p1}});
+      resetPwdToken = null;
+      document.getElementById('pwdModal').style.display = 'none';
+      alert('密码已重置，请用新密码登录。');
+      openAuthModal('login');
+    }else{
+      const data = await authApi('/api/password', {method:'POST', body:{password:p1}, auth:true});
+      if(data.token){ authState.token = data.token; saveAuthState(); } // 换新 token，本机不用重新登录
+      document.getElementById('pwdModal').style.display = 'none';
+      alert('密码已修改。');
+    }
   }catch(e){
     msg.classList.remove('ok');
     msg.textContent = e.message || '修改失败';
     btn.disabled = false;
   }
+}
+/* ---- v3.32 找回密码：登录页"忘记密码？"弹出的第一步（收邮箱），第二步见上面 pwdModal reset 模式 ---- */
+function openForgotPwdModal(){
+  document.getElementById('forgotPwdEmail').value = '';
+  const msg = document.getElementById('forgotPwdMsg'); msg.textContent = ''; msg.classList.remove('ok');
+  document.getElementById('forgotPwdSubmitBtn').disabled = false;
+  closeAuthModal();
+  document.getElementById('forgotPwdModal').style.display = 'flex';
+}
+function closeForgotPwdModal(){ document.getElementById('forgotPwdModal').style.display = 'none'; }
+async function forgotPwdSubmit(){
+  const email = document.getElementById('forgotPwdEmail').value.trim();
+  const msg = document.getElementById('forgotPwdMsg');
+  const btn = document.getElementById('forgotPwdSubmitBtn');
+  msg.classList.remove('ok');
+  if(!email){ msg.textContent = '请填写邮箱'; return; }
+  btn.disabled = true;
+  msg.textContent = '正在发送…'; msg.classList.add('ok');
+  try{
+    const data = await authApi('/api/forgot-password', {method:'POST', body:{email}});
+    msg.textContent = data.message || '重置邮件已发出，请查收。';
+    msg.classList.add('ok');
+  }catch(e){
+    msg.classList.remove('ok');
+    msg.textContent = e.message || '发送失败';
+    btn.disabled = false;
+  }
+}
+// 从重置邮件里的链接回站时带 ?resetToken=...，接住之后立刻把参数从地址栏抹掉
+// （避免刷新/分享链接时把令牌再次暴露、或重复触发弹窗），跟 pscConsumeReturnParam 同一个套路
+function resetPwdConsumeUrlParam(){
+  let q;
+  try{ q = new URLSearchParams(location.search); }catch(e){ return; }
+  const t = q.get('resetToken');
+  if(!t) return;
+  q.delete('resetToken');
+  const rest = q.toString();
+  history.replaceState(null, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+  resetPwdToken = t;
+  openPwdModal('reset');
 }
 function authLogout(){
   if(!confirm('退出登录？\n这台设备上已有的盒子和设置会原样留着，下次登录会再并回账号里。')) return;
@@ -9021,7 +9098,7 @@ document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncM
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
 document.getElementById('mfFabCircleSwitch').onclick = ()=>{ toggleFabCircleMode(); syncMoreFuncSwitches(); };
 document.getElementById('mfBoxUniformSwitch').onclick = ()=>{ toggleBoxUniformScale(); syncMoreFuncSwitches(); };
-document.getElementById('mfChangePwdBtn').onclick = openPwdModal;
+document.getElementById('mfChangePwdBtn').onclick = ()=> openPwdModal('change');
 document.getElementById('mfLogoutBtn').onclick = authLogout;
 document.getElementById('mfPscBtn').onclick = openPscModal;
 document.getElementById('pscModalClose').onclick = closePscModal;
@@ -9031,6 +9108,12 @@ oauthConsentBootstrap(); // 第三方把用户送来授权时会带 ?oauth2_req=
 document.getElementById('pwdModalClose').onclick = ()=>{ document.getElementById('pwdModal').style.display='none'; };
 document.getElementById('pwdModal').onclick = (e)=>{ if(e.target.id==='pwdModal') document.getElementById('pwdModal').style.display='none'; };
 document.getElementById('pwdSubmitBtn').onclick = pwdSubmit;
+document.getElementById('authForgotLink').onclick = openForgotPwdModal;
+document.getElementById('forgotPwdModalClose').onclick = closeForgotPwdModal;
+document.getElementById('forgotPwdModal').onclick = (e)=>{ if(e.target.id==='forgotPwdModal') closeForgotPwdModal(); };
+document.getElementById('forgotPwdSubmitBtn').onclick = forgotPwdSubmit;
+document.getElementById('forgotPwdEmail').addEventListener('keydown', e=>{ if(e.key==='Enter') forgotPwdSubmit(); });
+resetPwdConsumeUrlParam(); // 从重置密码邮件的链接跳回来时会带 ?resetToken=...，接住并弹设置新密码浮窗
 // 输入框里按回车直接提交，省得在手机上还要去点按钮
 document.querySelectorAll('#authFieldsRegister input, #authFieldsLogin input').forEach(el=>{
   el.addEventListener('keydown', e=>{ if(e.key==='Enter') authSubmit(); });
@@ -16898,9 +16981,32 @@ let boxSort = { key:null, dir:0 };
 const BOX_SORT_DEFS = [
   {key:'dex',   label:'图鉴编号', firstDir:1},   // 默认从小到大
   {key:'level', label:'等级',    firstDir:-1},  // 默认从高到低
-  {key:'eff',   label:'效率值',   firstDir:-1},  // 默认从高到低
+  {key:'grade', label:'毕业等级', firstDir:-1},  // 默认从高到低，点击先弹当前/70级/80级气泡选基准
   {key:'medal', label:'睡饱饱奖章', firstDir:-1},  // 第一下从高到低，第二下从低到高，第三下取消
 ];
+// v3.32：盒子排序「毕业等级」用的完整档位梯队（高→低）。十档主体+邪修系两档+恐怖+打工，
+// 沿用 PVP_SCORE_TABLE（约19610行）已经拍过板的顺序（金帮同名档位排在非金帮同名档位之前、
+// 恐怖宝可梦排在大毕业和金帮毕业之间、打工垫在十档最底两档之上）——唯一的改动是把「邪修」
+// 从跟「金帮和解」同分并列，改成明确排在金帮和解之上（用户这次对盒子排序单独指定的顺序，
+// 跟 PVP 计分本身的并列分不冲突，PVP 那边分数表不用动）
+const BOX_GRAD_TIER_ORDER = [
+  '金帮超级毕业','超级毕业','金帮大毕业','大毕业','恐怖宝可梦','金帮毕业','毕业',
+  '极致邪修','邪修','金帮和解','和解','打工','金帮不合格','不合格'
+];
+const BOX_GRAD_TIER_RANK = BOX_GRAD_TIER_ORDER.reduce((m,g,i)=>{ m[g] = BOX_GRAD_TIER_ORDER.length - i; return m; }, {});
+// basis: 'cur'=不改动等级直接判；70/80=假设该记录处在这一级，只影响这次排序用的档位计算，
+// 不改盒子里存的真实等级（跟 pvpLevelNormalizedGrade 换等级判档的做法同一个套路：
+// Object.assign 出一份改了 level 的临时副本喂给 pvpCategoryOf，必须走这条完整判定链，
+// 不能直接调 boxEntryGraduationGrade——会绕开 abc/aba 强制不合格、邪修/恐怖优先级这些结构性判断）
+function boxGradeSortValue(entry){
+  const basis = boxSort.basis;
+  const e = (basis==null || basis==='cur') ? entry : Object.assign({}, entry, {level: basis});
+  let cat = null;
+  try{ cat = pvpCategoryOf(e); }catch(err){ cat = null; }
+  if(!cat) return null;
+  const rank = BOX_GRAD_TIER_RANK[cat];
+  return rank!=null ? rank : null;
+}
 function boxDexOrderValue(dex){
   if(!dex) return null;
   const m = /^#(\d+)(?:-(\d+))?/.exec(dex);
@@ -16932,7 +17038,7 @@ function boxEntryGradeScore(entry){
 function boxSortValue(entry, key){
   if(key==='dex') return boxDexOrderValue(entry.dex);
   if(key==='level') return entry.level!=null ? entry.level : null;
-  if(key==='eff') return entry.dex ? boxEntryEfficiency(entry) : null;
+  if(key==='grade') return boxGradeSortValue(entry);
   // 0 档按最低值正常参与排序（不当成"算不出来"沉底）
   if(key==='medal') return boxEntrySatiety(entry);
   return null;
@@ -16963,8 +17069,17 @@ function renderBoxSortRow(){
     btn.type = 'button';
     btn.className = 'box-sort-btn'+(on?' box-sort-active':'');
     btn.dataset.sortkey = d.key;
-    btn.textContent = d.label + (on ? (boxSort.dir>0 ? '▲' : '▼') : '');
+    // 「毕业等级」按当前生效的基准（70/80 级假设）在按钮上加个小标注，跟"当前"（不标注）区分开
+    const basisTag = (d.key==='grade' && on && boxSort.basis && boxSort.basis!=='cur') ? ('('+boxSort.basis+'级)') : '';
+    btn.textContent = d.label + basisTag + (on ? (boxSort.dir>0 ? '▲' : '▼') : '');
     btn.onclick = ()=>{
+      // 「毕业等级」第一次点（当前没在按它排序）不直接排序，先弹气泡选基准（当前/70级/80级）；
+      // 已经在按它排序时，后续点击走跟其它按钮一样的三段循环（正序→倒序→取消），不用重新选基准
+      if(d.key==='grade' && !on){
+        openBoxSortGradeBasisPopup(btn, d.firstDir);
+        return;
+      }
+      closeBoxFilterPop(); // 保险起见：万一气泡还开着（比如没选完就点了别的排序按钮），先收掉
       if(!on) boxSort = {key:d.key, dir:d.firstDir};            // 第一次点：默认方向
       else if(boxSort.dir===d.firstDir) boxSort.dir = -d.firstDir; // 第二次点：倒序
       else boxSort = {key:null, dir:0};                          // 第三次点：取消排序
@@ -16979,6 +17094,24 @@ function renderBoxSortRow(){
   resetBtn.textContent = '重置';
   resetBtn.onclick = boxResetAllFilters;
   row.appendChild(resetBtn);
+}
+// 「毕业等级」排序按钮第一次点开的气泡：选排序基准（当前等级 / 假设70级 / 假设80级），
+// 复用筛选行同一套气泡浮窗（boxFilterPopShow/boxFilterOptGrid），选完立刻应用+关气泡，
+// 不是多选筛选那种"点了还能再点别的"，所以不用 boxMultiOptPopup 那套选中态高亮
+function openBoxSortGradeBasisPopup(anchorEl, firstDir){
+  const opts = [{value:'cur', label:'当前'}, {value:'70', label:'70级'}, {value:'80', label:'80级'}];
+  const itemsHtml = opts.map(o=>'<div class="segbtn" data-val="'+o.value+'">'+o.label+'</div>').join('');
+  boxFilterPopShow('sortgrade', anchorEl, boxFilterOptGrid('按毕业等级排序 · 基准', itemsHtml));
+  const panel = document.getElementById('boxFilterPopupPanel');
+  panel.querySelectorAll('[data-val]').forEach(btn=>{
+    btn.onclick = (e)=>{
+      e.stopPropagation();
+      const v = btn.dataset.val;
+      boxSort = {key:'grade', dir:firstDir, basis:(v==='cur' ? 'cur' : Number(v))};
+      closeBoxFilterPop();
+      renderBoxPage();
+    };
+  });
 }
 // 通用：把内容塞进气泡浮窗，锚定在筛选按钮下方，尾巴对准按钮中心
 let boxFilterPopAnchor = null;
@@ -17220,7 +17353,9 @@ document.addEventListener('click', (e)=>{
   // .box-filter-btn 是筛选行那几颗；快速查找按钮（吸底按钮条/圆形浮窗两个版本）复用的
   // 是同一套气泡浮窗，但不在筛选行里，得单独放行，不然打开它的这一下点击冒泡到 document
   // 就会被这里当成"点了气泡外面"立刻反手关掉，气泡刚弹出来就自己合上
-  if(e.target.closest && (e.target.closest('.box-filter-btn') || e.target.closest('#boxActMoreBtn') || e.target.closest('#fabMore'))) return;
+  // .box-sort-btn 是排序行的按钮，「毕业等级」第一次点会同步开这个气泡（见 openBoxSortGradeBasisPopup），
+  // 不放行的话开出来的这一下点击冒泡到 document 就会被当成"点了气泡外面"立刻反手关掉
+  if(e.target.closest && (e.target.closest('.box-filter-btn') || e.target.closest('.box-sort-btn') || e.target.closest('#boxActMoreBtn') || e.target.closest('#fabMore'))) return;
   closeBoxFilterPop();
 });
 window.addEventListener('resize', ()=>{
