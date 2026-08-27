@@ -4142,6 +4142,10 @@
         </div>
         <div class="mf-switch" id="capFullBagSwitch"></div>
       </div>
+      <!-- v3.33 能量型设置：跟树果/能量型页签下那颗独立的"参数设置"按钮（capCtrlBtn/capCtrlPop）
+           内容同源，共享同一份 capState.ctrl，两处操作互相同步。只在树果/能量型页签下显示，
+           显隐逻辑跟上面的"满包"一样交给 syncCapGradModalSwitch 统一管，见 renderCapGradEnergySection -->
+      <div id="capGradEnergySection" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -14009,6 +14013,45 @@ function syncCapGradModalSwitch(){
   const rowFullBag = document.getElementById('capFullBagRow');
   if(rowSkillMax) rowSkillMax.style.display = (capState.type==='food') ? '' : 'none';
   if(rowFullBag) rowFullBag.style.display = (capState.type==='berryEnergy') ? '' : 'none';
+  renderCapGradEnergySection();
+}
+/* v3.33 能量型设置：树果/能量型页签下"参数设置"按钮（capCtrlBtn/capCtrlPop）里的
+   队友树果/龙队/技能保底，原样搬一份进控制参数浮窗，命名"能量型设置"。跟原按钮共享
+   同一份 capState.ctrl，不管从哪边改，两边下次打开都是同一个结果——不单独复制状态。 */
+function renderCapGradEnergySection(){
+  const wrap = document.getElementById('capGradEnergySection');
+  if(!wrap) return;
+  const show = capState.type==='berryEnergy';
+  wrap.style.display = show ? '' : 'none';
+  if(!show) return;
+  const c = capState.ctrl;
+  const dcOpts = [['solo','仅自身'],['d2', c.latias?'相依为命':'2龙'],['d3','3龙'],['d4','4龙'],['d5','5龙']];
+  let html = `<div class="group-label" style="margin-top:14px;">能量型设置</div>`;
+  html += `<div class="lab">队友树果</div><div class="btnrow" id="capGradEnergyDirRow">
+    <div class="pkbtn dir-normal${c.direction==='normal'?' selected':''}" data-dir="normal">队友顺果</div>
+    <div class="pkbtn dir-reverse${c.direction==='reverse'?' selected':''}" data-dir="reverse">队友逆果</div></div>
+    <div class="note">队友顺果：默认队友树果能量等于自身树果<br>队友逆果：默认队友树果能量等于自身树果0.3-0.45倍（根据自身树果能量决定）</div>`;
+  html += `<div class="lab" style="margin-top:12px;">龙队（拉帝欧斯专用）</div><div class="btnrow" id="capGradEnergyDragonRow">`;
+  dcOpts.forEach(([v,lab])=>{ if(v==='solo'&&c.latias) return; // 带拉帝亚斯就不可能"仅自身"，跟原按钮同一条规则
+    let cls='pkbtn pk-dragoncount'; if(v==='d2'&&c.latias) cls+=' striped'; if(c.dragon===v) cls+=' selected';
+    html += `<div class="${cls}" data-dc="${v}">${lab}</div>`; });
+  html += `<div class="pkbtn pk-latias${c.latias?' selected':''}" id="capGradEnergyLatiasBtn">拉帝亚斯</div></div>`;
+  html += `<div class="lab" style="margin-top:12px;">技能保底</div><div class="btnrow" id="capGradEnergyPityRow">
+    <div class="segbtn${c.pity?' selected':''}" data-pity="1">含保底</div>
+    <div class="segbtn${!c.pity?' selected':''}" data-pity="0">不含保底</div></div>`;
+  wrap.innerHTML = html;
+  wrap.querySelectorAll('#capGradEnergyDirRow .pkbtn').forEach(el=> el.onclick=()=>{ c.direction=el.getAttribute('data-dir'); capGradEnergyCtrlChanged(); });
+  wrap.querySelectorAll('#capGradEnergyDragonRow .pk-dragoncount').forEach(el=> el.onclick=()=>{ c.dragon=el.getAttribute('data-dc'); capGradEnergyCtrlChanged(); });
+  const lt = document.getElementById('capGradEnergyLatiasBtn');
+  if(lt) lt.onclick=()=>{ c.latias=!c.latias; if(c.latias&&c.dragon==='solo') c.dragon='d2'; capGradEnergyCtrlChanged(); };
+  wrap.querySelectorAll('#capGradEnergyPityRow .segbtn').forEach(el=> el.onclick=()=>{ c.pity=el.getAttribute('data-pity')==='1'; capGradEnergyCtrlChanged(); });
+}
+// 改完立刻重画自己 + 排名；原来那颗"参数设置"按钮弹窗理论上不会同时开着（两个浮窗互斥），
+// 这里顺手也刷一下只是双保险，避免真出现同开的边界情况时显示对不上
+function capGradEnergyCtrlChanged(){
+  renderCapGradEnergySection();
+  renderCaptureBody();
+  if(capState.ctrlOpen) renderCaptureCtrlPop();
 }
 function openCapGradModal(){
   syncCapGradModalSwitch();
@@ -15176,6 +15219,37 @@ function updateFabDockPosition(){
   });
 }
 window.addEventListener('resize', updateFabDockPosition, {passive:true});
+/* ============ 全局修复：软键盘收起后，吸底的页面切换栏/吸底按钮条等固定定位元素被"拉飘" ============
+   在宝可梦盒批量修改等级的自定义输入框上发现：点进输入框弹出键盘、退出后关掉键盘，
+   底边 #tabBar 有时不会跟着键盘收起重新贴回视口底部，要等下一次滚动/resize才会自己归位——
+   这是移动端浏览器（尤其安卓Chrome）一个跟具体哪个输入框无关的通病，只要是输入框失焦、
+   键盘收起都可能触发，不是这一个输入框自己的问题，所以不在这一个输入框上单独打补丁，
+   而是在最外层挂一次全局修复，一次性覆盖全站现在和以后新增的所有输入框：
+     1) window.visualViewport 的 resize 事件：现代移动浏览器键盘开合时会精确触发它，
+        这是问题真正发生的时刻，优先用它触发修复，不用瞎猜延时。
+     2) document 的 focusout 事件委托（capture，挂在最外层，不用逐个输入框手动补
+        blur 处理）+ 延时兜底，给不支持 visualViewport 的老内核浏览器（部分微信/
+        国产壳浏览器）留一条后路。
+   修复手法：把几条吸底固定定位元素的 position 短暂切成 static 再切回来，只碰这一个属性，
+   强制浏览器按当前真实视口重新摆放它们——跟文件里其它地方"void el.offsetHeight 强制重排"
+   是同一个手法，两次赋值在同一段同步代码里前后紧挨着，中间不会真被画出来，不会闪一下 */
+function refixStickyBarsAfterKeyboard(){
+  document.querySelectorAll('.tabbar, .page-action-bar, .box-action-bar, .ui-fab').forEach(el=>{
+    const prevPos = el.style.position;
+    el.style.position = 'static';
+    void el.offsetHeight;
+    el.style.position = prevPos;
+  });
+}
+if(window.visualViewport){
+  window.visualViewport.addEventListener('resize', refixStickyBarsAfterKeyboard, {passive:true});
+}
+document.addEventListener('focusout', (e)=>{
+  const t = e.target;
+  if(t && (/^(INPUT|TEXTAREA|SELECT)$/i.test(t.tagName) || t.isContentEditable)){
+    setTimeout(refixStickyBarsAfterKeyboard, 350);
+  }
+}, true);
 function openDashboard(){
   dashboardOpen = true;
   document.getElementById('dashboardOverlay').style.display = 'flex';
