@@ -12118,6 +12118,46 @@ const SPECIES_ICON_GRID = 32; // 参考图和截图裁出来的图标统一缩�
 // 目前唯一登记过备选配色的条目：#025-1 皮卡丘（万圣节）在raenonx上分橘色/紫色两个配色，
 // 我方数据不分色，两张都留作参考模板一起比，谁分数低算谁
 const SPECIES_ICON_ALT_IDS = ['#025-1'];
+// ============ 头像参考图的空闲预缓存 ============
+// 这491张参考图共约4.5MB，独立于主HTML按需下载。问题是"按需"= 用户点了"截图识别"
+// 才开始下，第一次用就要干等一次。这里把它挪到页面彻底闲下来之后偷偷下完，存进
+// service worker 的 Cache Storage（见 sw.js，只对 species_icons/ 这一类路径做 cache-first，
+// index.html 依然一个字节都不缓存）。之后无论本次还是以后任何一次识别都是本地命中。
+// 名单从 POKEMON_DEX_DATA 现算，不另存一份清单——加新宝可梦时这里自动跟上，
+// 不用再多记一个数据点。
+function speciesIconUrls(){
+  const out = [];
+  for(const row of POKEMON_DEX_DATA){
+    const id = row[0];
+    const sufs = SPECIES_ICON_ALT_IDS.includes(id) ? ['', '-alt'] : [''];
+    for(const suf of sufs){
+      const bare = id.slice(1) + suf; // 去掉"#"，跟 getSpeciesIconRefs 里拼法保持一致
+      out.push(new URL(SPECIES_ICON_BASE+'normal/'+bare+'.webp', location.href).href);
+      out.push(new URL(SPECIES_ICON_BASE+'shiny/'+bare+'.webp', location.href).href);
+    }
+  }
+  return out;
+}
+function schedulePortraitPrecache(){
+  if(!('serviceWorker' in navigator)) return;
+  // 省流量模式 / 2G 下直接不做：那种网络环境里这点"提前量"远不值 4.5MB 的代价。
+  // 不做也只是退回原来的按需下载，识别功能本身不受影响。
+  const conn = navigator.connection;
+  if(conn && (conn.saveData || conn.effectiveType === '2g' || conn.effectiveType === 'slow-2g')) return;
+  const kick = ()=>{
+    navigator.serviceWorker.ready.then(reg=>{
+      const sw = navigator.serviceWorker.controller || reg.active;
+      if(sw) sw.postMessage({type:'precache-icons', urls: speciesIconUrls()});
+    }).catch(()=>{});
+  };
+  const idle = ()=> window.requestIdleCallback
+      ? requestIdleCallback(kick, {timeout:15000})
+      : setTimeout(kick, 3000);
+  // load 之后再等2秒才开始排队，确保首屏渲染和用户最初几下操作都过去了
+  if(document.readyState === 'complete') setTimeout(idle, 2000);
+  else window.addEventListener('load', ()=> setTimeout(idle, 2000), {once:true});
+}
+schedulePortraitPrecache();
 
 // ============ 头像抠图：把"角色本体"从截图背景里剥出来 ============
 // 目的：参考图（webp透明底）角色本体本来就顶满整张图，而截图裁出来的头像框自带一圈米白圆
