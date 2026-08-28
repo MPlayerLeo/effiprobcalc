@@ -12198,8 +12198,14 @@ function portraitBgSeeds(d, w, h){
     const k = (d[i]<<16)|(d[i+1]<<8)|d[i+2];
     cnt.set(k, (cnt.get(k)||0)+1);
   }
-  return [...cnt.entries()].sort((a,b)=> b[1]-a[1]).slice(0,2)
-                           .map(([k])=> [(k>>16)&255, (k>>8)&255, k&255]);
+  // 只有"真的占了一大片"的颜色才算背景种子。截图里白卡片/浅黄圆分别是3万/1万像素级别，
+  // 第二名占第一名的1/3，稳稳过线；而单色背景的图（比如把参考图合成到纯色底上再走同一条
+  // 管线做口径对齐）第二名可能只是角色身上某个颜色，把它当背景种子会连带把"两种子连线上"
+  // 那条通道打开，直接吃掉角色本体。10%这道门槛就是用来挡住这种情况的。
+  const ranked = [...cnt.entries()].sort((a,b)=> b[1]-a[1]).slice(0,2);
+  const floor = ranked.length ? ranked[0][1]*0.10 : 0;
+  return ranked.filter(([,n])=> n >= floor)
+               .map(([k])=> [(k>>16)&255, (k>>8)&255, k&255]);
 }
 // 截图侧的背景判定：alpha透明 / 贴近任一背景种子色 / 落在两个种子色的连线上（白卡片与浅黄圆
 // 交界处的抗锯齿过渡色就在这条线上，不单独放行的话会留下一圈假前景）/ 卡片珊瑚橙描边
@@ -12302,10 +12308,22 @@ function portraitGridFromShot(canvas, grid){
   }
   return last;
 }
-// 参考图侧：webp本来就是透明底，只看 alpha 就够了。绝对不能在这边也按"浅色算背景"判——
-// 那样参考图里的白云/白肚子会跟截图侧一样被吃掉，两边一起错还看不出来
-function refGridFromCanvas(canvas, grid){
-  return maskedGridFromCanvas(canvas, (r,g,b,a)=> a<20, grid);
+// 参考图口径对齐：参考图是透明底webp，截图侧却是"浅黄圆+白卡片"的不透明背景。
+// 原来两边用两套不同的抠图（参考图按alpha阈值、截图按自适应背景种子+容差梯度），
+// 边缘抗锯齿的处理方式天生不一致——截图那边被吃掉的过渡像素，参考图这边完整保留，
+// 结果是截图的轮廓相对参考图系统性地"瘦一圈"，轮廓不匹配率被整体抬高。
+// 改成：先把参考图合成到跟截图头像圈同色的浅黄底上（四周留6%边给洪水填充起步），
+// 再走截图那条一模一样的 portraitGridFromShot。两边从此是同一套管线、同一种边缘处理。
+// 实测收益很大：top1 68/74 → 73/74，confident 55 → 69（仍然零认错）。
+const REF_CARD_BG = 'rgb(254,254,238)';
+function compositeRefOnCardBg(cv){
+  const pad = Math.round(Math.max(cv.width, cv.height) * 0.06);
+  const out = document.createElement('canvas');
+  out.width = cv.width + pad*2; out.height = cv.height + pad*2;
+  const c = out.getContext('2d');
+  c.fillStyle = REF_CARD_BG; c.fillRect(0, 0, out.width, out.height);
+  c.drawImage(cv, pad, pad);
+  return out;
 }
 function loadImageAsGrid(src, grid){
   return new Promise((resolve)=>{
@@ -12314,7 +12332,7 @@ function loadImageAsGrid(src, grid){
       try{
         const full = document.createElement('canvas'); full.width=img.naturalWidth; full.height=img.naturalHeight;
         full.getContext('2d').drawImage(img, 0, 0);
-        const g = refGridFromCanvas(full, grid);
+        const g = portraitGridFromShot(compositeRefOnCardBg(full), grid);
         resolve(g ? g.data : null);
       }catch(e){ resolve(null); }
     };
@@ -12412,7 +12430,11 @@ async function matchSpeciesIcon(iconCanvas){
   // 不是绝对定律，后续样本多了发现偏了再回来调这一个数字
   const secondDiffSpecies = ranking.find(r=> r.id!==first.id);
   let confident = true;
-  if(secondDiffSpecies){ const denom = secondDiffSpecies.dist || 1; confident = (first.dist/denom) < 0.55; }
+  // 0.70 是在74张真机截图上扫出来的：0.70~0.80 是一段平台（confident都=69且零认错），
+  // 第一个认错出现在 0.85（小福蛋被认成食梦梦，ratio=0.837）。取平台左端而不是右端，
+  // 是为了跟已知的第一个错例留出 0.14 的安全边距——宁可多弃权几张让用户点候选，
+  // 也不要一个"自信满满的错答案"。（参考图口径对齐之前这个数是0.55。）
+  if(secondDiffSpecies){ const denom = secondDiffSpecies.dist || 1; confident = (first.dist/denom) < 0.70; }
   // 前两名同属一条进化链时不必再纠结：同链各形态本来就长得像（小拳石/隆隆石/隆隆岩就是
   // 典型，靠32×32缩略图分辨率天生分不开），而它们在本站的效率数据是按最终形态算的，
   // 选谁其实等价。直接取最终形态、判定为确信，把"分不清同一家族的哪一阶"这类无意义的
@@ -12431,7 +12453,7 @@ async function matchSpeciesIcon(iconCanvas){
     if(seen.has(r.id)) continue;
     seen.add(r.id);
     candidates.push({id:r.id, dist:r.dist, shiny:r.shiny});
-    if(candidates.length>=6) break;
+    if(candidates.length>=20) break; // 多留一些，外层会按主技能兼容性重排后再砍到6个
   }
   return {pkId, dist:first.dist, ranking, confident, shiny, candidates};
 }
@@ -12654,6 +12676,19 @@ function skillNamesFuzzy(tableSkill, ocrSkill){
   return levenshtein(t, o) <= 1;
 }
 
+// 只做"主技能 → 哪些物种对得上"这一层筛选，不碰数量/食材。
+// 跟 identifyBySignature 的定位完全不同：那个要独立给出一个答案，所以必须层层收紧到唯一解，
+// 收不紧就整个放弃；这个只负责当裁判——头像已经把范围缩到前几名了，这里只需要回答
+// "这几只里哪些的主技能跟读到的对得上"。同样的证据，用在小得多的候选集上，可靠得多。
+function speciesIdsMatchingSkill(mainSkillText){
+  if(!normSkillName(mainSkillText)) return null;
+  const keys = Object.keys(PK_SIG_QTY);
+  let ids = keys.filter(function(id){ return skillNamesEqual(PK_SIG_QTY[id].s, mainSkillText); });
+  if(!ids.length) ids = keys.filter(function(id){ return skillNamesMatch(PK_SIG_QTY[id].s, mainSkillText); });
+  if(!ids.length) ids = keys.filter(function(id){ return skillNamesFuzzy(PK_SIG_QTY[id].s, mainSkillText); });
+  return ids.length ? new Set(ids) : null;
+}
+
 // 兜底识别主函数。返回匹配到的 POKEMON_DEX_DATA 记录（多个撞车时取图鉴编号最小），认不出返回 null。
 // leftQty/rightQty：两个食材槽 ×N 的数字（OCR不到就传 null）。
 // ing30Canvas/ing60Canvas：两个食材图标裁剪（仅在候选很多、食材构成不同时用来二次区分）。
@@ -12762,9 +12797,20 @@ async function runOcrOnFile(file, silent){
   const statusEl = document.getElementById('ocrStatus');
   statusEl.textContent = '正在加载 OCR 引擎（会尝试多个来源，网络不好时可能要等 10~30 秒）…';
   if(!silent) openOcrReview();
+  // ---- 耗时计量：这条链路有~30次OCR识别+一堆纯像素计算，不量就只能靠猜哪段是瓶颈。
+  // 开销只有几十次 Date.now()，常驻不影响性能，结果挂在 window.__ocrTiming 上随时可查。
+  const __t = { total: Date.now() };
+  const __mark = (k, t0)=>{ __t[k] = (__t[k]||0) + (Date.now()-t0); };
   try{
+    // 参考图网格构建是纯主线程计算（491张，1~3秒），跟"下载引擎+起worker"完全没有依赖关系。
+    // 这里先点火不等它，让它跟下面的引擎加载并行跑完，真正用到的时候通常已经好了。
+    getSpeciesIconRefs().catch(()=>null); // 点火即忘，不接结果——下面真正要用时那次调用会拿到同一份缓存
+    let __s = Date.now();
     await loadTesseract();
+    __mark('引擎加载', __s);
+    __s = Date.now();
     const img = await loadImageFromFile(file);
+    __mark('图片解码', __s);
 
     // 之前是单个worker把十几二十次识别串行跑完，一张图要60~90秒。这些识别任务
     // （名字/性格/主技能/6格副技能×4阈值/等级/食材数量）互相之间没有先后依赖——都只
@@ -12772,7 +12818,10 @@ async function runOcrOnFile(file, silent){
     // 池子大小按硬件并发数取，封顶4（怕低端手机内存吃紧，每个worker都要常驻一份语言模型），
     // 保底2（哪怕hardwareConcurrency读不到也至少并行一点）
     const POOL_SIZE = Math.max(2, Math.min(4, (navigator.hardwareConcurrency||4)));
+    __s = Date.now();
     const workerPool = await Promise.all(Array.from({length: POOL_SIZE}, ()=> Tesseract.createWorker('chi_tra')));
+    __mark('worker池创建', __s);
+    const __pxStart = Date.now();
 
     function withTimeout(promise, ms, label){
       return Promise.race([
@@ -12795,8 +12844,12 @@ async function runOcrOnFile(file, silent){
           const i = next++;
           if(i>=jobs.length) break;
           const j = jobs[i];
+          const __js = Date.now();
           await withTimeout(w.setParameters(j.params), 30000, j.label+'(setParams)');
           results[i] = await withTimeout(w.recognize(j.canvas), 30000, j.label);
+          __t.__perJob = __t.__perJob || {};
+          const __pj = __t.__perJob[j.label] = __t.__perJob[j.label] || {n:0, ms:0};
+          __pj.n++; __pj.ms += Date.now()-__js;
         }
       }
       await Promise.all(workerPool.map(loop));
@@ -12937,10 +12990,9 @@ async function runOcrOnFile(file, silent){
       } else { arrowDbg = '没找到橙/蓝箭头'; }
     }
 
-    statusEl.textContent = '正在识别宝可梦名称…';
     const nameCoords = {sx:0, sy:0, sw:W, sh:H*0.16};
     const nameCanvas = cropPixels(0, 0, W, H*0.16);
-    const nameJobIdx = pushJob(nameCanvas, '3', '', '名称');
+    let nameJobIdx = null; // 真要不要跑，等下面头像先出结果再决定
 
     // 主技能名（黄色框第一行文字）：单独整宽裁剪。它横跨屏幕中线、被上面副技能的左右半切
     // 从中间劈开了，所以不能复用skillsLeft/Right，得独立裁一条。仅在绿条定位成功时才做——
@@ -13008,7 +13060,26 @@ async function runOcrOnFile(file, silent){
     // 不改statusEl文案——沿用上面"正在定位食材区域…"这条已经在BOX_OCR_STAGE_PCT里登记过的文案，
     // 换成没登记过的新文案，进度条监听器会把它当成"未知阶段=已完成"直接跳100%，反而在真正耗时的
     // 这一步把进度条显示成假的"已完成"
+    __mark('像素裁剪与定位', __pxStart);
+
+    // ---- 头像先跑，它决定名字OCR要不要跑 ----
+    // 头像匹配是纯像素计算（~250ms，不占worker），而名字那一次OCR要1.3秒worker时间。
+    // 现在头像单独就有 top1 73/74、达到确信门槛的全部判对，所以头像一旦确信，名字OCR
+    // 的全部作用就只剩"再确认一遍已经确定的事"，纯属白花钱——直接不派发这个任务。
+    // 头像不确信时才跑名字：那时它是真的还有信息量（交叉验证/兜底）。
+    statusEl.textContent = '正在识别宝可梦名称…';
+    __s = Date.now();
+    const portraitMatch = await identifyByPortraitIcon(img, nameCardBox);
+    __mark('头像匹配', __s);
+    if(!portraitMatch || !portraitMatch.confident){
+      nameJobIdx = pushJob(nameCanvas, '3', '', '名称');
+    } else {
+      console.log('头像已达确信门槛（'+portraitMatch.pkRec[1]+'），跳过名字OCR，省下一次识别');
+    }
+
+    __s = Date.now();
     const jobResults = await runJobs();
+    __mark('OCR并行墙钟', __s);
 
     // ---- 从并行结果里按job下标取回各自需要的东西 ----
     const subCellTexts = ['','','','','','']; // [行1左,行1右, 行2左,行2右, 行3左,行3右]
@@ -13023,7 +13094,7 @@ async function runOcrOnFile(file, silent){
       arrowDec = statNameToLetter(decTxt);
       arrowDbg = 'incY='+statArrowBands.incY+' "'+incTxt.replace(/\s/g,'')+'"→'+arrowInc+' | decY='+statArrowBands.decY+' "'+decTxt.replace(/\s/g,'')+'"→'+arrowDec;
     }
-    const nameRes = jobResults[nameJobIdx];
+    const nameRes = nameJobIdx!=null ? jobResults[nameJobIdx] : null;
     let mainSkillText = '';
     if(mainSkillJobIdx!=null){
       // 裁宽松了会把技能描述那几行也一起裁进来，但只要技能名本身、不要连着描述句子一起传出去——
@@ -13056,7 +13127,9 @@ async function runOcrOnFile(file, silent){
     ]);
     const ocrLevel = levelJobIdx!=null ? parseLevelFromOcrText(jobResults[levelJobIdx].data.text) : null;
 
+    __s = Date.now();
     await Promise.all(workerPool.map(w=> w.terminate()));
+    __mark('worker销毁', __s);
 
     // 每格文字各自取"第一个命中的技能"，按格子在网格里的固定位置对号入座填进5个槽——
     // 位置是几何确定的，不再靠"读出来的顺序"去猜等级，漏读一格只会让那一格为null、不会连锁错位
@@ -13078,7 +13151,7 @@ async function runOcrOnFile(file, silent){
       personaName = matchPersonaFromOcrText(personaRes.data.text || '');
       if(personaName){ const at=PERSONA_NAME_MAP[personaName]; if(at){ personaInc=at.inc; personaDec=at.dec; } }
     }
-    const nameRec = matchPokemonFromOcrText(nameRes.data.text || '');
+    const nameRec = nameRes ? matchPokemonFromOcrText(nameRes.data.text || '') : null;
     let pkRec = null;
 
     // ============ 物种判定：头像优先，名字降级成交叉验证 ============
@@ -13109,13 +13182,12 @@ async function runOcrOnFile(file, silent){
     let portraitShiny = null;
     let ocrPortraitCandidates = null;
     {
-      const [portraitMatch, sigMatch] = await Promise.all([
-        identifyByPortraitIcon(img, nameCardBox),
-        identifyBySignature(mainSkillText, qty30.val, qty60.val, ing30Canvas, ing60Canvas),
-      ]);
+      const __ps = Date.now();
+      const sigMatch = await identifyBySignature(mainSkillText, qty30.val, qty60.val, ing30Canvas, ing60Canvas);
+      __mark('签名反查', __ps);
       // 不管最后认没认出来，都把头像最像的前几只留一份——没认出时用来在修改面板里
       // 摆头像给用户点选（识别不确定≠毫无信息，正确答案通常就在这前几名里）
-      if(portraitMatch && portraitMatch.candidates) ocrPortraitCandidates = portraitMatch.candidates;
+      if(portraitMatch && portraitMatch.candidates) ocrPortraitCandidates = portraitMatch.candidates.slice(0, 6);
 
       // 头像排名前三（按物种去重后取前三，同一只的正常/闪光两态算一个）
       const top3 = [];
@@ -13127,6 +13199,27 @@ async function runOcrOnFile(file, silent){
         }
       }
       const nameInTop3 = nameRec && top3.some(id=> id===nameRec[0] || speciesFamilyKey(id)===speciesFamilyKey(nameRec[0]));
+
+      // 主技能裁判：拿主技能去筛头像的前三名，恰好剩一只时就采纳它（见下面用到它的分支）。
+      // 按进化链去重之后再数——同一条链的不同形态（小福蛋/吉利蛋/幸福蛋）主技能相同，
+      // 它们全都留下来不算"有歧义"，本来就该折叠成同一个答案。
+      const skillIds = speciesIdsMatchingSkill(mainSkillText);
+      let skillJudgePick = null;
+      if(top3.length && skillIds){
+        const kept = top3.filter(id=> skillIds.has(id));
+        const fams = [...new Set(kept.map(speciesFamilyKey))];
+        // 恰好剩一族，而且这一族必须包含头像的第一名。
+        // "必须包含第一名"这条是拿真机截图买来的教训：一开始只要求"筛完剩一只"就采纳，
+        // 结果小福蛋那张（头像前三是 食梦梦/呆呆兽/幸福蛋，正确答案排在第7）把排第三的
+        // 幸福蛋提拔成了确信答案——正确答案压根不在前三里，"筛剩一个"不代表"筛对了"。
+        // （小福蛋还是分歧进化：#440 有 #113/#242 两个最终形态，链折叠故意不管它。）
+        // 收紧成"主技能只能确认头像第一名、不能改判"之后：两条独立信号指向同一只才敢拍板，
+        // 指向不同就是信号打架，老老实实弃权。信使鸟那种"头像第一名对、只是跟第二名分数
+        // 咬得紧"的仍然能救回来，那才是这条规则真正要解决的场景。
+        if(fams.length === 1 && kept.length && speciesFamilyKey(top3[0]) === fams[0]){
+          skillJudgePick = DEX_BY_ID[fams[0]] || DEX_BY_ID[kept[0]] || null;
+        }
+      }
 
       if(!portraitMatch){
         // 头像这条路整个没跑通，退回原来的"名字 → 签名反查"顺序
@@ -13145,6 +13238,15 @@ async function runOcrOnFile(file, silent){
         identifiedByPortrait = true;
         portraitShiny = portraitMatch.shiny;
         if(nameRec) console.log('名字OCR读到「'+nameRec[1]+'」但它连头像前三都没进（'+top3.join('/')+'），判定那是昵称，以头像为准：', pkRec[1]);
+      } else if(skillJudgePick){
+        // 头像前三名打平（比如"信使鸟 vs 凯罗斯"这种分数咬得很死的），但主技能只跟其中
+        // 一只对得上——这时候不该弃权，两条独立证据合起来已经唯一了。
+        // 严格限定在"恰好剩一只"：像南瓜怪人小/中/大/巨那样前三名全是同一只的体型变种、
+        // 主技能也全一样的，筛完还剩多只，仍然弃权让用户点——那是真歧义，猜错就是错。
+        pkRec = skillJudgePick;
+        identifiedByPortrait = true;
+        identifiedBySig = true;
+        console.log('头像前三打平（'+top3.join('/')+'），但主技能「'+mainSkillText+'」只跟其中的「'+pkRec[1]+'」对得上，两条证据合起来唯一，采纳');
       } else if(sigMatch){
         // 头像没到"确信"的门槛，但只要它给出了候选、且这个候选跟签名反查对不上，说明至少有
         // 一条独立信号在唱反调——哪怕头像本身不够自信，这也是实打实的反对票，不该被无视。
@@ -13157,6 +13259,15 @@ async function runOcrOnFile(file, silent){
         } else {
           pkRec = sigMatch; identifiedBySig = true;
         }
+      }
+      // 弃权时的候选列表：把"主技能对得上"的往前提。头像排名靠后但主技能吻合的那几只，
+      // 比排名靠前却主技能完全对不上的更值得摆给用户点。这一步只影响候选列表的顺序、
+      // 不影响任何自动判定，所以是纯赚——小福蛋那张正确答案在头像第7名，靠这步才进得了前六。
+      if(!pkRec && skillIds && portraitMatch && portraitMatch.candidates){
+        const all = portraitMatch.candidates;
+        ocrPortraitCandidates = all.filter(c=> skillIds.has(c.id))
+                                   .concat(all.filter(c=> !skillIds.has(c.id)))
+                                   .slice(0, 6);
       }
       // 名字OCR给了结果、但既没进头像前三、头像自己也不确信 → 两条信号都不硬气，
       // 不采纳任何一个。把名字OCR那只也塞进候选列表首位，让用户一眼能点到
@@ -13183,7 +13294,7 @@ async function runOcrOnFile(file, silent){
     console.log('绿色横条定位：', bands.length>=2 ? ('成功，共'+bands.length+'条，位置='+JSON.stringify(bands)) : '失败，已用整图兜底');
     console.log('性格区域裁剪坐标：', JSON.stringify(personaCoords));
     console.log('名称区域裁剪坐标：', JSON.stringify(nameCoords));
-    console.log('宝可梦名称区域原始文字：', JSON.stringify(nameRes.data.text));
+    console.log('宝可梦名称区域原始文字：', nameRes ? JSON.stringify(nameRes.data.text) : '(头像已确信，本次跳过名字OCR)');
     console.log('副技能网格行定位（已跳过主技能框，[top,bot]）：', JSON.stringify(subRowBands));
     console.log('副技能逐格识别文字 [行1左,行1右,行2左,行2右,行3左,行3右]：', JSON.stringify(subCellTexts));
     console.log('副技能槽位判定结果 [Lv10,25,50,75,100]：', JSON.stringify(skillMatches));
@@ -13215,6 +13326,9 @@ async function runOcrOnFile(file, silent){
       console.log('没认出物种（可能改了昵称），跳过食材比对——食材留空交给手动选择');
     }
     console.log('性格箭头法：', arrowDbg, '→ 最终 inc/dec =', personaInc, '/', personaDec, '性格名=', personaName);
+    __t.total = Date.now() - __t.total;
+    window.__ocrTiming = __t;
+    console.log('耗时分解(ms)：', __t);
     console.log('匹配结果：', {pkRec: pkRec ? pkRec[1] : null, identifiedByName, identifiedBySig, identifiedByPortrait, portraitShiny, ocrLevel, personaName, skillMatches, slot30: slot30&&slot30.ing, slot60: slot60&&slot60.ing});
     console.log('========================');
 
