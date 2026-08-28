@@ -842,11 +842,13 @@
   #fabCreate{ background:#3f9a52; right:24px; bottom:100px; }
   /* "更多功能"按需求固定在左下角，不跟右侧那组共用位置 */
   #fabMore{ background:#7a4f9e; left:24px; bottom:100px; }
+  /* 快速查找拆出来的视图切换钮：跟右侧 #fabPanel/#fabControls 一个套路，堆在 fabMore 正上方 */
+  #fabListView{ background:#3a7fae; left:24px; bottom:158px; font-size:0; }
   /* 培养计划资源总计态「取消全选」：借 fabMore 在左下角的坐标——两者互斥（fabMore 只在
      盒子浮层内出现，这颗只在普通页面的培养计划里出现），不会真的叠在一起 */
   #fabPlanClear{ background:#8d8776; left:24px; bottom:100px; }
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
-  #fabPanel.fab-lifted{ bottom:212px; }
+  #fabPanel.fab-lifted, #fabListView.fab-lifted{ bottom:212px; }
   #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
   /* 岛屿评分子页圆形浮窗模式下同样借用这两颗做"批量选择/取消"，跟按钮条版本共用同一个灰色 */
   .ui-fab.ui-fab-off{ background:#c7c1af !important; cursor:default; }
@@ -1122,6 +1124,36 @@
     border:2px solid #fff; background:#3a8fae; box-shadow:0 1px 4px rgba(0,0,0,.3); z-index:2;
     display:flex; align-items:center; justify-content:center; font-size:9px; line-height:1; pointer-events:none;
   }
+
+  /* ============ 盒子列表视图：容器/条目节点原样复用 .box-grid/.box-grid-item，只在挂了
+     box-list-view 类时用更高优先级的选择器改布局——JS 那边点击/长按/拖选/多选/gif播放
+     全部按 dataset.id 和 class 名工作，不感知网格还是列表，一个字都不用碰。
+     行内容（昵称/等级/毕业等级牌子）直接复用「大家的宝睡」明细行的 .pvp-row-* 类名，
+     不新写一套平行 CSS——两处看起来长一样不是巧合，是真的同一份 CSS。 */
+  .box-grid.box-list-view{ display:flex; flex-direction:column; gap:0; }
+  .box-grid.box-list-view .box-grid-item{
+    flex-direction:row; align-items:center; width:100%; gap:9px;
+    padding:7px 2px; border-bottom:1px solid var(--line); cursor:pointer;
+  }
+  .box-grid.box-list-view .box-grid-flagged{ background:rgba(193,68,58,.12); border-radius:0; }
+  /* 高优先级（3层类名）覆盖基础的 width:100%+aspect-ratio:51/55（网格模式用的固定比例框），
+     不依赖样式表里两条规则谁写在后面——那样谁赢是隐式的，容易被以后的改动悄悄弄反 */
+  .box-grid.box-list-view .box-grid-item .box-grid-img-wrap{
+    width:34px; height:34px; aspect-ratio:auto; border-radius:9px; overflow:hidden;
+    background:#f4effa; border:1.5px solid var(--line); flex:0 0 auto;
+  }
+  .box-grid.box-list-view .box-grid-unknown{ font-size:16px; }
+  /* 多选复选框：网格模式叠在头像右上角（原样不动，见上面 .box-grid-checkbox），
+     列表模式改成行首独立一列，不再遮头像——用户反馈过窄屏下头像本来就小，勾选框叠上去点不准 */
+  .box-grid.box-list-view .box-grid-checkbox{ position:static; flex:0 0 auto; margin:0; }
+  /* 睡饱饱奖章/联动徽章：网格模式叠在头像上（原样不动），列表模式挪到毕业等级左边，
+     跟毕业等级牌子放在同一行尾——用小圆点/小图标而不是网格模式那种大角标，行内空间有限 */
+  .box-list-badge{
+    flex:0 0 auto; width:18px; height:18px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; font-size:10px; line-height:1;
+    border:1.5px solid var(--line); background:#fff;
+  }
+  .box-list-medal{ flex:0 0 auto; width:20px; height:20px; }
 
   .box-batch-bar{ flex:0 0 auto; display:flex; gap:10px; padding:10px; background:var(--panel); border-top:1px solid var(--line); }
   .box-batch-cancel-btn, .box-batch-selectall-btn, .box-batch-delete-btn, .box-batch-level-btn, .box-batch-species-btn{ flex:1 1 0; border:none; border-radius:9px; padding:11px 4px; font-size:14px; font-weight:800; cursor:pointer; }
@@ -2371,6 +2403,8 @@
 .box-act-btn:hover{ filter:brightness(1.08); }
 /* 「+」按钮不跟其他按钮争宽度：只是个图标，给固定窄宽，把空间让给四个中文按钮 */
 .box-act-create{ flex:0 0 44px; background:#3f9a52; padding:9px 0; }
+/* 快速查找左边拆出来的视图切换钮，跟「+」一个套路：图标窄宽，把空间让给"快速查找"四个字 */
+.box-act-viewtoggle{ flex:0 0 44px; background:#3a7fae; padding:9px 0; }
 .box-act-more{ background:#7a4f9e; }
 .box-act-register{ background:#3a7fd5; }
 .box-act-login{ background:#e0a32e; }
@@ -3748,6 +3782,7 @@
 <div class="ui-fab" id="fabControls"><span id="fabControlsLabel">控制<br>参数</span></div>
 <div class="ui-fab" id="fabPlanClear"><span>取消<br>全选</span></div>
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
+<div class="ui-fab" id="fabListView"></div>
 <div class="ui-fab" id="fabMore">快速<br>查找</div>
 <div class="box-toast" id="boxToast"></div>
 <div class="ptr-bar" id="ptrBar">
@@ -3857,6 +3892,7 @@
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
     <div class="box-action-bar" id="boxActionBar">
       <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
+      <button type="button" class="box-act-btn box-act-viewtoggle" id="boxActViewToggleBtn"></button>
       <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">快速查找</button>
       <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
       <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn"><svg viewBox="0 0 24 24" width="20" height="20" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></button>
@@ -4668,6 +4704,33 @@ function checkIconSvg(color, strokeW, sizePx){
   const sizeAttr = sizePx ? ('width="'+sizePx+'" height="'+sizePx+'" style="vertical-align:middle" ') : '';
   return '<svg '+sizeAttr+'viewBox="0 0 24 24" fill="none" stroke="'+(color||'currentColor')+'" stroke-width="'+(strokeW||3)+
     '" stroke-linecap="square" stroke-linejoin="miter"><path d="M4 13l5 6L20 6"/></svg>';
+}
+// 盒子网格/列表视图切换按钮的两个图标：四宫格＝当前是网格（点了切到列表），三条杠＝当前是
+// 列表（点了切回网格）。跟 checkIconSvg 同款直角风格（stroke-linecap:square），不用圆角，
+// 全站图标统一走这个调性（见 [[feedback_check_icon_style]]）。
+function boxGridIconSvg(sizePx){
+  const s = sizePx||18;
+  return '<svg width="'+s+'" height="'+s+'" style="display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter">'+
+    '<rect x="3.5" y="3.5" width="7.5" height="7.5"/><rect x="13" y="3.5" width="7.5" height="7.5"/>'+
+    '<rect x="3.5" y="13" width="7.5" height="7.5"/><rect x="13" y="13" width="7.5" height="7.5"/></svg>';
+}
+function boxListIconSvg(sizePx){
+  const s = sizePx||18;
+  return '<svg width="'+s+'" height="'+s+'" style="display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="square">'+
+    '<path d="M4 6h16M4 12h16M4 18h16"/></svg>';
+}
+// 按钮固定显示"切换到另一种视图"的那个图标：当前网格→显示三条杠（点了变列表），
+// 当前列表→显示四宫格（点了变网格）。两个界面（吸底条+圆形浮窗）共用同一份图标逻辑。
+function renderBoxViewToggleIcon(){
+  const html = userPrefs.boxViewMode==='list' ? boxGridIconSvg(20) : boxListIconSvg(20);
+  const btn = document.getElementById('boxActViewToggleBtn'); if(btn) btn.innerHTML = html;
+  const fab = document.getElementById('fabListView'); if(fab) fab.innerHTML = userPrefs.boxViewMode==='list' ? boxGridIconSvg(22) : boxListIconSvg(22);
+}
+function boxToggleViewMode(){
+  userPrefs.boxViewMode = userPrefs.boxViewMode==='list' ? 'grid' : 'list';
+  saveUserPrefs();
+  renderBoxViewToggleIcon();
+  renderBoxPage();
 }
 
 /* ============ 副技能定义 ============ */
@@ -8127,7 +8190,7 @@ function updateBoxActionBar(){
     // 圆形浮窗模式：更多功能/+新建/修改面板改走圆形浮窗（见 updateFabCircles）；
     // 注册/登录沿用旧版样式，始终是按钮条，不做成圆——这条底部条只在未登录时才留下来放它俩
     bar.style.display = (shouldShow && !logged) ? 'flex' : 'none';
-    ['boxActMoreBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
+    ['boxActMoreBtn','boxActViewToggleBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
       const el = document.getElementById(id); if(el) el.style.display = 'none';
     });
     ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
@@ -8137,7 +8200,7 @@ function updateBoxActionBar(){
     if(bubble){ bubble.classList.remove('on'); bubble.innerHTML = ''; }
   } else {
     bar.style.display = shouldShow ? 'flex' : 'none';
-    ['boxActMoreBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
+    ['boxActMoreBtn','boxActViewToggleBtn','boxActCreateBtn','boxActPanelBtn'].forEach(id=>{
       const el = document.getElementById(id); if(el) el.style.display = 'flex';
     });
     ['boxActRegisterBtn','boxActLoginBtn'].forEach(id=>{
@@ -9169,6 +9232,7 @@ document.getElementById('authModalClose').onclick = closeAuthModal;
 document.getElementById('authModal').onclick = (e)=>{ if(e.target.id==='authModal') closeAuthModal(); };
 document.getElementById('authSubmitBtn').onclick = authSubmit;
 document.getElementById('boxActMoreBtn').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
+document.getElementById('boxActViewToggleBtn').onclick = ()=> boxToggleViewMode();
 document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
@@ -10386,7 +10450,8 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null}; // 26格=6.5h，8格=2h；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid'}; // 26格=6.5h，8格=2h；
+// boxViewMode：盒子网格/列表视图，'grid'=原来的gif方块平铺，'list'=横向列表（毕业等级/睡饱饱/联动徽章一目了然）；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
 let userPrefs = Object.assign({}, PREFS_DEFAULT);
@@ -16475,10 +16540,11 @@ function updateFabCircles(){
   const fabControls = document.getElementById('fabControls');
   const fabCreate = document.getElementById('fabCreate');
   const fabMore = document.getElementById('fabMore');
+  const fabListView = document.getElementById('fabListView');
   const fabPlanClear = document.getElementById('fabPlanClear');
-  if(!fabPanel || !fabControls || !fabCreate || !fabMore) return;
+  if(!fabPanel || !fabControls || !fabCreate || !fabMore || !fabListView) return;
   if(!userPrefs.fabCircleModeOn){
-    [fabPanel, fabControls, fabCreate, fabMore, fabPlanClear].forEach(el=>{
+    [fabPanel, fabControls, fabCreate, fabMore, fabListView, fabPlanClear].forEach(el=>{
       if(!el) return;
       el.style.display = 'none'; el.classList.remove('box-page-visible','fab-lifted');
     });
@@ -16489,9 +16555,9 @@ function updateFabCircles(){
   try{ inBox = !!boxOverlayOpen; }catch(e){}
   const inBatch = (typeof boxSelectMode!=='undefined') && !!boxSelectMode;
   if(inBox){
-    // 盒子浮层内：更多功能/+新建/修改面板三颗圆，控制参数不出现（盒子里本来就没有它）
+    // 盒子浮层内：更多功能/+新建/修改面板/视图切换四颗圆，控制参数不出现（盒子里本来就没有它）
     const show = !inDetail && !inBatch;
-    [fabPanel, fabCreate, fabMore].forEach(el=>{
+    [fabPanel, fabCreate, fabMore, fabListView].forEach(el=>{
       el.style.display = show ? 'flex' : 'none';
       el.classList.add('box-page-visible');
     });
@@ -16501,12 +16567,13 @@ function updateFabCircles(){
     // 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住
     const authBar = document.getElementById('boxActionBar');
     const authVisible = !!(show && authBar && authBar.style.display !== 'none' && authBar.classList.contains('box-auth-only'));
-    [fabPanel, fabCreate, fabMore].forEach(el=> el.classList.toggle('fab-lifted', authVisible));
+    [fabPanel, fabCreate, fabMore, fabListView].forEach(el=> el.classList.toggle('fab-lifted', authVisible));
   } else {
-    // 普通页面：控制参数+修改面板两颗圆，盒子专属的更多功能/+新建不出现
-    [fabPanel, fabCreate, fabMore].forEach(el=> el.classList.remove('box-page-visible','fab-lifted'));
+    // 普通页面：控制参数+修改面板两颗圆，盒子专属的更多功能/+新建/视图切换不出现
+    [fabPanel, fabCreate, fabMore, fabListView].forEach(el=> el.classList.remove('box-page-visible','fab-lifted'));
     fabCreate.style.display = 'none';
     fabMore.style.display = 'none';
+    fabListView.style.display = 'none';
     const page2El = document.getElementById('page2');
     // v3.24：更多功能选择页（hub）不需要任何浮窗——两颗圆一起收起，跟按钮条模式下
     // 整条按钮条+白底一起收起是同一个标准
@@ -16560,7 +16627,7 @@ function updateFabDockPosition(){
     const el = document.getElementById(id); if(!el) return;
     el.style.right = useOutsideRight ? outsideRight + 'px' : '';
   });
-  ['fabMore','fabPlanClear'].forEach(id=>{
+  ['fabMore','fabListView','fabPlanClear'].forEach(id=>{
     const el = document.getElementById(id); if(!el) return;
     el.style.left = useOutsideLeft ? outsideLeft + 'px' : '';
   });
@@ -16727,6 +16794,7 @@ document.getElementById('fabPanel').onclick = ()=>{
 };
 document.getElementById('fabCreate').onclick = ()=> openDashboardForNewEntry();
 document.getElementById('fabMore').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
+document.getElementById('fabListView').onclick = ()=> boxToggleViewMode();
 document.getElementById('pageActSelAllBtn').onclick = ()=> planSumDeselectAll();
 document.getElementById('fabPlanClear').onclick = ()=> planSumDeselectAll();
 document.getElementById('dashCreateCancelBtn').onclick = ()=> closeDashboard();
@@ -17241,6 +17309,8 @@ function renderBoxPage(){
   const grid = document.getElementById('boxGrid');
   const empty = document.getElementById('boxGridEmpty');
   if(!grid) return;
+  grid.classList.toggle('box-list-view', userPrefs.boxViewMode==='list');
+  renderBoxViewToggleIcon();
   applyBoxGridColumns();
   const entries = boxFilteredEntries();
   renderBoxCountWidget(entries.length);
@@ -17295,41 +17365,93 @@ function renderBoxPage(){
       q.textContent = '?';
       imgWrap.appendChild(q);
     }
+    const isListView = userPrefs.boxViewMode==='list';
+    let checkboxEl = null;
     if(boxSelectMode){
-      const cb = document.createElement('div');
-      cb.className = 'box-grid-checkbox'+(boxSelectedIds.has(entry.id)?' checked':'');
-      imgWrap.appendChild(cb);
+      checkboxEl = document.createElement('div');
+      checkboxEl.className = 'box-grid-checkbox'+(boxSelectedIds.has(entry.id)?' checked':'');
     }
-    if(entry.source === 'psc' && userPrefs.boxPscBadgeOn){
-      const srcBadge = document.createElement('div');
-      srcBadge.className = 'box-grid-source-psc';
-      srcBadge.title = '来自' + PSC_PARTNER_NAME;
-      srcBadge.textContent = '🔗';
-      imgWrap.appendChild(srcBadge);
-    }
-    if(userPrefs.boxMedalOn){
-      const msrc = satietyMedalSrc(boxEntrySatiety(entry));   // v3.16 格子内部顶端居中的睡饱饱奖章
-      if(msrc){
-        const mi = document.createElement('img');
-        mi.className = 'box-grid-medal';
-        mi.src = msrc;
-        imgWrap.appendChild(mi);
+    if(!isListView){
+      // 网格模式：复选框/联动徽章/睡饱饱奖章都叠在头像上，原样不动
+      if(checkboxEl) imgWrap.appendChild(checkboxEl);
+      if(entry.source === 'psc' && userPrefs.boxPscBadgeOn){
+        const srcBadge = document.createElement('div');
+        srcBadge.className = 'box-grid-source-psc';
+        srcBadge.title = '来自' + PSC_PARTNER_NAME;
+        srcBadge.textContent = '🔗';
+        imgWrap.appendChild(srcBadge);
       }
-    }
-    const label = document.createElement('div');
-    label.className = 'box-grid-label';
-    // 保险起见在显示端也强制截断一次：万一存量数据（导入/云端合并等旧路径）里混进了超限昵称，
-    // 也不能让格子布局被冲垮
-    label.textContent = boxTrimNickname(entry.nickname || entry.name) || entry.name;
-    item.appendChild(imgWrap);
-    item.appendChild(label);
-    // v3.18：等级行受「更多功能」里的"宝可梦等级显示"开关控制。关掉时整个元素不建，
-    // 而不是 visibility:hidden——那样会白占 10px 高度，格子间距看着不对
-    if(userPrefs.boxLevelOn){
-      const levelLabel = document.createElement('div');
-      levelLabel.className = 'box-grid-level';
-      levelLabel.textContent = 'Lv.'+levelRealOf(entry);   // v3.20 网格小卡片位置窄，只显示真实等级，不带「按XX档」后缀
-      item.appendChild(levelLabel);
+      if(userPrefs.boxMedalOn){
+        const msrc = satietyMedalSrc(boxEntrySatiety(entry));   // v3.16 格子内部顶端居中的睡饱饱奖章
+        if(msrc){
+          const mi = document.createElement('img');
+          mi.className = 'box-grid-medal';
+          mi.src = msrc;
+          imgWrap.appendChild(mi);
+        }
+      }
+      const label = document.createElement('div');
+      label.className = 'box-grid-label';
+      // 保险起见在显示端也强制截断一次：万一存量数据（导入/云端合并等旧路径）里混进了超限昵称，
+      // 也不能让格子布局被冲垮
+      label.textContent = boxTrimNickname(entry.nickname || entry.name) || entry.name;
+      item.appendChild(imgWrap);
+      item.appendChild(label);
+      // v3.18：等级行受「更多功能」里的"宝可梦等级显示"开关控制。关掉时整个元素不建，
+      // 而不是 visibility:hidden——那样会白占 10px 高度，格子间距看着不对
+      if(userPrefs.boxLevelOn){
+        const levelLabel = document.createElement('div');
+        levelLabel.className = 'box-grid-level';
+        levelLabel.textContent = 'Lv.'+levelRealOf(entry);   // v3.20 网格小卡片位置窄，只显示真实等级，不带「按XX档」后缀
+        item.appendChild(levelLabel);
+      }
+    } else {
+      // 列表模式：复选框独立占行首一列（不再叠在头像上，窄屏头像小容易点不准）；
+      // 昵称/等级/毕业等级牌子直接复用「大家的宝睡」明细行同一套 .pvp-row-* 类名——
+      // 毕业等级就是调 pvpCategoryOf/pvpCatColor/pvpDisplayLabel，PVP 页面算档位牌子
+      // 用的同一条函数，恐怖宝可梦彩虹牌子这些特殊展示照搬，不用重新判一遍。
+      // 睡饱饱奖章/联动徽章紧挨着放在毕业等级左侧（网格模式是叠在头像上，这里挪出来）。
+      if(checkboxEl) item.appendChild(checkboxEl);
+      item.appendChild(imgWrap);
+      const main = document.createElement('div');
+      main.className = 'pvp-row-main';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'pvp-row-name';
+      nameEl.textContent = boxTrimNickname(entry.nickname || entry.name) || entry.name;
+      main.appendChild(nameEl);
+      if(userPrefs.boxLevelOn){
+        const sub = document.createElement('div');
+        sub.className = 'pvp-row-sub';
+        sub.textContent = 'Lv.'+levelRealOf(entry);
+        main.appendChild(sub);
+      }
+      item.appendChild(main);
+      if(entry.source === 'psc' && userPrefs.boxPscBadgeOn){
+        const srcBadge = document.createElement('span');
+        srcBadge.className = 'box-list-badge';
+        srcBadge.title = '来自' + PSC_PARTNER_NAME;
+        srcBadge.textContent = '🔗';
+        item.appendChild(srcBadge);
+      }
+      if(userPrefs.boxMedalOn){
+        const msrc = satietyMedalSrc(boxEntrySatiety(entry));
+        if(msrc){
+          const mi = document.createElement('img');
+          mi.className = 'box-list-medal';
+          mi.src = msrc;
+          item.appendChild(mi);
+        }
+      }
+      let cat = null;
+      try{ cat = pvpCategoryOf(entry); }catch(e){ cat = null; }
+      if(cat){
+        const isTerror = cat === '恐怖宝可梦';
+        const pill = document.createElement('span');
+        pill.className = 'pvp-grade'+(isTerror?' pvp-grade-terror':'');
+        if(!isTerror) pill.style.background = pvpCatColor(cat);
+        pill.textContent = pvpDisplayLabel(cat);
+        item.appendChild(pill);
+      }
     }
     item.onclick = ()=> boxGridItemClick(entry.id, item);
     item.addEventListener('pointerdown', (e)=>{ boxGridItemPointerDown(e, entry.id, item); boxGridItemLongPressStart(e, entry.id); });
@@ -21281,6 +21403,52 @@ function pvpCategoryOf(entry){
    ⚠️ 跟老函数一样，必须走 pvpCategoryOf（＝ boxEntryGradeCategory 完整判定链），不能图省事
    直接调 boxEntryGraduationGrade——后者只做"效率→档位"这一步，会绕开 abc/aba 强制不合格、
    组合不可用删除线等【组合本身不行】的结构性判废，那些换到 80 级窗口也救不回来。 */
+/* 2026-08-28 追加：不合格/金帮不合格的"及格线以下但没差太多"给个安慰分（35分），
+   跟食材型"打工"（20分）是同一个思路——PVP_SCORE_TABLE 里这两档本来死死钉在0分，
+   一个效率其实还凑合、只是没摸到毕业门槛的树果/能量型宝可梦，跟一个真正数值拉胯的
+   宝可梦拿一样的0分不公平。用户拍板：不改毕业判定本身（页面上照样显示"不合格"，
+   食谱覆盖率/档位文案一个字都不动），只在PVP计分这一步给个地板分。
+
+   参照线＝"效率≥果S帮M"：构造一个假想配置——技能栏只选树果数量提升S+帮忙速度M
+   这两个，其余槽位空着（不是随手拍的，是"就这两个技能撑起来的产出"这个直观基准），
+   在等级70（PVP判档一律按70级，见上面 pvpLevelNormalizedGrade 的固定70级窗口）
+   算出这个假想配置的效率，拿去跟条目自己按70级真实技能栏算出的效率比大小——
+   ≥ 就够格拿35分，这个比较只看效率数字，不重新走一遍毕业判定的档位表/排名逻辑。
+   金帮不合格（选了帮手奖励但仍不合格）一视同仁，同样够格。
+   跟已有的70/80均分逻辑是"取较大值"的地板关系：70级本身纯0分才会被35整个顶上去；
+   70级不合格但80级跳档已经算出比如(0+55)/2=27.5这种非零均分时，35分仍然按地板生效
+   （27.5<35→35，45<35不成立就保留45）——35分永远是这条线内的下限，不会盖掉更高的均分。 */
+const PVP_FLOOR_SCORE = 35;
+function pvpFloorEligibleGrade(cat){ return cat==='不合格' || cat==='金帮不合格'; }
+function pvpFloorScoreFor(entry){
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  if(!rec) return null;
+  const dtype = DEX_TYPE_MAP[rec[3]];
+  if(dtype!=='fruit' && dtype!=='energy') return null;
+  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
+  if(!x) return null;
+  try{
+    const realBuild = {selected: entry.selected, incAttr: entry.incAttr, decAttr: entry.decAttr};
+    const baseBuild = {selected: ['fruitS','speedM',null,null,null], incAttr: entry.incAttr, decAttr: entry.decAttr};
+    const realLabels = buildLabels(realBuild), baseLabels = buildLabels(baseBuild);
+    const persona = buildPersona(realBuild);   // 假想配置沿用真实性格——只让"技能选择"这一个变量参与比较
+    let realEff, baseEff;
+    if(dtype==='energy'){
+      const pkId = ENERGY_NAME_TO_ID[x.name];
+      const pk = pkId ? POKEMON[pkId] : null;
+      if(!pk) return null;
+      const options = currentEnergyOptions();
+      const ws = windowSizeOf(70);
+      realEff = computeEnergyEfficiency(pk, sumsToFloat(windowSums(realLabels, ws)), persona, 70, options);
+      baseEff = computeEnergyEfficiency(pk, sumsToFloat(windowSums(baseLabels, ws)), persona, 70, options);
+    } else {
+      realEff = computeEfficiency(realLabels, dtype, 70, persona);
+      baseEff = computeEfficiency(baseLabels, dtype, 70, persona);
+    }
+    if(realEff==null || baseEff==null || !isFinite(realEff) || !isFinite(baseEff)) return null;
+    return realEff >= baseEff ? PVP_FLOOR_SCORE : null;
+  }catch(e){ return null; }
+}
 function pvpLevelNormalizedGrade(entry){
   const e70 = Object.assign({}, entry, {level: 70});
   const e80 = Object.assign({}, entry, {level: 80});
@@ -21290,11 +21458,19 @@ function pvpLevelNormalizedGrade(entry){
   if(cat70 == null) return null;
   const s70 = PVP_SCORE_MAP[cat70];
   if(s70 == null) return null;
+  let result;
   if(cat80 != null && cat80 !== cat70){
     const s80 = PVP_SCORE_MAP[cat80];
-    if(s80 != null) return {cat: cat70, score: (s70+s80)/2, bumpGrade: cat80};
+    result = (s80 != null) ? {cat: cat70, score: (s70+s80)/2, bumpGrade: cat80} : {cat: cat70, score: s70, bumpGrade: null};
+  } else {
+    result = {cat: cat70, score: s70, bumpGrade: null};
   }
-  return {cat: cat70, score: s70, bumpGrade: null};
+  result.floored = false;   // 上传/服务端复核要知道这条分数是不是靠地板分顶上去的，见 pvpSnapshotRecords
+  if(pvpFloorEligibleGrade(result.cat)){
+    const floor = pvpFloorScoreFor(e70);
+    if(floor!=null && floor > result.score){ result.score = floor; result.floored = true; }
+  }
+  return result;
 }
 
 /* "不推荐使用"的宝可梦（POKEMON_DEX_DATA 的 rec[4] 有值，比如穿山鼠"弱"）按 1/4 分计入总分；
@@ -21423,13 +21599,16 @@ function pvpBuildMyStats(){
       }
       return;
     }
-    rows[g].push({entry:re, branchOf:entry, cat:norm.cat, score:norm.score, bumpGrade:norm.bumpGrade, unrecommended:null, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
+    rows[g].push({entry:re, branchOf:entry, cat:norm.cat, score:norm.score, bumpGrade:norm.bumpGrade, floored:norm.floored, unrecommended:null, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
   });
   // 闪光和不闪光的分数各算各的，但欧非分共用同一个分母(总捕捉数)——游戏里没有"闪光捕捉数"。
   // 分母下限用整盒只数(闪光+不闪光一起)：每一只都是抓来的，都占捕捉次数
   const totalBox = (typeof boxData!=='undefined') ? boxData.length : 0;
   const catches = userPrefs.pvpCatchTotal;
+  // 总榜：闪光+不闪光的条目直接合并成一个列表重新聚合。floorN(欧非分分母下限)两边传的
+  // 本来就是同一个 totalBox，合并后分母天然一致，不用另外算
   return {
+    all:    pvpAggregate(rows.normal.concat(rows.shiny), unrated.normal+unrated.shiny, boxCount.normal+boxCount.shiny, catches, totalBox),
     normal: pvpAggregate(rows.normal, unrated.normal, boxCount.normal, catches, totalBox),
     shiny:  pvpAggregate(rows.shiny,  unrated.shiny,  boxCount.shiny,  catches, totalBox),
     boxCount: totalBox
@@ -21456,8 +21635,9 @@ function pvpAvatarImg(name, shiny){
 // 分数可能带 .5（未来可期是半价分），整数就不显示小数点
 function pvpFmtScore(n){ return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10); }
 
-/* ---- 「我的战绩」视图。闪光/不闪光两套分完全独立，用页签切 ---- */
-var pvpShinyView = 'normal';   // 'normal' | 'shiny'
+/* ---- 「我的战绩」视图。闪光/不闪光两套分完全独立，用页签切；总榜是两边合并后重新聚合的第三种视角
+   （见 pvpBuildMyStats 的 all 字段），不是简单相加总分——同物种在两边各养一只时明细列表也要混排展示 ---- */
+var pvpShinyView = 'normal';   // 'all' | 'normal' | 'shiny'
 function pvpRenderMe(){
   const el = document.getElementById('pvpPaneMe'); if(!el) return;
   const all = pvpBuildMyStats();
@@ -21467,6 +21647,7 @@ function pvpRenderMe(){
   }
   const st = all[pvpShinyView];
   const segHtml = `<div class="pvp-seg">
+    <div class="pvp-seg-b${pvpShinyView==='all'?' active':''}" data-pvpshiny="all">总榜 ${pvpFmtScore(all.all.total)}分</div>
     <div class="pvp-seg-b${pvpShinyView==='normal'?' active':''}" data-pvpshiny="normal">不闪光 ${pvpFmtScore(all.normal.total)}分</div>
     <div class="pvp-seg-b${pvpShinyView==='shiny'?' active':''}" data-pvpshiny="shiny">✨闪光 ${pvpFmtScore(all.shiny.total)}分</div>
   </div>`;
@@ -21506,11 +21687,15 @@ function pvpRenderMe(){
   }).join('');
   const moreBtn = st.list.length > pvpListLimit
     ? `<button type="button" class="pvp-more-btn" id="pvpMoreBtn">还有 ${st.list.length-pvpListLimit} 只，展开更多</button>` : '';
-  const groupName = pvpShinyView==='shiny' ? '闪光' : '不闪光';
+  // groupTitle 用在"我的X战力"/"X明细"这类当形容词修饰的位置，总榜时用"总"；
+  // groupQualifier 用在"另有N只X判不出档位"这类限定句里，总榜本来就涵盖全部，留空更通顺
+  // （"另有N只总判不出档位"读不通，"另有N只判不出档位"才对）
+  const groupTitle = pvpShinyView==='all' ? '总' : (pvpShinyView==='shiny' ? '闪光' : '不闪光');
+  const groupQualifier = pvpShinyView==='all' ? '' : (pvpShinyView==='shiny' ? '闪光' : '不闪光');
   el.innerHTML = `
     ${segHtml}
     <div class="pvp-card">
-      <div class="pvp-card-t">我的${groupName}战力</div>
+      <div class="pvp-card-t">我的${groupTitle}战力</div>
       <div class="pvp-score-row">
         <div class="pvp-score-box">
           <div class="pvp-score-v">${pvpFmtScore(st.total)}</div>
@@ -21529,9 +21714,9 @@ function pvpRenderMe(){
       ${distHtml}
     </div>
     <div class="pvp-card">
-      <div class="pvp-card-t">${groupName}明细（${st.ratedCount} 只）</div>
-      <div class="isl-hint" style="margin-bottom:8px">每一只都单独计分，同物种养几只就加几份。盒子里另有 ${st.unrated} 只${groupName}判不出档位（副技能没选满、或组合本身判废），既不计分也不进均分的分母。</div>
-      ${st.list.length ? `<div class="pvp-list">${rowsHtml}</div>${moreBtn}` : `<div class="pvp-empty">还没有能判出档位的${groupName}宝可梦</div>`}
+      <div class="pvp-card-t">${groupTitle}明细（${st.ratedCount} 只）</div>
+      <div class="isl-hint" style="margin-bottom:8px">每一只都单独计分，同物种养几只就加几份。盒子里另有 ${st.unrated} 只${groupQualifier}判不出档位（副技能没选满、或组合本身判废），既不计分也不进均分的分母。</div>
+      ${st.list.length ? `<div class="pvp-list">${rowsHtml}</div>${moreBtn}` : `<div class="pvp-empty">还没有能判出档位的${groupQualifier}宝可梦</div>`}
     </div>`;
   el.querySelectorAll('[data-pvpshiny]').forEach(b=> b.onclick = ()=>{
     pvpShinyView = b.getAttribute('data-pvpshiny'); pvpListLimit = PVP_LIST_STEP; pvpRenderMe();
@@ -21588,6 +21773,9 @@ function pvpSnapshotRecords(){
         quarter: r.unrecommended ? 1 : 0,
         bump: r.bumpGrade ? 1 : 0,
         bumpGrade: r.bumpGrade || null,
+        // floor=1：这条的 score 是靠"效率≥果S帮M"地板分顶上去的35分（见 pvpFloorScoreFor），
+        // 不是档位表算出来的0分——后端要靠这一位知道该用哪条公式复核，见 pvp.js 的 want 计算
+        floor: r.floored ? 1 : 0,
         score: r.score, eff: r.eff,
         detail: JSON.stringify({
           nick: e.nickname || '', sel: e.selected || [],
@@ -21627,9 +21815,12 @@ function pvpRenderBoard(){
     el.innerHTML = `<div class="pvp-card"><div class="pvp-empty">排行榜要登录后才能看。<br>去「更多设置」登录一下。</div></div>`;
     return;
   }
-  const shiny = pvpShinyView==='shiny' ? 1 : 0;
+  // 总榜传给后端的是字符串 'all'（不是 0/1），boardColumn/handlePvpSpecies/handlePvpIndex
+  // 三处后端接口都认这个值——见 D:\土王智商高\后端\src\pvp.js
+  const shiny = pvpShinyView==='all' ? 'all' : (pvpShinyView==='shiny' ? 1 : 0);
   const head = `
     <div class="pvp-seg">
+      <div class="pvp-seg-b${pvpShinyView==='all'?' active':''}" data-pvpshiny="all">总榜</div>
       <div class="pvp-seg-b${pvpShinyView==='normal'?' active':''}" data-pvpshiny="normal">不闪光</div>
       <div class="pvp-seg-b${pvpShinyView==='shiny'?' active':''}" data-pvpshiny="shiny">✨闪光</div>
     </div>
@@ -21690,8 +21881,9 @@ function pvpRenderBoard(){
          <div class="pvp-score-box"><div class="pvp-score-v">${pvpFmt(d.me.percentile,0)}%</div><div class="pvp-score-k">百分位</div><div class="pvp-score-sub">超过了这么多人</div></div>
        </div>`
     : `<div class="isl-hint" style="margin-bottom:10px">你还没参加排行${isLuck?'，或者没填总捕捉数':''}，所以榜上没有你。去「设置」里打开。</div>`;
+  const boardTitle = pvpShinyView==='all' ? '总' : (pvpShinyView==='shiny' ? '闪光' : '不闪光');
   el.innerHTML = head + `<div class="pvp-card">
-      <div class="pvp-card-t">${pvpShinyView==='shiny'?'闪光':'不闪光'}${isLuck?'欧非榜':'总分榜'}（${d.participants} 人）</div>
+      <div class="pvp-card-t">${boardTitle}${isLuck?'欧非榜':'总分榜'}（${d.participants} 人）</div>
       ${meHtml}
       ${isLuck?`<div class="isl-hint" style="margin-bottom:8px">欧非分 ＝ 总分 ÷ 总捕捉数 × 100。分母是各人自填的，仅供娱乐。</div>`:''}
       ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
@@ -21779,11 +21971,16 @@ function pvpRenderSpecies(el, head, bind, shiny){
       const sizeM = r.name.match(/\(([^)]*)\)$/);
       const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
       const comboHtml = pvpRowComboHtml(r);
+      // 总榜(shiny==='all')下每行可能是闪光也可能不是（后端已经去掉闪光过滤，取的是这人这个
+      // 物种不分闪光的最好一条），头像该跟着这一行自己的 r.shiny 走，不能再用页面级的 shiny 变量
+      // （那样 'all' 字符串是真值，会把所有行都错误地画成闪光态）
+      const rowShiny = shiny==='all' ? !!r.shiny : !!shiny;
+      const shinyTag = shiny==='all' && r.shiny ? ' ✨' : '';
       return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
         <div class="pvp-row-rank">${r.rank}</div>
-        <div class="pvp-av">${pvpAvatarImg(r.name, shiny)}</div>
+        <div class="pvp-av">${pvpAvatarImg(r.name, rowShiny)}</div>
         <div class="pvp-row-main">
-          <div class="pvp-row-name">${who}</div>
+          <div class="pvp-row-name">${who}${shinyTag}</div>
           <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}${bumpNote}</div>
         </div>
         <span class="pvp-grade${isTerror?' pvp-grade-terror':''}"${isTerror?'':` style="background:${badgeColor}"`}>${label}</span>
@@ -21791,7 +21988,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
       </div>`;
     }).join('');
     el.innerHTML = head + backBtn + `<div class="pvp-card">
-      <div class="pvp-card-t">${spName}${shiny?'（闪光）':''}榜</div>
+      <div class="pvp-card-t">${spName}${shiny===1?'（闪光）':''}榜</div>
       <div class="isl-hint" style="margin-bottom:8px">每人只上榜自己最强的那一只，同分按效率值排。</div>
       ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">这只还没有人上榜</div>`}
     </div>`;
@@ -21816,9 +22013,12 @@ function pvpRenderSpecies(el, head, bind, shiny){
   // 南瓜精/南瓜怪人合并成一格后 s.name 是不带尺寸的族名，POKEMON_PORTRAITS 只认带后缀的
   // 全名，头像图单独接一个"(中)"去查图，跟格子里显示的族名文字互不影响
   const PVP_PUMPKIN_AVATAR = {'#710':'南瓜精(中)', '#711':'南瓜怪人(中)'};
+  // 这里的图只是物种网格的通用图标（不代表任何具体玩家），总榜(shiny==='all')下没有单一的
+  // 闪光/不闪光可言，固定给普通态图标——'all' 是字符串真值，不做特判会被误当成"要闪光图"
+  const iconShiny = shiny==='all' ? false : !!shiny;
   const gridHtml = (d.species||[]).map(s=>
     `<div class="pvp-sp" data-pvpdex="${s.dex}">
-       <div class="pvp-av">${pvpAvatarImg(PVP_PUMPKIN_AVATAR[s.dex]||s.name, shiny)}</div>
+       <div class="pvp-av">${pvpAvatarImg(PVP_PUMPKIN_AVATAR[s.dex]||s.name, iconShiny)}</div>
        <div class="pvp-sp-n">${s.name}</div>
        <div class="pvp-sp-c">${s.players} 人</div>
      </div>`).join('');
