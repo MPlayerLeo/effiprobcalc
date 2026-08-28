@@ -1146,6 +1146,9 @@
   /* 多选复选框：网格模式叠在头像右上角（原样不动，见上面 .box-grid-checkbox），
      列表模式改成行首独立一列，不再遮头像——用户反馈过窄屏下头像本来就小，勾选框叠上去点不准 */
   .box-grid.box-list-view .box-grid-checkbox{ position:static; flex:0 0 auto; margin:0; }
+  /* 列表模式对勾改紫色，跟这条列表复用的"大家的宝睡"配色（快速查找/修改面板按钮同款紫）呼应，
+     跟网格模式的主题色对勾区分开——纯粹是视觉指定，功能上跟网格模式那颗完全一样 */
+  .box-grid.box-list-view .box-grid-checkbox.checked{ background:#7a4f9e; border-color:#7a4f9e; }
   /* 睡饱饱奖章/联动徽章：网格模式叠在头像上（原样不动），列表模式挪到毕业等级左边，
      跟毕业等级牌子放在同一行尾——用小圆点/小图标而不是网格模式那种大角标，行内空间有限 */
   .box-list-badge{
@@ -2394,6 +2397,9 @@
   flex:0 0 auto; display:flex; gap:6px; padding:8px 10px;
   background:var(--panel); border-top:1px solid var(--line);
 }
+/* 左右两组各占一半可分配空间（flex:1 1 0，跟"+"的固定宽度无关），"+"夹在中间天然落在
+   正中央——不管登录态/圆形浮窗态怎么增减两侧按钮，两组宽度总是相等，"+"位置不会跟着挪动 */
+.box-act-group{ flex:1 1 0; min-width:0; display:flex; gap:6px; }
 .box-act-btn{
   flex:1 1 0; min-width:0; border:none; border-radius:9px; padding:9px 2px;
   font-size:12px; font-weight:800; color:#fff; cursor:pointer; line-height:1.15;
@@ -2588,6 +2594,17 @@
   display:flex; align-items:center; justify-content:center;
 }
 .pvp-av img{ width:100%; height:100%; object-fit:cover; }
+/* 闪光头像边框：跟站内其它彩虹流光元素同款渐变+shinyMove动画，边框宽度不变，只是把纯色换成流光——
+   用"透明边框+双层背景(padding-box纯色/border-box渐变)"这个经典技巧，不用额外套一层壳。
+   .box-grid-img-wrap（盒子列表模式头像）跟 .pvp-av 背景色/圆角刚好一样，共用同一条规则。 */
+.pvp-av.shiny-av-ring, .box-grid.box-list-view .box-grid-item .box-grid-img-wrap.shiny-av-ring{
+  border-color:transparent;
+  background-image: linear-gradient(#f4effa,#f4effa), linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+  background-size: auto, 400% 400%;
+  animation: shinyMove 2s linear infinite;
+}
 .pvp-row-main{ flex:1 1 auto; min-width:0; }
 .pvp-row-name{ font-size:12.5px; font-weight:800; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pvp-row-sub{ font-size:10.5px; font-weight:700; color:#8a8375; margin-top:1px; }
@@ -3892,12 +3909,16 @@
          统一并成这一条吸底按钮条。未登录5颗、登录后3颗（注册/登录撤掉），显隐由 renderBoxActionBar 控制 -->
     <div class="box-action-bar" id="boxActionBar">
       <div class="box-panel-mon-bubble" id="boxPanelMonBubble"></div>
-      <button type="button" class="box-act-btn box-act-viewtoggle" id="boxActViewToggleBtn"></button>
-      <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">快速查找</button>
-      <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
+      <div class="box-act-group box-act-group-l">
+        <button type="button" class="box-act-btn box-act-viewtoggle" id="boxActViewToggleBtn"></button>
+        <button type="button" class="box-act-btn box-act-more" id="boxActMoreBtn">快速查找</button>
+        <button type="button" class="box-act-btn box-act-register" id="boxActRegisterBtn">注册</button>
+      </div>
       <button type="button" class="box-act-btn box-act-create" id="boxActCreateBtn"><svg viewBox="0 0 24 24" width="20" height="20" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></button>
-      <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
-      <button type="button" class="box-act-btn box-act-panel" id="boxActPanelBtn">修改面板</button>
+      <div class="box-act-group box-act-group-r">
+        <button type="button" class="box-act-btn box-act-login" id="boxActLoginBtn">登录</button>
+        <button type="button" class="box-act-btn box-act-panel" id="boxActPanelBtn">修改面板</button>
+      </div>
     </div>
   </div>
   </div>
@@ -4711,8 +4732,8 @@ function checkIconSvg(color, strokeW, sizePx){
 function boxGridIconSvg(sizePx){
   const s = sizePx||18;
   return '<svg width="'+s+'" height="'+s+'" style="display:block" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="square" stroke-linejoin="miter">'+
-    '<rect x="3.5" y="3.5" width="7.5" height="7.5"/><rect x="13" y="3.5" width="7.5" height="7.5"/>'+
-    '<rect x="3.5" y="13" width="7.5" height="7.5"/><rect x="13" y="13" width="7.5" height="7.5"/></svg>';
+    '<rect x="2" y="2" width="8" height="8"/><rect x="14" y="2" width="8" height="8"/>'+
+    '<rect x="2" y="14" width="8" height="8"/><rect x="14" y="14" width="8" height="8"/></svg>';
 }
 function boxListIconSvg(sizePx){
   const s = sizePx||18;
@@ -17320,52 +17341,60 @@ function renderBoxPage(){
     const item = document.createElement('div');
     item.className = 'box-grid-item'+(entry.flagged?' box-grid-flagged':'');
     item.dataset.id = entry.id;
-    const asset = BOX_ASSET_MAP[entry.dex];
-    const imgWrap = document.createElement('div');
-    imgWrap.className = 'box-grid-img-wrap';
-    // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），素材自身的动画不受影响。
-    // v3.17 南瓜两族换成 gif 后这层壳对 gif 分支也要生效，所以提到两个分支外面统一处理
-    // （gif 分支要把 canvas 和 img 一起塞进壳里，否则静帧和播放态的缩放会对不上）
-    // 南瓜精/南瓜怪人小中大巨四档共用同一张原图，靠这个系数区分体型——两种模式都要保留；
-    // 等比显示模式下不再靠"壳+transform:scale"实现（那套是配合固定51:55框写的），改成
-    // 直接把系数乘进 boxApplyUniformSize 要撑开的像素宽高里，所以这个模式下不建那层壳
-    const pumpkinScale = PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
-    const uniformOn = !!userPrefs.boxUniformScaleOn;
-    let imgHost = imgWrap;
-    if(pumpkinScale && asset && !uniformOn){
-      const shell = document.createElement('div');
-      shell.className = 'box-pumpkin-scale';
-      shell.style.transform = 'scale('+pumpkinScale+')';
-      imgWrap.appendChild(shell);
-      imgHost = shell;
-    }
-    if(asset && asset.kind==='gif'){
-      const canvas = document.createElement('canvas');
-      canvas.className = 'box-grid-canvas';
-      const img = document.createElement('img');
-      img.className = 'box-grid-img';
-      img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
-      imgHost.appendChild(canvas);
-      imgHost.appendChild(img);
-      boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny), imgWrap, img, pumpkinScale);
-    } else if(asset && asset.kind==='png'){
-      const img = document.createElement('img');
-      img.className = 'box-grid-img';
-      img.src = boxAssetPath(entry.dex, entry.shiny);
-      if(uniformOn){
-        const applyPng = ()=> boxApplyUniformSize(imgWrap, null, img, img.naturalWidth, img.naturalHeight, pumpkinScale);
-        if(img.complete && img.naturalWidth) applyPng();
-        else img.addEventListener('load', applyPng, {once:true});
-      }
-      imgHost.appendChild(img);
-    } else {
-      // 没有素材（多半是 OCR 连物种都没认出来，dex 为空）：放个问号占位，别留一个空白格
-      const q = document.createElement('span');
-      q.className = 'box-grid-unknown';
-      q.textContent = '?';
-      imgWrap.appendChild(q);
-    }
     const isListView = userPrefs.boxViewMode==='list';
+    const imgWrap = document.createElement('div');
+    if(isListView){
+      // 列表模式头像直接用头像图（POKEMON_PORTRAITS），不走网格模式那套 gif/png 缩略精灵图——
+      // 缩略图是配合方块格子的像素画风格设计的，行内头像小，头像图更清楚也不用背 gif 解码开销。
+      // 闪光套彩虹流光环，跟 PVP 页头像同一条 .shiny-av-ring 规则。
+      imgWrap.className = 'box-grid-img-wrap'+(entry.shiny?' shiny-av-ring':'');
+      imgWrap.innerHTML = pvpAvatarImg(entry.name, entry.shiny);
+    } else {
+      const asset = BOX_ASSET_MAP[entry.dex];
+      imgWrap.className = 'box-grid-img-wrap';
+      // v3.16 南瓜按尺寸缩放：套一层只负责缩放的壳（底部对齐），素材自身的动画不受影响。
+      // v3.17 南瓜两族换成 gif 后这层壳对 gif 分支也要生效，所以提到两个分支外面统一处理
+      // （gif 分支要把 canvas 和 img 一起塞进壳里，否则静帧和播放态的缩放会对不上）
+      // 南瓜精/南瓜怪人小中大巨四档共用同一张原图，靠这个系数区分体型——两种模式都要保留；
+      // 等比显示模式下不再靠"壳+transform:scale"实现（那套是配合固定51:55框写的），改成
+      // 直接把系数乘进 boxApplyUniformSize 要撑开的像素宽高里，所以这个模式下不建那层壳
+      const pumpkinScale = PUMPKIN_BOX_SCALE_BY_DEX[entry.dex];
+      const uniformOn = !!userPrefs.boxUniformScaleOn;
+      let imgHost = imgWrap;
+      if(pumpkinScale && asset && !uniformOn){
+        const shell = document.createElement('div');
+        shell.className = 'box-pumpkin-scale';
+        shell.style.transform = 'scale('+pumpkinScale+')';
+        imgWrap.appendChild(shell);
+        imgHost = shell;
+      }
+      if(asset && asset.kind==='gif'){
+        const canvas = document.createElement('canvas');
+        canvas.className = 'box-grid-canvas';
+        const img = document.createElement('img');
+        img.className = 'box-grid-img';
+        img.style.visibility = 'hidden'; // 跟boxSetGridItemPlaying统一用visibility，不用display
+        imgHost.appendChild(canvas);
+        imgHost.appendChild(img);
+        boxDrawFrozenFrame(canvas, boxAssetPath(entry.dex, entry.shiny), imgWrap, img, pumpkinScale);
+      } else if(asset && asset.kind==='png'){
+        const img = document.createElement('img');
+        img.className = 'box-grid-img';
+        img.src = boxAssetPath(entry.dex, entry.shiny);
+        if(uniformOn){
+          const applyPng = ()=> boxApplyUniformSize(imgWrap, null, img, img.naturalWidth, img.naturalHeight, pumpkinScale);
+          if(img.complete && img.naturalWidth) applyPng();
+          else img.addEventListener('load', applyPng, {once:true});
+        }
+        imgHost.appendChild(img);
+      } else {
+        // 没有素材（多半是 OCR 连物种都没认出来，dex 为空）：放个问号占位，别留一个空白格
+        const q = document.createElement('span');
+        q.className = 'box-grid-unknown';
+        q.textContent = '?';
+        imgWrap.appendChild(q);
+      }
+    }
     let checkboxEl = null;
     if(boxSelectMode){
       checkboxEl = document.createElement('div');
@@ -21534,7 +21563,7 @@ function pvpLuckScore(total, floorN, catchCount){
   return {score: total/n*100, denom:n, reason:null};
 }
 function pvpAggregate(rows, unrated, boxCount, catchCount, floorN){
-  const list = rows.slice().sort((a,b)=> (b.score-a.score) || (b.eff-a.eff));
+  const list = rows.slice().sort((a,b)=> (b.score-a.score) || ((b.shiny?1:0)-(a.shiny?1:0)) || (b.eff-a.eff));
   const total = list.reduce((s,r)=> s+r.score, 0);
   const dist = new Map();        // 档位名 -> 只数（未来半价的单独归一类）
   list.forEach(r=>{
@@ -21631,13 +21660,15 @@ function pvpAvatarImg(name, shiny){
   const b64 = pair ? (shiny ? pair[1] : pair[0]) : null;
   return b64 ? `<img src="data:image/webp;base64,${b64}" alt="${name}">` : `<span class="cap-portrait-q">?</span>`;
 }
+// 头像外框 class：闪光一律加彩虹流光环（见 .shiny-av-ring），全站头像统一走这一条
+function pvpAvClass(shiny){ return 'pvp-av'+(shiny?' shiny-av-ring':''); }
 
 // 分数可能带 .5（未来可期是半价分），整数就不显示小数点
 function pvpFmtScore(n){ return Number.isInteger(n) ? String(n) : String(Math.round(n*10)/10); }
 
 /* ---- 「我的战绩」视图。闪光/不闪光两套分完全独立，用页签切；总榜是两边合并后重新聚合的第三种视角
    （见 pvpBuildMyStats 的 all 字段），不是简单相加总分——同物种在两边各养一只时明细列表也要混排展示 ---- */
-var pvpShinyView = 'normal';   // 'all' | 'normal' | 'shiny'
+var pvpShinyView = 'all';   // 'all' | 'normal' | 'shiny'
 function pvpRenderMe(){
   const el = document.getElementById('pvpPaneMe'); if(!el) return;
   const all = pvpBuildMyStats();
@@ -21675,7 +21706,7 @@ function pvpRenderMe(){
     const branchBtn = needsPick ? `<button type="button" class="pvp-branch-btn" data-branchid="${r.branchOf.id}">选分支</button>` : '';
     return `<div class="pvp-row">
       <div class="pvp-row-rank">${i+1}</div>
-      <div class="pvp-av">${pvpAvatarImg(e.name, e.shiny)}</div>
+      <div class="${pvpAvClass(e.shiny)}">${pvpAvatarImg(e.name, e.shiny)}</div>
       <div class="pvp-row-main">
         <div class="pvp-row-name">${nm}</div>
         <div class="pvp-row-sub">Lv.${e.level}${subExtra}${needsPick?' · 分支进化按默认计分':''}</div>
@@ -21734,7 +21765,7 @@ function pvpBranchBubbleHtml(entry){
     const rec = POKEMON_DEX_DATA.find(r=>r[0]===dex);
     const name = rec ? rec[1] : dex;
     return `<div class="pvp-branch-opt" data-branchdex="${dex}">
-      <div class="pvp-av">${pvpAvatarImg(name, entry.shiny)}</div>
+      <div class="${pvpAvClass(entry.shiny)}">${pvpAvatarImg(name, entry.shiny)}</div>
       <span>${name}</span>
     </div>`;
   }).join('')}</div>`;
@@ -21867,7 +21898,7 @@ function pvpRenderBoard(){
     const avShow = r.isMe || showNames;
     return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
       <div class="pvp-row-rank">${r.rank}</div>
-      <div class="pvp-av">${avShow ? pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny) : `<span class="cap-portrait-q">?</span>`}</div>
+      <div class="${avShow ? pvpAvClass(r.avatarShiny) : 'pvp-av'}">${avShow ? pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny) : `<span class="cap-portrait-q">?</span>`}</div>
       <div class="pvp-row-main">
         <div class="pvp-row-name">${who}</div>
         <div class="pvp-row-sub">${r.rated} 只计分${isLuck?(' · 分母 '+r.catchTotal):''}</div>
@@ -21978,7 +22009,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
       const shinyTag = shiny==='all' && r.shiny ? ' ✨' : '';
       return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
         <div class="pvp-row-rank">${r.rank}</div>
-        <div class="pvp-av">${pvpAvatarImg(r.name, rowShiny)}</div>
+        <div class="${pvpAvClass(rowShiny)}">${pvpAvatarImg(r.name, rowShiny)}</div>
         <div class="pvp-row-main">
           <div class="pvp-row-name">${who}${shinyTag}</div>
           <div class="pvp-row-sub">Lv.${r.level} · 效率 ${pvpFmt(r.eff,3)}${comboHtml}${sizeTag}${bumpNote}</div>
