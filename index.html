@@ -14054,7 +14054,7 @@ async function runOcrOnFile(file, silent){
       closeOcrReview();
       openDashboard();
     }
-    return {ok:true, pkRec, nameRawText:(nameRes&&nameRes.data&&nameRes.data.text)||'', personaName, personaInc, personaDec, skillMatches, candidates: pkRec?null:ocrPortraitCandidates};
+    return {ok:true, pkRec, nameRawText:(nameRes&&nameRes.data&&nameRes.data.text)||'', personaName, personaInc, personaDec, skillMatches, candidates: pkRec?null:ocrPortraitCandidates, ocrLevel};
   }catch(err){
     statusEl.textContent = '识别出错：'+err.message+'（可以直接关闭重试，或换一张更清晰的截图）';
     console.error(err);
@@ -19134,6 +19134,13 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     state.selectedDex = null; state.pkSearchText = '';
     state.ocrCandidates = null; // 每张图都从干净状态开始，不带上一张的候选
     state.ingChoice2 = null; state.ingChoice3 = null;
+    // shiny/level 以前没在这里重置：runOcrOnFile 只在"头像高置信度直接判定"这一条路径上才会写
+    // state.shiny，主技能/食材裁判、名字OCR、签名反查这几条兜底路径全都不碰它（本意是"没把握
+    // 就别动"，见 runOcrOnFile 里那条注释），但没把握≠该保留上一张图的判定——不重置就会把上一只
+    // 的闪光状态错认成这一只的。同理 state.level 只在识别出物种时才会被覆盖（默认档位或OCR等级），
+    // 认不出物种时会原样保留上一张的等级，摆到候选头像面板里显得很怪。这里统一先归零。
+    state.shiny = false;
+    state.level = 1;
     let res;
     try{ res = await runOcrOnFile(files[i], true); }catch(err){ res = {ok:false, error:err}; }
     if(!res.ok){ problems.push({rawName:'', speciesMatched:false, snap:boxSnapshotFromState()}); continue; }
@@ -19143,9 +19150,12 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
     const foodUnclear = state.selectedDex && (typeof CAP_DEX!=='undefined') && (()=>{
       const capRow = boxCapRowFor(state.selectedDex);
       const isFoodMon = capRow && (capRow.ingA||capRow.ingB||capRow.ingC);
-      return isFoodMon && !state.ingChoice2;
+      return isFoodMon && (!state.ingChoice2 || !state.ingChoice3); // 30级/60级两个食材槽都要认清，之前漏查了60级槽(ingChoice3)
     })();
-    const isProblem = !speciesMatched || skillCount<5 || !personaOk || foodUnclear;
+    // 等级弃权（字形模板法+OCR+锁定徽章区间三条都拿不准）时 res.ocrLevel 是 null，
+    // 这时 state.level 用的是按类型给的默认档位（60/70/50），是纯猜的，不能悄悄当"读对了"放行
+    const levelUnclear = speciesMatched && res.ocrLevel==null;
+    const isProblem = !speciesMatched || skillCount<5 || !personaOk || foodUnclear || levelUnclear;
     const snap = boxSnapshotFromState();
     // 认出物种的直接用种族名；没认出来的说明名字这块本来就没读准，不再拿 OCR 原始文字凑昵称，
     // 直接留空，交给用户在盒子里手动填——总比存一串乱码强
@@ -19161,16 +19171,22 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
   Object.assign(state, prevState);
   overlay.style.display = 'none';
 
-  // 完美识别的直接静默入盒
+  // 完美识别的直接静默入盒。盒子满了会静默 return——这里跟 pscSyncBox 一样记一下丢了几个，
+  // 不然满了之后的截图就凭空消失，用户毫无察觉（其它入盒路径全都会弹"盒子已满"提示，这条不该是例外）
+  let droppedForFull = 0;
   goods.forEach(g=>{
-    if(boxData.length>=BOX_MAX_COUNT) return;
+    if(boxData.length>=BOX_MAX_COUNT){ droppedForFull++; return; }
     const entry = Object.assign({id:genBoxId(), nickname:g.nickname||g.snap.name, addedAt:Date.now(), flagged:false}, g.snap);
     boxData.push(entry);
   });
   saveBoxData();
 
+  const remindFull = ()=>{
+    if(droppedForFull>0) alert('宝可梦盒已满（'+BOX_MAX_COUNT+'只上限），本次有 '+droppedForFull+' 张截图没能存进去，建议先清理一些再重传。');
+  };
   if(problems.length===0){
     renderAll(); renderBoxPage();
+    remindFull();
     return;
   }
   // 有问题的面板：存入盒子并标红。其中没认出种族的那些自动弹批量修改种族浮窗，改完（或点了取消）
@@ -19179,7 +19195,7 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
   const speciesUndetectedIds = [];
   const candidatesById = {};
   problems.forEach(p=>{
-    if(boxData.length>=BOX_MAX_COUNT) return;
+    if(boxData.length>=BOX_MAX_COUNT){ droppedForFull++; return; }
     const entry = Object.assign({id:genBoxId(), nickname:p.nickname||p.snap.name||'', addedAt:Date.now(), flagged:true}, p.snap);
     boxData.push(entry);
     flaggedIds.push(entry.id);
@@ -19193,7 +19209,10 @@ document.getElementById('boxBatchUploadFileInput').addEventListener('change', as
   renderBoxPage();
   const remindRemainingIssues = ()=>{
     const stillFlagged = flaggedIds.filter(id=>{ const e=boxGetEntry(id); return e && e.flagged; }).length;
-    if(stillFlagged>0) alert('本次上传中有 '+stillFlagged+' 只宝可梦识别可能有问题，已用红色底色标记在盒子里，请逐个检查修改。');
+    const msgs = [];
+    if(stillFlagged>0) msgs.push('本次上传中有 '+stillFlagged+' 只宝可梦识别可能有问题，已用红色底色标记在盒子里，请逐个检查修改。');
+    if(droppedForFull>0) msgs.push('宝可梦盒已满（'+BOX_MAX_COUNT+'只上限），本次有 '+droppedForFull+' 张截图没能存进去，建议先清理一些再重传。');
+    if(msgs.length) alert(msgs.join('\n\n'));
   };
   if(speciesUndetectedIds.length){
     openBoxSpeciesEditModal(speciesUndetectedIds, {onDone: remindRemainingIssues, candidatesById});
