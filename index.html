@@ -2587,6 +2587,18 @@
   padding:7px 13px; font-size:13px; font-weight:800; color:var(--accent-dk);
 }
 .mf-sub-title{ font-size:16px; font-weight:900; color:var(--ink); }
+/* 标题栏右侧的快捷开关：跟设置页里那颗 .mf-switch 同一个类，样式全部复用，
+   只是靠 margin-left:auto 被推到 .mf-sub-head 这个 flex 行的最右侧 */
+.mf-sub-head-switch{ margin-left:auto; }
+/* 更多功能首页条目右侧的"是否加入"小圆点状态：跟条目本身共用一次点击热区，
+   纯展示不拦截点击，所以不用管 pointer-events */
+.mf-hub-status{
+  flex:0 0 auto; display:flex; align-items:center; gap:5px;
+  font-size:11px; font-weight:800; color:#9a9484; white-space:nowrap; margin-right:2px;
+}
+.mf-hub-status.on{ color:#3f9a52; }
+.mf-hub-status-dot{ width:7px; height:7px; border-radius:50%; background:#cfc9bb; flex:0 0 auto; }
+.mf-hub-status-dot.on{ background:#3f9a52; }
 
 /* ============ v3.28 土王PVP ============ */
 /* 代码里的标识符一律保留 pvp 前缀（函数、CSS 类、/api/pvp 接口、数据库表名都是），
@@ -3414,6 +3426,7 @@
           <span class="mf-hub-t">土王PVP</span>
           <span class="mf-hub-d">直接读你的宝可梦盒算出战力总分，看看自己在大家里排第几</span>
         </span>
+        <span class="mf-hub-status" id="mfHubPvpStatus"></span>
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-mfsub="friend">
@@ -3422,6 +3435,7 @@
           <span class="mf-hub-t">土王好友帖</span>
           <span class="mf-hub-d">交友大厅认识新朋友，登记好友码、选糖要求和常驻岛屿</span>
         </span>
+        <span class="mf-hub-status" id="mfHubFriendStatus"></span>
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-mfsub="spwr">
@@ -3694,6 +3708,7 @@
     <div class="mf-sub-head">
       <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
       <span class="mf-sub-title">土王PVP</span>
+      <div class="mf-switch mf-sub-head-switch" id="pvpJoinSwitchTop" title="参加排行"></div>
     </div>
     <div class="pvp-disclaimer">
       <span>⚠️</span>
@@ -3712,6 +3727,7 @@
     <div class="mf-sub-head">
       <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
       <span class="mf-sub-title">土王好友帖</span>
+      <div class="mf-switch mf-sub-head-switch" id="friendJoinSwitchTop" title="加入大厅"></div>
     </div>
     <div class="isl-tabs" id="friendTabs"></div>
     <div id="friendPaneHall"></div>
@@ -5118,12 +5134,15 @@ function startLevelCustomInput(cb, real, onPick){
   inp.focus(); inp.select();
 }
 function windowSizeOf(level){ if(level===50||level===60) return 3; return level===70?4:5; }
-// 能量型70/80档"毕业判定"专用：只吃面板（副技能选择）本身，不吃纯等级带来的树果/固定技能产出天然增长。
-// 树果能量(pokemonFruitEAtLevel)随等级涨，但技能固定产出型能量宝可梦(音波龙系等)的技能伤害不随等级变，
-// 同一面板换个等级档位效率值会自己涨，直接拿真实等级算效率会导致"什么都没多选就跳档"，
-// 跟"判定只看面板"的初衷矛盾。统一按70级的树果/技能产出基准算效率去跟50级门槛比，
-// 80级多出来的第5技能槽只有真被用上(改变sums)时才会让判定变化。50/60/70级不受影响，原样返回。
-function energyGradeBasisLevel(level){ return level===80 ? 70 : level; }
+// 能量型60/70/80档"毕业判定"专用：只吃面板（副技能选择）本身，不吃纯等级带来的树果/固定技能产出天然增长。
+// 树果能量(pokemonFruitEAtLevel)随等级涨，但技能固定产出型能量宝可梦(音波龙/太阳伊布/电龙等)的技能伤害不随等级变，
+// 这两块此消彼长的比例会随等级变，同一面板换个等级档位效率值会自己涨，直接拿真实等级算效率会导致
+// "什么都没多选就跳档"，跟"判定只看面板"的初衷矛盾——而且这个判定的门槛数组(getEnergyDistinctValues的
+// arr50)本来就是固定在50级population上算出来的，跟它比较的效率值理应用同一套50级基准算，否则就是拿
+// 不同尺子比。之前这里只把80映射回70，70/60自己相对50的天然增长没堵上，同一个bug换个等级档位还会再犯
+// 一次（2026-08-30：太阳伊布70级从"金帮毕业"跳到"金帮超级毕业"，面板没多选任何技能）。
+// 60/70/80 多出来的技能槽只有真被用上(改变sums)时才会让判定变化，50级原样返回。
+function energyGradeBasisLevel(level){ return level>50 ? 50 : level; }
 // f 字段是这次给捕捉推荐页"加入面板"新加的（食材概率副技能实际影响食材产量要用到）；
 // 老调用点都不读 .f，加这个字段不影响它们
 function sumsToFloat(sums){ return {h: Number(sums.h.n)/Number(sums.h.d), f: Number(sums.f.n)/Number(sums.f.d), s: Number(sums.s.n)/Number(sums.s.d), hasFruit: sums.hasFruit}; }
@@ -10264,7 +10283,10 @@ function renderGraduation(pfx){
       let hasHelper80=false; for(let i=0;i<5;i++){ if(labels[i]==='G2'){hasHelper80=true;break;} }
       const sums70 = sumsToFloat(windowSums(labels,4));
       const sums80 = sumsToFloat(windowSums(labels,5));
-      const eff70 = computeEnergyEfficiency(pk, sums70, persona, 70, options);
+      // 这两处以前直接写死 70/energyGradeBasisLevel(80)，70 那处没走 energyGradeBasisLevel()，
+      // energyGradeBasisLevel(70) 从"原样返回70"改成"统一压回50"之后这里也得跟着换，
+      // 不然函数改了、这个硬编码调用点还是老样子，bug 换个位置继续存在
+      const eff70 = computeEnergyEfficiency(pk, sums70, persona, energyGradeBasisLevel(70), options);
       const eff80 = computeEnergyEfficiency(pk, sums80, persona, energyGradeBasisLevel(80), options);
       const grade70 = energyGradeFrom50Boundary(state.energyPokemon, eff70, options, hasHelper70);
       const grade80 = energyGradeFrom50Boundary(state.energyPokemon, eff80, options, hasHelper80);
@@ -10905,6 +10927,8 @@ function fmtFillTime(sec){
 }
 // 个性设置必须等上面的 userPrefs/PREFS_* 声明求值完再读，不能提到脚本更早的位置（const/let 有暂时性死区）
 loadUserPrefs();
+// 更多功能首页一打开就该看到「已加入/未加入」的准确状态，不用等用户先点进 PVP/好友帖子页
+if(typeof mfRenderHubStatus==='function') mfRenderHubStatus();
 
 function renderYieldAnalysis(pfx){
   pfx = pfx || '';
@@ -19402,6 +19426,30 @@ function mfShowSub(sub){
   // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
   updatePageActionBar();
   if(typeof syncViewHash==='function') syncViewHash();
+  mfRenderHubStatus();
+}
+// 更多功能首页条目右侧的「已加入/未加入」小圆点：PVP 那颗是本地 userPrefs，直接读；
+// 好友帖那颗要看服务器上的 inHall，草稿还没拉过就顺带拉一次，拉完再补渲染一遍。
+// 每次进/出任何子页（mfShowSub）都会跑一遍，够用了，不用单独监听状态变化。
+function mfRenderHubStatus(){
+  const pvpEl = document.getElementById('mfHubPvpStatus');
+  if(pvpEl){
+    const on = !!userPrefs.pvpJoinOn;
+    pvpEl.classList.toggle('on', on);
+    pvpEl.innerHTML = `<span class="mf-hub-status-dot${on?' on':''}"></span>${on?'已加入':'未加入'}`;
+  }
+  const frEl = document.getElementById('mfHubFriendStatus');
+  if(frEl){
+    if(friendDraft==null){
+      frEl.classList.remove('on');
+      frEl.innerHTML = `<span class="mf-hub-status-dot"></span>未加入`;
+      if(authLoggedIn() && !friendMeLoading) friendLoadMe().then(mfRenderHubStatus);
+    }else{
+      const on = !!friendDraft.inHall;
+      frEl.classList.toggle('on', on);
+      frEl.innerHTML = `<span class="mf-hub-status-dot${on?' on':''}"></span>${on?'已加入':'未加入'}`;
+    }
+  }
 }
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
   btn.onclick = ()=> mfShowSub(btn.getAttribute('data-mfsub'));
@@ -22228,6 +22276,35 @@ function pvpWireSpeciesBack(){
   if(b) b.onclick = ()=>{ pvpSpeciesSel = null; pvpSpeciesCache = null; pvpRenderBoard(); };
 }
 
+// 标题栏那颗快捷开关跟设置卡片里的 pvpJoinSwitch 是同一份状态，两处共用这一份逻辑，
+// 避免各自维护一套「先乐观切换、失败再靠重渲染纠正」的样板代码
+async function pvpToggleJoin(){
+  if(!authLoggedIn()){ alert('参加排行需要先登录（在「更多设置」里）。'); return; }
+  const want = !userPrefs.pvpJoinOn;
+  document.querySelectorAll('#pvpJoinSwitch, #pvpJoinSwitchTop').forEach(s=> s.classList.toggle('on', want));
+  const hint = document.getElementById('pvpJoinHint');
+  if(hint) hint.textContent = want ? '上传中…' : '退出中…';
+  try{
+    // 先跟服务器确认成功再落本地开关。反过来的话网络一失败，本地显示"已参加"
+    // 而库里其实没有你，用户以为自己在榜上、实际没有——这个方向的错更难发现
+    if(want) await pvpPushMine(); else await pvpLeaveBoard();
+    userPrefs.pvpJoinOn = want;
+    saveUserPrefs();
+    pvpBoardCache = null;
+  }catch(e){
+    alert((want?'加入排行失败：':'退出排行失败：') + (e.message||'出错了'));
+  }
+  pvpRenderSet(); pvpRenderBoard();
+  // 失败时 userPrefs.pvpJoinOn 没变，这一句会把标题栏开关纠正回真实状态
+  // （设置卡片里那颗已经在上面 pvpRenderSet() 里跟着 userPrefs 重新渲染过了）
+  pvpSyncJoinSwitchTop();
+  if(typeof mfRenderHubStatus==='function') mfRenderHubStatus();
+}
+function pvpSyncJoinSwitchTop(){
+  const top = document.getElementById('pvpJoinSwitchTop');
+  if(top) top.classList.toggle('on', !!userPrefs.pvpJoinOn);
+}
+
 /* ---- 「设置」视图：参加排行 + 是否显示人名 ---- */
 function pvpRenderSet(){
   const el = document.getElementById('pvpPaneSet'); if(!el) return;
@@ -22282,24 +22359,7 @@ function pvpRenderSet(){
       </div>
     </div>`;
   const js = document.getElementById('pvpJoinSwitch');
-  if(js) js.onclick = async ()=>{
-    if(!authLoggedIn()){ alert('参加排行需要先登录（在「更多设置」里）。'); return; }
-    const want = !userPrefs.pvpJoinOn;
-    js.classList.toggle('on', want);
-    const hint = document.getElementById('pvpJoinHint');
-    if(hint) hint.textContent = want ? '上传中…' : '退出中…';
-    try{
-      // 先跟服务器确认成功再落本地开关。反过来的话网络一失败，本地显示"已参加"
-      // 而库里其实没有你，用户以为自己在榜上、实际没有——这个方向的错更难发现
-      if(want) await pvpPushMine(); else await pvpLeaveBoard();
-      userPrefs.pvpJoinOn = want;
-      saveUserPrefs();
-      pvpBoardCache = null;
-    }catch(e){
-      alert((want?'加入排行失败：':'退出排行失败：') + (e.message||'出错了'));
-    }
-    pvpRenderSet(); pvpRenderBoard();
-  };
+  if(js) js.onclick = pvpToggleJoin;
   const ns = document.getElementById('pvpNamesSwitch');
   if(ns) ns.onclick = ()=>{
     userPrefs.pvpShowNamesOn = !(userPrefs.pvpShowNamesOn !== false);
@@ -22339,7 +22399,9 @@ function pvpRenderAll(){
   if(pvpPane==='me') pvpRenderMe();
   else if(pvpPane==='board') pvpRenderBoard();
   else pvpRenderSet();
+  pvpSyncJoinSwitchTop();
 }
+document.getElementById('pvpJoinSwitchTop').onclick = pvpToggleJoin;
 
 /* ============ v3.29 土王好友帖 ============
    两个页签：交友大厅(读别人的资料，可按选糖要求/常驻岛屿筛选)、信息设置(填自己的资料并保存)。
@@ -22420,6 +22482,16 @@ function friendRenderSet(){
       </div>
     </div>
     <div class="friend-card">
+      <div class="mf-toggle-row">
+        <div>
+          <div class="mf-toggle-label">加入大厅</div>
+          <div class="mf-toggle-hint" id="friendInHallHint">${d.inHall?'已投放到交友大厅':'未加入（默认）'}</div>
+        </div>
+        <div class="mf-switch${d.inHall?' on':''}" id="friendInHallSwitch"></div>
+      </div>
+      <div class="isl-hint" style="margin-top:9px">打开后，上面这些信息（含头像、用户名、好友码）会展示在交友大厅里，任何人都能看到并一键复制你的好友码。关掉即从大厅移除，但已填的内容会保留，方便下次直接重新打开。</div>
+    </div>
+    <div class="friend-card">
       <div class="friend-card-t">我的信息</div>
       <div class="mf-toggle-row" style="margin-bottom:14px;">
         <div>
@@ -22437,16 +22509,6 @@ function friendRenderSet(){
         <div class="spwr-isl-grid" id="friendIslGrid">${islGrid}</div>
       </div>
     </div>
-    <div class="friend-card">
-      <div class="mf-toggle-row">
-        <div>
-          <div class="mf-toggle-label">加入大厅</div>
-          <div class="mf-toggle-hint" id="friendInHallHint">${d.inHall?'已投放到交友大厅':'未加入（默认）'}</div>
-        </div>
-        <div class="mf-switch${d.inHall?' on':''}" id="friendInHallSwitch"></div>
-      </div>
-      <div class="isl-hint" style="margin-top:9px">打开后，上面这些信息（含头像、用户名、好友码）会展示在交友大厅里，任何人都能看到并一键复制你的好友码。关掉即从大厅移除，但已填的内容会保留，方便下次直接重新打开。</div>
-    </div>
     <button type="button" class="friend-save-btn" id="friendSaveBtn">保存设置</button>
     ${d.loadError ? `<div class="isl-hint" style="margin-top:8px;color:#c0392b">上次加载失败：${d.loadError}</div>` : ''}
   `;
@@ -22455,6 +22517,9 @@ function friendRenderSet(){
   };
   document.getElementById('friendInHallSwitch').onclick = ()=>{
     d.inHall = !d.inHall; friendRenderSet();
+    // 这里改的和标题栏快捷开关是同一个 d.inHall，顺带同步一下，
+    // 不然标题栏会一直显示上次真正保存过的状态，跟这张卡片上刚翻好的草稿对不上
+    friendSyncJoinSwitchTop();
   };
   document.getElementById('friendDaysInput').oninput = (e)=>{
     const n = Math.max(0, Math.min(9999, Math.floor(Number(e.target.value))||0));
@@ -22491,6 +22556,8 @@ function friendRenderSet(){
       }});
       friendHallCache = null; // 大厅列表可能因为这次保存而变化，下次打开重新拉
       showBoxToastOk('已保存');
+      friendSyncJoinSwitchTop();
+      if(typeof mfRenderHubStatus==='function') mfRenderHubStatus();
     }catch(e){
       alert('保存失败：'+(e.message||'出错了'));
     }
@@ -22595,6 +22662,40 @@ function friendRenderTabs(){
   el.innerHTML = FRIEND_TABS.map(t=> `<div class="isl-tab${friendPane===t[0]?' active':''}" data-friendtab="${t[0]}">${t[1]}</div>`).join('');
   el.querySelectorAll('[data-friendtab]').forEach(t=> t.onclick = ()=>{ friendPane = t.getAttribute('data-friendtab'); friendRenderAll(); });
 }
+var friendHallTopBusy = false;
+// 标题栏那颗「加入大厅」快捷开关：跟「信息设置」页里那颗不一样——那颗只改草稿，
+// 要点「保存设置」才真正提交；这颗是给"只想快速开关，不想进设置页填资料"的场景用的，
+// 点了立刻把当前草稿（如果还没拉过就先拉一次）整份 PUT 上去，跟土王PVP的「参加排行」一个模式。
+// 副作用：如果用户正在「信息设置」页改资料改到一半还没点保存，这里会连带把那些未保存的改动一起提交——
+// 这是「同一份草稿对象、两个入口」的必然结果，不算 bug，跟点了保存按钮是一回事。
+async function friendToggleHallTop(){
+  if(!authLoggedIn()){ alert('加入大厅需要先登录（在「更多设置」里）。'); return; }
+  if(friendHallTopBusy) return;
+  friendHallTopBusy = true;
+  try{
+    if(friendDraft==null) await friendLoadMe();
+    const d = friendDraft;
+    const want = !d.inHall;
+    const top = document.getElementById('friendJoinSwitchTop');
+    if(top) top.classList.toggle('on', want);
+    await authApi('/api/friend/me', {method:'PUT', auth:true, body:{
+      friendCode: d.friendCode, candyPref: d.candyPref, loginDays: d.loginDays, islands: d.islands, inHall: want,
+      avatarDex: userPrefs.avatarDex || null, avatarShiny: !!userPrefs.avatarShiny,
+    }});
+    d.inHall = want;
+    friendHallCache = null; // 大厅列表可能因为这次保存而变化，下次打开重新拉
+  }catch(e){
+    alert('切换加入大厅失败：'+(e.message||'出错了'));
+  }
+  friendHallTopBusy = false;
+  friendSyncJoinSwitchTop();
+  if(friendPane==='set') friendRenderSet();
+  if(typeof mfRenderHubStatus==='function') mfRenderHubStatus();
+}
+function friendSyncJoinSwitchTop(){
+  const top = document.getElementById('friendJoinSwitchTop');
+  if(top) top.classList.toggle('on', !!(friendDraft && friendDraft.inHall));
+}
 function friendRenderAll(){
   friendRenderTabs();
   const hall = document.getElementById('friendPaneHall'), set = document.getElementById('friendPaneSet');
@@ -22602,7 +22703,14 @@ function friendRenderAll(){
   hall.style.display = friendPane==='hall' ? '' : 'none';
   set.style.display = friendPane==='set' ? '' : 'none';
   if(friendPane==='hall') friendRenderHall(); else friendRenderSet();
+  // 「信息设置」页签自己会在 friendRenderSet 里触发加载；「交友大厅」页签也要顺带把草稿拉回来，
+  // 不然标题栏那颗快捷开关会一直停在初始的「未加入」样子，直到用户点进「信息设置」
+  if(friendPane==='hall' && friendDraft==null && authLoggedIn() && !friendMeLoading){
+    friendLoadMe().then(()=>{ friendSyncJoinSwitchTop(); if(typeof mfRenderHubStatus==='function') mfRenderHubStatus(); });
+  }
+  friendSyncJoinSwitchTop();
 }
+document.getElementById('friendJoinSwitchTop').onclick = friendToggleHallTop;
 
 /* ============ v3.30 睡意之力计算 ============
    给定岛屿 + 组队规模(3~8只)，玩家私人贡献的"当前睡意之力"落在哪个能量区间对应多少分(0~100)，
