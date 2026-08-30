@@ -2588,8 +2588,10 @@
 }
 .mf-sub-title{ font-size:16px; font-weight:900; color:var(--ink); }
 /* 标题栏右侧的快捷开关：跟设置页里那颗 .mf-switch 同一个类，样式全部复用，
-   只是靠 margin-left:auto 被推到 .mf-sub-head 这个 flex 行的最右侧 */
-.mf-sub-head-switch{ margin-left:auto; }
+   外面套一层 wrap 靠 margin-left:auto 被推到 .mf-sub-head 这个 flex 行的最右侧，
+   wrap 里再放一个文字标签说明这颗开关是干嘛的 */
+.mf-sub-head-switch-wrap{ margin-left:auto; display:flex; align-items:center; gap:7px; }
+.mf-sub-head-switch-label{ font-size:12px; font-weight:800; color:#9a9484; white-space:nowrap; }
 /* 更多功能首页条目右侧的"是否加入"小圆点状态：跟条目本身共用一次点击热区，
    纯展示不拦截点击，所以不用管 pointer-events */
 .mf-hub-status{
@@ -3708,7 +3710,10 @@
     <div class="mf-sub-head">
       <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
       <span class="mf-sub-title">土王PVP</span>
-      <div class="mf-switch mf-sub-head-switch" id="pvpJoinSwitchTop" title="参加排行"></div>
+      <div class="mf-sub-head-switch-wrap">
+        <span class="mf-sub-head-switch-label">参加排行</span>
+        <div class="mf-switch" id="pvpJoinSwitchTop" title="参加排行"></div>
+      </div>
     </div>
     <div class="pvp-disclaimer">
       <span>⚠️</span>
@@ -3727,7 +3732,10 @@
     <div class="mf-sub-head">
       <button type="button" class="mf-back-btn" data-mfback="1">‹ 更多功能</button>
       <span class="mf-sub-title">土王好友帖</span>
-      <div class="mf-switch mf-sub-head-switch" id="friendJoinSwitchTop" title="加入大厅"></div>
+      <div class="mf-sub-head-switch-wrap">
+        <span class="mf-sub-head-switch-label">加入大厅</span>
+        <div class="mf-switch" id="friendJoinSwitchTop" title="加入大厅"></div>
+      </div>
     </div>
     <div class="isl-tabs" id="friendTabs"></div>
     <div id="friendPaneHall"></div>
