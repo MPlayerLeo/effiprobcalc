@@ -175,8 +175,10 @@
   // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
   // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
   // farthest-corner为100%基准，天然保证涨满时四个角都已经露出来)
-  function openMaskHole(mask){
-    var start = null, dur = 650;
+  function openMaskHole(mask, onDone){
+    var start = null, dur = 650, holeDone = false;
+    // onDone 只在这里调用一次——正常播完/兜底强制摘除两条路径都可能先到，用这个标志去重
+    function complete(){ if(holeDone) return; holeDone = true; if(onDone) onDone(); }
     function step(ts){
       if(!mask.parentNode) return;
       if(start===null) start = ts;
@@ -188,11 +190,11 @@
       mask.style.webkitMaskImage = grad;
       mask.style.maskImage = grad;
       if(p < 1) requestAnimationFrame(step);
-      else mask.remove();
+      else { mask.remove(); complete(); }
     }
     requestAnimationFrame(step);
     // 兜底：极端情况下(比如动画期间标签页切到后台，rAF被挂起)也不能把用户永远挡在外面
-    setTimeout(function(){ if(mask.parentNode) mask.remove(); }, dur + 2500);
+    setTimeout(function(){ if(mask.parentNode) mask.remove(); complete(); }, dur + 2500);
   }
   function finish(){
     if(done) return; done = true;
@@ -217,8 +219,12 @@
       textEl.appendChild(pivot);
       textEl.classList.add('boot-slogan-drop');
     }
-    // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开
-    setTimeout(function(){ openMaskHole(mask); }, 700);
+    // 等"土王智商高！"跳入落地的动画播完，再让遮罩从正中间裂开；洞完全打开后（onDone）
+    // 才弹"添加到桌面"横幅——showPwaInstallBanner 定义在后面的 script 里，但这个回调
+    // 要等 rAF 动画跑完几帧之后才会真的执行，那时候全部 script 早就按顺序跑完了，取得到。
+    // 不区分是不是下拉刷新触发的这次开屏：需求明确要求"×"关掉后一重新加载就得再弹出来，
+    // 下拉刷新本身也是走 location.reload() 的一次完整重新加载，同一个口径，不用特殊排除
+    setTimeout(function(){ openMaskHole(mask, function(){ if(typeof showPwaInstallBanner==='function') showPwaInstallBanner(); }); }, 700);
   }
   if(document.readyState === 'complete') finish();
   else window.addEventListener('load', finish);
@@ -880,6 +886,40 @@
   .tabbar.tabbar-merged{
     border-top-color:transparent; box-shadow:none;
   }
+  /* ============ "添加到桌面"横幅：贴在切换栏正上方，iOS通知横幅那种排版 ============
+     bottom 是 JS 量出 #tabBar 实际高度后写进去的行内样式（见 positionPwaBanner），
+     不写死数值——切换栏高度理论上会随字号/安全区变，量出来的才准 */
+  .pwa-banner{
+    position:fixed; left:0; right:0; z-index:1099;
+    background:var(--panel); border-top:1px solid var(--line);
+    box-shadow:0 -2px 10px rgba(0,0,0,.08);
+    transform:translateZ(0) translateY(6px); will-change:transform;
+    opacity:0; transition:opacity .25s, transform .25s;
+    pointer-events:none;
+  }
+  .pwa-banner.pwa-banner-show{ opacity:1; transform:translateZ(0) translateY(0); pointer-events:auto; }
+  .pwa-banner-inner{
+    max-width:640px; margin:0 auto; width:100%;
+    display:flex; align-items:center; gap:7px; padding:8px 12px;
+  }
+  .pwa-banner-icon{ width:36px; height:36px; border-radius:9px; flex:0 0 auto; box-shadow:0 1px 4px rgba(0,0,0,.2); }
+  .pwa-banner-text{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; gap:1px; }
+  .pwa-banner-line1{ font-size:13px; font-weight:800; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pwa-banner-line2{ font-size:10.5px; font-weight:600; color:#8a8375; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pwa-banner-add{
+    flex:0 0 auto; border:none; border-radius:15px; background:var(--accent); color:#fff;
+    font-size:12px; font-weight:800; padding:7px 11px; cursor:pointer; white-space:nowrap;
+  }
+  .pwa-banner-add:active{ background:var(--accent-dk); }
+  .pwa-banner-mute{
+    flex:0 0 auto; border:none; background:none; color:#8a8375;
+    font-size:11px; font-weight:700; padding:4px 2px; cursor:pointer; white-space:nowrap;
+  }
+  .pwa-banner-close{
+    flex:0 0 auto; border:none; background:none; color:#a39c8c;
+    font-size:15px; line-height:1; padding:4px 0 4px 2px; cursor:pointer;
+  }
+  @media print{ .pwa-banner{ display:none !important; } }
   .tabbar-inner{ max-width:640px; margin:0 auto; width:100%; display:flex; position:relative; }
   .tab-indicator{
     position:absolute; height:48px; border-radius:16px; background:var(--accent);
@@ -3808,6 +3848,19 @@
 <div class="ptr-bar" id="ptrBar">
   <div class="ptr-icon" id="ptrIcon"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 4v13M12 17l-5-5M12 17l5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
   <span id="ptrLabel">下拉刷新</span>
+</div>
+
+<div class="pwa-banner" id="pwaBanner" style="display:none">
+  <div class="pwa-banner-inner">
+    <img class="pwa-banner-icon" src="apple-touch-icon.png" alt="">
+    <div class="pwa-banner-text">
+      <div class="pwa-banner-line1">请将土王智商高添加到桌面</div>
+      <div class="pwa-banner-line2">以获得最佳使用体验</div>
+    </div>
+    <button type="button" class="pwa-banner-add" id="pwaBannerAddBtn">添加到桌面</button>
+    <button type="button" class="pwa-banner-mute" id="pwaBannerMuteBtn">不再提醒</button>
+    <button type="button" class="pwa-banner-close" id="pwaBannerCloseBtn" aria-label="关闭">✕</button>
+  </div>
 </div>
 
 <div class="tabbar" id="tabBar">
@@ -8558,6 +8611,35 @@ document.getElementById('pwaGuideModal').onclick = (e)=>{ if(e.target.id==='pwaG
 // 点图片直接开新标签看原图（1920宽，弹窗里只是缩小展示），方便照着图上标的1/2/3步操作
 document.getElementById('pwaGuideImg').onclick = (e)=>{ e.stopPropagation(); window.open('ios-add-guide.jpg', '_blank'); };
 
+/* ---- 开屏结束后的"添加到桌面"横幅：贴在切换栏正上方，点「添加到桌面」复用上面
+   pwaInstallClick 那整套安装逻辑（各浏览器分支已经处理好，不用再判一遍UA）。
+   两种关闭方式口径不同：「不再提醒」写进 userPrefs 永久生效，跟随本地/云端设置走；
+   「×」只在这次页面存活期间生效，不写任何存储——刷新后横幅照常再弹出来，这是需求明确要的 */
+function positionPwaBanner(){
+  const banner = document.getElementById('pwaBanner');
+  const tabBar = document.getElementById('tabBar');
+  if(!banner || !tabBar || banner.style.display==='none') return;
+  banner.style.bottom = tabBar.offsetHeight + 'px';
+}
+window.addEventListener('resize', positionPwaBanner, {passive:true});
+function showPwaInstallBanner(){
+  if(pwaIsStandalone() || userPrefs.pwaBannerDismissed) return;
+  const banner = document.getElementById('pwaBanner');
+  if(!banner) return;
+  banner.style.display = '';
+  positionPwaBanner();
+  requestAnimationFrame(()=> requestAnimationFrame(()=> banner.classList.add('pwa-banner-show')));
+}
+function hidePwaBanner(){
+  const banner = document.getElementById('pwaBanner');
+  if(!banner) return;
+  banner.classList.remove('pwa-banner-show');
+  setTimeout(()=>{ banner.style.display = 'none'; }, 260);
+}
+document.getElementById('pwaBannerAddBtn').onclick = ()=>{ hidePwaBanner(); pwaInstallClick(); };
+document.getElementById('pwaBannerMuteBtn').onclick = ()=>{ userPrefs.pwaBannerDismissed = true; saveUserPrefs(); hidePwaBanner(); };
+document.getElementById('pwaBannerCloseBtn').onclick = ()=>{ hidePwaBanner(); };
+
 /* ---- 全站下拉刷新：手指在任意页面拉到顶（含宝可梦盒自己的滚动列表）之后继续往下拉，
    露出顶部这条 #ptrBar，松手够阈值就硬刷新(location.reload)，配合下面开屏遮罩那段
    看 sessionStorage 标记改文案的逻辑，刷新时显示"土王智商刷新中"而不是"加载中"。
@@ -10474,7 +10556,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid'}; // 26格=6.5h，8格=2h；
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid', pwaBannerDismissed: false}; // 26格=6.5h，8格=2h；
 // boxViewMode：盒子网格/列表视图，'grid'=原来的gif方块平铺，'list'=横向列表（毕业等级/睡饱饱/联动徽章一目了然）；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
@@ -10518,6 +10600,7 @@ function loadUserPrefs(){
       if(typeof o.pvpJoinOn==='boolean') userPrefs.pvpJoinOn = o.pvpJoinOn;
       if(typeof o.pvpShowNamesOn==='boolean') userPrefs.pvpShowNamesOn = o.pvpShowNamesOn;
       if(typeof o.pvpCatchTotal==='number' && isFinite(o.pvpCatchTotal)) userPrefs.pvpCatchTotal = o.pvpCatchTotal;
+      if(typeof o.pwaBannerDismissed==='boolean') userPrefs.pwaBannerDismissed = o.pwaBannerDismissed;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
           const b = o.capPanelBuild[t];
@@ -16672,12 +16755,13 @@ window.addEventListener('resize', updateFabDockPosition, {passive:true});
    强制浏览器按当前真实视口重新摆放它们——跟文件里其它地方"void el.offsetHeight 强制重排"
    是同一个手法，两次赋值在同一段同步代码里前后紧挨着，中间不会真被画出来，不会闪一下 */
 function refixStickyBarsAfterKeyboard(){
-  document.querySelectorAll('.tabbar, .page-action-bar, .box-action-bar, .ui-fab').forEach(el=>{
+  document.querySelectorAll('.tabbar, .page-action-bar, .box-action-bar, .ui-fab, .pwa-banner').forEach(el=>{
     const prevPos = el.style.position;
     el.style.position = 'static';
     void el.offsetHeight;
     el.style.position = prevPos;
   });
+  if(typeof positionPwaBanner==='function') positionPwaBanner(); // 切换栏高度也可能跟着重排变了，横幅贴的位置要重新量
 }
 if(window.visualViewport){
   window.visualViewport.addEventListener('resize', refixStickyBarsAfterKeyboard, {passive:true});
