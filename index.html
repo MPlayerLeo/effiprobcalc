@@ -20492,7 +20492,7 @@ function planComputeEntry(e, boost, budgetLeft){
     // 等级已达成但选了进化：进化糖果照样得算，只是没有升级消耗
     const need = Math.max(0, evoCandy - owned);
     return {ready:false, levelCandy:0, evoCandy, totalCandy:evoCandy,
-            needCandy:need, handyCandy:Math.ceil(need/3), shards:0, boosted:0, ok:true};
+            needCandy:need, handyCandy:Math.ceil(need/3), handyCandyM:Math.floor(need/20), shards:0, boosted:0, ok:true};
   }
   const sim = planSimulate(
     e.levelReal, Math.max(0, Math.floor(Number(e.remainExp)) || 0), e.targetLevel,
@@ -20502,7 +20502,7 @@ function planComputeEntry(e, boost, budgetLeft){
   const total = sim.candies + evoCandy;          // 进化糖果不产生经验、不消耗碎片、不占增强配额
   const need  = Math.max(0, total - owned);
   return {ready:true, levelCandy:sim.candies, evoCandy, totalCandy:total,
-          needCandy:need, handyCandy:Math.ceil(need/3), shards:sim.shards,
+          needCandy:need, handyCandy:Math.ceil(need/3), handyCandyM:Math.floor(need/20), shards:sim.shards,
           boosted:sim.boosted, ok:sim.ok};
 }
 /* 全表计算：增强配额【全表共享】，按显示顺序（优先级）从上往下消耗。
@@ -20620,7 +20620,7 @@ function planArrowHtml(r, e, mini){
   else if(done)  top = `<span class="plan-res-done">已达成</span>` + napHtml;
   else if(r){
     top = `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
-          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}</span>`+
+          `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}<span class="plan-nap-slash">/</span><span class="plan-nap-tk">${planFmtNum(r.handyCandyM)}</span></span>`+
           napHtml;
     // 增强额度只挂在列表上；弹窗底下的 planModalNote 已经拿文字说过一遍了
     bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
