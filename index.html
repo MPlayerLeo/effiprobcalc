@@ -21773,7 +21773,7 @@ function pvpRenderMe(){
     const isTerror = !r.unrecommended && r.cat === '恐怖宝可梦';
     const label = isTerror ? PVP_TERROR_LABEL : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat);
     const badgeColor = pvpCatColor(r.cat);
-    const bumpNote = r.bumpGrade ? ` · 80级可到${r.bumpGrade}，按70/80两档均分计分` : '';
+    const bumpNote = r.bumpGrade ? ` · 80级可到${pvpDisplayLabel(r.bumpGrade)}，按70/80两档均分计分` : '';
     const subExtra = (r.unrecommended ? ' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分' : '') + bumpNote;
     // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
     // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
@@ -22073,7 +22073,7 @@ function pvpRenderSpecies(el, head, bind, shiny){
       const isTerror = !r.quarter && r.grade === '恐怖宝可梦';
       const label = isTerror ? PVP_TERROR_LABEL : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
       const badgeColor = pvpCatColor(r.quarter?'不推荐使用':r.grade);
-      const bumpNote = r.bump && r.bumpGrade ? ` · 80级可到${r.bumpGrade}` : '';
+      const bumpNote = r.bump && r.bumpGrade ? ` · 80级可到${pvpDisplayLabel(r.bumpGrade)}` : '';
       const sizeM = r.name.match(/\(([^)]*)\)$/);
       const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
       const comboHtml = pvpRowComboHtml(r);
