@@ -854,6 +854,10 @@
   /* 培养计划资源总计态「取消全选」：借 fabMore 在左下角的坐标——两者互斥（fabMore 只在
      盒子浮层内出现，这颗只在普通页面的培养计划里出现），不会真的叠在一起 */
   #fabPlanClear{ background:#8d8776; left:24px; bottom:100px; }
+  /* 更多功能 hub 的列表/图标视图切换：常驻浮窗，跟按钮条模式/圆形浮窗模式那套开关无关——
+     hub 页本来两种模式下都不出任何圆，这颗单独常驻在右下角、页面切换栏正上方，只看
+     是否停在 hub（不是任何子页）来决定显隐，见 updateMfHubViewFab() */
+  #mfHubViewFab{ background:#5a7a8f; right:24px; bottom:100px; font-size:0; }
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
   #fabPanel.fab-lifted, #fabListView.fab-lifted{ bottom:212px; }
   #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
@@ -2553,13 +2557,14 @@
 /* ============ v3.19 更多功能页（原效率概率页）============ */
 /* 页2 拆成 hub + 若干子页：hub 是满宽大按钮列表，子页各自带一条返回栏。
    子页的显隐只切 display，DOM 常驻，效率概率那套渲染函数不用管自己在不在屏上 */
-.mf-hub-toolbar{ display:flex; justify-content:flex-end; margin-bottom:10px; }
-.mf-hub-viewtoggle-btn{
-  width:34px; height:34px; border-radius:9px; flex:0 0 auto;
-  background:var(--panel); border:1px solid var(--line); color:var(--ink);
-  display:flex; align-items:center; justify-content:center; cursor:pointer;
+/* 整个 hub 首页禁掉文本选中/图片长按菜单：光靠按钮自己那份 user-select:none 不够，
+   长按落在按钮之间的空隙、标题文字、图标 svg/img 上时系统一样会弹选中手柄或"保存图片"，
+   把拖动排序的手势判定打断——挂在容器上一次性全盖住，比每个子元素分别贴省心也更保险 */
+#mfHubView, #mfHubView *{
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  -webkit-user-drag:none; -webkit-tap-highlight-color:transparent;
 }
-.mf-hub-viewtoggle-btn:active{ transform:translateY(1px); }
+#mfHubView img, #mfHubView svg{ pointer-events:none; }
 .mf-hub-list{ display:flex; flex-direction:column; gap:12px; }
 /* v3.30：拖动排序 + 网格视图都要用到——user-select/touch-callout 跟 .plan-rowwrap 同款，
    不然长按准备拖动的这段时间里手指按在图标上会被系统当成"长按预览"，把手势判定打断 */
@@ -2586,10 +2591,21 @@
 .mf-hub-list.mf-hub-grid .mf-hub-t{ font-size:11.5px; text-align:center; white-space:normal; line-height:1.3; }
 .mf-hub-list.mf-hub-grid .mf-hub-d, .mf-hub-list.mf-hub-grid .mf-hub-arrow, .mf-hub-list.mf-hub-grid .mf-hub-status{ display:none; }
 .mf-hub-ic{
+  position:relative;
   flex:0 0 auto; width:44px; height:44px; border-radius:12px;
   display:flex; align-items:center; justify-content:center;
   font-size:21px; font-weight:900; color:#fff; background:var(--accent);
 }
+/* 图标视角下小字备注（含"已加入/未加入"文字）整个隐藏，PVP/好友帖这两颗有加入状态的
+   改成图标右上角内侧一颗小灯——绿色=已加入，灰色=未加入，跟列表视角的状态点同一份判定，
+   只是换了个更省地方的展示形式。列表视角下这颗灯保持不出现，沿用原来的文字版本 */
+.mf-hub-ic-dot{
+  display:none; position:absolute; top:3px; right:3px;
+  width:9px; height:9px; border-radius:50%; background:#cfc9bb;
+  box-shadow:0 0 0 2px rgba(0,0,0,.15);
+}
+.mf-hub-ic-dot.on{ background:#5fd67a; }
+.mf-hub-list.mf-hub-grid .mf-hub-ic-dot{ display:block; }
 .mf-hub-ic-island{ background:#2f8f8a; }
 /* 岛屿评分/培养计划的头图不再用 emoji：emoji 在安卓/iOS/PC 上是三套完全不同的彩色字形，
    跟旁边扁平的白色「%」放一起风格对不上，还得看系统装没装对应字体。
@@ -3425,9 +3441,6 @@
   <!-- v3.19：页2 从「效率概率」升格成「更多功能」入口页。hub 是满宽大按钮列表，
        每颗按钮进一个子页；原来的效率概率整页内容原封不动搬进 #mfSubEffi 里。 -->
   <div id="mfHubView">
-    <div class="mf-hub-toolbar">
-      <button type="button" class="mf-hub-viewtoggle-btn" id="mfHubViewToggleBtn" aria-label="切换视图"></button>
-    </div>
     <div class="mf-hub-list" id="mfHubList">
       <button type="button" class="mf-hub-btn" data-hubkey="effi" data-mfsub="effi">
         <span class="mf-hub-ic">%</span>
@@ -3462,7 +3475,7 @@
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-hubkey="pvp" data-mfsub="pvp">
-        <span class="mf-hub-ic mf-hub-ic-pvp"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L14 10M10 6l8 8M17 4l3 3-2 2-3-3zM7 20H4v-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
+        <span class="mf-hub-ic mf-hub-ic-pvp"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L14 10M10 6l8 8M17 4l3 3-2 2-3-3zM7 20H4v-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg><span class="mf-hub-ic-dot" id="mfHubPvpDot"></span></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">土王PVP</span>
           <span class="mf-hub-d">直接读你的宝可梦盒算出战力总分，看看自己在大家里排第几</span>
@@ -3471,7 +3484,7 @@
         <span class="mf-hub-arrow">›</span>
       </button>
       <button type="button" class="mf-hub-btn" data-hubkey="friend" data-mfsub="friend">
-        <span class="mf-hub-ic mf-hub-ic-friend"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="17" cy="9.5" r="2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.6 20c.6-4.4 3.6-6.6 7.4-6.6s6.8 2.2 7.4 6.6M15.6 14.6c3 .3 4.9 2.1 5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
+        <span class="mf-hub-ic mf-hub-ic-friend"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="17" cy="9.5" r="2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.6 20c.6-4.4 3.6-6.6 7.4-6.6s6.8 2.2 7.4 6.6M15.6 14.6c3 .3 4.9 2.1 5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg><span class="mf-hub-ic-dot" id="mfHubFriendDot"></span></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">土王好友帖</span>
           <span class="mf-hub-d">交友大厅认识新朋友，登记好友码、选糖要求和常驻岛屿</span>
@@ -3923,6 +3936,7 @@
 <div class="ui-fab" id="fabCreate"><svg viewBox="0 0 24 24" width="26" height="26" style="display:block"><path d="M12 4v16M4 12h16" stroke="currentColor" stroke-width="3.2" stroke-linecap="square"/></svg></div>
 <div class="ui-fab" id="fabListView"></div>
 <div class="ui-fab" id="fabMore">快速<br>查找</div>
+<div class="ui-fab" id="mfHubViewFab" aria-label="切换视图"></div>
 <div class="box-toast" id="boxToast"></div>
 <div class="ptr-bar" id="ptrBar">
   <div class="ptr-icon" id="ptrIcon"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 4v13M12 17l-5-5M12 17l5-5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
@@ -16660,6 +16674,7 @@ function updatePageActionBar(){
   if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
   updateFabCircles();
+  if(typeof updateMfHubViewFab==='function') updateMfHubViewFab();
   updatePanelBtnLabel(inBox);
 }
 function updateFabVisibility(){ updatePageActionBar(); }
@@ -19501,21 +19516,26 @@ function mfShowSub(sub){
 // 每次进/出任何子页（mfShowSub）都会跑一遍，够用了，不用单独监听状态变化。
 function mfRenderHubStatus(){
   const pvpEl = document.getElementById('mfHubPvpStatus');
+  const pvpDot = document.getElementById('mfHubPvpDot');
   if(pvpEl){
     const on = !!userPrefs.pvpJoinOn;
     pvpEl.classList.toggle('on', on);
     pvpEl.innerHTML = `<span class="mf-hub-status-dot${on?' on':''}"></span>${on?'已加入':'未加入'}`;
+    if(pvpDot) pvpDot.classList.toggle('on', on);
   }
   const frEl = document.getElementById('mfHubFriendStatus');
+  const frDot = document.getElementById('mfHubFriendDot');
   if(frEl){
     if(friendDraft==null){
       frEl.classList.remove('on');
       frEl.innerHTML = `<span class="mf-hub-status-dot"></span>未加入`;
+      if(frDot) frDot.classList.remove('on');
       if(authLoggedIn() && !friendMeLoading) friendLoadMe().then(mfRenderHubStatus);
     }else{
       const on = !!friendDraft.inHall;
       frEl.classList.toggle('on', on);
       frEl.innerHTML = `<span class="mf-hub-status-dot${on?' on':''}"></span>${on?'已加入':'未加入'}`;
+      if(frDot) frDot.classList.toggle('on', on);
     }
   }
 }
@@ -19561,25 +19581,40 @@ function mfHubPointerDown(ev, btn){
     if(mfHubGestId !== btn.dataset.hubkey || mfHubDragging) return;
     mfHubDragging = true;
     btn.classList.add('mf-hub-dragging');
+    mfHubStartDrag(btn);
   }, MFHUB_DRAG_ARM_MS);
 }
+/* 拖动排序抖动的根因：原来每次 pointermove 都现场量"离指针最近的按钮"再 insertBefore，
+   而 insertBefore 本身会改变布局——量出来的距离和刚造成的位移互相牵扯，指针稍微停在
+   两颗按钮中间就会来回反复横跳（换过去→量出对方更近→换回来→……）。
+   改成开拖那一刻就把当时的格子中心点冻结成一份静态坐标表（slots），后续全程只拿指针
+   位置去找"离哪个冻结坐标最近"，坐标表本身不再跟着拖动过程实时重新测量，就没有这个
+   反馈环了；实际挪 DOM 时按整份目标顺序 keys 一次性重新 append，图标视角(grid)、
+   列表视角都通用，不用分别处理行/列。 */
+let mfHubDragGroup = null;
+function mfHubStartDrag(btn){
+  const list = document.getElementById('mfHubList'); if(!list) return;
+  const items = [...list.querySelectorAll('.mf-hub-btn')];
+  const slots = items.map(b=>{ const r = b.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; });
+  mfHubDragGroup = { list, keys: items.map(b=>b.dataset.hubkey), elByKey: new Map(items.map(b=>[b.dataset.hubkey, b])), slots, draggedKey: btn.dataset.hubkey };
+}
 function mfHubDragMove(clientX, clientY){
-  const list = document.getElementById('mfHubList'); const btn = mfHubGestBtn; if(!list || !btn) return;
-  let closest = null, closestDist = Infinity;
-  [...list.querySelectorAll('.mf-hub-btn')].forEach(b=>{
-    if(b===btn) return;
-    const r = b.getBoundingClientRect(); const cx = r.left+r.width/2, cy = r.top+r.height/2;
-    const d = (cx-clientX)*(cx-clientX) + (cy-clientY)*(cy-clientY);
-    if(d < closestDist){ closestDist = d; closest = b; }
+  const g = mfHubDragGroup; if(!g) return;
+  let nearestIdx = 0, nearestDist = Infinity;
+  g.slots.forEach((s,i)=>{
+    const d = (s.x-clientX)*(s.x-clientX) + (s.y-clientY)*(s.y-clientY);
+    if(d < nearestDist){ nearestDist = d; nearestIdx = i; }
   });
-  if(!closest) return;
-  const all = [...list.children];
-  const before = all.indexOf(btn) > all.indexOf(closest) ? closest : closest.nextSibling;
-  if(before !== btn) list.insertBefore(btn, before);
+  const curIdx = g.keys.indexOf(g.draggedKey);
+  if(nearestIdx === curIdx) return;
+  g.keys.splice(curIdx, 1);
+  g.keys.splice(nearestIdx, 0, g.draggedKey);
+  g.keys.forEach(k=>{ const el = g.elByKey.get(k); if(el) g.list.appendChild(el); });
 }
 function mfHubEndDrag(){
   if(mfHubGestBtn) mfHubGestBtn.classList.remove('mf-hub-dragging');
   mfHubDragging = false;
+  mfHubDragGroup = null;
   mfHubPersistCurrentOrder();
 }
 function mfHubPointerMove(ev){
@@ -19603,10 +19638,11 @@ window.addEventListener('pointerup', mfHubPointerUp);
 window.addEventListener('pointercancel', mfHubPointerUp);
 window.addEventListener('touchmove', (ev)=>{ if(mfHubDragging) ev.preventDefault(); }, {passive:false});
 // 列表/图标（网格）视图切换：图标沿用宝可梦盒左下角那颗按钮的同一份 SVG，按钮固定显示
-// "切换到另一种视图"的那个图标，跟 renderBoxViewToggleIcon 同一个套路
+// "切换到另一种视图"的那个图标，跟 renderBoxViewToggleIcon 同一个套路。按钮本体现在是
+// 常驻右下角的圆形浮窗（#mfHubViewFab），不再嵌在 hub 内容里跟着页面滚走
 function renderMfHubViewToggleIcon(){
-  const btn = document.getElementById('mfHubViewToggleBtn'); if(!btn) return;
-  btn.innerHTML = userPrefs.mfHubViewMode==='grid' ? boxListIconSvg(18) : boxGridIconSvg(18);
+  const fab = document.getElementById('mfHubViewFab'); if(!fab) return;
+  fab.innerHTML = userPrefs.mfHubViewMode==='grid' ? boxListIconSvg(22) : boxGridIconSvg(22);
 }
 function mfHubApplyViewMode(){
   const list = document.getElementById('mfHubList'); if(!list) return;
@@ -19618,9 +19654,18 @@ function mfHubToggleViewMode(){
   saveUserPrefs();
   mfHubApplyViewMode();
 }
+// 常驻浮窗只在真正停在 hub（更多功能首页，不是任何子页）时才冒出来，跟按钮条/圆形浮窗
+// 那套 fabCircleModeOn 开关无关——hub 本来两种模式下都不出任何圆，这颗是独立追加的
+function updateMfHubViewFab(){
+  const fab = document.getElementById('mfHubViewFab'); if(!fab) return;
+  const page2El = document.getElementById('page2');
+  const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
+  fab.style.display = onHub ? 'flex' : 'none';
+}
 mfHubApplyOrder();
 mfHubApplyViewMode();
-document.getElementById('mfHubViewToggleBtn').onclick = mfHubToggleViewMode;
+updateMfHubViewFab();
+document.getElementById('mfHubViewFab').onclick = mfHubToggleViewMode;
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
   const extUrl = btn.getAttribute('data-mfext');
   btn.onclick = ()=>{
