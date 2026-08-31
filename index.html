@@ -22660,7 +22660,12 @@ function friendRenderHall(){
     if(friendFilterCandy!=null) qs.push('candyPref='+friendFilterCandy);
     if(friendFilterIsland!=null) qs.push('island='+encodeURIComponent(friendFilterIsland));
     authApi('/api/friend/hall'+(qs.length?'?'+qs.join('&'):''), {auth:true})
-      .then(d=>{ friendHallCache = {key, list:d.list||[]}; })
+      .then(d=>{
+        const list = d.list||[];
+        // 可添加(remainSlots>0)排前面，不可添加(0)排后面；组内相对顺序（服务端按更新时间倒序）不变
+        list.sort((a,b)=> (a.remainSlots>0?0:1) - (b.remainSlots>0?0:1));
+        friendHallCache = {key, list};
+      })
       .catch(e=>{ friendHallCache = {key, error:e.message||'加载失败'}; })
       .then(()=>{ friendHallBusy=false; friendRenderHall(); });
     return;
@@ -22687,7 +22692,7 @@ function friendRenderHall(){
           ${friendIslandBadgesHtml(r.islands)}
         </div>
       </div>
-      <div class="friend-code-cell">${friendFmtCode(r.friendCode)}</div>
+      <div class="friend-code-cell">${slotsZero ? '好友已满' : friendFmtCode(r.friendCode)}</div>
     </div>`;
   }).join('');
   el.innerHTML = filterBar + `<div class="friend-card">
