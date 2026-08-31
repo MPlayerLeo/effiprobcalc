@@ -680,6 +680,7 @@
   .grad-grade .gline{ display:block; white-space:nowrap; line-height:1.15; }
   .grad-grade .gline + .gline{ margin-top:2px; }
   .grad-primary .grad-comment{font-weight:600; letter-spacing:.03em; margin-top:4px;}
+  .grad-rank-title{font-weight:700; font-size:12px; letter-spacing:.05em; margin-bottom:2px;}
   .grad-rank-line{font-weight:800; margin-bottom:4px; letter-spacing:.02em;}
   .grad-sub{ margin-top:18px; }
   .grad-sub .grad-grade{font-weight:800;}
@@ -2774,7 +2775,7 @@
 }
 .friend-av img{ width:100%; height:100%; object-fit:cover; }
 .friend-main{ flex:1 1 auto; min-width:0; }
-.friend-name-row{ display:flex; align-items:center; gap:2px; min-width:0; }
+.friend-name-row{ display:flex; align-items:center; gap:5px; min-width:0; }
 .friend-name{ flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* 剩余好友位：+ 号 + 小人头像 + 数字，紧跟在昵称前面 */
 .friend-slots{ flex:0 0 auto; display:inline-flex; align-items:center; gap:1px; padding:1.5px 6px 1.5px 5px; border-radius:8px; background:var(--accent); color:#fff; }
@@ -10361,14 +10362,19 @@ function renderGraduation(pfx){
 
     // noFruitS：排名在最上，"建议严选果S"这行标题居中，删除线红字的毕业等级排在标题下面——
     // 跟"不推荐使用"那种警示语在最上面的排法反过来，保留排名展示的同时不让警示语抢占最显眼位置
+    // 排名数字固定字号（不随毕业等级 boost 变大），上方小字标题同色，字号固定更小
+    const rankGradeSize = 36;
+    const rankTitleHtml = `<div class="grad-rank-title" style="color:${primaryStyle.color};">面板能量排名</div>`;
     const primaryBodyHtml = isNoFruitS
-      ? `<div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;">${rankText}</div>
+      ? `${rankTitleHtml}
+          <div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${rankGradeSize}px;">${rankText}</div>
           ${warnHeadingHtml}
           <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px; ${strikeStyle}"></div>
           <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
           <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${gradCommentHtml(commentText)}</div>`
       : `${warnHeadingHtml}
-          <div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px;">${rankText}</div>
+          ${rankTitleHtml}
+          <div class="grad-rank-line" style="color:${primaryStyle.color}; font-size:${rankGradeSize}px;">${rankText}</div>
           <div class="grad-grade" data-text="${gradeText}" style="color:${primaryStyle.color}; font-size:${primaryGradeSize}px; ${strikeStyle}"></div>
           <div class="grad-rule" style="border-top:3px solid ${primaryStyle.color}; width:56%; margin:10px auto;"></div>
           <div class="grad-comment" style="color:${primaryStyle.color}; font-size:${primaryCommentSize}px;">${gradCommentHtml(commentText)}</div>`;
