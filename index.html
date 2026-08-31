@@ -2776,7 +2776,7 @@
 .friend-main{ flex:1 1 auto; min-width:0; }
 .friend-name-row{ display:flex; align-items:center; gap:2px; min-width:0; }
 .friend-name{ flex:1 1 auto; min-width:0; font-size:13.5px; font-weight:900; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-/* 剩余好友位：+ 号 + 小人头像 + 数字，紧跟在昵称后面 */
+/* 剩余好友位：+ 号 + 小人头像 + 数字，紧跟在昵称前面 */
 .friend-slots{ flex:0 0 auto; display:inline-flex; align-items:center; gap:1px; padding:1.5px 6px 1.5px 5px; border-radius:8px; background:var(--accent); color:#fff; }
 .friend-slots-ic{ width:12px; height:12px; }
 .friend-slots-n{ font-size:11px; font-weight:900; margin-left:1px; }
@@ -2791,6 +2791,8 @@
 .friend-candy.nopref .friend-candy-dot{ background:#1f8a3d; }
 .friend-info-sep{ color:#cfc8b8; }
 .friend-days, .friend-islands{ color:#8a8375; }
+/* 岛屿角标打包成一个整体flex item：容纳不下时整组换到下一行，而不是逐个角标各自换行 */
+.friend-islands-group{ display:inline-flex; flex-wrap:wrap; align-items:center; gap:4px; }
 .friend-code-cell{
   flex:0 0 auto; font-family:'Consolas',monospace; font-size:12.5px; font-weight:900;
   color:var(--accent-dk); text-align:right; letter-spacing:.5px;
@@ -22453,17 +22455,18 @@ function friendFmtCode(digits){
 // 岛屿角标：直接复用捕捉推荐页 capIslandsHtml 那一套配色/样式(.cap-isl-n*/.cap-isl-ex*/.cap-isl-all)，
 // 用户原话"把捕捉推荐的岛屿标签搬过来"，这里是真的搬同一套 CSS 类，不是另起一份新样式
 function friendIslandBadgesHtml(islands){
-  if(!islands || !islands.length) return `<span class="cap-isl cap-isl-all">全部</span>`;
-  return islands.map(id=>{
+  if(!islands || !islands.length) return `<span class="friend-islands-group"><span class="cap-isl cap-isl-all">全部</span></span>`;
+  const badges = islands.map(id=>{
     if(id.indexOf('EX')===0) return `<span class="cap-isl cap-isl-ex${id.slice(2)}">EX${id.slice(2)}</span>`;
     return `<span class="cap-isl cap-isl-n${id}">${id}</span>`;
   }).join('');
+  return `<span class="friend-islands-group">${badges}</span>`;
 }
 function friendIslandsSummary(islands){
   if(!islands || !islands.length) return '全部';
   return islands.map(id=>{ const t=FRIEND_ISLAND_TAGS.find(x=>x.id===id); return t?t.name:id; }).join('·');
 }
-// 剩余好友位徽章：+ 号 + 小人头像 + 数字，跟在昵称后面。0 时外层 .friend-row-zero 负责整行变灰。
+// 剩余好友位徽章：+ 号 + 小人头像 + 数字，放在昵称前面。0 时外层 .friend-row-zero 负责整行变灰。
 function friendSlotsHtml(remain){
   const n = Math.max(0, Math.min(50, Math.floor(Number(remain))||0));
   return `<span class="friend-slots">
@@ -22684,7 +22687,7 @@ function friendRenderHall(){
       <div class="friend-av">${pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny)}</div>
       <div class="friend-main">
         <div class="friend-name-row">
-          <span class="friend-name">${r.isMe?'<b>我</b> · ':''}${r.username}</span>${friendSlotsHtml(r.remainSlots)}
+          ${friendSlotsHtml(r.remainSlots)}<span class="friend-name">${r.isMe?'<b>我</b> · ':''}${r.username}</span>
         </div>
         <div class="friend-info">
           ${candyHtml}<span class="friend-info-sep">·</span>
