@@ -2553,14 +2553,38 @@
 /* ============ v3.19 更多功能页（原效率概率页）============ */
 /* 页2 拆成 hub + 若干子页：hub 是满宽大按钮列表，子页各自带一条返回栏。
    子页的显隐只切 display，DOM 常驻，效率概率那套渲染函数不用管自己在不在屏上 */
+.mf-hub-toolbar{ display:flex; justify-content:flex-end; margin-bottom:10px; }
+.mf-hub-viewtoggle-btn{
+  width:34px; height:34px; border-radius:9px; flex:0 0 auto;
+  background:var(--panel); border:1px solid var(--line); color:var(--ink);
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.mf-hub-viewtoggle-btn:active{ transform:translateY(1px); }
 .mf-hub-list{ display:flex; flex-direction:column; gap:12px; }
+/* v3.30：拖动排序 + 网格视图都要用到——user-select/touch-callout 跟 .plan-rowwrap 同款，
+   不然长按准备拖动的这段时间里手指按在图标上会被系统当成"长按预览"，把手势判定打断 */
 .mf-hub-btn{
+  position:relative;
   display:flex; align-items:center; gap:13px; width:100%; text-align:left;
   font-family:inherit; cursor:pointer;
   background:var(--panel); border:1px solid var(--line); border-radius:12px;
   padding:15px 16px; box-shadow:0 1px 2px rgba(0,0,0,.04);
+  user-select:none; -webkit-touch-callout:none; -webkit-user-drag:none;
 }
 .mf-hub-btn:active{ transform:translateY(1px); }
+.mf-hub-btn.mf-hub-dragging{ z-index:5; box-shadow:0 6px 18px rgba(0,0,0,.22); }
+/* 图标视角：类似 iOS 主页那种"图标+名称"平铺，一排4个，小字备注不显示 */
+.mf-hub-list.mf-hub-grid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:18px 6px; }
+.mf-hub-list.mf-hub-grid .mf-hub-btn{
+  flex-direction:column; padding:6px 2px; gap:7px;
+  background:transparent; border:none; box-shadow:none; text-align:center;
+}
+.mf-hub-list.mf-hub-grid .mf-hub-ic{ width:52px; height:52px; border-radius:14px; font-size:24px; }
+.mf-hub-list.mf-hub-grid .mf-hub-svg{ width:30px; height:30px; }
+.mf-hub-list.mf-hub-grid .mf-hub-ic-plan img{ width:34px; height:34px; }
+.mf-hub-list.mf-hub-grid .mf-hub-body{ width:100%; }
+.mf-hub-list.mf-hub-grid .mf-hub-t{ font-size:11.5px; text-align:center; white-space:normal; line-height:1.3; }
+.mf-hub-list.mf-hub-grid .mf-hub-d, .mf-hub-list.mf-hub-grid .mf-hub-arrow, .mf-hub-list.mf-hub-grid .mf-hub-status{ display:none; }
 .mf-hub-ic{
   flex:0 0 auto; width:44px; height:44px; border-radius:12px;
   display:flex; align-items:center; justify-content:center;
@@ -2610,6 +2634,7 @@
 .mf-hub-ic-friend{ background:#2f8f5e; }
 .mf-hub-ic-spwr{ background:#3f7fbf; }
 .mf-hub-ic-luck{ background:#8a63c2; }
+.mf-hub-ic-wiki{ background:#a8763c; }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
 .pvp-disclaimer{
@@ -3400,8 +3425,11 @@
   <!-- v3.19：页2 从「效率概率」升格成「更多功能」入口页。hub 是满宽大按钮列表，
        每颗按钮进一个子页；原来的效率概率整页内容原封不动搬进 #mfSubEffi 里。 -->
   <div id="mfHubView">
+    <div class="mf-hub-toolbar">
+      <button type="button" class="mf-hub-viewtoggle-btn" id="mfHubViewToggleBtn" aria-label="切换视图"></button>
+    </div>
     <div class="mf-hub-list" id="mfHubList">
-      <button type="button" class="mf-hub-btn" data-mfsub="effi">
+      <button type="button" class="mf-hub-btn" data-hubkey="effi" data-mfsub="effi">
         <span class="mf-hub-ic">%</span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">效率概率</span>
@@ -3409,7 +3437,7 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="rank">
+      <button type="button" class="mf-hub-btn" data-hubkey="rank" data-mfsub="rank">
         <span class="mf-hub-ic mf-hub-ic-rank"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20V14" stroke="currentColor" stroke-width="2.6" stroke-linecap="square"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">排名对比</span>
@@ -3417,7 +3445,7 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="island">
+      <button type="button" class="mf-hub-btn" data-hubkey="island" data-mfsub="island">
         <span class="mf-hub-ic mf-hub-ic-island"><svg class="mf-hub-svg" viewBox="0 0 48 48" aria-hidden="true"><g fill="currentColor"><g transform="translate(5.28,2.528) scale(0.78)"><path d="M21.6 17C19.9 25 18.9 32.5 19.1 40L25.2 40C24.8 32.5 25.6 25 27 17Z"/><g transform="translate(24,17)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/><g transform="scale(-1,1)"><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-54)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(-16)"/><path d="M0 0C5.5-6.8 13-8 18.5-4.6 13.2-4.2 6.8-1.6 2.4 3.2Z" transform="rotate(20)"/></g></g></g><path d="M9 38.6C11.8 33.9 17.1 31.5 24 31.5C30.9 31.5 36.2 33.9 39 38.6Z"/></g><path d="M4.6 46.6C7.83 46.6 11.07 43.4 14.3 43.4C17.53 43.4 20.77 46.6 24 46.6C27.23 46.6 30.47 43.4 33.7 43.4C36.93 43.4 40.17 46.6 43.4 46.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">岛屿评分</span>
@@ -3425,7 +3453,7 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="plan">
+      <button type="button" class="mf-hub-btn" data-hubkey="plan" data-mfsub="plan">
         <span class="mf-hub-ic mf-hub-ic-plan" id="mfHubIcPlan"></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">培养计划</span>
@@ -3433,7 +3461,7 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="pvp">
+      <button type="button" class="mf-hub-btn" data-hubkey="pvp" data-mfsub="pvp">
         <span class="mf-hub-ic mf-hub-ic-pvp"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20L14 10M10 6l8 8M17 4l3 3-2 2-3-3zM7 20H4v-3" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">土王PVP</span>
@@ -3442,7 +3470,7 @@
         <span class="mf-hub-status" id="mfHubPvpStatus"></span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="friend">
+      <button type="button" class="mf-hub-btn" data-hubkey="friend" data-mfsub="friend">
         <span class="mf-hub-ic mf-hub-ic-friend"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="17" cy="9.5" r="2.8" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M2.6 20c.6-4.4 3.6-6.6 7.4-6.6s6.8 2.2 7.4 6.6M15.6 14.6c3 .3 4.9 2.1 5.4 5.4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">土王好友帖</span>
@@ -3451,7 +3479,7 @@
         <span class="mf-hub-status" id="mfHubFriendStatus"></span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfsub="spwr">
+      <button type="button" class="mf-hub-btn" data-hubkey="spwr" data-mfsub="spwr">
         <span class="mf-hub-ic mf-hub-ic-spwr"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C9 6.5 6.5 10 6.5 13.5A5.5 5.5 0 0 0 12 19a5.5 5.5 0 0 0 5.5-5.5C17.5 10 15 6.5 12 3Z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 21.5v-2.6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">睡意之力计算</span>
@@ -3459,11 +3487,19 @@
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
-      <button type="button" class="mf-hub-btn" data-mfext="https://sleep-luck-tools.com/">
+      <button type="button" class="mf-hub-btn" data-hubkey="luck" data-mfext="https://sleep-luck-tools.com/">
         <span class="mf-hub-ic mf-hub-ic-luck"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3M14 4h6v6M20 4 10 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
         <span class="mf-hub-body">
           <span class="mf-hub-t">水跃鱼气运站</span>
           <span class="mf-hub-d">Performed by Pluto<br>盒子总计、日常记录与大盘评分</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
+      <button type="button" class="mf-hub-btn" data-hubkey="wiki" data-mfext="https://wiki.pokesleep.com/">
+        <span class="mf-hub-ic mf-hub-ic-wiki"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5c0-.8.7-1.4 1.5-1.3C8 4 10 4.7 12 6c2-1.3 4-2 6.5-2.3.8-.1 1.5.5 1.5 1.3v13c0 .8-.7 1.4-1.5 1.3-2.5-.3-4.5.4-6.5 1.7-2-1.3-4-2-6.5-1.7C4.7 19.4 4 18.8 4 18Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 6v14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">宝睡超级资料站</span>
+          <span class="mf-hub-d">Performed by 猫昆卡<br>宝睡百科全书</span>
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
@@ -10610,7 +10646,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid', pwaBannerDismissed: false}; // 26格=6.5h，8格=2h；
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid', mfHubViewMode: 'list', pwaBannerDismissed: false}; // 26格=6.5h，8格=2h；
 // boxViewMode：盒子网格/列表视图，'grid'=原来的gif方块平铺，'list'=横向列表（毕业等级/睡饱饱/联动徽章一目了然）；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
@@ -19483,9 +19519,115 @@ function mfRenderHubStatus(){
     }
   }
 }
+/* v3.30：更多功能 hub 支持长按拖动换序（跟培养计划列表同款手势，见 planRowPointerDown 那一段的
+   长注释——按下瞬间就摘掉 touch-action 交给自己判定，不然真机上纵向位移一冒头就被系统原生滚动
+   截胡，0.5s 的长按计时器永远轮不到）。顺序纯本地 localStorage，不进 userPrefs/prefs_json，
+   不跟账号云同步——每台设备各排各的，换手机/换浏览器不带过去，这是需求明确要的行为。
+   排序算法不分列表/网格：拖动时找当前离指针最近的另一颗按钮，把自己插到它前面还是后面
+   （按原来谁在前谁在后决定方向），CSS grid 的自动布局本来就按 DOM 顺序走，两种视图共用一套逻辑。 */
+const MFHUB_ORDER_KEY = 'effiprobcalc_mfhub_order_v1';
+function mfHubLoadOrder(){
+  try{ const raw = localStorage.getItem(MFHUB_ORDER_KEY); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }catch(e){ return []; }
+}
+function mfHubPersistCurrentOrder(){
+  const list = document.getElementById('mfHubList'); if(!list) return;
+  try{ localStorage.setItem(MFHUB_ORDER_KEY, JSON.stringify([...list.querySelectorAll('.mf-hub-btn')].map(b=>b.dataset.hubkey))); }catch(e){}
+}
+function mfHubApplyOrder(){
+  const list = document.getElementById('mfHubList'); if(!list) return;
+  const saved = mfHubLoadOrder(); if(!saved.length) return;
+  const btns = [...list.querySelectorAll('.mf-hub-btn')];
+  const byKey = new Map(btns.map(b=>[b.dataset.hubkey, b]));
+  const ordered = [];
+  saved.forEach(k=>{ const b = byKey.get(k); if(b){ ordered.push(b); byKey.delete(k); } });
+  byKey.forEach(b=> ordered.push(b));   // 存过之后新加的功能（比如这次的宝睡超级资料站）排最后
+  ordered.forEach(b=> list.appendChild(b));
+}
+let mfHubGestId=null, mfHubGestBtn=null, mfHubGestStart=null, mfHubDragTimer=null, mfHubDragging=false, mfHubGestureFired=false;
+const MFHUB_DRAG_ARM_MS = 500, MFHUB_GEST_TOL = 10;
+function mfHubCancelGesture(){
+  if(mfHubDragTimer){ clearTimeout(mfHubDragTimer); mfHubDragTimer=null; }
+  if(mfHubGestBtn) mfHubGestBtn.style.touchAction = '';
+  mfHubGestId = null; mfHubGestBtn = null;
+}
+function mfHubPointerDown(ev, btn){
+  if(ev.button!=null && ev.button!==0) return;
+  mfHubCancelGesture();
+  mfHubGestId = btn.dataset.hubkey; mfHubGestBtn = btn;
+  mfHubGestStart = {x:ev.clientX, y:ev.clientY};
+  btn.style.touchAction = 'none';
+  mfHubDragTimer = setTimeout(()=>{
+    mfHubDragTimer = null;
+    if(mfHubGestId !== btn.dataset.hubkey || mfHubDragging) return;
+    mfHubDragging = true;
+    btn.classList.add('mf-hub-dragging');
+  }, MFHUB_DRAG_ARM_MS);
+}
+function mfHubDragMove(clientX, clientY){
+  const list = document.getElementById('mfHubList'); const btn = mfHubGestBtn; if(!list || !btn) return;
+  let closest = null, closestDist = Infinity;
+  [...list.querySelectorAll('.mf-hub-btn')].forEach(b=>{
+    if(b===btn) return;
+    const r = b.getBoundingClientRect(); const cx = r.left+r.width/2, cy = r.top+r.height/2;
+    const d = (cx-clientX)*(cx-clientX) + (cy-clientY)*(cy-clientY);
+    if(d < closestDist){ closestDist = d; closest = b; }
+  });
+  if(!closest) return;
+  const all = [...list.children];
+  const before = all.indexOf(btn) > all.indexOf(closest) ? closest : closest.nextSibling;
+  if(before !== btn) list.insertBefore(btn, before);
+}
+function mfHubEndDrag(){
+  if(mfHubGestBtn) mfHubGestBtn.classList.remove('mf-hub-dragging');
+  mfHubDragging = false;
+  mfHubPersistCurrentOrder();
+}
+function mfHubPointerMove(ev){
+  if(!mfHubGestId) return;
+  if(!mfHubDragging){
+    if(Math.abs(ev.clientX-mfHubGestStart.x) > MFHUB_GEST_TOL || Math.abs(ev.clientY-mfHubGestStart.y) > MFHUB_GEST_TOL) mfHubCancelGesture();
+    return;
+  }
+  ev.preventDefault();
+  mfHubDragMove(ev.clientX, ev.clientY);
+  mfHubGestureFired = true;
+}
+function mfHubPointerUp(){
+  if(mfHubDragTimer){ clearTimeout(mfHubDragTimer); mfHubDragTimer=null; }
+  if(mfHubDragging) mfHubEndDrag();
+  if(mfHubGestBtn) mfHubGestBtn.style.touchAction = '';
+  mfHubGestId = null; mfHubGestBtn = null;
+}
+window.addEventListener('pointermove', mfHubPointerMove);
+window.addEventListener('pointerup', mfHubPointerUp);
+window.addEventListener('pointercancel', mfHubPointerUp);
+window.addEventListener('touchmove', (ev)=>{ if(mfHubDragging) ev.preventDefault(); }, {passive:false});
+// 列表/图标（网格）视图切换：图标沿用宝可梦盒左下角那颗按钮的同一份 SVG，按钮固定显示
+// "切换到另一种视图"的那个图标，跟 renderBoxViewToggleIcon 同一个套路
+function renderMfHubViewToggleIcon(){
+  const btn = document.getElementById('mfHubViewToggleBtn'); if(!btn) return;
+  btn.innerHTML = userPrefs.mfHubViewMode==='grid' ? boxListIconSvg(18) : boxGridIconSvg(18);
+}
+function mfHubApplyViewMode(){
+  const list = document.getElementById('mfHubList'); if(!list) return;
+  list.classList.toggle('mf-hub-grid', userPrefs.mfHubViewMode==='grid');
+  renderMfHubViewToggleIcon();
+}
+function mfHubToggleViewMode(){
+  userPrefs.mfHubViewMode = userPrefs.mfHubViewMode==='grid' ? 'list' : 'grid';
+  saveUserPrefs();
+  mfHubApplyViewMode();
+}
+mfHubApplyOrder();
+mfHubApplyViewMode();
+document.getElementById('mfHubViewToggleBtn').onclick = mfHubToggleViewMode;
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
   const extUrl = btn.getAttribute('data-mfext');
-  btn.onclick = extUrl ? (()=> window.open(extUrl, '_blank', 'noopener')) : (()=> mfShowSub(btn.getAttribute('data-mfsub')));
+  btn.onclick = ()=>{
+    if(mfHubGestureFired){ mfHubGestureFired = false; return; }
+    extUrl ? window.open(extUrl, '_blank', 'noopener') : mfShowSub(btn.getAttribute('data-mfsub'));
+  };
+  btn.addEventListener('pointerdown', (ev)=> mfHubPointerDown(ev, btn));
 });
 document.querySelectorAll('#page2 [data-mfback]').forEach(btn=>{
   btn.onclick = ()=> mfShowSub(null);
