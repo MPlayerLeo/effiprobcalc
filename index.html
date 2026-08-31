@@ -856,8 +856,17 @@
   #fabPlanClear{ background:#8d8776; left:24px; bottom:100px; }
   /* 更多功能 hub 的列表/图标视图切换：常驻浮窗，跟按钮条模式/圆形浮窗模式那套开关无关——
      hub 页本来两种模式下都不出任何圆，这颗单独常驻在右下角、页面切换栏正上方，只看
-     是否停在 hub（不是任何子页）来决定显隐，见 updateMfHubViewFab() */
-  #mfHubViewFab{ background:#5a7a8f; right:24px; bottom:100px; font-size:0; }
+     是否停在 hub（不是任何子页）来决定显隐，见 updateMfHubViewFab()。
+     样式改回最早那版白色方块（不是彩色圆），跟其它 .ui-fab 圆钮区分开——这颗单纯是个
+     视图切换小开关，不是"进某个功能"的主动作按钮，不需要那么抢眼。
+     right/bottom 两个坐标不写死，交给 updateMfHubViewFabDock() 现场量：上方留白要跟右边留白
+     一样宽，且电脑宽屏时得贴在居中内容区（.tabbar-inner）右边缘内侧，不能照抄其它圆钮那套
+     "宽屏就贴出内容区外面"的停靠逻辑——所以没有复用 updateFabDockPosition，另起一个函数。 */
+  #mfHubViewFab{
+    width:34px; height:34px; border-radius:9px;
+    background:var(--panel); border:1px solid var(--line); color:var(--ink);
+    box-shadow:0 2px 8px rgba(0,0,0,.15);
+  }
   /* 未登录时盒子底部还留着注册/登录条，圆形浮窗要往上让开，避免压住 */
   #fabPanel.fab-lifted, #fabListView.fab-lifted{ bottom:212px; }
   #fabControls.fab-lifted, #fabCreate.fab-lifted, #fabMore.fab-lifted{ bottom:154px; }
@@ -2600,8 +2609,8 @@
    改成图标右上角内侧一颗小灯——绿色=已加入，灰色=未加入，跟列表视角的状态点同一份判定，
    只是换了个更省地方的展示形式。列表视角下这颗灯保持不出现，沿用原来的文字版本 */
 .mf-hub-ic-dot{
-  display:none; position:absolute; top:3px; right:3px;
-  width:9px; height:9px; border-radius:50%; background:#cfc9bb;
+  display:none; position:absolute; top:7.25px; right:7.25px;
+  width:4.5px; height:4.5px; border-radius:50%; background:#cfc9bb;
   box-shadow:0 0 0 2px rgba(0,0,0,.15);
 }
 .mf-hub-ic-dot.on{ background:#5fd67a; }
@@ -19642,7 +19651,7 @@ window.addEventListener('touchmove', (ev)=>{ if(mfHubDragging) ev.preventDefault
 // 常驻右下角的圆形浮窗（#mfHubViewFab），不再嵌在 hub 内容里跟着页面滚走
 function renderMfHubViewToggleIcon(){
   const fab = document.getElementById('mfHubViewFab'); if(!fab) return;
-  fab.innerHTML = userPrefs.mfHubViewMode==='grid' ? boxListIconSvg(22) : boxGridIconSvg(22);
+  fab.innerHTML = userPrefs.mfHubViewMode==='grid' ? boxListIconSvg(18) : boxGridIconSvg(18);
 }
 function mfHubApplyViewMode(){
   const list = document.getElementById('mfHubList'); if(!list) return;
@@ -19654,6 +19663,24 @@ function mfHubToggleViewMode(){
   saveUserPrefs();
   mfHubApplyViewMode();
 }
+/* 停靠坐标现场量，不写死在 CSS 里：右边留白要跟切换栏上方留白一样宽，且宽屏时得贴着
+   居中内容区（.tabbar-inner，跟 .wrap 同一套 max-width:640px 居中）的右边缘内侧，
+   不能用 window.innerWidth 直接减——桌面浏览器有纵向滚动条时 innerWidth 比
+   fixed 元素 right/left 实际生效的基准（documentElement.clientWidth）宽出滚动条那几像素，
+   算出来的缝会跟着偏，跟 updateFabDockPosition() 里同一个坑。 */
+function updateMfHubViewFabDock(){
+  const fab = document.getElementById('mfHubViewFab');
+  const ref = document.querySelector('.tabbar-inner');
+  const tabBar = document.getElementById('tabBar');
+  if(!fab || !ref || !tabBar) return;
+  const GAP = 24;
+  const vw = document.documentElement.clientWidth;
+  const contentRect = ref.getBoundingClientRect();
+  const tabBarRect = tabBar.getBoundingClientRect();
+  fab.style.right = (vw - contentRect.right + GAP) + 'px';
+  fab.style.bottom = ((window.innerHeight - tabBarRect.top) + GAP) + 'px';
+}
+window.addEventListener('resize', updateMfHubViewFabDock, {passive:true});
 // 常驻浮窗只在真正停在 hub（更多功能首页，不是任何子页）时才冒出来，跟按钮条/圆形浮窗
 // 那套 fabCircleModeOn 开关无关——hub 本来两种模式下都不出任何圆，这颗是独立追加的
 function updateMfHubViewFab(){
@@ -19661,9 +19688,11 @@ function updateMfHubViewFab(){
   const page2El = document.getElementById('page2');
   const onHub = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === null;
   fab.style.display = onHub ? 'flex' : 'none';
+  if(onHub) updateMfHubViewFabDock();
 }
 mfHubApplyOrder();
 mfHubApplyViewMode();
+updateMfHubViewFabDock();
 updateMfHubViewFab();
 document.getElementById('mfHubViewFab').onclick = mfHubToggleViewMode;
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
