@@ -2608,6 +2608,7 @@
 .mf-hub-ic-pvp{ background:#c2554b; }
 .mf-hub-ic-friend{ background:#2f8f5e; }
 .mf-hub-ic-spwr{ background:#3f7fbf; }
+.mf-hub-ic-luck{ background:#8a63c2; }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
 .pvp-disclaimer{
@@ -3445,6 +3446,14 @@
         <span class="mf-hub-body">
           <span class="mf-hub-t">睡意之力计算</span>
           <span class="mf-hub-d">选岛屿、填当前睡意之力，算出各组队规模的分数和起床时间</span>
+        </span>
+        <span class="mf-hub-arrow">›</span>
+      </button>
+      <button type="button" class="mf-hub-btn" data-mfext="https://sleep-luck-tools.com/">
+        <span class="mf-hub-ic mf-hub-ic-luck"><svg class="mf-hub-svg" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-3M14 4h6v6M20 4 10 14" stroke="currentColor" stroke-width="2.2" stroke-linecap="square" stroke-linejoin="miter" fill="none"/></svg></span>
+        <span class="mf-hub-body">
+          <span class="mf-hub-t">水跃鱼气运站</span>
+          <span class="mf-hub-d">朋友做的气运小站，点击在新标签页打开（performed by Pluto）</span>
         </span>
         <span class="mf-hub-arrow">›</span>
       </button>
@@ -19460,7 +19469,8 @@ function mfRenderHubStatus(){
   }
 }
 document.querySelectorAll('#mfHubList .mf-hub-btn').forEach(btn=>{
-  btn.onclick = ()=> mfShowSub(btn.getAttribute('data-mfsub'));
+  const extUrl = btn.getAttribute('data-mfext');
+  btn.onclick = extUrl ? (()=> window.open(extUrl, '_blank', 'noopener')) : (()=> mfShowSub(btn.getAttribute('data-mfsub')));
 });
 document.querySelectorAll('#page2 [data-mfback]').forEach(btn=>{
   btn.onclick = ()=> mfShowSub(null);
