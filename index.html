@@ -244,8 +244,10 @@
     window.__pwaDeferredPrompt = e;
     if(typeof updatePwaInstallUI === 'function') updatePwaInstallUI();
   });
+  window.__pwaInstalled = false;
   window.addEventListener('appinstalled', function(){
     window.__pwaDeferredPrompt = null;
+    window.__pwaInstalled = true;   // 供 pwaWatchInstallStall 判断安装是真完成了还是卡在 Google 那步
     if(typeof updatePwaInstallUI === 'function') updatePwaInstallUI();
   });
   if('serviceWorker' in navigator){
@@ -4719,7 +4721,7 @@
   <div class="cap-ctrl-box" style="width:min(340px,92vw)">
     <div class="cap-ctrl-head"><span id="pwaGuideTitle">添加到桌面</span><span class="cap-ctrl-close" id="pwaGuideClose">✕</span></div>
     <div class="settings-name-hint" id="pwaGuideBody" style="white-space:pre-line;"></div>
-    <img id="pwaGuideImg" src="ios-add-guide.jpg?v=1" alt="iOS添加到主屏幕步骤图" style="display:none;width:100%;border-radius:10px;margin-top:10px;cursor:zoom-in;">
+    <img id="pwaGuideImg" data-src="ios-add-guide.jpg?v=1" alt="iOS添加到主屏幕步骤图" style="display:none;width:100%;border-radius:10px;margin-top:10px;cursor:zoom-in;">
     <div class="isl-modal-acts">
       <button type="button" class="isl-modal-btn isl-modal-save" id="pwaGuideOkBtn" style="width:100%;">知道了</button>
     </div>
@@ -8693,8 +8695,10 @@ async function pwaInstallClick(){
   if(evt){
     window.__pwaDeferredPrompt = null;
     evt.prompt();
-    try{ await evt.userChoice; }catch(e){}
+    let outcome = '';
+    try{ outcome = (await evt.userChoice || {}).outcome || ''; }catch(e){}
     updatePwaInstallUI();
+    if(outcome === 'accepted') pwaWatchInstallStall();
     return;
   }
   if(isIOS){
@@ -8703,9 +8707,30 @@ async function pwaInstallClick(){
   }
   openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。\n\n注意：vivo/oppo/小米等手机自带浏览器的这个菜单项很多是老式网页快捷方式，不认标准安装规范，加出来的图标可能是网页截图、打开也不是全屏——不是加失败，是这个浏览器本身不支持真正的一键安装。想要正常的图标和全屏效果，换成 Chrome 等主流浏览器打开本站再试。');
 }
+/* 用户在系统安装框里点了"安装"、通知栏却一直卡在"正在安装…"不动 —— 这是安卓 Chrome
+   在国内的固定坑，不是本站的问题：Chrome 的安装走的是 WebAPK 流程，要把 manifest 传到
+   Google 的铸造服务器、由 Google 生成签名 APK 再传回来装上。手机没有 Google 服务框架
+   （国行机常见）或者网络到不了 Google 时，这个请求就一直挂着，Chrome 既不报错也不提示。
+   站点侧改不了这件事，只能在等不到 appinstalled 时把原因讲清楚、给出绕路办法。
+   30 秒是个折中：正常能连通时铸造一般几秒到十几秒就回来了，给足余量避免误报。 */
+let pwaStallTimer = null;
+function pwaWatchInstallStall(){
+  if(!/Android/i.test(navigator.userAgent || '')) return;   // WebAPK 是安卓独有的流程
+  clearTimeout(pwaStallTimer);
+  pwaStallTimer = setTimeout(function(){
+    if(window.__pwaInstalled || pwaIsStandalone()) return;   // 真装上了就别打扰
+    openPwaGuideModal('如果通知栏那条「正在安装」一直转不动，多半是卡在 Google 那一步了，不是本站的问题。\n\n安卓 Chrome 的「安装」不在本地完成：它要把本站信息发到 Google 的服务器，由 Google 生成安装包再装回手机。手机没装 Google 服务框架（国行机很常见），或者网络到不了 Google，这一步就会一直转，Chrome 也不会报错。\n\n可以这样绕开：\n\n1. 先别急着重试。那条通知有时要等上几分钟才超时，超时后 Chrome 有机会自动退回成一个普通快捷方式，也能用。\n\n2. 用手机自带浏览器（小米/vivo/oppo 等）打开本站，点它菜单里的「添加到桌面」。这条路不经过 Google，一定能加上，代价是图标可能是网页截图、打开也不是全屏。\n\n3. 之后要是有能连上 Google 的网络环境，再用 Chrome 装一次，装好就是正常图标 + 全屏效果了。');
+  }, 30000);
+}
 function openPwaGuideModal(text, showImage){
   document.getElementById('pwaGuideBody').textContent = text;
-  document.getElementById('pwaGuideImg').style.display = showImage ? '' : 'none';
+  const img = document.getElementById('pwaGuideImg');
+  // 这张图 1.1MB，只有 iOS 用户点「添加到桌面」才会看见。标签上写死 `src` 的话，
+  // 每个访客首次进站都要把它下完：`display:none` 并不阻止 `<img>` 下载（只有
+  // background-image 才会跳过），而且 `window.load` 会等它——开屏遮罩恰好是挂在
+  // `window.load` 上揭开的，等于这张 iOS 专用图卡着所有人的首屏。改成用到才加载。
+  if(showImage && !img.getAttribute('src')) img.src = img.dataset.src;
+  img.style.display = showImage ? '' : 'none';
   document.getElementById('pwaGuideModal').style.display = 'flex';
 }
 function closePwaGuideModal(){ document.getElementById('pwaGuideModal').style.display = 'none'; }
