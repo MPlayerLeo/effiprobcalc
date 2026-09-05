@@ -3174,8 +3174,18 @@
 /* 增强剩余提示条 */
 .plan-boost-note{
   font-size:11px; font-weight:800; color:var(--accent-dk); background:#efe9f6;
-  border-radius:8px; padding:6px 10px; margin:-4px 0 10px;
+  border-radius:8px; padding:6px 10px; margin:-4px 0 10px; line-height:1.7;
 }
+/* 条里那个"已用多少颗"的输入框：跟提示文字同一行内联，去掉数字框的上下箭头
+   （在这么窄的框里点不准，还会把数字挤没） */
+.plan-boost-used-in{
+  width:58px; margin:0 4px; padding:1px 4px; box-sizing:border-box;
+  font-family:inherit; font-size:11px; font-weight:900; line-height:1.5;
+  color:var(--accent-dk); background:var(--paper); border:1px solid var(--accent);
+  border-radius:5px; text-align:center; -moz-appearance:textfield;
+}
+.plan-boost-used-in::-webkit-outer-spin-button,
+.plan-boost-used-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
 /* 资源数字：糖果 / 万能糖 / 碎片，图标当单位。列表条目和编辑弹窗共用这一套 class */
 .plan-res-item{ display:inline-flex; align-items:center; gap:3px; color:var(--ink); }
 .plan-res-ic{ width:14px; height:14px; flex:0 0 auto; object-fit:contain; vertical-align:-2px; }
@@ -3187,6 +3197,9 @@
 /* 原来是 margin-left:auto 顶到最右边，那会把上面的 justify-content:center 吃掉
    （auto 边距优先级高于对齐），所以改成跟着一起居中排 */
 .plan-res-boost{ display:inline-flex; align-items:center; gap:2px; color:var(--accent); font-weight:900; }
+/* 这一只自己的糖就够用、一颗增强都不需要占：徽标照出（0/xxx），但压成灰的，
+   免得满屏紫色 0 把真正吃到增强的那几条盖过去 */
+.plan-res-boost.zero{ color:#a8a294; font-weight:800; }
 .plan-up-ic{ width:10px; height:10px; flex:0 0 auto; fill:currentColor; }
 /* 一条 = 左边一根通高的标签竖条 + 右边「标题 + 箭头图」。箭头图原本只在编辑弹窗里出现，
    现在直接当条目本体，列表和弹窗共用 planArrowHtml() / .plan-arrow-wrap 一套东西。
@@ -20282,7 +20295,9 @@ let planTags = [];
 let planData = [];
 // 增强开关。boost 只能三选一（'none' / 'mini' / 'candy'，两种增强互斥）；
 // boostCap 打开时增强只作用于前 cap 颗糖，用完自动恢复正常消耗
-let planOpts = {boost:'none', boostCap:true};
+// boostUsed = 玩家在活动里【已经吃掉】的增强糖果数，两种增强各记一份（上限不同、是两个活动），
+// 表内可分配的额度 = cap - boostUsed
+let planOpts = {boost:'none', boostCap:true, boostUsed:{mini:0, candy:0}};
 let planPane = 'list';
 let planRemoveMode = false;      // 移出培养多选态：工具条那颗进入，页脚接管确认/取消
 let planSumMode = false;         // 资源总计多选态：页脚左槽进入
@@ -20367,6 +20382,14 @@ function planLoadState(){
     if(o && typeof o==='object'){
       planOpts.boost = PLAN_BOOSTS[o.boost] ? o.boost : 'none';
       planOpts.boostCap = o.boostCap !== false;   // 默认开启上限
+      // 上限值在 PLAN_BOOSTS 里，这里只保证是个非负整数，真正的封顶交给 planBoostUsedOf
+      planOpts.boostUsed = {mini:0, candy:0};
+      if(o.boostUsed && typeof o.boostUsed==='object'){
+        ['mini','candy'].forEach(k=>{
+          const n = Math.floor(Number(o.boostUsed[k]));
+          planOpts.boostUsed[k] = (Number.isFinite(n) && n>0) ? n : 0;
+        });
+      }
     }
   }catch(e){}
 }
@@ -20667,6 +20690,55 @@ function planEvoFamily(dex){
   return out;
 }
 
+/* ---- 糖果共享组 ----
+   游戏里宝可梦糖果是按【种族】发的，整条进化链（含分叉，比如沙奈朵和艾路雷朵）共用同一份，
+   所以表里出现好几条同链条目时它们得共享一个糖果池。
+   另外有几组是"两条互相独立的进化链其实共用一份糖果"的特例（形态变体自成一链、
+   PLAN_EVO_NEXT 里没有边把它们连起来），靠 PLAN_CANDY_MERGE 把链根并到本体那条链上。 */
+const PLAN_CANDY_MERGE = {
+  '#025-1':'#025', '#025-2':'#025', '#025-3':'#025',   // 皮卡丘 万圣节 / 佳节 / 船长
+  '#133-1':'#133', '#133-2':'#133',                    // 伊布 佳节 / 万圣节
+  '#037-1':'#037',                                     // 冰六尾链 → 六尾链
+  '#194-1':'#194',                                     // 毒乌波链 → 乌波链
+  '#363-1':'#363',                                     // 海豹球（佳节）
+  '#710-1':'#710', '#710-2':'#710', '#710-3':'#710',   // 南瓜精/南瓜怪人 四个体型
+  '#849-1':'#849',                                     // 颤弦蝾螈 低调 → 高调那条链（同属毒电婴）
+};
+const planCandyKeyCache = {};
+// 一个 dex 属于哪个糖果池：先取它整条进化链的根，再顺着 PLAN_CANDY_MERGE 并到本体链的根
+function planCandyGroupKey(dex){
+  if(!dex) return null;
+  if(planCandyKeyCache[dex]) return planCandyKeyCache[dex];
+  let root = planEvoFamily(dex)[0];
+  for(let i=0; i<5 && PLAN_CANDY_MERGE[root]; i++) root = planEvoFamily(PLAN_CANDY_MERGE[root])[0];
+  planCandyKeyCache[dex] = root;
+  return root;
+}
+// 手动条目还没选种族时没有链可查，给它一把只有自己能开的锁，免得所有"未选种族"的条目互相串糖
+function planEntryCandyKey(e){
+  const d = planCurrentEvoDex(e) || (e && e.dex);
+  return d ? planCandyGroupKey(d) : ('__solo_' + (e && e.id));
+}
+/* 一个池子现在有多少糖：取组内各条目 candyOwned 的最大值。
+   正常情况下组内所有条目这个字段都被 planSyncGroupOwned 写成同一个数，取 max 只是为了
+   兜住两种"还没同步过"的数据——(1) 这个功能上线前存下来的老条目，(2) 刚从盒子加进来、
+   字段还是默认 0 的新条目。用 max 而不是"第一条"，是因为 0 是默认值，不该把已经填好的数盖掉。 */
+function planGroupOwnedOf(key){
+  let mx = 0;
+  planData.forEach(e=>{
+    if(planEntryCandyKey(e) !== key) return;
+    const n = Math.max(0, Math.floor(Number(e.candyOwned)) || 0);
+    if(n > mx) mx = n;
+  });
+  return mx;
+}
+function planOwnedOf(e){ return planGroupOwnedOf(planEntryCandyKey(e)); }
+// 改一条的"现有糖果"＝改整个种族的池子，同组每条都写一遍
+function planSyncGroupOwned(e, val){
+  const key = planEntryCandyKey(e);
+  planData.forEach(x=>{ if(planEntryCandyKey(x) === key) x.candyOwned = val; });
+}
+
 /* ---- 单只的逐颗模拟 ---- */
 function planSpeciesMult(dex){ return PLAN_SPECIES_MULT[dex] || 1; }
 // 性格的 exp 增减：盒子记录里 incAttr/decAttr 的 'E' 就是 exp。
@@ -20733,11 +20805,18 @@ const PLAN_BOOSTS = {
   mini:  {label:'迷你增强', expMul:2, shardMul:4, cap:350},
   candy: {label:'糖果增强', expMul:2, shardMul:5, cap:3500},
 };
+// 玩家自己填的"这个活动里已经吃掉多少颗增强糖"，封顶到该增强的上限
+function planBoostUsedOf(kind){
+  const b = PLAN_BOOSTS[kind]; if(!b) return 0;
+  const n = Math.floor(Number((planOpts.boostUsed || {})[kind]));
+  return (Number.isFinite(n) && n > 0) ? Math.min(n, b.cap) : 0;
+}
 function planBoostCtx(){
   const b = PLAN_BOOSTS[planOpts.boost];
-  if(!b) return {kind:null, expMul:1, shardMul:1, budget:0};
-  return {kind:planOpts.boost, expMul:b.expMul, shardMul:b.shardMul,
-          budget: planOpts.boostCap ? b.cap : Infinity};
+  if(!b) return {kind:null, expMul:1, shardMul:1, budget:0, cap:0, used:0};
+  const used = planBoostUsedOf(planOpts.boost);
+  return {kind:planOpts.boost, expMul:b.expMul, shardMul:b.shardMul, cap:b.cap, used,
+          budget: planOpts.boostCap ? Math.max(0, b.cap - used) : Infinity};
 }
 
 /* ---- 单条结果 ---- */
@@ -20746,26 +20825,48 @@ function planEntryReady(e){
   const tgt = Math.floor(Number(e.targetLevel));
   return Number.isFinite(tgt) && tgt >= 1 && tgt <= PLAN_LEVEL_MAX && tgt > planClampLevel(e.levelReal);
 }
-function planComputeEntry(e, boost, budgetLeft){
+/* 这一只该吃几颗增强糖。
+   增强不是"有额度就往上怼"——手上的糖够把它升到目标等级的话，一颗增强都不该占用
+   （额度留给后面真正缺糖的条目）；不够才补到"刚好够"为止；额度全用满了还是不够，
+   那就把能用的额度全吃掉。run(b) = 用 b 颗增强跑一遍模拟，candies(b) 对 b 单调不增，
+   所以"最少要几颗"可以直接二分（3500 的上限也只要十几次模拟）。 */
+function planPickBoostSim(run, budgetLeft, ownedForLevel){
+  const base = run(0);
+  if(!(budgetLeft > 0)) return base;
+  if(base.candies <= ownedForLevel) return base;          // 自己的糖就够，跳过这只
+  const hi0 = Math.min(budgetLeft, base.candies);         // 比总糖数还多的增强没有意义
+  const full = run(hi0);
+  if(full.candies > ownedForLevel) return full;           // 全用满也不够，那就全用
+  let lo = 1, hi = hi0;
+  while(lo < hi){
+    const mid = (lo + hi) >> 1;
+    if(run(mid).candies <= ownedForLevel) hi = mid; else lo = mid + 1;
+  }
+  return run(lo);
+}
+// ownedAvail = 这一只实际能动用的糖（同种族共享池被前面几只扣完之后剩下的）。
+// 不传就按整个种族池的总数算（弹窗兜底用）。
+function planComputeEntry(e, boost, budgetLeft, ownedAvail){
   // 现状/目标形态现在可能被链上选择改掉了，不能再假设现状永远是 e.dex——
   // 种族倍率跟着"现状形态"走，进化消耗跟着"现状→目标"这条区间走
   const curDex = planCurrentEvoDex(e), tgtDex = planTargetEvoDex(e);
   const evoCandy = planEvoTotalCost(curDex, tgtDex);
-  const owned = Math.max(0, Math.floor(Number(e.candyOwned)) || 0);
+  const owned = (ownedAvail === undefined || ownedAvail === null)
+    ? planOwnedOf(e) : Math.max(0, Math.floor(ownedAvail) || 0);
   if(!planEntryReady(e)){
     // 等级已达成但选了进化：进化糖果照样得算，只是没有升级消耗
     const need = Math.max(0, evoCandy - owned);
-    return {ready:false, levelCandy:0, evoCandy, totalCandy:evoCandy,
+    return {ready:false, owned, levelCandy:0, evoCandy, totalCandy:evoCandy,
             needCandy:need, handyCandy:Math.ceil(need/3), handyCandyM:Math.floor(need/20), shards:0, boosted:0, ok:true};
   }
-  const sim = planSimulate(
-    e.levelReal, Math.max(0, Math.floor(Number(e.remainExp)) || 0), e.targetLevel,
-    planNatureKeyOf(e), planSpeciesMult(curDex),
-    boost.expMul, boost.shardMul, Math.max(0, budgetLeft)
-  );
-  const total = sim.candies + evoCandy;          // 进化糖果不产生经验、不消耗碎片、不占增强配额
+  const fromLv = e.levelReal, rExp = Math.max(0, Math.floor(Number(e.remainExp)) || 0);
+  const natK = planNatureKeyOf(e), mult = planSpeciesMult(curDex);
+  const run = b => planSimulate(fromLv, rExp, e.targetLevel, natK, mult, boost.expMul, boost.shardMul, b);
+  // 进化糖果不产生经验、不占增强配额，但一样要从手上的糖里出，所以先把它从"能用来升级的糖"里扣掉
+  const sim = planPickBoostSim(run, Math.max(0, budgetLeft), Math.max(0, owned - evoCandy));
+  const total = sim.candies + evoCandy;
   const need  = Math.max(0, total - owned);
-  return {ready:true, levelCandy:sim.candies, evoCandy, totalCandy:total,
+  return {ready:true, owned, levelCandy:sim.candies, evoCandy, totalCandy:total,
           needCandy:need, handyCandy:Math.ceil(need/3), handyCandyM:Math.floor(need/20), shards:sim.shards,
           boosted:sim.boosted, ok:sim.ok};
 }
@@ -20776,14 +20877,21 @@ function planComputeAll(ids){
   const boost = planBoostCtx();
   let left = boost.budget;
   const res = {};
+  const pools = {};                                 // 糖果池：一个种族（整条进化链）一份，同样按显示顺序从上往下扣
   const list = ids ? planSorted().filter(e=>ids.has(e.id)) : planSorted();
   list.forEach(e=>{
-    const r = planComputeEntry(e, boost, left);
+    const key = planEntryCandyKey(e);
+    if(!(key in pools)) pools[key] = planGroupOwnedOf(key);
+    const avail = pools[key];
+    const r = planComputeEntry(e, boost, left, avail);
+    // 这一只实际吃掉的糖从池子里扣走，后面同种族的条目只能用剩下的
+    pools[key] = Math.max(0, avail - Math.min(avail, r.totalCandy));
     res[e.id] = r;
     if(Number.isFinite(left)) left -= r.boosted;
   });
-  res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;
-  res.__boostCap  = Number.isFinite(boost.budget) ? boost.budget : null;
+  res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
+  res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
+  res.__boostPre  = boost.used;                                                     // 玩家自己填的"已用"
   return res;
 }
 // 增强徽标上的向上箭头：扁平实心矢量，替掉原来的 ⚡ emoji（emoji 各平台字形不一，
@@ -20886,9 +20994,13 @@ function planArrowHtml(r, e, mini){
     top = `<span class="plan-res-item">${planIcon('candy')}${planFmtNum(r.needCandy)}</span>`+
           `<span class="plan-res-item">${planIcon('handy')}${planFmtNum(r.handyCandy)}<span class="plan-nap-slash">/</span><span class="plan-nap-tk">${planFmtNum(r.handyCandyM)}</span></span>`+
           napHtml;
-    // 增强额度只挂在列表上；弹窗底下的 planModalNote 已经拿文字说过一遍了
+    // 增强额度只挂在列表上；弹窗底下的 planModalNote 已经拿文字说过一遍了。
+    // 分母＝这一只升到目标等级实际吃掉的总糖数（含被增强的那些），分子＝其中吃到增强的颗数。
+    // 开了增强就一直挂着，哪怕分子是 0——"这只不用吃增强"本身就是个要看的结论
     bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
-          (mini && r.boosted > 0 ? `<span class="plan-res-boost">${PLAN_UP_SVG}${r.boosted}/${r.levelCandy}</span>` : '');
+          (mini && planOpts.boost !== 'none' && r.levelCandy > 0
+            ? `<span class="plan-res-boost${r.boosted ? '' : ' zero'}">${PLAN_UP_SVG}${planFmtNum(r.boosted)}/${planFmtNum(r.levelCandy)}</span>`
+            : '');
   }
   return `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
     `<div class="plan-side">`+
@@ -20903,6 +21015,59 @@ function planArrowHtml(r, e, mini){
       `<div>${planPortraitHtml(e, rightDex)}</div><div class="plan-side-lv">Lv.${tgtLv}</div>`+
     `</div>`+
   `</div>`;
+}
+/* 增强提示条。里头那个「已用 __ 颗」是可编辑的：玩家在游戏里已经吃掉的增强糖填进来，
+   表里能分配的额度就只剩 cap - 已用。
+   ⚠️ 这条每次 planRenderList 都会走一遍，而输入框正被用户敲着——所以结构只在第一次
+   （或者被别的分支冲掉之后）建一次，之后只改两侧的文字；输入框正拿着焦点时连 value 都不回写，
+   不然打到一半会被自己的重绘顶掉光标。 */
+function planRenderBoostNote(all){
+  const note = document.getElementById('planBoostNote');
+  if(!note) return;
+  const kind = planOpts.boost;
+  if(kind === 'none'){ note.style.display = 'none'; note.innerHTML = ''; return; }
+  const b = PLAN_BOOSTS[kind];
+  note.style.display = '';
+  if(!planOpts.boostCap){
+    // 不限量时"已用多少"没有意义，输入框整个不出现
+    note.innerHTML = planEsc(b.label) + '已开启（未限量）';
+    return;
+  }
+  let inp = document.getElementById('planBoostUsedIn');
+  if(!inp || !note.contains(inp)){
+    note.innerHTML =
+      '<span id="planBoostNoteLab"></span>'+
+      '<input type="number" class="plan-boost-used-in" id="planBoostUsedIn" min="0" inputmode="numeric">'+
+      '<span id="planBoostNoteTail"></span>';
+    inp = document.getElementById('planBoostUsedIn');
+    // 打字时只兜住负数，超上限等失焦再夹——边打边夹会让"3500"在输到第三位时就被砍成 350
+    const commit = (clampMax)=>{
+      const bb = PLAN_BOOSTS[planOpts.boost]; if(!bb) return;
+      let n = Math.floor(Number(inp.value));
+      if(!Number.isFinite(n) || n < 0) n = 0;
+      if(clampMax && n > bb.cap){ n = bb.cap; inp.value = String(n); }
+      planOpts.boostUsed = planOpts.boostUsed || {};
+      planOpts.boostUsed[planOpts.boost] = n;
+      planSaveState();
+      planRenderList();
+    };
+    inp.addEventListener('input', ()=> commit(false));
+    inp.addEventListener('blur',  ()=> commit(true));
+  }
+  const used = planBoostUsedOf(kind);
+  const budget = Math.max(0, b.cap - used);
+  const alloc = Math.max(0, all.__boostUsed || 0);
+  // 刚切换了增强种类：两种增强各记各的"已用"，这时必须无条件把新的那份写进框里。
+  // 光靠"没焦点才回写"不行——手机上点按钮不会把焦点从输入框拿走（iOS 不给 button 焦点），
+  // 焦点还留在框里的话就会看着像"切了增强但已用没变"
+  const kindChanged = note.dataset.boostKind !== kind;
+  note.dataset.boostKind = kind;
+  document.getElementById('planBoostNoteLab').textContent = b.label + '已用';
+  inp.max = b.cap;
+  if(kindChanged || document.activeElement !== inp) inp.value = String(used);
+  document.getElementById('planBoostNoteTail').textContent =
+    ' / ' + planFmtNum(b.cap) + ' 颗，还剩 ' + planFmtNum(budget) + ' 颗可分配，表内已分掉 ' +
+    planFmtNum(alloc) + ' 颗（按上方优先级顺序，只补给自己糖不够的那几只）';
 }
 function planRenderBoostBar(){
   const set = (id, on)=>{ const b=document.getElementById(id); if(b) b.classList.toggle('on', on); };
@@ -21098,17 +21263,7 @@ function planRenderList(){
      一起切过去，这样"页脚合计 = 被选中卡片之和"永远成立（用户明确选的这个口径）。 */
   const subsetMode = planSumMode && planPickedIds.size > 0;
   const all = subsetMode ? planComputeAll(planPickedIds) : planComputeAll();
-  const note = document.getElementById('planBoostNote');
-  if(note){
-    if(planOpts.boost !== 'none' && all.__boostCap != null){
-      note.style.display = '';
-      note.textContent = PLAN_BOOSTS[planOpts.boost].label + '已用 ' + planFmtNum(all.__boostUsed) +
-        ' / ' + planFmtNum(all.__boostCap) + ' 颗，按上方优先级顺序依次分配';
-    } else if(planOpts.boost !== 'none'){
-      note.style.display = '';
-      note.textContent = PLAN_BOOSTS[planOpts.boost].label + '已开启（未限量）';
-    } else note.style.display = 'none';
-  }
+  planRenderBoostNote(all);
   const dup = planDupIdSet();
   el.innerHTML = '';
   // 多选态下手势（左滑删除/长按拖动排序）整个不出现，滑开的删除按钮也一起收起，
@@ -21275,8 +21430,8 @@ function planOpenEditModal(id){
         <input type="number" class="plan-field-in" id="planFCur" min="1" max="${PLAN_LEVEL_MAX}" value="${levelRealOf(e)}"></div>
       <div class="plan-field"><span class="plan-field-lab">升级还需 exp（不填按整级算）</span>
         <input type="number" class="plan-field-in" id="planFExp" min="0" value="${e.remainExp||''}"></div>
-      <div class="plan-field"><span class="plan-field-lab">现有宝可梦糖果</span>
-        <input type="number" class="plan-field-in" id="planFOwn" min="0" value="${e.candyOwned||0}"></div>
+      <div class="plan-field"><span class="plan-field-lab">现有宝可梦糖果（同种族共享）</span>
+        <input type="number" class="plan-field-in" id="planFOwn" min="0" value="${planOwnedOf(e)}"></div>
       <div class="plan-field"><span class="plan-field-lab">目标等级（1~${PLAN_LEVEL_MAX}）</span>
         <input type="number" class="plan-field-in" id="planFTgt" min="1" max="${PLAN_LEVEL_MAX}" value="${e.targetLevel||''}"></div>
       <div class="plan-field"><span class="plan-field-lab">同优先级内排序（1~${PLAN_SORT_MAX}，越小越靠前）</span>
@@ -21368,7 +21523,8 @@ function planEditCollect(e){
   const ex = Math.floor(Number(num('planFExp')));
   e.remainExp = (num('planFExp')==='' || !Number.isFinite(ex) || ex<0) ? null : ex;
   const ow = Math.floor(Number(num('planFOwn')));
-  e.candyOwned = (!Number.isFinite(ow) || ow<0) ? 0 : ow;
+  // 糖果是按种族发的：改这一只＝改整条进化链（含分叉和共享糖果的形态）的池子，同组每条都写一遍
+  planSyncGroupOwned(e, (!Number.isFinite(ow) || ow<0) ? 0 : ow);
   const tg = num('planFTgt');
   e.targetLevel = tg==='' ? null : planClampLevel(tg);
   // 组内排序数字不能相同：按用户填的数字把这条插到该去的位置，同组其它条目让位重排
@@ -21441,7 +21597,12 @@ function planEditRefresh(e){
     const bits = [];
     if(r.ready) bits.push('升级 ' + planFmtNum(r.levelCandy) + ' 颗');
     if(r.evoCandy) bits.push('进化 ' + planFmtNum(r.evoCandy) + ' 颗（进化不消耗梦之碎片）');
-    if(e.candyOwned) bits.push('已有 ' + planFmtNum(e.candyOwned) + ' 颗已扣除');
+    // 同种族的前位条目已经把池子吃掉一部分时，得说清楚这一只真正能动用的是多少
+    const pool = planOwnedOf(e);
+    if(pool && pool !== r.owned)
+      bits.push('同种族共 ' + planFmtNum(pool) + ' 颗，前位已用掉 ' + planFmtNum(pool - r.owned) +
+                ' 颗，这只可用 ' + planFmtNum(r.owned) + ' 颗');
+    else if(r.owned) bits.push('已有 ' + planFmtNum(r.owned) + ' 颗已扣除');
     if(r.boosted) bits.push(PLAN_BOOSTS[planOpts.boost].label + ' 覆盖前 ' + r.boosted + ' 颗');
     if(r.ok === false) bits.push('⚠ 计算未收敛，请检查输入');
     note.textContent = bits.join(' · ');
