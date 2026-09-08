@@ -12638,7 +12638,10 @@ const PORTRAIT_BBOX_SANE_RATIO = 0.80;
 const SPECIES_ICON_SHAPE_W = 20;
 const SPECIES_ICON_HIST_W = 12;
 
-// 取出现频次最高的两种颜色当背景种子
+// 【只给"合成参考图"用】取出现频次最高的两种精确色当背景种子。
+// 参考图是我们自己合成到 REF_CARD_BG / ING_REF_BG 这种精确纯色上的，背景本来就没有噪点，
+// 按精确色数就是对的；食材图标那条链（ingGridFromCanvas）也一直用这一份。
+// 真机截图请走下面的 portraitBgSeedsClustered——两边故意分开，原因见那边的注释。
 function portraitBgSeeds(d, w, h){
   const cnt = new Map();
   for(let i=0;i<w*h*4;i+=4){
@@ -12653,6 +12656,69 @@ function portraitBgSeeds(d, w, h){
   const floor = ranked.length ? ranked[0][1]*0.10 : 0;
   return ranked.filter(([,n])=> n >= floor)
                .map(([k])=> [(k>>16)&255, (k>>8)&255, k&255]);
+}
+// 【只给真机截图用】把相邻色先聚成一簇再排名，然后取前两簇当背景种子。
+// ⚠️ 这是 2026-09-08 那次"所有截图都被认成食梦梦"的根因修复，别退回精确色计数：
+//   无损 PNG 截图里白卡片和浅黄圆各自是一个精确纯色，精确色计数正好排出这两名。但玩家发来的
+//   图几乎都被微信/QQ 转过一次 JPEG——一块纯色会被打散成上百个相邻色。实测那张微信图：
+//   浅黄圆 (254,254,238) 裂成 252,255,236 / 253,254,238 / 255,254,236 … 每片只占 1.0~1.7%，
+//   而白卡片自己的两个碎片（254,254,254 占 21%、254,254,252 占 14%）把前两名双双占满，
+//   于是**浅黄圆整个进不了种子**：泛洪填不掉它 → "最大前景连通块"＝整个浅黄圆盘 →
+//   缩成 32×32 就是一坨浅色圆饼，谁圆谁浅谁就赢，全站统一答成食梦梦（而且是"确信"的）。
+//   聚类之后同一批像素归并成 白 54% / 浅黄 24%，两个种子都稳稳过线。
+// 合并容差取 8：白(254) 和浅黄(238) 差 16，取一半——既吞得下 JPEG 噪点，又不会把这两者并成一簇。
+// 归并是"跟簇心比"而不是链式传递，所以不会出现 254→246→238 一路并过去的情况。
+// 参考图侧不能用这一份：合成底是精确纯色，聚类只会让角色身上某个颜色更容易堆过 10% 门槛
+// 变成第二种子，把"两种子连线"那条通道开在角色身上。实测参考图也换成聚类的话，
+// 75 张测试图 top1 从 71 掉到 64。
+const PORTRAIT_SEED_MERGE_TOL = 8;
+const PORTRAIT_SEED_MAX_CLUSTERS = 24;
+function portraitBgSeedsClustered(d, w, h){
+  const cnt = new Map();
+  for(let i=0;i<w*h*4;i+=4){
+    const k = (d[i]<<16)|(d[i+1]<<8)|d[i+2];
+    cnt.set(k, (cnt.get(k)||0)+1);
+  }
+  const ranked = [...cnt.entries()].sort((a,b)=> b[1]-a[1]);
+  const clusters = [];
+  for(const [k, n] of ranked){
+    const r=(k>>16)&255, g=(k>>8)&255, b=k&255;
+    let hit = null;
+    for(const q of clusters){
+      if(Math.abs(r-q.s[0])<=PORTRAIT_SEED_MERGE_TOL && Math.abs(g-q.s[1])<=PORTRAIT_SEED_MERGE_TOL
+         && Math.abs(b-q.s[2])<=PORTRAIT_SEED_MERGE_TOL){ hit = q; break; }
+    }
+    // 簇心＝簇里出现最多的那个精确色（按频次降序遍历，第一个建簇的天然就是它）
+    if(hit) hit.n += n;
+    else if(clusters.length < PORTRAIT_SEED_MAX_CLUSTERS) clusters.push({s:[r,g,b], n});
+  }
+  clusters.sort((a,b)=> b.n-a.n);
+  const top = clusters.slice(0, 2);
+  const floor = top.length ? top[0].n*0.10 : 0;   // 10% 门槛的用意同 portraitBgSeeds
+  return top.filter(c=> c.n >= floor).map(c=> c.s);
+}
+// 背景到底有多毛：主背景簇里 90% 的像素落在离簇心多远之内（切比雪夫距离）。
+// 实测这一个数字把"有没有被 JPEG 压过"分得很开：75 张无损 PNG 有 74 张是 0，
+// JPEG q75 全是 3~4，q55 全是 4~5（唯一那张 PNG 里读出 5 的，本身就是个 .jpg 文件）。
+// 拿它来定起步容差，就不用在"PNG 要紧一点、JPEG 要松一点"之间二选一——见 portraitTolLadder。
+function portraitBgNoise(d, w, h){
+  const cnt = new Map();
+  for(let i=0;i<w*h*4;i+=4){
+    const k = (d[i]<<16)|(d[i+1]<<8)|d[i+2];
+    cnt.set(k, (cnt.get(k)||0)+1);
+  }
+  let bestK = 0, bestN = -1;
+  for(const [k, n] of cnt){ if(n > bestN){ bestN = n; bestK = k; } }
+  const s = [(bestK>>16)&255, (bestK>>8)&255, bestK&255];
+  const mem = []; let tot = 0;
+  for(const [k, n] of cnt){
+    const dd = Math.max(Math.abs(((k>>16)&255)-s[0]), Math.abs(((k>>8)&255)-s[1]), Math.abs((k&255)-s[2]));
+    if(dd <= PORTRAIT_SEED_MERGE_TOL){ mem.push([dd, n]); tot += n; }
+  }
+  mem.sort((a,b)=> a[0]-b[0]);
+  let acc = 0;
+  for(const [dd, n] of mem){ acc += n; if(acc >= tot*0.90) return dd; }
+  return 0;
 }
 // 截图侧的背景判定：alpha透明 / 贴近任一背景种子色 / 落在两个种子色的连线上（白卡片与浅黄圆
 // 交界处的抗锯齿过渡色就在这条线上，不单独放行的话会留下一圈假前景）/ 卡片珊瑚橙描边
@@ -12741,12 +12807,28 @@ function maskedGridFromCanvas(canvas, isBg, grid){
   octx.drawImage(tmp, b.minx, b.miny, b.maxx-b.minx+1, b.maxy-b.miny+1, 0, 0, grid, grid);
   return { data: octx.getImageData(0,0,grid,grid).data, bbox: b, area: r.area, cropW: w, cropH: h };
 }
+// 起步容差按实测的背景噪声定，后面再留两级放宽当兜底。
+// 【为什么不能固定从 2 起步】原来的阶梯 [2,5,10,18] 有个致命的退出条件：只要抠出来的前景框
+// 不大得离谱（≤80%）就当成功、立刻返回，从来不往下走。而 JPEG 图在 tol=2 下抠出来的东西
+// 恰恰"看着很合理"——宝可梦周围糊着一圈压缩振铃，那圈既不够接近种子色（删不掉）又粘在本体上，
+// 于是前景框只有 40% 左右，稳稳过线返回，阶梯里 5/10/18 三级形同虚设。
+// 实测把 tol 固定到 5，75 张图在 q55 下的 top1 直接从 10 跳到 69；但 PNG 会掉 1 张，
+// 说明"该紧的时候就得紧"。所以改成按 portraitBgNoise 自适应：PNG 算出来还是 2，JPEG 是 4~6。
+// 【参考图走 exactBg】合成参考图的底是我们自己填的精确纯色，噪声恒为 0、种子也不该聚类，
+// 保持原来那套一模一样的口径，免得动一处把参考图池整个换了。
+function portraitTolLadder(d, w, h){
+  const t0 = Math.min(8, Math.max(PORTRAIT_BG_TOL, portraitBgNoise(d, w, h) + 1));
+  return [t0, 10, 18].filter((v, i, a)=> v >= t0 && a.indexOf(v) === i);
+}
 // 截图侧：容差从紧到松逐级重试，第一个抠出"大小合理"的结果就用
-function portraitGridFromShot(canvas, grid){
+function portraitGridFromShot(canvas, grid, opts){
   const w = canvas.width, h = canvas.height;
-  const seeds = portraitBgSeeds(canvas.getContext('2d').getImageData(0,0,w,h).data, w, h);
+  const d = canvas.getContext('2d').getImageData(0,0,w,h).data;
+  const exactBg = !!(opts && opts.exactBg);
+  const seeds  = exactBg ? portraitBgSeeds(d, w, h) : portraitBgSeedsClustered(d, w, h);
+  const ladder = exactBg ? PORTRAIT_BG_TOL_LADDER : portraitTolLadder(d, w, h);
   let last = null;
-  for(const tol of PORTRAIT_BG_TOL_LADDER){
+  for(const tol of ladder){
     const g = maskedGridFromCanvas(canvas, makePortraitBgTest(seeds, tol), grid);
     if(!g) continue;
     last = g;
@@ -12779,7 +12861,7 @@ function loadImageAsGrid(src, grid){
       try{
         const full = document.createElement('canvas'); full.width=img.naturalWidth; full.height=img.naturalHeight;
         full.getContext('2d').drawImage(img, 0, 0);
-        const g = portraitGridFromShot(compositeRefOnCardBg(full), grid);
+        const g = portraitGridFromShot(compositeRefOnCardBg(full), grid, {exactBg:true});
         resolve(g ? g.data : null);
       }catch(e){ resolve(null); }
     };
@@ -12877,23 +12959,32 @@ async function matchSpeciesIcon(iconCanvas){
   // 74张真机截图对着比值做过阈值扫描：0.55 是"确信的全部判对"（55张确信、0张错）里
   // 收得最多的点，再往上0.60开始混进错的。这组数字是从这一批测试截图里扫出来的，
   // 不是绝对定律，后续样本多了发现偏了再回来调这一个数字
-  const secondDiffSpecies = ranking.find(r=> r.id!==first.id);
-  let confident = true;
+  // 置信度问的是「**这一族**是不是明显最好」，而不是「这一只是不是明显甩开第二名」。
+  // 同链各形态本来就长得像（小拳石/隆隆石/隆隆岩是典型，32×32 缩略图天生分不开），
+  // 而它们在本站的效率数据是按最终形态算的，选谁其实等价——所以拿"第一个不同族的候选"
+  // 当分母，同族之间咬得多死都不影响置信度，最后再把答案收敛到最终形态。
   // 0.70 是在74张真机截图上扫出来的：0.70~0.80 是一段平台（confident都=69且零认错），
   // 第一个认错出现在 0.85（小福蛋被认成食梦梦，ratio=0.837）。取平台左端而不是右端，
   // 是为了跟已知的第一个错例留出 0.14 的安全边距——宁可多弃权几张让用户点候选，
   // 也不要一个"自信满满的错答案"。（参考图口径对齐之前这个数是0.55。）
-  if(secondDiffSpecies){ const denom = secondDiffSpecies.dist || 1; confident = (first.dist/denom) < 0.70; }
-  // 前两名同属一条进化链时不必再纠结：同链各形态本来就长得像（小拳石/隆隆石/隆隆岩就是
-  // 典型，靠32×32缩略图分辨率天生分不开），而它们在本站的效率数据是按最终形态算的，
-  // 选谁其实等价。直接取最终形态、判定为确信，把"分不清同一家族的哪一阶"这类无意义的
-  // 犹豫从弃权名单里摘出去——这跟 identifyBySignature 收尾处"同链数据完全相同就选最终形态"
-  // 是同一个口径
+  //
+  // ⚠️ 这里原来是"先按不同**物种**算比值，比值不过关但前两名同族就强行改判确信"。
+  // 那种写法会**凭空造出置信度**：2026-09-08 那张繁中截图里的拉帝亚斯（立绘是斜躺的飞行姿势，
+  // 参考图是站姿，轮廓不匹配率 0.50，正确答案排到第 11）前两名恰好是三地鼠/地鼠这对同族，
+  // 于是"前两名同族"这条规则把一个 0.90 的烂比值直接盖章成"确信的三地鼠"，
+  // 连名字OCR都没机会翻案。改成按族算之后同一张图变成"不确信"，退回摆候选让玩家点。
+  // 75张测试图 ×3 档压缩上验证过：top1 完全不变，确信数只在 PNG 那档少了 1 张。
+  const firstFam = speciesFamilyKey(first.id);
+  const secondDiffFamily = ranking.find(r=> speciesFamilyKey(r.id) !== firstFam);
+  let confident = true;
+  if(secondDiffFamily){ const denom = secondDiffFamily.dist || 1; confident = (first.dist/denom) < 0.70; }
+  // 同族里还有别的形态挤在不同族候选前面 → 说明"是哪一阶"确实分不清，收敛到最终形态。
+  // 这跟 identifyBySignature 收尾处"同链数据完全相同就选最终形态"是同一个口径。
   let pkId = first.id, shiny = first.shiny;
-  if(!confident && secondDiffSpecies && speciesFamilyKey(first.id)===speciesFamilyKey(secondDiffSpecies.id)){
-    pkId = speciesFamilyKey(first.id);
-    confident = true;
-    console.log('头像识别：前两名（'+first.id+'/'+secondDiffSpecies.id+'）同属一条进化链，直接取最终形态', pkId);
+  const sameFamNext = ranking.find(r=> r.id!==first.id && speciesFamilyKey(r.id)===firstFam);
+  if(confident && sameFamNext && (!secondDiffFamily || sameFamNext.dist < secondDiffFamily.dist) && pkId !== firstFam){
+    pkId = firstFam;
+    console.log('头像识别：前几名（'+first.id+'/'+sameFamNext.id+'）同属一条进化链，直接取最终形态', pkId);
   }
   // 拿不准时给调用方一份"最像的前几只"（按物种去重），用来在修改面板里摆出头像candidates让用户点选
   const candidates = [];
@@ -12915,6 +13006,9 @@ async function matchSpeciesIcon(iconCanvas){
 // 固定比例往里取——这两块内容都在卡片里，不需要各自单独找一次形状。
 // 下面这套比例是拿 Downloads/测试图片 里的真机截图（1320×2868，7只宝可梦）量出来的，
 // 不是拍脑袋的初值；如果以后遇到分辨率差异很大的截图定位跑偏，回来重新量这几个数字。
+// 名字卡片的宽÷高。这是个固定尺寸的 UI 元件，80 张真机截图 ×3 档压缩实测全部落在
+// 3.505~3.579，跟机型/分辨率/压缩程度都无关——所以当右边框被压没时可以拿它来推算宽度。
+const NAME_CARD_ASPECT = 3.515;
 function isCardBorderPixel(r,g,b){
   return r>230 && g>90 && g<160 && b<130 && (r-b)>90 && (r-g)>60;
 }
@@ -12976,11 +13070,24 @@ function locateNameCardBox(img){
     for(let x=workW-1;x>=0;x--){ const p=(y*workW+x)*4; if(isCardBorderPixel(d[p],d[p+1],d[p+2])){ last = x; break; } }
     if(last>=0) lasts.push(last);
   }
-  if(!lasts.length) return locateNameCardBoxByRows(img);
   lasts.sort(function(a,b){ return a-b; });
-  const x1w = lasts[Math.floor(lasts.length/2)];
+  const x1Coral = lasts.length ? (lasts[Math.floor(lasts.length/2)]+1)/scale/W : null;
 
-  return { x0: 0, x1: (x1w+1)/scale/W, y0: (run[0]/scale)/H, y1: ((run[1]+1)/scale)/H };
+  // ③ 兜底：卡片是个固定长宽比的 UI 元件，**宽÷高恒等于 3.515**——80 张真机截图
+  //    ×（原图 / JPEG q75 / q55）三档全部落在 3.505~3.579，跟分辨率、机型、压缩都无关。
+  //    ②那一步靠的是卡片那圈**1px** 珊瑚色细边框，它是整张图里最先被 JPEG 压没的东西：
+  //    玩家那张波加曼截图上边框被抹得一干二净，逐行"最右珊瑚像素"扫到的只剩左边那条竖条
+  //    自己，中位数给出 x1=0.035（正确值 0.567）——卡片塌成一条缝，头像裁到空白、
+  //    等级读成 null、名字OCR读到的是食材槽上的"Lv.30/Lv.60"。①那一步的竖条又厚又实，
+  //    从来没塌过，所以拿"竖条高度 × 3.515"当校验和兜底是可靠的。
+  //    优先仍然用②的实测值（那是直接量出来的，比例是推出来的），只在两者差得离谱时才改用比例。
+  const cardH  = (run[1]-run[0]+1)/scale;              // 卡片高度（换算回原图像素）
+  const x1Ratio = Math.min(1, cardH*NAME_CARD_ASPECT/W);
+  const x1 = (x1Coral!=null && Math.abs(x1Coral-x1Ratio) <= x1Ratio*0.15) ? x1Coral : x1Ratio;
+  if(x1Coral==null || x1!==x1Coral) console.log('名字卡片右边框被压没了（逐行珊瑚中位数给出 '
+    + (x1Coral==null?'无':x1Coral.toFixed(3)) + '），改按卡片固定长宽比推算：x1=' + x1Ratio.toFixed(3));
+
+  return { x0: 0, x1: x1, y0: (run[0]/scale)/H, y1: ((run[1]+1)/scale)/H };
 }
 // 旧的逐行横带写法，留作兜底
 function locateNameCardBoxByRows(img){
