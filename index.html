@@ -12939,6 +12939,32 @@ function speciesFamilyKey(dex){
   const finals = POKEMON_FINAL_DEX_MAP[dex];
   return (finals && finals.length===1) ? finals[0] : dex;
 }
+// 精修阶段的平移搜索范围（格）和参与精修的候选数。
+// 【为什么需要】32×32 这一步是"抠出本体 → 收紧到包围盒 → 缩放"，包围盒是由**最外沿那几个
+// 像素**决定的。拉帝亚斯那两条又细又长的耳鳍在真机截图里被 JPEG 压得只剩几个半透明像素，
+// 抠图时鳍尖丢掉一点，包围盒就跟着缩一圈，缩到 32×32 之后整个身体相对参考图错开 1~2 格——
+// 逐像素比对从此全程对不上号。实测那张图：颜色直方图（不看位置）把它排到第 3，
+// 逐像素颜色差却把它排到第 88，最终第 27 名、弃权、候选条里连个影子都没有。
+// 允许 ±2 格平移取最好的那个位置之后，它直接回到第 1 名且分差 0.55 达到确信门槛。
+// 【为什么是全量而不是只精修前几名】一开始担心 493 张 ×25 个平移太慢，写了"只精修前 40 名"
+// 的两段式，结果实测整轮比对只有 24ms（不是先前估的 250ms），全量精修也才 116ms——
+// 相对整条 OCR 链的好几秒完全可以忽略。而两段式是有害的：没被精修的那些参考图分数原样不动、
+// 被精修的普遍降了一截，等于给排名靠后的正确答案额外压了一道。q55 的拉帝亚斯掉到第 68，
+// 两段式救不回来（还是弃权），全量精修直接回到第 1。所以别再改回两段式。
+const SPECIES_ICON_ALIGN_R = 2;
+// 把网格整体平移 (dx,dy)，移出去的位置留空（alpha=0，等价于"这里没有本体"）。
+function shiftGrid(d, grid, dx, dy){
+  const o = new Uint8ClampedArray(d.length);
+  for(let y=0;y<grid;y++){
+    for(let x=0;x<grid;x++){
+      const sx = x-dx, sy = y-dy, t = (y*grid+x)*4;
+      if(sx<0 || sy<0 || sx>=grid || sy>=grid){ o[t+3]=0; continue; }
+      const p = (sy*grid+sx)*4;
+      o[t]=d[p]; o[t+1]=d[p+1]; o[t+2]=d[p+2]; o[t+3]=d[p+3];
+    }
+  }
+  return o;
+}
 async function matchSpeciesIcon(iconCanvas){
   const refs = await getSpeciesIconRefs();
   if(!refs.length) return {pkId:null, ranking:[], confident:false, shiny:false, candidates:[]};
@@ -12947,12 +12973,34 @@ async function matchSpeciesIcon(iconCanvas){
   if(!g) return {pkId:null, ranking:[], confident:false, shiny:false, candidates:[]};
   const target = g.data;
   const targetHist = gridColorHist(target, SPECIES_ICON_GRID);
-  const ranking = refs.map(r=>{
-    const p = gridDistanceParts(target, r.grid, SPECIES_ICON_GRID);
-    const score = p.color * (1 + SPECIES_ICON_SHAPE_W * p.mismatch)
-                + SPECIES_ICON_HIST_W * histDistance(targetHist, r.hist) * 10000;
-    return {id:r.id, shiny:r.shiny, dist: Math.round(score)};
-  }).sort((a,b)=> a.dist-b.dist);
+  const scoreOf = (t, th, ref)=>{
+    const p = gridDistanceParts(t, ref.grid, SPECIES_ICON_GRID);
+    return p.color * (1 + SPECIES_ICON_SHAPE_W * p.mismatch)
+         + SPECIES_ICON_HIST_W * histDistance(th, ref.hist) * 10000;
+  };
+  // 第一遍：不平移，先排一遍（这一遍的分数就是每张参考图 dx=dy=0 时的分数）
+  const ranking = refs.map(r=> ({ref:r, id:r.id, shiny:r.shiny, dist: Math.round(scoreOf(target, targetHist, r))}))
+                      .sort((a,b)=> a.dist-b.dist);
+  // 第二遍：给每张参考图各自找最合适的对齐位置（±R 格），取它自己最好的那个分数。
+  // 平移过的目标图会有一条边空出来，那部分算作"轮廓不匹配"，所以平移不是白送分——
+  // 对本来就对齐的图，dx=dy=0 通常就是最优解，分数原样不变。
+  const variants = [];
+  for(let dy=-SPECIES_ICON_ALIGN_R; dy<=SPECIES_ICON_ALIGN_R; dy++){
+    for(let dx=-SPECIES_ICON_ALIGN_R; dx<=SPECIES_ICON_ALIGN_R; dx++){
+      const d = (dx===0 && dy===0) ? target : shiftGrid(target, SPECIES_ICON_GRID, dx, dy);
+      variants.push({dx, dy, d, hist: (dx===0&&dy===0) ? targetHist : gridColorHist(d, SPECIES_ICON_GRID)});
+    }
+  }
+  for(const e of ranking){
+    let best = e.dist, bdx = 0, bdy = 0;
+    for(const v of variants){
+      if(v.dx===0 && v.dy===0) continue;
+      const sc = Math.round(scoreOf(v.d, v.hist, e.ref));
+      if(sc < best){ best = sc; bdx = v.dx; bdy = v.dy; }
+    }
+    e.dist = best; e.dx = bdx; e.dy = bdy; delete e.ref;
+  }
+  ranking.sort((a,b)=> a.dist-b.dist);
   const first = ranking[0];
   // 置信度判断跟 matchIngredientIcon 同一个思路（最优候选要明显甩开第二名），但候选池从
   // "3选1/19选1"变成了"245选1"，比值阈值需要拿真实截图重新调。拿 Downloads/测试图片 里
