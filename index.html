@@ -9621,10 +9621,38 @@ document.getElementById('authSubmitBtn').onclick = authSubmit;
 document.getElementById('boxActMoreBtn').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
 document.getElementById('boxActViewToggleBtn').onclick = ()=> boxToggleViewMode();
 document.getElementById('boxStaleRefreshBtn').onclick = ()=>{
-  // ptrTriggerRefresh 会先记下"现在停在盒子里"再 reload，刷新回来还在盒子，不会被丢回首页
-  if(typeof window.ptrTriggerRefresh === 'function') window.ptrTriggerRefresh();
-  else location.reload();
+  /* 刻意不用 location.reload()。2026-10-05 用户反馈"刷新了还是红问号"——iOS Safari 上
+     普通刷新未必真去取新的：这个站的 HTML 响应里 Cloudflare Pages 既不发 ETag 也不发
+     Last-Modified（实测只有 `Cache-Control: public, max-age=0, must-revalidate`），
+     没有校验器就没法条件请求，再叠上低数据模式 / 后台标签页恢复 / 中间代理，
+     浏览器完全可能继续吃本地那份。
+     换一个 query 就是换一个缓存 key，任何层级的 HTTP 缓存都只能重新下载——
+     这是站点侧唯一能强制取到新版本的手段。
+     ?fresh= 这个参数在下面开场逻辑里会被 replaceState 悄悄抹掉，不留在地址栏里。 */
+  try{
+    sessionStorage.setItem('iqdoohPtrRestore', JSON.stringify({page:'box'}));
+    sessionStorage.setItem('iqdoohPtrRefresh', '1');
+  }catch(e){}
+  let url;
+  try{
+    const u = new URL(location.href);
+    u.searchParams.set('fresh', String(Date.now()));
+    url = u.toString();
+  }catch(e){
+    url = location.pathname + '?fresh=' + Date.now() + location.hash;
+  }
+  location.replace(url);
 };
+/* 硬刷新用的 ?fresh= 用完就抹掉：replaceState 只改地址栏、不触发任何请求，
+   也不会影响 OAuth 回调那几处对 location.search 的解析（它们都是按名字取参数） */
+(function(){
+  try{
+    if(!/[?&]fresh=/.test(location.search)) return;
+    const u = new URL(location.href);
+    u.searchParams.delete('fresh');
+    history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
+  }catch(e){}
+})();
 document.getElementById('boxStaleCloseBtn').onclick = ()=>{
   boxStaleBarDismissed = true;   // 只压这一次会话，刷新后该提示还是会提示
   renderBoxStaleBar();
