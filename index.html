@@ -1465,6 +1465,20 @@
   .pk-disp-col-header .pk-disp-badges{ justify-content:flex-start; margin-top:4px; }
   .pk-disp-empty{ color:#bbb; font-size:12.5px; text-align:center; padding:24px 0; }
 
+  /* v3.33 每只独立等级：①控制参数里的等级排按面板拆成几排；展示窗的「xx级」徽章点一下就地改 */
+  .panel-level-stack{ flex-direction:column; align-items:stretch; gap:10px; }
+  .panel-level-row{ display:flex; align-items:center; gap:8px; }
+  .panel-level-tag{ flex:0 0 auto; min-width:24px; font-size:12px; font-weight:800; color:var(--accent-dk); }
+  .panel-level-seg{ flex:1 1 auto; min-width:0; }
+  /* .pk-disp-badges .level-badge 把 cursor 写死成 default，这里要更高权重才压得住 */
+  .pk-disp-badges .level-badge.level-badge-tap, .level-badge.level-badge-tap{ cursor:pointer; }
+  /* 徽章本身长得就是个"标签"，不加点东西没人知道能点。用一个小三角当可点提示，
+     比加边框/阴影都省地方，也不会把"65级(按60档)"这种长文案挤换行 */
+  .level-badge.level-badge-tap::after{ content:'▾'; margin-left:4px; font-size:9px; opacity:.85; }
+  .pk-disp-badges .level-badge.level-badge-tap:active{ filter:brightness(.92); }
+  .pk-disp-col-tap{ cursor:pointer; }
+  .panel-level-bubble .btnrow{ flex-wrap:nowrap; gap:6px; }
+
   .pk-skills-compact{ display:flex; flex-direction:column; gap:4px; margin-bottom:8px; }
   .pk-skills-compact-row{ display:flex; gap:4px; }
   .pk-skills-compact-row .ps-skill{ padding:5px 2px; font-size:10px; flex:1 1 0; }
@@ -6840,7 +6854,8 @@ function renderPkDispWindow(){
     // 不能想当然用 state（面板1）取数据：面板1本身可能是空的——比如从宝可梦盒直接把这只
     // 塞进了2/3号面板，面板1还没选——这时真正"唯一有选择"的面板可能是2号或3号，
     // 得从 builds 里找到真正有选择的那个面板取数据，标题才不会因为面板1是空的而白给
-    const activeBuild = builds.find(b=>panelHasSelection(b));
+    const activeIdx = builds.findIndex(b=>panelHasSelection(b));   // 记住是几号面板，等级徽章要按号改
+    const activeBuild = activeIdx>=0 ? builds[activeIdx] : null;
     const rec = activeBuild ? getPokemonRecordFor(activeBuild) : null;
     if(!rec){
       titleEl.innerHTML = '';
@@ -6849,12 +6864,15 @@ function renderPkDispWindow(){
       const nameHtml = `${rec[1]}<span class="dex">${rec[0]}</span>`;
       const typeCls = activeBuild.type==='energy' ? 'energy' : activeBuild.type;
       const typeLabelText = activeBuild.type==='energy' ? '能量型' : (activeBuild.type==='skill'?'功能型':typeLabel(activeBuild.type));
-      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${levelBadgeText(levelRealOf(activeBuild))}</span>`;
+      const badgesHtml = `<div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge" data-panel="${activeIdx+1}">${levelBadgeText(levelRealOf(activeBuild))}</span>`;
       titleEl.innerHTML = `<div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${nameHtml}</div></div><div class="pk-disp-badges">${badgesHtml}</div>`;
     }
   }
   row.innerHTML = '';
   for(let i=1;i<=n;i++) row.appendChild(renderPkDispCol(i, n, !uniform));
+  // 等级徽章点一下就地改这一只的等级（共用标题和分列标题两处都要挂）
+  wirePanelLevelBadges(titleEl);
+  wirePanelLevelBadges(row);
   // 必须等所有列都挂到文档树上之后再量宽度——挂载前的孤立节点 clientWidth 恒为0，测不出真实是否溢出
   row.querySelectorAll('.ps-persona-capsule-compact').forEach(fitPersonaCapsuleLater);
 }
@@ -6885,7 +6903,7 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
     const typeCls = build.type==='energy' ? 'energy' : build.type;
     const typeLabelText = build.type==='energy' ? '能量型' : (build.type==='skill'?'功能型':typeLabel(build.type));
     const nickHtml = build.boxNickname ? `<div class="pk-disp-nickname">${build.boxNickname}</div>` : '';
-    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge">${levelBadgeText(levelRealOf(build))}</span></div></div>`;
+    headerHtml = `<div class="pk-disp-col-header"><div class="pk-disp-name-wrap">${nickHtml}<div class="pk-disp-name">${rec[1]}<span class="dex">${rec[0]}</span></div></div><div class="pk-disp-badges"><div class="typebtn ${typeCls}">${typeLabelText}</div><span class="level-badge" data-panel="${panelN}">${levelBadgeText(levelRealOf(build))}</span></div></div>`;
   }
 
   let skillsHtml;
@@ -6929,6 +6947,10 @@ function renderPkDispCol(panelN, totalN, showOwnHeader){
   }
 
   col.innerHTML = `${headerHtml}${skillsHtml}${personaHtml}${ingHtml}`;
+  // 点卡片 = 直接进这一只的修改面板，省掉"先开面板、再在顶部切到2号/3号"这一步。
+  // 等级徽章自己 stopPropagation，点徽章只改等级、不会顺带把面板也开了（见 wirePanelLevelBadges）
+  col.classList.add('pk-disp-col-tap');
+  col.onclick = ()=>{ setDashTarget(panelN); openDashboard(); };
   return col;
 }
 // "添加面板"点开的二选一气泡：选"添加面板"照旧走修改面板浮窗；选"宝可梦盒"则开盒子，
@@ -7516,9 +7538,79 @@ function buildPersona(build){
   const s = build.incAttr==='S'?1:(build.decAttr==='S'?-1:0);
   return {h,f,s};
 }
+/* v3.33 修正：原来写死"1号 = 当前 state"，但 state 装的其实是【当前编辑目标】那一只的实时数据。
+   在修改面板里切到 2/3 号期间，dashTarget≠1，这时问 getPanelBuild(1) 会把 2/3 号的 build 当成
+   1 号返回，1 号自己的数据（存在 panel1Snap 里）反而被无视——展示窗/排名对比/面板天梯都会跟着错位。
+   平时被"浮窗打开期间不重绘"挡住了，但从空面板点「添加面板」是 setDashTarget(n) → openDashboard()
+   两步，中间那一下 dashboardOpen 还是 false，页面会实实在在地闪一帧错的。
+   正确口径只有一条：谁是当前编辑目标，谁才读实时 state，其余一律读各自的快照。 */
 function getPanelBuild(n){
-  if(n===1) return snapshotBuild();
+  if(n === state.dashTarget) return snapshotBuild();
+  if(n === 1) return panel1Snap;
   return (n===2 ? state.panel2Snap : state.panel3Snap) || null;
+}
+/* 给【任意面板】设等级，不需要先把编辑目标切过去。
+   当前编辑目标那一只照旧走 setLevelWithRankOverlay（它要连带改 state.levelReal）；
+   其余面板直接改各自快照里的 levelReal + level（后者是档位，排名/缓存 key 吃的是它，必须同步写）。 */
+function setPanelLevel(n, lv){
+  if(n === state.dashTarget){ setLevelWithRankOverlay(lv); return; }
+  const snap = (n===1) ? panel1Snap : (n===2 ? state.panel2Snap : state.panel3Snap);
+  if(!snap) return;
+  const tierChanged = levelTierOf(lv) !== levelTierOf(levelRealOf(snap));
+  const apply = ()=>{ snap.levelReal = clampLevelReal(lv); snap.level = levelTierOf(lv); };
+  // 档位变了才值得弹"排名计算中"——跟 setLevelWithRankOverlay 同一套判断，理由见那里的注释
+  if(onRankSub() && tierChanged){
+    showRankCalcOverlay();
+    setTimeout(async ()=>{ apply(); await renderAll(); hideRankCalcOverlay(); }, 20);
+  } else {
+    apply(); renderAll();
+  }
+}
+/* 排名对比页①控制参数里的等级排：按面板拆成 1号/2号/3号 各一排。
+   原来只有一排、且永远写进"当前编辑目标"，而 closeDashboard() 会把目标强制拨回 1 号，
+   于是页面上这排等级实际只能改 1 号，2/3 号的等级在页面上根本没有入口——
+   这就是用户反馈的"无法分别改动每个宝可梦的等级"。 */
+function renderPanelLevelRows(host){
+  if(!host) return;
+  host.innerHTML = '';
+  host.classList.add('panel-level-stack');
+  const n = Math.max(1, state.compareCount);
+  for(let i=1;i<=n;i++){
+    const b = getPanelBuild(i);
+    const wrap = document.createElement('div');
+    wrap.className = 'panel-level-row';
+    if(n > 1){
+      const tag = document.createElement('div');
+      tag.className = 'panel-level-tag';
+      tag.textContent = i+'号';
+      wrap.appendChild(tag);
+    }
+    const seg = document.createElement('div');
+    seg.className = 'btnrow panel-level-seg';
+    wrap.appendChild(seg);
+    host.appendChild(wrap);
+    renderLevelSegRow(seg, levelRealOf(b || state), lv=> setPanelLevel(i, lv));
+  }
+}
+/* 展示窗卡片上的「60级」徽章点一下就地改这一只的等级 */
+function openPanelLevelBubble(anchorEl, panelN){
+  capShowBubble(anchorEl, '<div class="cap-jump-bubble panel-level-bubble" id="panelLevelBubbleWrap"><div class="btnrow" id="panelLevelBubbleRow"></div></div>');
+  const wrap = document.getElementById('panelLevelBubbleWrap');
+  // 不挡掉冒泡的话，capShowBubble 挂的"点一下就关"会在自定义等级输入框弹出来的同一瞬间把气泡收走
+  if(wrap) wrap.onclick = (e)=>{ e.stopPropagation(); };
+  const b = getPanelBuild(panelN);
+  renderLevelSegRow(document.getElementById('panelLevelBubbleRow'), levelRealOf(b || state), lv=>{
+    capHideBubble();              // 先收气泡：setPanelLevel 会重绘整张卡片，气泡的锚点会被换掉
+    setPanelLevel(panelN, lv);
+  });
+}
+function wirePanelLevelBadges(root){
+  if(!root) return;
+  root.querySelectorAll('.level-badge[data-panel]').forEach(el=>{
+    el.classList.add('level-badge-tap');
+    // stopPropagation：卡片整体点一下是"打开这一只的修改面板"，点徽章不该顺带把面板也开了
+    el.onclick = (e)=>{ e.stopPropagation(); openPanelLevelBubble(el, Number(el.dataset.panel)); };
+  });
 }
 function renderDashPanelTargetSel(){
   const row = document.getElementById('dashPanelTargetRow');
@@ -8051,7 +8143,9 @@ function renderControlsGeneric(pfx, compact){
     if(block) block.style.display = (hideType && !hasSubmenuContent) ? 'none' : '';
   }
 
-  renderLevelSegRow(document.getElementById(pfx+'levelSel'), state.levelReal, lv=> setLevelWithRankOverlay(lv));
+  // p3- 就是排名对比页那块①控制参数，那里要按 1号/2号/3号 拆成几排各改各的，见 renderPanelLevelRows
+  if(pfx === 'p3-') renderPanelLevelRows(document.getElementById(pfx+'levelSel'));
+  else renderLevelSegRow(document.getElementById(pfx+'levelSel'), state.levelReal, lv=> setLevelWithRankOverlay(lv));
   const lockEl = document.getElementById(pfx+'lockSel');
   if(lockEl){
     lockEl.innerHTML='';
@@ -8722,7 +8816,20 @@ async function pwaInstallClick(){
     openPwaGuideModal('iOS 系统不支持一键添加，需要手动几步：\n\n1. 点底部工具栏的「分享」按钮（方框+箭头）\n2. 下滑找到「添加到主屏幕」\n3. 点右上角「添加」\n\n点击下方图片可以查看大图，对照图上标的步骤操作', true);
     return;
   }
-  openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。\n\n注意：vivo/oppo/小米等手机自带浏览器的这个菜单项很多是老式网页快捷方式，不认标准安装规范，加出来的图标可能是网页截图、打开也不是全屏——不是加失败，是这个浏览器本身不支持真正的一键安装。想要正常的图标和全屏效果，换成 Chrome 等主流浏览器打开本站再试。');
+  /* 华为/荣耀单独一条分支，不能让它掉进下面那段通用兜底文案里——那段的结尾是"换成 Chrome 再试"，
+     对华为用户恰恰是最坏的建议：国行华为没有 Google 服务框架，而安卓 Chrome 的安装必须走
+     Google 的 WebAPK 铸造（详见 pwaWatchInstallStall 上方那段注释），换过去只会卡在
+     通知栏「正在安装…」不动。华为这边唯一可行的就是用它自带浏览器的「添加到桌面」。
+     放在 __pwaDeferredPrompt 分支【之后】：华为浏览器本身是 Chromium 系，万一它真的抛了
+     beforeinstallprompt，那条一键路径比手动引导好，不该被这个分支抢走。
+     没有华为真机可实拍，所以这里只给纯文字引导，菜单项名称按"不同版本可能叫…"的口径写，
+     不写死成某一个版本的确切字样。 */
+  const isHuawei = /huaweibrowser|honorbrowser|harmonyos|arkweb|hmscore|\bhuawei\b|\bhonor\b/i.test(ua);
+  if(isHuawei){
+    openPwaGuideModal('华为/荣耀手机上基本弹不出系统的一键安装框，手动加一次就好：\n\n1. 用【华为浏览器】打开本站（鸿蒙 / EMUI 自带的那个「浏览器」就是它）\n2. 点底部中间的菜单按钮（三横线「≡」）\n3. 在菜单里找「添加到桌面」——不同版本也可能写成「添加到主屏幕」，或者收在「更多」里\n4. 确认之后桌面就会出现图标\n\n两点说明：\n\n· 不要换成 Chrome。安卓 Chrome 的「安装」要把网站信息发到 Google 的服务器生成安装包再装回手机，国行华为没有 Google 服务框架，这一步会一直卡在通知栏的「正在安装…」不动，装不上。\n\n· 华为浏览器加出来的图标长什么样、打开是不是全屏，取决于它自己的实现：有的版本是正经的网页应用（图标和全屏都对），有的只是老式网页快捷方式（图标是网页截图、打开还带地址栏）。两种都能正常用本站，只是观感不同，这一点站点侧改不了。');
+    return;
+  }
+  openPwaGuideModal('没找到一键安装的入口，可能是这个浏览器不支持，或者之前已经安装过/关闭过安装提示。\n\n可以试试浏览器菜单里找「安装应用」或「添加到主屏幕」。\n\n注意：vivo/oppo/小米/华为等手机自带浏览器的这个菜单项很多是老式网页快捷方式，不认标准安装规范，加出来的图标可能是网页截图、打开也不是全屏——不是加失败，是这个浏览器本身不支持真正的一键安装。想要正常的图标和全屏效果，换成 Chrome 等主流浏览器打开本站再试。');
 }
 /* 用户在系统安装框里点了"安装"、通知栏却一直卡在"正在安装…"不动 —— 这是安卓 Chrome
    在国内的固定坑，不是本站的问题：Chrome 的安装走的是 WebAPK 流程，要把 manifest 传到
@@ -8736,7 +8843,7 @@ function pwaWatchInstallStall(){
   clearTimeout(pwaStallTimer);
   pwaStallTimer = setTimeout(function(){
     if(window.__pwaInstalled || pwaIsStandalone()) return;   // 真装上了就别打扰
-    openPwaGuideModal('如果通知栏那条「正在安装」一直转不动，多半是卡在 Google 那一步了，不是本站的问题。\n\n安卓 Chrome 的「安装」不在本地完成：它要把本站信息发到 Google 的服务器，由 Google 生成安装包再装回手机。手机没装 Google 服务框架（国行机很常见），或者网络到不了 Google，这一步就会一直转，Chrome 也不会报错。\n\n可以这样绕开：\n\n1. 先别急着重试。那条通知有时要等上几分钟才超时，超时后 Chrome 有机会自动退回成一个普通快捷方式，也能用。\n\n2. 用手机自带浏览器（小米/vivo/oppo 等）打开本站，点它菜单里的「添加到桌面」。这条路不经过 Google，一定能加上，代价是图标可能是网页截图、打开也不是全屏。\n\n3. 之后要是有能连上 Google 的网络环境，再用 Chrome 装一次，装好就是正常图标 + 全屏效果了。');
+    openPwaGuideModal('如果通知栏那条「正在安装」一直转不动，多半是卡在 Google 那一步了，不是本站的问题。\n\n安卓 Chrome 的「安装」不在本地完成：它要把本站信息发到 Google 的服务器，由 Google 生成安装包再装回手机。手机没装 Google 服务框架（国行机很常见），或者网络到不了 Google，这一步就会一直转，Chrome 也不会报错。\n\n可以这样绕开：\n\n1. 先别急着重试。那条通知有时要等上几分钟才超时，超时后 Chrome 有机会自动退回成一个普通快捷方式，也能用。\n\n2. 用手机自带浏览器（小米/vivo/oppo/华为 等）打开本站，点它菜单里的「添加到桌面」。这条路不经过 Google，一定能加上，代价是图标可能是网页截图、打开也不是全屏。\n\n3. 之后要是有能连上 Google 的网络环境，再用 Chrome 装一次，装好就是正常图标 + 全屏效果了。');
   }, 30000);
 }
 function openPwaGuideModal(text, showImage){
