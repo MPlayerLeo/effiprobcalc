@@ -9837,11 +9837,13 @@ const GRAD_STD_TABS = [
         '所有<b>功能型</b>食材精选（穿山王 / 乌鸦头头 / 岩殿居蟹 / 摔角鹰人）',
       ])
     + gstdP('<b>大嘴娃 / 蝶结萌虻本身不算在这条规则里</b>——它们优先走正常食材型标准，只有落在"不推荐使用"或 aba / abc / aaa（abb）不可用 这几种情况时，才会触发邪修判定。<b>aab / aac</b> 不算：那条线已经有「aax 打工 / aax 报废」自己的判定（见「食材」页签）。')
+    + gstdP('<b>前提条件：原效率必须先够得上「和解」。</b>邪修的意思是"自身素质较差、靠食谱覆盖率翻身"，不是"效率多低都能被覆盖率洗白"。按这只宝可梦<b>自己类型</b>的标准算出来的原始效率（食材型看食材线、功能型食材精选看功能线），如果连<b>和解 / 金帮和解</b>的门槛都没够到，那么<b>不管食谱覆盖率有多高，一律判不合格</b>，不会转成邪修。')
     + gstdP('判定口径：食谱覆盖率固定按<b>无限持有</b>计算，跟当前持有上限的设置无关。任意<b>一种</b>食材覆盖率达标就算数：')
     + gstdGradeTable('', ['覆盖率门槛','判定结果','评语'], [
         ['≥ 120%', '<b style="color:'+XIEXIU_COLOR+';">邪修</b>', '剑走偏锋 走火入魔'],
         ['≥ 140%', '<b style="color:'+XIEXIU_COLOR+';">极致邪修</b>', '以身入局 未尝不可'],
         ['都不满足', '维持原判定', '（不推荐使用 / 组合不可用 那几种红字删除线展示照旧）'],
+        ['不看覆盖率', '<b>不合格</b>', '原效率不到和解，覆盖率再高也不转邪修'],
       ])
     + gstdP('邪修 / 极致邪修展示为<b style="color:'+XIEXIU_COLOR+';">红字，不加删除线</b>，覆盖率框和等级之间会补一行小字：')
     + gstdNote('自身素质较差，但由食谱覆盖率转化为邪修')
@@ -10166,6 +10168,23 @@ function xiexiuEligibleNow(){
   if(pattern==='aaa' || pattern==='abb') return !String(rec[6]||'').includes(pattern);
   return false;
 }
+/* v3.34 邪修的效率门槛：【原效率至少要够得上「和解」】，否则覆盖率再高也不转邪修，维持不合格。
+   邪修的本意是"自身素质较差、但靠食谱覆盖率翻身"，不是"效率多低都能被覆盖率洗白"——
+   覆盖率高到离谱但效率连和解线都够不着的面板，结论就该是不合格。
+   判定用的是这只宝可梦【自己类型】的标准（食材型走 food 线、功能型食材精选走 skill 线），
+   跟毕业判定框里显示的那个"原判定"完全同源：同一套 labels/persona/level、同一个
+   classifyGrade + applyFruitSGradBoost，这样"显示不合格却判成邪修"的自相矛盾不会出现。
+   （applyFruitSGradBoost 那6只传说都是能量型主技能，本来就进不了邪修资格，带上只为跟原判定口径一致。） */
+function xiexiuEffGateOk(dtype, level, labels, persona, name, selected){
+  const ws = windowSizeOf(level);
+  let hasHelper = false;
+  for(let i=0;i<ws;i++){ if(labels[i]==='G2'){ hasHelper = true; break; } }
+  const eff = computeEfficiency(labels, dtype, level, persona);
+  const isSpecialSkillMon = dtype==='skill' && !!name && SPECIAL_SKILL_GRAD_MONS.has(name);
+  let row = classifyGrade(dtype, hasHelper, eff, isSpecialSkillMon);
+  row = applyFruitSGradBoost(row, name, selected, level);
+  return !!row && GRAD_RANK[row.grade] >= 1;   // >=1 即「和解 / 金帮和解」及以上
+}
 // 覆盖率门槛：任意一种食材 ≥120% 判邪修，≥140% 判极致邪修
 function xiexiuInfoFromRows(rows){
   const ratios = (rows||[]).map(r=>r.ratio).filter(r=>r!=null);
@@ -10179,6 +10198,9 @@ const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
 // 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率，且固定忽略露营券开关）
 function computeXiexiuNow(labels, persona){
   if(!xiexiuEligibleNow()) return null;
+  const rec = getSelectedPokemonRecord();
+  // 原效率够不到和解就不给邪修，直接退回原判定（那条路算出来必然是不合格）
+  if(!xiexiuEffGateOk(state.type, state.level, labels, persona, rec && rec[1], state.selected)) return null;
   return withNoCamping(()=>{
     const effFood = computeEfficiency(labels, 'food', state.level, persona);
     return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true));
@@ -14547,7 +14569,16 @@ async function runOcrOnFile(file, silent){
     // "Lv.NN"等级识别跟认没认出物种无关，独立应用——哪怕物种没认出，等级读到了也先填上，
     // 好过让用户在浮窗里连等级都要自己重新点一遍。state.level 是 levelReal 之上的访问器，
     // 直接赋值即可，会自动 clamp 到 1~99（见 Object.defineProperty(state,'level',...)）
-    if(ocrLevel!=null) state.level = ocrLevel;
+    //
+    // v3.34：识别到的等级【只往上取，不往下取】——识别值 ≤ 该类型默认等级时一律用默认等级，
+    // 高于默认等级才用识别值（默认等级即上面那套 TYPE_LEVEL_DEFAULT：功能50 / 食材60 / 树果·能量70）。
+    // 理由：这个站的判定体系建立在 50/60/70/80 四个锚点上，默认等级是各类型"该拿来评价"的那一档；
+    // 玩家截的往往是刚抓到的低等级个体（Lv.11、Lv.28…），照实填进去算出来的是"它现在有多弱"，
+    // 而用户真正想知道的是"练到位之后值不值得练"。低于默认档时直接按默认档评价更有参考意义。
+    if(ocrLevel!=null){
+      const defLv = TYPE_LEVEL_DEFAULT[state.type] || 50;
+      state.level = Math.max(ocrLevel, defLv);
+    }
 
     renderAll();
     // 不管认没认出物种，都直接进修改面板：能认多少就填多少，物种/副技能没认出的就留空，
@@ -18991,6 +19022,12 @@ function boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex){
 // 邪修判定用的覆盖率（固定按无限持有；computeFoodCoverageRowsForBuild 本来就不缩放；固定忽略露营券开关）
 function boxXiexiuInfo(entry, x, dtype){
   if(!entry.selected || !entry.selected.some(v=>v!=null)) return null;
+  {
+    // 跟 computeXiexiuNow 同一道效率门槛：原效率够不到和解就不是邪修（见 xiexiuEffGateOk）。
+    // 盒子这边三个入口（标记扫描 / 毕业等级筛选 / 详情）都走这个函数，拦在这里一处就够
+    const build0 = boxEntryBuild(entry);
+    if(!xiexiuEffGateOk(dtype, entry.level, buildLabels(build0), buildPersona(build0), x && x.name, entry.selected)) return null;
+  }
   return withNoCamping(()=>{
     const build = boxEntryBuild(entry);
     const labels = buildLabels(build), persona = buildPersona(build);
