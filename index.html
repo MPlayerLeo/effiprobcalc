@@ -1100,6 +1100,24 @@
      grid-template-columns（保证6个中文字符的昵称不被截断），这里只是列数未知前的兜底默认值 */
   .box-grid{ display:grid; grid-template-columns:repeat(6, 1fr); gap:8px 6px; }
   .box-grid-empty{ text-align:center; color:#8a8375; font-size:13px; padding:60px 20px; line-height:1.6; }
+  /* 页面版本比盒子数据旧时的吸顶提示条：盒子里出现了这个版本不认识的物种（会渲染成红问号），
+     唯一的成因基本就是页面缓存旧了——iOS Safari 的后台标签页恢复时不走真正的导航，
+     可以抱着一个月前的 index.html 不放。与其让用户对着红问号猜，不如直接告诉他刷新。 */
+  .box-stale-bar{
+    position:sticky; top:0; z-index:5; display:flex; align-items:center; gap:8px;
+    margin:-12px -10px 10px; padding:9px 12px;
+    background:#fdf1d6; border-bottom:1.5px solid #d8ab3a; color:#5a4410;
+    font-size:12.5px; font-weight:700; line-height:1.45;
+  }
+  .box-stale-txt{ flex:1 1 auto; min-width:0; }
+  .box-stale-btn{
+    flex:0 0 auto; border:none; background:#b5861d; color:#fff; font-weight:800;
+    font-size:12.5px; padding:6px 14px; border-radius:7px; cursor:pointer;
+  }
+  .box-stale-x{
+    flex:0 0 auto; border:none; background:transparent; color:#8a7338;
+    font-size:14px; font-weight:800; padding:4px 2px; cursor:pointer; line-height:1;
+  }
   /* 拉到底时额外留出的空白区（约2排格子高，具体高度由 JS 按实际格子渲染高度算出）：
      独占整行，不能让它跟最后一排的真实格子挤在同一个网格行里，否则那一排会被它撑高、把真实格子拉伸变形 */
   .box-grid-bottom-spacer{ grid-column:1 / -1; }
@@ -4066,6 +4084,12 @@
       </div>
     </div>
     <div class="box-grid-scroll" id="boxGridScroll">
+      <!-- 页面版本比盒子数据旧时的提示条（见 renderBoxStaleBar）。吸顶，用户滚到哪都看得见 -->
+      <div class="box-stale-bar" id="boxStaleBar" style="display:none;">
+        <span class="box-stale-txt" id="boxStaleTxt"></span>
+        <button type="button" class="box-stale-btn" id="boxStaleRefreshBtn">刷新</button>
+        <button type="button" class="box-stale-x" id="boxStaleCloseBtn" aria-label="关闭">✕</button>
+      </div>
       <div class="box-grid" id="boxGrid"></div>
       <div class="box-grid-empty" id="boxGridEmpty" style="display:none;">盒子里还没有宝可梦，去任意一个修改面板点「加入盒子」存一只进来吧。</div>
     </div>
@@ -9014,6 +9038,9 @@ document.getElementById('pwaBannerCloseBtn').onclick = ()=>{ hidePwaBanner(); };
     try{ sessionStorage.setItem('iqdoohPtrRefresh', '1'); }catch(e){}
     playCloseMask(function(){ location.reload(); });
   }
+  // 暴露出去给"页面版本旧了"提示条的「刷新」按钮用：走同一条路才能同样保留遮罩动画
+  // 和"刷新后回到原来那一页"的状态还原，不然按钮刷完会把用户丢回毕业判定页
+  window.ptrTriggerRefresh = triggerRefresh;
   function onEnd(){
     if(!active) return;
     if(ready){
@@ -9593,6 +9620,15 @@ document.getElementById('authModal').onclick = (e)=>{ if(e.target.id==='authModa
 document.getElementById('authSubmitBtn').onclick = authSubmit;
 document.getElementById('boxActMoreBtn').onclick = (e)=> openBoxQuickSearchPop(e.currentTarget);
 document.getElementById('boxActViewToggleBtn').onclick = ()=> boxToggleViewMode();
+document.getElementById('boxStaleRefreshBtn').onclick = ()=>{
+  // ptrTriggerRefresh 会先记下"现在停在盒子里"再 reload，刷新回来还在盒子，不会被丢回首页
+  if(typeof window.ptrTriggerRefresh === 'function') window.ptrTriggerRefresh();
+  else location.reload();
+};
+document.getElementById('boxStaleCloseBtn').onclick = ()=>{
+  boxStaleBarDismissed = true;   // 只压这一次会话，刷新后该提示还是会提示
+  renderBoxStaleBar();
+};
 document.getElementById('mfMedalSwitch').onclick = ()=>{ toggleBoxMedal(); syncMoreFuncSwitches(); };
 document.getElementById('mfLevelSwitch').onclick = ()=>{ toggleBoxLevel(); syncMoreFuncSwitches(); };
 document.getElementById('mfPscBadgeSwitch').onclick = ()=>{ toggleBoxPscBadge(); syncMoreFuncSwitches(); };
@@ -17864,9 +17900,33 @@ function boxApplyUniformSize(wrap, elA, elB, w, h, scale){
   if(elA){ elA.style.width = rw+'px'; elA.style.height = rh+'px'; }
   if(elB){ elB.style.width = rw+'px'; elB.style.height = rh+'px'; }
 }
+/* 盒子里出现了【这个页面版本不认识的物种】时提示用户刷新。
+   背景：2026-10-05 用户反馈 iOS Safari 里超梦显示成红问号、"桌面版"（添加到桌面那个）却是对的。
+   那个红问号是 .box-grid-unknown，条件是 BOX_ASSET_MAP[entry.dex] 取不到——跟 Safari 解不解
+   gif 毫无关系，纯粹是那个标签页跑的 index.html 还是加超梦之前的版本（截图里盒子底部连
+   2026-08-28 就上线的「☰ 视图切换」按钮都还没有）。盒子数据存在账号/本地、跟着人走，
+   页面却卡在旧版本，于是数据里有、代码里没有。
+   iOS Safari 的后台标签页恢复不是一次真正的导航，Cache-Control 管不到它，站点侧没法强制它重新取，
+   能做的就是把"你该刷新了"这件事说清楚。顺带：这同一个条件对以后任何新增宝可梦都成立，
+   不用为每只单独加判断。 */
+function renderBoxStaleBar(){
+  const bar = document.getElementById('boxStaleBar');
+  if(!bar) return;
+  if(boxStaleBarDismissed){ bar.style.display = 'none'; return; }
+  const unknown = (typeof boxData!=='undefined' && Array.isArray(boxData))
+    ? boxData.filter(e=> e && e.dex && !BOX_ASSET_MAP[e.dex]) : [];
+  if(!unknown.length){ bar.style.display = 'none'; return; }
+  const names = [...new Set(unknown.map(e=> e.name).filter(Boolean))];
+  const who = names.length ? ('（' + names.slice(0,3).join('、') + (names.length>3?' 等':'') + '）') : '';
+  document.getElementById('boxStaleTxt').innerHTML =
+    '盒子里有 <b>' + unknown.length + '</b> 只宝可梦' + who + '当前页面版本还不认识，所以显示成「?」。多半是页面缓存旧了，刷新一下就好。';
+  bar.style.display = 'flex';
+}
+let boxStaleBarDismissed = false;
 function renderBoxPage(){
   renderBoxFilterRow();
   renderBoxSortRow();
+  renderBoxStaleBar();
   const grid = document.getElementById('boxGrid');
   const empty = document.getElementById('boxGridEmpty');
   if(!grid) return;
