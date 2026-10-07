@@ -2171,6 +2171,22 @@
   .cap-reco.rec-red{ background:#fbe9e7; border-color:#c0392b; color:#c0392b; }
   /* v3.18"标记已毕业"：整条淡绿底，推荐程度框改实心绿底白字，居中显示"已毕业" */
   .cap-row-graduated{ background:#eaf7ec; }
+  /* 「视为毕业」：盒子详情页毕业判定卡片底部那颗长按钮 */
+  .box-fakegrad-btn{
+    display:block; width:100%; margin-top:14px; padding:12px 10px;
+    border:2px solid #b5861d; border-radius:10px; background:#fff; color:#b5861d;
+    font-size:14px; font-weight:800; letter-spacing:.04em; cursor:pointer; line-height:1.4;
+  }
+  .box-fakegrad-btn.on{ background:#b5861d; color:#fff; }
+  .box-fakegrad-btn.stale{ border-color:#aab0b8; color:#8a8f98; font-size:12.5px; }
+  /* 捕捉推荐页的黄色「视为毕业」标记：跟绿(真毕业)/红(邪修)/彩虹(恐怖)成套 */
+  .cap-row-fakegrad{ background:#fdf4e0; }
+  .cap-reco-fakegrad{ background:#b5861d; border-color:#b5861d; color:#fff; font-size:12px; }
+  .cap-cav-fakegrad{ box-shadow:0 0 0 2px #b5861d; }
+  .cap-food-pill.cap-pill-fakegrad-fill:not(.active){ background:#f5e2b4; }
+  .cap-skill-pill.cap-pill-fakegrad-fill:not(.active){ background:#f5e2b4; }
+  .cap-attr-pill.cap-pill-fakegrad-outline{ box-shadow:0 0 0 2px #b5861d inset; }
+  .cap-isl-btn.cap-pill-fakegrad-outline:not(.active){ box-shadow:0 0 0 2px #b5861d inset; }
   .cap-reco-graduated{ background:#1f8a3d; border-color:#1f8a3d; color:#fff; font-size:12px; }
   /* 邪修(仅极致邪修)/恐怖宝可梦标记：跟已毕业系列一一对应，邪修红色、恐怖彩虹流光 */
   .cap-row-xiexiu{ background:#fbe4e2; }
@@ -2261,6 +2277,7 @@
   .cap-ccol-grad-check svg{ width:11px; height:11px; }
   /* 邪修：图标浅红底+红框；恐怖：图标底色直接换成彩虹流光渐变（食材图片盖在上面，只露出边缘） */
   .cap-ccol-ic-xiexiu{ border:2px solid #c0392b; background:#fbe4e2; }
+  .cap-ccol-ic-fakegrad{ border:2px solid #b5861d; background:#fdf4e0; }
   .cap-ccol-ic-terror{
     border:2px solid transparent;
     background:linear-gradient(90deg,#ff6ec4,#7873f5,#4ade80,#facc15,#ff6ec4);
@@ -4176,6 +4193,8 @@
         <h2 class="grad-title-h2"><span class="grad-h2-side grad-h2-left"><span class="n">1</span>毕业判定<button type="button" class="grad-help-btn" aria-label="毕业标准">?</button></span><span class="grad-pk-name" id="boxdet-gradPkName"></span><span class="grad-h2-side grad-h2-right"><span class="grad-type-badge" id="boxdet-gradTypeBadge"></span><span class="level-badge" id="boxdet-gradLevelBadge"></span></span></h2>
         <div id="boxdet-gradBox"></div>
         <div id="boxdet-panelSummaryBox"></div>
+        <!-- 「视为毕业」长按钮：只在这只当前结论低于毕业时出现，见 renderBoxDetFakeGradBtn -->
+        <button type="button" class="box-fakegrad-btn" id="boxDetFakeGradBtn" style="display:none;"></button>
       </div>
       <div class="card" id="boxdet-yieldCard" style="margin-top:16px;">
         <h2><span class="n">2</span>产能分析</h2>
@@ -9653,6 +9672,7 @@ document.getElementById('boxStaleRefreshBtn').onclick = ()=>{
     history.replaceState(null, '', u.pathname + (u.search || '') + u.hash);
   }catch(e){}
 })();
+document.getElementById('boxDetFakeGradBtn').onclick = boxDetFakeGradToggle;
 document.getElementById('boxStaleCloseBtn').onclick = ()=>{
   boxStaleBarDismissed = true;   // 只压这一次会话，刷新后该提示还是会提示
   renderBoxStaleBar();
@@ -10211,6 +10231,15 @@ function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay,
 // 毕业判定里要不要出"食谱覆盖率"框：食材型一直都有；食材精选是本次新加的（它们的主业也是产食材）
 function gradShowsFoodCoverage(){ return state.type==='food' || isFoodPickPanel(); }
 
+/* 「视为毕业」：用户在盒子详情页手动给一只没毕业的宝可梦盖的章。
+   跟邪修/恐怖那几种"算出来的"档位不同，这个纯粹是主观意愿，所以：
+   · 只改展示（毕业判定框 + 捕捉推荐页标记），不参与任何计分；
+   · PVP 分数完全不受影响——pvpCategoryOf 走的是 boxEntryGradeCategoryRaw，拿到的永远是原档位；
+   · 只在这只【确实还没毕业】的时候生效。练上去真毕业了，这枚章自动失效、显示回真实档位
+     （不然会出现"真·大毕业被自己盖的视为毕业盖住"这种降级展示）。 */
+const FAKE_GRAD_NAME = '视同毕业';
+const FAKE_GRAD_COMMENT = '深宠厚爱 情同手足';
+const FAKE_GRAD_COLOR = '#b5861d';   // 金黄：跟绿(真毕业)/红(邪修)/彩虹(恐怖)都区分得开
 const XIEXIU_COLOR = '#c0392b'; // 邪修/极致邪修统一红色，且不加删除线
 const XIEXIU_GRADES = ['邪修','极致邪修'];
 // 邪修：主流食材评价体系根本没纳入考量、但主业确实是产食材的那批宝可梦
@@ -10452,7 +10481,45 @@ function updateGradQuickBar(pfx, gradeName, terror){
   bar.style.borderColor = state.shiny ? '' : style.color;
   bar.classList.toggle('grad-quick-shiny', !!state.shiny);
 }
+/* 「视为毕业」的展示覆盖刻意做成【渲染完之后改 DOM】，而不是往 renderGraduationCore 里塞分支：
+   那个函数有 8 条各自 return 的出口（未知 / 不推荐占位 / 恐怖 / aax强制档 / 请完善食材 /
+   能量型未选 / 能量型主路径 / 通用主路径），逐条塞判断既啰嗦又容易漏一条。
+   这里只动最终那三个元素（档位名、分隔线、评语）的文字和颜色，顺手撤掉删除线——
+   不管上面走的是哪条出口，结构都是一样的 .grad-grade/.grad-rule/.grad-comment，一处搞定。
+   注意只取【第一个】.grad-grade：50级那几块70/80追高提示里也有同名元素，那是附加信息，不该被改掉。 */
+function applyFakeGradToGradBox(el){
+  if(!el) return;
+  const grade = el.querySelector('.grad-grade');
+  const comment = el.querySelector('.grad-comment');
+  if(!grade || !comment) return;
+  const rule = el.querySelector('.grad-rule');
+  grade.setAttribute('data-text', FAKE_GRAD_NAME);
+  grade.style.color = FAKE_GRAD_COLOR;
+  grade.style.fontSize = '36px';
+  grade.style.textDecoration = 'none';
+  if(rule) rule.style.borderTopColor = FAKE_GRAD_COLOR;
+  comment.innerHTML = gradCommentHtml(FAKE_GRAD_COMMENT);
+  comment.style.color = FAKE_GRAD_COLOR;
+  comment.style.fontSize = '28px';
+  renderGradeText(grade);
+}
 function renderGraduation(pfx){
+  pfx = pfx || '';
+  renderGraduationCore(pfx);
+  if(fakeGradActiveNow()){
+    applyFakeGradToGradBox(document.getElementById(pfx+'gradBox'));
+    const bar = document.getElementById(pfx+'gradQuickBar');
+    if(bar){
+      bar.classList.remove('grad-quick-terror');
+      bar.classList.toggle('grad-quick-shiny', !!state.shiny);
+      bar.textContent = FAKE_GRAD_NAME;
+      bar.style.color = FAKE_GRAD_COLOR;
+      bar.style.borderColor = state.shiny ? '' : FAKE_GRAD_COLOR;
+    }
+  }
+  if(pfx === 'boxdet-') renderBoxDetFakeGradBtn();
+}
+function renderGraduationCore(pfx){
   pfx = pfx || '';
   const el = document.getElementById(pfx+'gradBox');
   if(!el) return;
@@ -15435,11 +15502,25 @@ let capGradSpecies = new Set(), capGradFoodAAA = new Set(), capGradFoodABB = new
 let capXiexiuFoodByCombo = {aaa:new Set(), abb:new Set(), aac:new Set(), abc:new Set()};
 let capXiexiuSkillSpecies = new Set(); // 功能型食材精选(isFoodPickDex)整只按种族标记，跟毕业标记里的 capGradSpecies 同口径
 let capTerrorFoodByCombo = {aac:new Set(), abc:new Set()};
+/* 「视为毕业」的黄色标记集合，跟上面几套并列。食材型按【食材字母】记而不是按组合名记：
+   用户定的口径是"不受绿色那两条限制"——不可用的组合照标、C位食材也算，所以
+   aaa→a、aab/aba/abb→b、aac/abc→c（取组合里最靠后的那个非 a 字母），
+   比绿色那套只认 aaa/abb 覆盖得更全。 */
+let capFakeGradSpecies = new Set();
+let capFakeGradFoodByLetter = {a:new Set(), b:new Set(), c:new Set()};
+function capFakeGradLetterOf(pattern){
+  if(!pattern) return null;
+  if(pattern.indexOf('c') >= 0) return 'c';
+  if(pattern.indexOf('b') >= 0) return 'b';
+  return 'a';
+}
 function computeCapGraduationSets(){
   capGradSpecies = new Set(); capGradFoodAAA = new Set(); capGradFoodABB = new Set();
   capXiexiuFoodByCombo = {aaa:new Set(), abb:new Set(), aac:new Set(), abc:new Set()};
   capXiexiuSkillSpecies = new Set();
   capTerrorFoodByCombo = {aac:new Set(), abc:new Set()};
+  capFakeGradSpecies = new Set();
+  capFakeGradFoodByLetter = {a:new Set(), b:new Set(), c:new Set()};
   if(typeof boxData==='undefined' || typeof CAP_DEX==='undefined') return;
   for(const entry of boxData){
     if(!entry.dex) continue;
@@ -15467,6 +15548,21 @@ function computeCapGraduationSets(){
       let terror = false;
       try{ terror = boxTerrorInfo(entry, x); }catch(e){ terror = false; }
       if(terror){ capTerrorFoodByCombo[pattern].add(finalDex); continue; }
+    }
+
+    /* 视为毕业：排在真毕业之后、邪修之前（2026-10-07 用户定的优先级 恐怖 > 真毕业 > 视为毕业 > 邪修）。
+       fakeGradActiveFor 本身就要求"原档位没毕业"，所以跟上面那段真毕业的 if 天然互斥，
+       这里 continue 掉是为了不让同一只又去点亮邪修的红色标记 */
+    let isFake = false;
+    try{ isFake = fakeGradActiveFor(entry); }catch(e){ isFake = false; }
+    if(isFake){
+      if(dtype==='food'){
+        const ltr = capFakeGradLetterOf(pattern);
+        if(ltr && capFakeGradFoodByLetter[ltr]) capFakeGradFoodByLetter[ltr].add(finalDex);
+      } else {
+        capFakeGradSpecies.add(finalDex);
+      }
+      continue;
     }
 
     // 邪修：只有极致邪修计入捕捉推荐标记（普通邪修不算，见需求）
@@ -15498,6 +15594,28 @@ function capFoodComboXiexiu(x, ingName){
   if(x.ingB===ingName) return capXiexiuFoodByCombo.abb.has(x.dex);
   if(x.ingC===ingName) return capXiexiuFoodByCombo.aac.has(x.dex) || capXiexiuFoodByCombo.abc.has(x.dex);
   return false;
+}
+// 食材型条目/头像用：这个格子对应的食材是不是被标了"视为毕业"。
+// a/b/c 三个槽都参与（口径见 capFakeGradFoodByLetter 上面那段注释）
+function capFoodComboFakeGrad(x, ingName){
+  if(!userPrefs.capGradMarkOn) return false;
+  if(x.ingA===ingName) return capFakeGradFoodByLetter.a.has(x.dex);
+  if(x.ingB===ingName) return capFakeGradFoodByLetter.b.has(x.dex);
+  if(x.ingC===ingName) return capFakeGradFoodByLetter.c.has(x.dex);
+  return false;
+}
+function capFoodAxisFakeGrad(food){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> capFoodComboFakeGrad(x, food));
+}
+function capAttrFakeGrad(attr){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> x.attr===attr && (x.dtype==='树果'||x.dtype==='能量') && capFakeGradSpecies.has(x.dex));
+}
+function capIslandFakeGrad(isl){ return isl.attrs.some(a=>capAttrFakeGrad(a)); }
+function capSkillPillFakeGrad(sub){
+  if(!userPrefs.capGradMarkOn || typeof CAP_DEX==='undefined') return false;
+  return CAP_DEX.some(x=> x.skillCat===sub && capFakeGradSpecies.has(x.dex));
 }
 function capFoodComboTerror(x, ingName){
   if(!userPrefs.capGradMarkOn) return false;
@@ -15642,17 +15760,25 @@ function capRowHtml(rec, rank, maxVal, line2Html){
   // 这里改用 capFoodComboTerror/capFoodComboXiexiu（内部已把 aac/abc 合并判定），不再直接按 reco.combo
   // 精确匹配——reco.combo 对没进官方推荐/可用表的C位组合会固定回落成'aac'，会把真实是abc组合的记录漏掉
   const terror = !graduated && userPrefs.capGradMarkOn && capState.type==='food' && capFoodComboTerror(x, capState.subFood);
-  const xiexiu = !graduated && !terror && userPrefs.capGradMarkOn && (capState.type==='food'
+  // 视为毕业（黄）插在真毕业和邪修之间，口径见 computeCapGraduationSets 里那段注释
+  const fakeGrad = !graduated && !terror && userPrefs.capGradMarkOn && (capState.type==='food'
+    ? capFoodComboFakeGrad(x, capState.subFood)
+    : capFakeGradSpecies.has(x.dex));
+  const xiexiu = !graduated && !terror && !fakeGrad && userPrefs.capGradMarkOn && (capState.type==='food'
     ? capFoodComboXiexiu(x, capState.subFood)
     : (capState.type==='skill' && capXiexiuSkillSpecies.has(x.dex)));
+  // 视为毕业的文案跟真毕业一样是「已毕业」，只有颜色不同（金黄 vs 绿）——需求原话是"都标为黄色"，
+  // 而且"视为毕业"四个字在这个窄列里会折行，三个字刚好跟绿色那枚对齐
   const recoColHtml = terror
     ? `<span class="cap-reco cap-reco-terror">完美</span>`
     : graduated
     ? `<span class="cap-reco cap-reco-graduated">已毕业</span>`
+    : fakeGrad
+    ? `<span class="cap-reco cap-reco-fakegrad">已毕业</span>`
     : xiexiu
     ? `<span class="cap-reco cap-reco-xiexiu">已邪修</span>`
     : `<span class="cap-reco rec-${reco.level}">${capRecoLinesHtml(reco.text)}</span>`;
-  const rowMarkCls = graduated ? ' cap-row-graduated' : (xiexiu ? ' cap-row-xiexiu' : '');
+  const rowMarkCls = graduated ? ' cap-row-graduated' : (fakeGrad ? ' cap-row-fakegrad' : (xiexiu ? ' cap-row-xiexiu' : ''));
   return `<div class="cap-row${rowMarkCls}" data-dex="${x.dex}">
     <div class="cap-rank ${sleepInfo.cls}"><div class="cap-rank-num">${rank}</div><div class="cap-sleep-lab">${sleepInfo.labHtml}</div></div>
     <div class="cap-avatars">
@@ -15732,13 +15858,16 @@ function capAvatarComboHtml(rec, food){
   // 恐怖优先级最高（跟毕业/邪修各自的触发组合本来就不重叠，这里的互斥判断是防御性的）；
   // 恐怖只加彩虹外框，不叠对勾（需求只要求"用彩虹流光框标明"）；邪修跟已毕业一样叠外框+对勾，改红色
   const terror = !graduated && capFoodComboTerror(x, food);
-  const xiexiu = !graduated && !terror && capFoodComboXiexiu(x, food);
+  const fakeGrad = !graduated && !terror && capFoodComboFakeGrad(x, food);
+  const xiexiu = !graduated && !terror && !fakeGrad && capFoodComboXiexiu(x, food);
   const checkHtml = graduated
     ? `<span class="cap-cav-grad-check">${checkIconSvg('#1f8a3d')}</span>`
+    : fakeGrad
+    ? `<span class="cap-cav-grad-check">${checkIconSvg(FAKE_GRAD_COLOR)}</span>`
     : xiexiu
     ? `<span class="cap-cav-grad-check">${checkIconSvg('#c0392b')}</span>`
     : '';
-  const frameCls = graduated ? ' cap-cav-grad' : (terror ? ' cap-cav-terror' : (xiexiu ? ' cap-cav-xiexiu' : ''));
+  const frameCls = graduated ? ' cap-cav-grad' : (terror ? ' cap-cav-terror' : (fakeGrad ? ' cap-cav-fakegrad' : (xiexiu ? ' cap-cav-xiexiu' : '')));
   return `<div class="cap-cavwrap" data-name="${x.name}" data-medal="${rec.medal?1:0}" data-food="${food}">
     <span class="cap-cav rec-${lvl}${frameCls}">${capB64Img(x.name)}${rec.medal?`<img class="cap-medal" src="${CAP_ICONS.medal}">`:''}${checkHtml}</span>
   </div>`;
@@ -15852,7 +15981,8 @@ function capRenderFoodChart(container){
     const foodGrad = capFoodPillGraduated(b.food);
     // 恐怖 > 毕业 > 邪修：这个食材列下只要存在对应的种族就点亮，跟 foodGrad 同一个思路
     const foodTerror = !foodGrad && capFoodAxisTerror(b.food);
-    const foodXiexiu = !foodGrad && !foodTerror && capFoodAxisXiexiu(b.food);
+    const foodFake = !foodGrad && !foodTerror && capFoodAxisFakeGrad(b.food);
+    const foodXiexiu = !foodGrad && !foodTerror && !foodFake && capFoodAxisXiexiu(b.food);
     // 并列冠军：食材产量与冠军（b.top）差距在1%以内的全部视为并列冠军（而不是只留一个），按精确食材产量从高到低排列（产量高的显示在最上面）
     const champGroup = b.recs.filter(r=> r.totalE >= b.top*0.99)
       .sort((r1,r2)=> r2.totalE - r1.totalE);
@@ -15894,7 +16024,7 @@ function capRenderFoodChart(container){
         ${lineHtml}
         ${markers}
       </div>
-      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':(foodTerror?' cap-ccol-ic-terror':(foodXiexiu?' cap-ccol-ic-xiexiu':''))}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?checkIconSvg('#1f8a3d',3.2):(foodTerror?'<span class="cap-ccol-check-rainbow"></span>':(foodXiexiu?checkIconSvg('#c0392b',3.2):''))}</span></div>
+      <div class="cap-ccol-label"><span class="cap-ccol-ic${foodGrad?' cap-ccol-ic-grad':(foodTerror?' cap-ccol-ic-terror':(foodFake?' cap-ccol-ic-fakegrad':(foodXiexiu?' cap-ccol-ic-xiexiu':'')))}"><img src="${ING_ICONS[b.food]||''}"></span><span class="${foodGrad?'cap-ccol-e-grad':''}">${b.ingE}</span><span class="cap-ccol-grad-check">${foodGrad?checkIconSvg('#1f8a3d',3.2):(foodTerror?'<span class="cap-ccol-check-rainbow"></span>':(foodFake?checkIconSvg(FAKE_GRAD_COLOR,3.2):(foodXiexiu?checkIconSvg('#c0392b',3.2):'')))}</span></div>
     </div>`;
   }).join('');
   container.innerHTML = `<div class="cap-chart-outer">
@@ -16251,9 +16381,9 @@ function renderCaptureSubtype(){
   let subHtml='', noteHtml='', rightHtml='';
   if(capState.type==='berryEnergy'){
     const attrsPills = CAP_ATTRS.map(a=>{ const c=ATTR_COLORS[a]||'#999'; const active=capState.subAttr.includes(a); const icon=ATTR_ICONS[a]; const label=a==='超能力'?'超能':a;
-      return `<div class="cap-attr-pill${active?' active':''}${capAttrGraduated(a)?' cap-pill-grad-outline':''}" data-attr="${a}" style="border-color:${c}; ${active?`background:${c}; color:#fff;`:`background:${c}22; color:${c};`}">${icon?`<img src="${icon}">`:''}<span>${label}</span></div>`; }).join('');
+      return `<div class="cap-attr-pill${active?' active':''}${capAttrGraduated(a)?' cap-pill-grad-outline':(capAttrFakeGrad(a)?' cap-pill-fakegrad-outline':'')}" data-attr="${a}" style="border-color:${c}; ${active?`background:${c}; color:#fff;`:`background:${c}22; color:${c};`}">${icon?`<img src="${icon}">`:''}<span>${label}</span></div>`; }).join('');
     const islandBtns = CAP_ISLANDS.map(isl=>{ const active = isl.attrs.every(a=>capState.subAttr.includes(a));
-      return `<div class="cap-isl-btn${active?' active':''}${capIslandGraduated(isl)?' cap-pill-grad-outline':''}" data-island="${isl.id}" style="background-image:${isl.bg}"><span class="cap-isl-btn-label">${isl.name}</span></div>`; }).join('');
+      return `<div class="cap-isl-btn${active?' active':''}${capIslandGraduated(isl)?' cap-pill-grad-outline':(capIslandFakeGrad(isl)?' cap-pill-fakegrad-outline':'')}" data-island="${isl.id}" style="background-image:${isl.bg}"><span class="cap-isl-btn-label">${isl.name}</span></div>`; }).join('');
     subHtml = `<div class="cap-attrs-row"><div class="cap-sub-attrs">${attrsPills}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill" id="capCtrlBtn"><span>参数</span><span>设置</span></div></div>
       <div class="cap-islands-row"><div class="cap-isl-grid">${islandBtns}</div><div class="cap-ctrl-btn cap-ctrl-btn-fill cap-ctrl-btn-danger" id="capClearAttrBtn"><span>清除</span><span>所选</span></div></div>`;
     noteHtml = `<div class="cap-sub-note">＊默认含副技能「树果数量S」，岛屿顺果，能量型默认满技能等级</div>`;
@@ -16262,13 +16392,14 @@ function renderCaptureSubtype(){
     subHtml = `<div class="cap-sub-foods">`+foods.map(f=>{ const active=capState.subFood===f; const icon=ING_ICONS[f];
       const foodGradFill = capFoodPillGraduated(f);
       const foodTerrorFill = !foodGradFill && capFoodAxisTerror(f);
-      const foodXiexiuFill = !foodGradFill && !foodTerrorFill && capFoodAxisXiexiu(f);
-      const foodFillCls = foodGradFill ? ' cap-pill-grad-fill' : (foodTerrorFill ? ' cap-pill-terror-fill' : (foodXiexiuFill ? ' cap-pill-xiexiu-fill' : ''));
+      const foodFakeFill = !foodGradFill && !foodTerrorFill && capFoodAxisFakeGrad(f);
+      const foodXiexiuFill = !foodGradFill && !foodTerrorFill && !foodFakeFill && capFoodAxisXiexiu(f);
+      const foodFillCls = foodGradFill ? ' cap-pill-grad-fill' : (foodTerrorFill ? ' cap-pill-terror-fill' : (foodFakeFill ? ' cap-pill-fakegrad-fill' : (foodXiexiuFill ? ' cap-pill-xiexiu-fill' : '')));
       return `<div class="cap-food-pill${active?' active':''}${foodFillCls}" data-food="${f}">${icon?`<img src="${icon}">`:`<span>${f}</span>`}</div>`; }).join('')+`</div>`;
     noteHtml = `<div class="cap-sub-note" style="color:#d9333f;">＊默认主技能满级导致技能型食材精选产量虚高，注意请勿培养！</div>`;
   } else {
     subHtml = `<div class="cap-sub-skills">`+CAP_SKILL_SUBS.map(s=>{ const active=capState.subSkill===s;
-      return `<div class="cap-skill-pill${active?' active':''}${capSkillPillGraduated(s)?' cap-pill-grad-fill':''}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
+      return `<div class="cap-skill-pill${active?' active':''}${capSkillPillGraduated(s)?' cap-pill-grad-fill':(capSkillPillFakeGrad(s)?' cap-pill-fakegrad-fill':'')}" data-skill="${s}">${capSkillIcon(CAP_SKILL_ICON[s])}<span>${s}<small>（${CAP_SKILL_FULL[s]}）</small></span></div>`; }).join('')+`</div>`;
     const pity = capState.ctrl.pity;
     rightHtml = `<div class="cap-pity-col">
       <div class="cap-pity-btn${!pity?' active':''}" data-pity="0">不含保底</div>
@@ -19079,8 +19210,8 @@ function boxAnyFilterActive(){
    凡是页面上带删除线显示的（不推荐使用 / aaa·abb 组合不可用 / 能量型没果S）都不算它划掉的那个
    档位，一律归"其他"；aax打工归"打工"；覆盖率够高的邪修/极致邪修归"邪修"；算不出来的也归"其他"。 */
 const BOX_GRADE_CATS = ['不合格','和解','毕业','大毕业','超级毕业',
-  '金帮不合格','金帮和解','金帮毕业','金帮大毕业','金帮超级毕业','邪修','打工','其他'];
-const BOX_GRADE_CAT_COLOR = {'邪修':XIEXIU_COLOR, '打工':'#7a4f9e', '其他':'#8a8f98'};
+  '金帮不合格','金帮和解','金帮毕业','金帮大毕业','金帮超级毕业','视为毕业','邪修','打工','其他'];
+const BOX_GRADE_CAT_COLOR = {'视为毕业':FAKE_GRAD_COLOR, '邪修':XIEXIU_COLOR, '打工':'#7a4f9e', '其他':'#8a8f98'};
 function boxGradeCatColor(cat){ return BOX_GRADE_CAT_COLOR[cat] || tierStyleOf(cat).color; }
 function boxEntryBuild(entry){ return {selected:entry.selected, incAttr:entry.incAttr, decAttr:entry.decAttr}; }
 // aab/aac：照搬 getGradOverrideInfo 里那一段——有 aaa 可用且 2 槽效率≥1.63 判打工；
@@ -19149,7 +19280,15 @@ function boxTerrorInfo(entry, x){
     return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
   });
 }
+/* 拆成 Raw + 包装层：Raw 是【原始档位】，谁也盖不住它，PVP 计分和"视为毕业"自己的
+   资格判定都只认它；包装层才会把手动盖的「视为毕业」顶上来，供盒子筛选器用。
+   —— 这个分层就是"视为毕业不影响 PVP 分数"这条需求的落点，改这里之前先想清楚
+   调用方到底要的是哪一种。 */
 function boxEntryGradeCategory(entry){
+  if(fakeGradActiveFor(entry)) return '视为毕业';
+  return boxEntryGradeCategoryRaw(entry);
+}
+function boxEntryGradeCategoryRaw(entry){
   const rec = entry.dex ? POKEMON_DEX_DATA.find(r=>r[0]===entry.dex) : null;
   if(!rec) return '其他';
   const dtype = DEX_TYPE_MAP[rec[3]];
@@ -19186,6 +19325,69 @@ function boxEntryGradeCategory(entry){
   let grade = null;
   try{ grade = boxEntryGraduationGrade(entry, x, dtype); }catch(e){ grade = null; }
   return grade || '其他';
+}
+/* 这只条目够不够格盖「视为毕业」的章——也就是盒子详情页那颗按钮该不该出现。
+   口径（2026-10-07 用户定）：**只要当前结论不是"毕业及以上"就能盖**，
+   所以和解/不合格、邪修/极致邪修、aax打工/报废、不推荐使用/组合不可用（带删除线那些）统统算数。
+   只有这几种情况不给：
+     · 面板信息不全（没选副技能 / 食材槽没选满 / 能量型查不到基础数值）—— 根本没有结论可改
+     · 恐怖宝可梦 —— 它展示的就是"超级毕业"那一档
+     · 原档位已经是毕业及以上（GRAD_RANK>=2）—— 不需要"视为" */
+function boxEntryFakeGradApplicable(entry){
+  if(!entry || !entry.dex) return false;
+  if(!Array.isArray(entry.selected) || !entry.selected.some(v=>v!=null)) return false;
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  if(!rec) return false;
+  const dtype = DEX_TYPE_MAP[rec[3]];
+  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
+  if(!dtype || !x) return false;
+  if(dtype==='food' && (!entry.ingChoice2 || !entry.ingChoice3)) return false;
+  if(dtype==='energy' && !ENERGY_NAME_TO_ID[x.name]) return false;
+  try{ if(boxTerrorInfo(entry, x)) return false; }catch(e){}
+  let cat = null;
+  try{ cat = boxEntryGradeCategoryRaw(entry); }catch(e){ cat = null; }
+  if(!cat) return false;
+  if(GRAD_RANK[cat] != null && GRAD_RANK[cat] >= 2) return false;
+  return true;
+}
+// 这只条目此刻是不是"视为毕业"状态：盖了章 + 现在仍然够格。两个条件缺一不可
+function fakeGradActiveFor(entry){
+  return !!(entry && entry.fakeGrad) && boxEntryFakeGradApplicable(entry);
+}
+// 当前正在编辑的那只（盒子详情页 / 从盒子点进修改面板）是不是视为毕业——驱动毕业判定框的展示覆盖
+function fakeGradActiveNow(){
+  try{ return fakeGradActiveFor(currentEditingBoxEntry()); }catch(e){ return false; }
+}
+/* 盒子详情页那颗长按钮。两种状态：
+   · 还没盖章 + 够格 → 「将本宝可梦视为已毕业」
+   · 盖了章        → 「取消…」；如果这只后来真毕业了，章会自动失效（见 fakeGradActiveFor），
+                      这时按钮改成灰色并写明"当前不生效"，但仍然留着，给用户一个撤章的入口，
+                      否则这枚章就再也点不掉了 */
+function renderBoxDetFakeGradBtn(){
+  const btn = document.getElementById('boxDetFakeGradBtn');
+  if(!btn) return;
+  const entry = (typeof boxDetailEntryId!=='undefined' && boxDetailEntryId) ? boxGetEntry(boxDetailEntryId) : null;
+  const marked = !!(entry && entry.fakeGrad);
+  let applicable = false;
+  try{ applicable = entry ? boxEntryFakeGradApplicable(entry) : false; }catch(e){ applicable = false; }
+  if(!entry || (!marked && !applicable)){ btn.style.display = 'none'; return; }
+  btn.style.display = '';
+  const active = marked && applicable;
+  btn.classList.toggle('on', active);
+  btn.classList.toggle('stale', marked && !applicable);
+  btn.textContent = marked
+    ? (applicable ? '取消「视为已毕业」' : '这只已经真的毕业了，标记当前不生效 · 点此撤销')
+    : '将本宝可梦视为已毕业';
+}
+function boxDetFakeGradToggle(){
+  if(typeof boxDetailEntryId==='undefined' || !boxDetailEntryId) return;
+  const e = boxGetEntry(boxDetailEntryId);
+  if(!e) return;
+  if(e.fakeGrad) delete e.fakeGrad; else e.fakeGrad = true;
+  saveBoxData();   // 盒子条目是整个对象原样上云（cloudPayload 直接发 box: boxData），所以这个字段自动同步，后端零改动
+  renderGraduation('boxdet-');   // 内部会连带重画这颗按钮
+  if(typeof renderBoxPage==='function') renderBoxPage();   // 盒子那边的「毕业等级」筛选结果可能跟着变
+  if(typeof showBoxToast==='function') showBoxToast(e.fakeGrad ? '已标记为「视为毕业」' : '已取消「视为毕业」');
 }
 function boxEntryMatchesFilters(entry){
   const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
@@ -22436,7 +22638,8 @@ function pvpCatColor(cat){
    优先级 恐怖 > 极致邪修/邪修 > 十档，跟捕捉推荐 capRowHtml 里的优先级一致 */
 function pvpCategoryOf(entry){
   let cat = null;
-  try{ cat = boxEntryGradeCategory(entry); }catch(e){ return null; }
+  // 必须是 Raw：手动盖的「视为毕业」不能进 PVP 计分，PVP 永远按原档位算（需求明确要求）
+  try{ cat = boxEntryGradeCategoryRaw(entry); }catch(e){ return null; }
   if(!cat || cat==='其他') return null;
   const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
   const dtype = rec ? DEX_TYPE_MAP[rec[3]] : null;
