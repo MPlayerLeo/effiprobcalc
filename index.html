@@ -1981,6 +1981,12 @@
   /* justify-content:center：树果区左右两栏都是纵向 flex，之前没写 justify-content，
      默认 flex-start 导致内容整体贴在顶上（右栏比左栏矮时更明显），改成居中让内容在栏高范围内上下居中 */
   .yield-section-fruit .yield-section-mid, .yield-section-fruit .yield-section-right{ flex-direction:column; align-items:flex-start; justify-content:center; }
+  /* 树果区右栏本身就是纵向 flex，.yield-stat-break 的 flex:0 0 100% 在这里会被解读成"占满整列高度"，
+     把那一项挤到旁边另开一列（≤520px 那段媒体查询早就为同一个原因打过补丁）。
+     加了"上线次数/满包损失"两项之后，多出来的那一列会直接溢出卡片右边被裁掉，
+     所以这里统一按纵向排：不另起列，每项各占一行，卡片高度跟着内容自己长 */
+  .yield-section-fruit .yield-section-right{ flex-wrap:nowrap; }
+  .yield-section-fruit .yield-section-right .yield-stat-break{ flex:0 0 auto; }
   .yield-section-skill .yield-section-mid{ flex-direction:row; align-items:stretch; padding:0; gap:0; }
   /* 持续满包"满包中"占位：不走 skill-cnt/-effect 那两个自带内边距的子块，直接塞进 .yield-section-mid，
      需要比上面那条 padding:0 更高优先级的选择器把内边距找补回来，才能和树果区文字左边缘对齐 */
@@ -2351,6 +2357,13 @@
 .dash-satiety-lab{ flex:0 0 auto; font-size:12px; font-weight:800; color:var(--accent-dk); }
 /* 紧跟在2000按钮后面的"+n"：作为 btnrow 里排在最后的一个 flex 项，不再另起一行 */
 .satiety-bonus-note{ flex:0 0 auto; align-self:center; font-size:12px; font-weight:800; color:var(--accent-dk); margin-left:2px; }
+/* 平均上线时间间隔的两个小输入框（__时__分） */
+.carry-gap-row{ margin-top:10px; margin-bottom:0; }
+.carry-gap-inputs{ flex:0 0 auto; display:flex; align-items:center; gap:3px; }
+.carry-gap-in{ width:42px; height:27px; box-sizing:border-box; text-align:center; font-size:13px; font-weight:800;
+  color:var(--accent-dk); border:1px solid var(--line); border-radius:7px; background:#fff; padding:0 2px; }
+.carry-gap-in::placeholder{ color:#c9cbd1; font-weight:600; letter-spacing:.06em; }
+.carry-gap-unit{ flex:0 0 auto; font-size:12px; font-weight:800; color:var(--accent-dk); margin-right:4px; }
 
 /* 睡眠时长数轴：13h / 15分钟一格 / 双滑钮 */
 .sleep-axis{ margin-top:2px; }
@@ -3474,6 +3487,16 @@
           </div>
           <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
           <div class="sleep-axis" id="sleepAxis"></div>
+          <!-- 平均上线时间间隔：留空＝不生效（清醒时段按旧行为随时收取、永不满包）。
+               刻意不记忆：不进 userPrefs / localStorage / 云端 / 盒子条目，刷新就回到留空，见 loginGapSeconds -->
+          <div class="carry-opts-row carry-gap-row">
+            <div class="carry-opts-lab">平均上线时间间隔</div>
+            <div class="carry-gap-inputs">
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="loginGapH" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">时</span>
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="loginGapM" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">分</span>
+            </div>
+            <div class="carry-opts-note" id="loginGapNote"></div>
+          </div>
         </div>
       </div>
       <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
@@ -3641,6 +3664,16 @@
           </div>
           <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
           <div class="sleep-axis" id="p2-sleepAxis"></div>
+          <!-- 平均上线时间间隔：留空＝不生效（清醒时段按旧行为随时收取、永不满包）。
+               刻意不记忆：不进 userPrefs / localStorage / 云端 / 盒子条目，刷新就回到留空，见 loginGapSeconds -->
+          <div class="carry-opts-row carry-gap-row">
+            <div class="carry-opts-lab">平均上线时间间隔</div>
+            <div class="carry-gap-inputs">
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="p2-loginGapH" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">时</span>
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="p2-loginGapM" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">分</span>
+            </div>
+            <div class="carry-opts-note" id="p2-loginGapNote"></div>
+          </div>
         </div>
       </div>
       <div class="ctrl-block ctrl-inline" style="flex:1 1 100%;">
@@ -3739,6 +3772,16 @@
           </div>
           <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
           <div class="sleep-axis" id="p3-sleepAxis"></div>
+          <!-- 平均上线时间间隔：留空＝不生效（清醒时段按旧行为随时收取、永不满包）。
+               刻意不记忆：不进 userPrefs / localStorage / 云端 / 盒子条目，刷新就回到留空，见 loginGapSeconds -->
+          <div class="carry-opts-row carry-gap-row">
+            <div class="carry-opts-lab">平均上线时间间隔</div>
+            <div class="carry-gap-inputs">
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="p3-loginGapH" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">时</span>
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="p3-loginGapM" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">分</span>
+            </div>
+            <div class="carry-opts-note" id="p3-loginGapNote"></div>
+          </div>
         </div>
       </div>
       <div class="ctrl-block" id="p3-finalPkBlock" style="flex:1 1 100%; display:none;">
@@ -4214,6 +4257,16 @@
           </div>
           <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
           <div class="sleep-axis" id="boxdet-sleepAxis"></div>
+          <!-- 平均上线时间间隔：留空＝不生效（清醒时段按旧行为随时收取、永不满包）。
+               刻意不记忆：不进 userPrefs / localStorage / 云端 / 盒子条目，刷新就回到留空，见 loginGapSeconds -->
+          <div class="carry-opts-row carry-gap-row">
+            <div class="carry-opts-lab">平均上线时间间隔</div>
+            <div class="carry-gap-inputs">
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="boxdet-loginGapH" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">时</span>
+              <input type="text" inputmode="numeric" class="carry-gap-in" id="boxdet-loginGapM" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">分</span>
+            </div>
+            <div class="carry-opts-note" id="boxdet-loginGapNote"></div>
+          </div>
         </div>
         <div class="ctrl-block ctrl-inline" style="flex:1 1 100%; margin-top:12px;">
           <div class="lab">主技能满级</div>
@@ -4403,6 +4456,16 @@
         </div>
         <div class="carry-opts-lab" style="margin-bottom:2px;">睡眠时长</div>
         <div class="sleep-axis" id="dash-sleepAxis"></div>
+        <!-- 平均上线时间间隔：留空＝不生效（清醒时段按旧行为随时收取、永不满包）。
+             刻意不记忆：不进 userPrefs / localStorage / 云端 / 盒子条目，刷新就回到留空，见 loginGapSeconds -->
+        <div class="carry-opts-row carry-gap-row">
+          <div class="carry-opts-lab">平均上线时间间隔</div>
+          <div class="carry-gap-inputs">
+            <input type="text" inputmode="numeric" class="carry-gap-in" id="dash-loginGapH" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">时</span>
+            <input type="text" inputmode="numeric" class="carry-gap-in" id="dash-loginGapM" maxlength="2" placeholder="--" autocomplete="off"><span class="carry-gap-unit">分</span>
+          </div>
+          <div class="carry-opts-note" id="dash-loginGapNote"></div>
+        </div>
       </div>
       <div class="dash-group-label">主技能满级</div>
       <div class="btnrow" id="dash-mainSkillMaxSel"></div>
@@ -7479,6 +7542,11 @@ const state = {
   pkPortraitDex: null,
   // v3.16 持有上限：'unlimited'(默认，与旧版完全一致) / 'limited' / 'always'；不持久化，每次重开回到无限持有
   carryMode: 'unlimited',
+  // 平均上线时间间隔（只在"有限持有"下生效）：两个输入框的原始字符串，两个都空＝不生效。
+  // 跟 carryMode 一样【不持久化、不上云、不写进盒子条目】——用户明确要求"不记忆，默认留空"。
+  // 它是全站共用的一个值（五套前缀的输入框互相同步），不属于某一只宝可梦自己的面板数据
+  loginGapH: '',
+  loginGapM: '',
   // 副技能持有档位组合（如 ['s','l']）；null = 跟随当前副技能面板的默认值
   carrySub: null,
   // 睡饱饱档位 0/200/500/1000/2000（徽章宝可梦强制 2000，见 satietyTierFor）
@@ -8264,6 +8332,7 @@ function renderCarryBlock(pfx){
   if(state.carryMode!=='limited') return;
   renderCarrySubSel(pfx);
   renderSleepAxis(pfx);
+  renderLoginGapRow(pfx);
 }
 
 function renderCarrySubSel(pfx){
@@ -8289,6 +8358,56 @@ function renderCarrySubSel(pfx){
   }
 }
 
+/* ---- 平均上线时间间隔：两个小输入框（__时__分）----
+   输入框本身是静态 HTML（五套前缀各一份），这里只负责回写值、刷说明文字、挂事件。
+   刻意不用 innerHTML 重建：那样每敲一个字都会把正在输入的 input 换掉，光标直接丢。
+   值是全站共用的（跟三态开关同级），所以在任意一处改动都要把另外四套的框同步过去。 */
+function renderLoginGapRow(pfx){
+  const hEl = document.getElementById(pfx+'loginGapH');
+  const mEl = document.getElementById(pfx+'loginGapM');
+  if(!hEl || !mEl) return;
+  // 正在输入的那个框不回写，否则半截输入会被改掉、光标会跳
+  if(document.activeElement !== hEl && hEl.value !== state.loginGapH) hEl.value = state.loginGapH;
+  if(document.activeElement !== mEl && mEl.value !== state.loginGapM) mEl.value = state.loginGapM;
+  hEl.oninput = ()=> onLoginGapInput(pfx, 'H', hEl);
+  mEl.oninput = ()=> onLoginGapInput(pfx, 'M', mEl);
+  // 失焦/回车时才跑整页重算（输入过程中只做下面那套就地刷新，避免每敲一下都重排整页）
+  hEl.onchange = ()=> renderAll();
+  mEl.onchange = ()=> renderAll();
+  const note = document.getElementById(pfx+'loginGapNote');
+  if(note) note.textContent = loginGapNoteText();
+}
+function loginGapNoteText(){
+  const gap = loginGapSeconds();
+  const [T1, T2] = sleepSegSeconds();
+  const awakeSec = Math.max(0, 86400 - T1 - T2);
+  if(!gap) return '留空＝不生效（清醒时段视为随时上线收取、永不满包）。不记忆，刷新后清空。';
+  const segs = carryLoginSegments(awakeSec, gap) || [];
+  // 只有真的切出多段、且最后一段短于一个完整间隔时，才提示那个零头（间隔比清醒还长时整段就一段，不用提）
+  const tail = (segs.length > 1 && Math.abs(segs[segs.length-1] - gap) > 1) ? segs[segs.length-1] : 0;
+  return '清醒 ' + fmtFillTime(awakeSec) + ' 按 ' + fmtFillTime(gap) + ' 均分 ＝ 上线 ' + segs.length + ' 次'
+    + (tail ? ('（最后一次只有 ' + fmtFillTime(tail) + '，满不满包单独算）') : '')
+    + '。每段都从空包开始，满包的部分只出树果、不出食材也不触发技能。只影响产能分析的数字，毕业判定/食谱覆盖率不受影响。';
+}
+function onLoginGapInput(pfx, which, el){
+  // 只留数字；时 0~24、分 0~59（"24时0分"＝一天只上线一次）
+  let v = String(el.value||'').replace(/[^0-9]/g, '').slice(0, 2);
+  if(v !== ''){
+    const max = (which === 'H') ? 24 : 59;
+    let n = parseInt(v, 10);
+    if(!Number.isFinite(n)) n = 0;
+    if(n > max) n = max;
+    v = String(n);
+  }
+  if(el.value !== v) el.value = v;
+  if(which === 'H') state.loginGapH = v; else state.loginGapM = v;
+  // 就地刷新，不跑 renderAll——跟拖睡眠数轴同一套策略（renderAll 会把正在输入的框连带重建）
+  CARRY_CTRL_PFXS.forEach(pp=> renderLoginGapRow(pp));
+  renderYieldAnalysis(''); renderYieldAnalysis('p2-'); renderYieldAnalysis('boxdet-');
+  // 排名对比页的展示窗和三栏产量也要跟着动。名次本身只看效率、不受持有上限影响，所以这里不会触发
+  // 那套重算遮罩——renderRankModule 在档位没变（枚举结果已缓存）时只有 1ms 左右，可以每敲一下就跑
+  try{ if(onRankSub()){ renderPkDispWindow(); renderRankModule(); } }catch(e){}
+}
 function renderSatietySel(){
   const el = document.getElementById('dashPanelSatietySel');
   if(!el) return;
@@ -8414,6 +8533,7 @@ function sleepDragTo(track, clientX, knob){
   clampSleepPrefs();
   // 拖动过程中不跑 renderAll（会把正在拖的 DOM 重建掉），只就地刷新四套数轴 + 产量数字
   CARRY_CTRL_PFXS.forEach(p=>{ if(p!==track.getAttribute('data-pfx')) renderSleepAxis(p); });
+  CARRY_CTRL_PFXS.forEach(p=> renderLoginGapRow(p));   // 清醒总时长变了，"上线 N 次"那行说明要重算
   updateSleepAxisInPlace(track);
   renderYieldAnalysis(''); renderYieldAnalysis('p2-'); renderYieldAnalysis('boxdet-');
 }
@@ -11198,6 +11318,37 @@ function expectedCappedTriggers(helps, p, cap){
 }
 function sleepSkillCapFor(x){ return (x && (x.dtype==='能量' || x.dtype==='功能')) ? 2 : 1; }
 
+/* ---- 平均上线时间间隔（2026-10-07 新增，只在"有限持有"下生效）----
+   口径：除掉已设定的两段睡觉时间，剩下的清醒时长（24h − 睡眠总长）按这个间隔均分，
+   每到一次间隔就视为"玩家上线收了一次包"，所以每一段都从空包重新开始攒。
+   某一段里如果满包时间短于这个间隔，超出去的那部分就是满包时长，按满包处理
+   （只出树果、不出食材、不触发技能），拿剩下的时长算食材和技能产量。
+   整除不尽的尾巴单独算作一次上线，满不满包自己独立判断（用户明确要求）。
+   例：睡 8h → 清醒 16h，满包 3h。间隔 4h ⇒ 4 段，每段 3h 正常 + 1h 满包，合计扣 4h；
+       间隔 5h ⇒ 5h/5h/5h/1h 四段，前三段各扣 2h，最后那段 1h 还没满包、一点不扣。
+   【不记忆】：值存在 state.loginGapH/M 上，不进 userPrefs/localStorage/云端/盒子条目。 */
+const LOGIN_GAP_MAX_SEC = 24*3600;
+function loginGapSeconds(){
+  if(state.carryMode !== 'limited') return 0;          // 无限持有/持续满包下这个参数无意义
+  const hs = String(state.loginGapH==null?'':state.loginGapH).trim();
+  const ms = String(state.loginGapM==null?'':state.loginGapM).trim();
+  if(hs==='' && ms==='') return 0;                     // 两个框都空 = 留空 = 不生效
+  const h = parseInt(hs,10), m = parseInt(ms,10);
+  const sec = (Number.isFinite(h)?h:0)*3600 + (Number.isFinite(m)?m:0)*60;
+  if(!(sec>0)) return 0;                               // 0时0分 同样视为留空
+  return Math.min(sec, LOGIN_GAP_MAX_SEC);
+}
+// 把清醒总时长切成一段段"从空包开始"的上线间隔；返回 null = 不生效（清醒段按旧行为永不满包）
+function carryLoginSegments(awakeSec, gapSec){
+  if(!(gapSec>0) || !(awakeSec>0)) return null;
+  const n = Math.floor(awakeSec/gapSec + 1e-9);
+  const segs = [];
+  for(let i=0;i<n;i++) segs.push(gapSec);
+  const rest = awakeSec - n*gapSec;
+  if(rest > 1) segs.push(rest);   // 不足1秒的零头不单独算一段，免得浮点残渣凭空多出一次上线
+  return segs.length ? segs : null;
+}
+
 /* ---- 有限持有的核心换算 ----
    返回：满包时间、以及"食材/技能/树果"三条产出相对无限持有模型的实际结果。
    ingScale / skillScale 是给现有展示代码用的缩放系数（食材各字母同比例缩放，技能按封顶后重算）。 */
@@ -11221,7 +11372,8 @@ function computeCarryModel(x, level, opts){
       limit, unitsPerHelp, fillSec: 0, alwaysFull: true,
       fruitCount: totalHelps24 * berryPerHelp,
       fruitScale: (1-opts.realIngProb) > 0 ? (1/(1-opts.realIngProb)) : 1,
-      ingScale: 0, skillCount: 0, skillScale: 0,
+      ingScale: 0, ingScaleNoGap: 0, skillCount: 0, skillScale: 0,
+      loginCount: 0, loginFullSec: 0,
     };
   }
 
@@ -11229,31 +11381,53 @@ function computeCarryModel(x, level, opts){
   const sleepTotal = segs.reduce((a,b)=>a+b, 0);
   const awake = Math.max(0, 86400 - sleepTotal);
 
-  // 清醒时段：完全按无限持有模型
-  let fruitCount   = awake * helpsPerSec * (1-opts.realIngProb) * berryPerHelp;
-  let ingHelps     = awake * helpsPerSec * opts.realIngProb;
-  let skillCount   = awake * helpsPerSec * opts.skillRate;
-
-  segs.forEach(T=>{
+  /* 一个"从空包开始、到下一次收取为止"的时间段：未满包阶段照常出食材/触发技能（技能按段封顶），
+     满包阶段每次帮忙都只出树果。两段睡眠和「平均上线间隔」切出来的清醒段走的是同一套算法——
+     2026-10-07 用户明确要求清醒段也套同一个"每段技能触发封顶"和"满包仍出树果"的口径。 */
+  const addSeg = (acc, T)=>{
     const tNorm = Math.min(fillSec, T);          // 未满包阶段
     const tFull = Math.max(0, T - fillSec);      // 满包阶段
     const hNorm = tNorm * helpsPerSec, hFull = tFull * helpsPerSec;
-    fruitCount += hNorm * (1-opts.realIngProb) * berryPerHelp;  // 未满包：按食材概率折算的树果
-    fruitCount += hFull * berryPerHelp;                          // 满包后：每次帮忙都只出树果
-    ingHelps   += hNorm * opts.realIngProb;
-    skillCount += expectedCappedTriggers(hNorm, opts.skillRate, skillCap);
-  });
+    acc.fruit += hNorm * (1-opts.realIngProb) * berryPerHelp;  // 未满包：按食材概率折算的树果
+    acc.fruit += hFull * berryPerHelp;                          // 满包后：每次帮忙都只出树果
+    acc.ing   += hNorm * opts.realIngProb;
+    acc.skill += expectedCappedTriggers(hNorm, opts.skillRate, skillCap);
+    acc.fullSec += tFull;
+  };
+  const tally = (loginSegs)=>{
+    const acc = {fruit:0, ing:0, skill:0, fullSec:0};
+    if(loginSegs) loginSegs.forEach(T=> addSeg(acc, T));
+    else {
+      // 没填上线间隔：清醒时段玩家随时收取、永不满包，完全按无限持有模型（即本功能之前的行为）
+      acc.fruit += awake * helpsPerSec * (1-opts.realIngProb) * berryPerHelp;
+      acc.ing   += awake * helpsPerSec * opts.realIngProb;
+      acc.skill += awake * helpsPerSec * opts.skillRate;
+    }
+    const awakeFullSec = acc.fullSec;   // 只记清醒段那部分满包时长，供"满包损失"显示用
+    segs.forEach(T=> addSeg(acc, T));
+    acc.awakeFullSec = awakeFullSec;
+    return acc;
+  };
+  const loginSegs = carryLoginSegments(awake, opts.loginGapSec);
+  const main = tally(loginSegs);
+  /* 食谱覆盖率/毕业判定那条线固定【不吃】上线间隔（2026-10-07 用户要求：这个间隔只动产能分析
+     和排名对比里的产量数字，不许把毕业判定一起带偏），所以这里额外再算一份"清醒段永不满包"
+     口径的食材缩放系数，由 carryIngScale 默认返回它。 */
+  const noGap = loginSegs ? tally(null) : main;
 
   const baseIngHelps   = totalHelps24 * opts.realIngProb;
   const baseSkillCount = totalHelps24 * opts.skillRate;
   const baseFruit      = totalHelps24 * (1-opts.realIngProb) * berryPerHelp;
   return {
     limit, unitsPerHelp, fillSec, alwaysFull: false,
-    fruitCount,
-    fruitScale: baseFruit>0 ? (fruitCount/baseFruit) : 1,
-    ingScale:   baseIngHelps>0   ? (ingHelps/baseIngHelps)     : 0,
-    skillCount,
-    skillScale: baseSkillCount>0 ? (skillCount/baseSkillCount) : 0,
+    fruitCount: main.fruit,
+    fruitScale: baseFruit>0 ? (main.fruit/baseFruit) : 1,
+    ingScale:   baseIngHelps>0   ? (main.ing/baseIngHelps)      : 0,
+    ingScaleNoGap: baseIngHelps>0 ? (noGap.ing/baseIngHelps)    : 0,
+    skillCount: main.skill,
+    skillScale: baseSkillCount>0 ? (main.skill/baseSkillCount)  : 0,
+    loginCount:   loginSegs ? loginSegs.length : 0,
+    loginFullSec: loginSegs ? main.awakeFullSec : 0,
   };
 }
 
@@ -11281,12 +11455,13 @@ function carryModelForPanel(p){
   const skillRate = expectedTriggerRatePerHelp(rawSkillProb, pityCount(x.interval), pityEligible && state.pityOn);
   const tiers = carrySubTiersFor(p.selected, level, p.carrySub);
   const limit = carryLimitOf(x, tiers, satietyTierFor(x, p.satiety));
+  const loginGapSec = loginGapSeconds();
   const key = [state.carryMode, x.dex, level, realInterval, realIngProb, skillRate, sums.hasFruit,
-               p.ingChoice2, p.ingChoice3, limit, userPrefs.sleep1, userPrefs.sleep2].join('|');
+               p.ingChoice2, p.ingChoice3, limit, userPrefs.sleep1, userPrefs.sleep2, loginGapSec].join('|');
   if(_carryCache.key === key) return _carryCache.val;
   const val = computeCarryModel(x, level, {
     realInterval, realIngProb, skillRate, hasFruitS: sums.hasFruit, limit,
-    ing2: p.ingChoice2, ing3: p.ingChoice3,
+    ing2: p.ingChoice2, ing3: p.ingChoice3, loginGapSec,
   });
   _carryCache = {key, val};
   return val;
@@ -11307,10 +11482,13 @@ function panelParamsFromBuild(build){
 function currentCarryModel(levelOverride){ return carryModelForPanel(panelParamsFromState(levelOverride)); }
 function carryModelForBuild(build){ return carryModelForPanel(panelParamsFromBuild(build)); }
 // 食材产量缩放系数：只有"有限持有"会缩放；"持续满包"下食谱覆盖率/毕业判定仍按无限持有算（避免把毕业判定一起打崩）
-function carryIngScale(levelOverride){
+// applyLoginGap：默认 false ＝ 不吃「平均上线时间间隔」，只按"睡眠才会满包"算。
+// 只有产能分析的食材区会传 true——用户要求这个间隔只影响产能分析的数字，毕业判定/食谱覆盖率照旧
+function carryIngScale(levelOverride, applyLoginGap){
   if(state.carryMode !== 'limited') return 1;
   const m = currentCarryModel(levelOverride);
-  return m ? m.ingScale : 1;
+  if(!m) return 1;
+  return applyLoginGap ? m.ingScale : m.ingScaleNoGap;
 }
 function fmtFillTime(sec){
   if(!isFinite(sec)) return '—';
@@ -11385,6 +11563,12 @@ function renderYieldAnalysis(pfx){
     + `<span class="yield-stat"><span class="yield-stat-label">帮忙间隔</span><b>${capFmt(realInterval,0)}</b><span class="yield-unit">秒</span></span>`
     + `<span class="yield-stat"><span class="yield-stat-label">帮忙次数</span><b>${capFmt(realHelpsPerDay,2)}</b><span class="yield-unit">次/天</span></span>`
     + ((carry && !carry.alwaysFull) ? `<span class="yield-stat yield-stat-break"><span class="yield-stat-label">满包时间</span><b>${fmtFillTime(carry.fillSec)}</b></span>` : '')
+    // 填了「平均上线时间间隔」才出现这两个数：上线次数＝清醒时长按间隔切出来的段数（含整除不尽的尾巴那一段），
+    // 满包损失＝这些清醒段里累计的满包时长（两段睡眠自己的满包不算在内，那部分本来就一直存在）
+    + ((carry && !carry.alwaysFull && carry.loginCount>0)
+        ? `<span class="yield-stat"><span class="yield-stat-label">上线次数</span><b>${carry.loginCount}</b><span class="yield-unit">次/天</span></span>`
+          + `<span class="yield-stat"><span class="yield-stat-label">满包损失</span><b>${fmtFillTime(carry.loginFullSec)}</b></span>`
+        : '')
     + `</div></div>`;
 
   // ---- 技能区域：复用 capPageBaseYield('skill')+capSkillYieldHtml（含技能特例食材/梦碎附加产出） ----
@@ -11417,7 +11601,9 @@ function renderYieldAnalysis(pfx){
   } else if(!state.ingChoice2 || !state.ingChoice3){
     foodBody = `<span class="grad-comment" style="color:#c0392b;font-size:14px;font-weight:700;">请先选择食材类型！</span>`;
   } else {
-    let rows = computeFoodCoverageRows(eFood, undefined);
+    // 末位 true ＝ 这一处（且只有这一处）把「平均上线时间间隔」算进去：产能分析是纯展示，
+    // 毕业判定框和档位升降判定那几处仍按"只有睡眠会满包"算，见 carryIngScale
+    let rows = computeFoodCoverageRows(eFood, undefined, undefined, undefined, true);
     if(hasSpecialIng && skillBase && skillBase.specialIngredients){
       rows = mergeSpecialFoodRows(rows, skillBase.specialIngredients, eSkill);
     }
@@ -15224,7 +15410,7 @@ function capPatternIngredientAmount(x, letter, n){
 // 毕业判定页"食谱覆盖率"：展示框按当前实际选择的等级+效率计算；levelOverride 仅供毕业判定规则内部按60级复算时使用
 // infiniteCarry=true 时无视当前持有上限模式，一律按"无限持有"算（邪修/恐怖宝可梦判定按需求固定用这个口径）
 // ignoreCamping=true 时无视当前露营券开关，一律按未开启算（毕业判定/邪修/aax 这几处决策口径固定用这个）
-function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry, ignoreCamping){
+function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry, ignoreCamping, applyLoginGap){
   if(typeof CAP_DEX==='undefined' || !state.selectedDex) return null;
   const pattern = currentIngredientPattern();
   if(!pattern) return null;
@@ -15246,7 +15432,7 @@ function computeFoodCoverageRows(effFrac, levelOverride, infiniteCarry, ignoreCa
     const amtSum = capPatternIngredientAmount(x, letter, n);
     // v3.16：仅"有限持有"会按满包模型缩放（"持续满包"下覆盖率/毕业判定仍按无限持有算，
     // 否则食材产量恒为0会把"和解经覆盖率转毕业""aax转打工"两条路径整个封死）
-    const actual = helps * (x.ingProb||0) * (amtSum / n) * e * (infiniteCarry ? 1 : carryIngScale(levelOverride));
+    const actual = helps * (x.ingProb||0) * (amtSum / n) * e * (infiniteCarry ? 1 : carryIngScale(levelOverride, applyLoginGap));
     // 尾巴（百变怪专属食材）不在 FOOD_DAILY_DEMAND 里，没有"每日食谱需求量"这个概念、算不出
     // 覆盖率，但产量本身照样要展示——demand 缺失时 ratio 留 null，交给展示层判断是否显示百分比，
     // 不能像之前那样直接 return 把整行（连同产量数字）都吞掉
