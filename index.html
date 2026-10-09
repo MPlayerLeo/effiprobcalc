@@ -10036,11 +10036,11 @@ const GRAD_STD_TABS = [
     + gstdP('以下几种宝可梦本身<b>进不了正常的食材型毕业标准</b>（要么组合不可用，要么直接被标不推荐），但主业确实是产食材，所以单独给一档「邪修」：')
     + gstdUl([
         '食材型里"组合本身就不可用"的 <b>aaa / abb</b>（比如 aaa 耿鬼、abb 妙蛙花）',
-        '食材型的 <b>aba / abc</b> 组合',
+        '食材型的 <b>abc</b> 组合（<b>aba 不算</b>——它一律走「aba 滚粗 → 不合格」那条路，覆盖率再高也不转邪修）',
         '被数据表标为<b>不推荐使用</b>的食材型（比如地鼠）',
         '所有<b>功能型</b>食材精选（穿山王 / 乌鸦头头 / 岩殿居蟹 / 摔角鹰人）',
       ])
-    + gstdP('<b>大嘴娃 / 蝶结萌虻本身不算在这条规则里</b>——它们优先走正常食材型标准，只有落在"不推荐使用"或 aba / abc / aaa（abb）不可用 这几种情况时，才会触发邪修判定。<b>aab / aac</b> 不算：那条线已经有「aax 打工 / aax 报废」自己的判定（见「食材」页签）。')
+    + gstdP('<b>大嘴娃 / 蝶结萌虻本身不算在这条规则里</b>——它们优先走正常食材型标准，只有落在"不推荐使用"或 abc / aaa（abb）不可用 这几种情况时，才会触发邪修判定。<b>aab / aac / aba</b> 都不算：aab / aac 那条线已经有「aax 打工 / aax 报废」自己的判定（见「食材」页签），aba 则一律走「aba 滚粗」的不合格判定。')
     + gstdP('<b>前提条件：原效率必须先够得上「和解」。</b>邪修的意思是"自身素质较差、靠食谱覆盖率翻身"，不是"效率多低都能被覆盖率洗白"。按这只宝可梦<b>自己类型</b>的标准算出来的原始效率（食材型看食材线、功能型食材精选看功能线），如果连<b>和解 / 金帮和解</b>的门槛都没够到，那么<b>不管食谱覆盖率有多高，一律判不合格</b>，不会转成邪修。')
     + gstdP('判定口径：食谱覆盖率固定按<b>无限持有</b>计算，跟当前持有上限的设置无关。任意<b>一种</b>食材覆盖率达标就算数：')
     + gstdGradeTable('', ['覆盖率门槛','判定结果','评语'], [
@@ -10364,20 +10364,24 @@ const XIEXIU_COLOR = '#c0392b'; // 邪修/极致邪修统一红色，且不加�
 const XIEXIU_GRADES = ['邪修','极致邪修'];
 // 邪修：主流食材评价体系根本没纳入考量、但主业确实是产食材的那批宝可梦
 //   · 食材型里"这个组合压根不可用"的 aaa/abb（aaa耿鬼、abb妙蛙花…）
-//   · 食材型的 aba / abc
+//   · 食材型的 abc
 //   · 被标为"不推荐使用"的食材型（地鼠、大嘴娃…）
 //   · 所有功能型的食材精选（岩殿居蟹等；食材型的萌虻/大嘴娃不按这一条算，它们本来就在食材体系里）
 // aab/aac 不算：那条线已经有"aax打工/aax报废"自己的判定
+// aba 不算（2026-10-09 用户要求）：它一律走原来那条「aba滚粗 → 不合格」的路，覆盖率再高也不转邪修。
+//   这一条必须拦在 rec[4]（不推荐使用）之前——否则地鼠这类本身就被标不推荐的食材型，
+//   选了 aba 照样会从那条分支漏进邪修，等于规则只生效了一半。
 function xiexiuEligibleNow(){
   const rec = getSelectedPokemonRecord();
   if(!rec) return false;
   const mappedType = DEX_TYPE_MAP[rec[3]];
   if(mappedType==='skill' && isFoodPickPanel()) return true;
   if(mappedType!=='food' || state.type!=='food') return false;
-  if(rec[4]) return true; // 不推荐使用
   const pattern = currentIngredientPattern();
+  if(pattern==='aba') return false; // aba 永远不邪修，见上面注释，顺序不能挪到 rec[4] 后面
+  if(rec[4]) return true; // 不推荐使用
   if(!pattern) return false;
-  if(pattern==='aba' || pattern==='abc') return true;
+  if(pattern==='abc') return true;
   if(pattern==='aaa' || pattern==='abb') return !String(rec[6]||'').includes(pattern);
   return false;
 }
@@ -19418,9 +19422,10 @@ function boxAaxCategory(entry, x, availItems){
 function boxXiexiuEligible(rec, dtype, pattern, availItems, finalDex){
   if(dtype==='skill') return isFoodPickDex(finalDex);
   if(dtype!=='food') return false;
+  if(pattern==='aba') return false; // 跟 xiexiuEligibleNow 一致：aba 一律不邪修，且必须拦在 rec[4] 之前
   if(rec[4]) return true;
   if(!pattern || pattern.length!==3) return false;
-  if(pattern==='aba' || pattern==='abc') return true;
+  if(pattern==='abc') return true;
   if(pattern==='aaa' || pattern==='abb') return !availItems.includes(pattern);
   return false;
 }
