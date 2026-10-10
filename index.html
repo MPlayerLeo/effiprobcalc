@@ -10042,12 +10042,14 @@ const GRAD_STD_TABS = [
       ])
     + gstdP('<b>大嘴娃 / 蝶结萌虻本身不算在这条规则里</b>——它们优先走正常食材型标准，只有落在"不推荐使用"或 abc / aaa（abb）不可用 这几种情况时，才会触发邪修判定。<b>aab / aac / aba</b> 都不算：aab / aac 那条线已经有「aax 打工 / aax 报废」自己的判定（见「食材」页签），aba 则一律走「aba 滚粗」的不合格判定。')
     + gstdP('<b>前提条件：原效率必须先够得上「和解」。</b>邪修的意思是"自身素质较差、靠食谱覆盖率翻身"，不是"效率多低都能被覆盖率洗白"。按这只宝可梦<b>自己类型</b>的标准算出来的原始效率（食材型看食材线、功能型食材精选看功能线），如果连<b>和解 / 金帮和解</b>的门槛都没够到，那么<b>不管食谱覆盖率有多高，一律判不合格</b>，不会转成邪修。')
+    + gstdP('<b>前提条件二：产量要够得上榜首的 80%。</b>（2026-10-10 新增）覆盖率是跟"每日食谱需求量"比出来的相对值，廉价食材的需求量低、很容易把覆盖率刷得很高，所以再加一道绝对产量的门槛：把这只宝可梦<b>自己面板下的每日食材总能量</b>（各食材产量 × 该食材单个能量，全部槽位相加）拿去跟<b>食材总览柱状图的榜首</b>比——榜首固定按<b>食概 M ＋ 冷静性格</b>这套面板计算、跟你在捕捉推荐页「加入面板」里选了什么无关，并且跟被判定的这只<b>按同一等级</b>比。够不到榜首的 <b>80%</b>，覆盖率再高也不转邪修。')
     + gstdP('判定口径：食谱覆盖率固定按<b>无限持有</b>计算，跟当前持有上限的设置无关。任意<b>一种</b>食材覆盖率达标就算数：')
     + gstdGradeTable('', ['覆盖率门槛','判定结果','评语'], [
         ['≥ 120%', '<b style="color:'+XIEXIU_COLOR+';">邪修</b>', '剑走偏锋 走火入魔'],
         ['≥ 140%', '<b style="color:'+XIEXIU_COLOR+';">极致邪修</b>', '以身入局 未尝不可'],
         ['都不满足', '维持原判定', '（不推荐使用 / 组合不可用 那几种红字删除线展示照旧）'],
         ['不看覆盖率', '<b>不合格</b>', '原效率不到和解，覆盖率再高也不转邪修'],
+        ['不看覆盖率', '<b>维持原判定</b>', '每日食材总能量不到柱状图榜首的 80%'],
       ])
     + gstdP('邪修 / 极致邪修展示为<b style="color:'+XIEXIU_COLOR+';">红字，不加删除线</b>，覆盖率框和等级之间会补一行小字：')
     + gstdNote('自身素质较差，但由食谱覆盖率转化为邪修')
@@ -10411,6 +10413,49 @@ function xiexiuInfoFromRows(rows){
   if(max >= 1.2) return {grade:'邪修',   comment:'剑走偏锋 走火入魔'};
   return null;
 }
+/* ---- 产量门槛（2026-10-10 用户要求）：恐怖/邪修的【前置条件】，覆盖率达标也要先过这一关 ----
+   基准 = 捕捉推荐页「食材总览柱状图」最高那根柱子的数值（当前是 快龙·叶子），固定口径：
+     · 面板固定 CAP_PANEL_DEFAULT.food 即【食概M+冷静】，跟用户在「加入面板」里改成什么无关；
+     · 固定忽略露营券、技能保底关、无限持有——跟邪修/恐怖判定其余部分同一套决策口径。
+   被判定那只的产量 = 它自己真实面板下的【每日食材总能量】＝ 各覆盖率行产量 × 该食材单个能量 之和
+   （全部槽位相加，不是只看触发判定的那一种食材）。榜首那只是 aaa 组合，它柱子的数值本身就等于
+   它的每日食材总能量，所以两边口径是对等的。
+   【两边按同一等级比】：基准若固定按 60 级，50 级的面板要达到 50 级榜首的 123% 才过线，等于把
+   恐怖/邪修变成 60 级专属；同级比下这个比值与等级无关（各槽位用量是等比的），规则更干净。 */
+const TERROR_YIELD_MIN = 0.90;   // 恐怖：榜首的 90%
+const XIEXIU_YIELD_MIN = 0.80;   // 邪修：榜首的 80%
+const foodTopBaselineCache = {};
+function foodTopBaselineEnergy(level){
+  if(foodTopBaselineCache[level] != null) return foodTopBaselineCache[level];
+  // capState / userPrefs.capPanelBuild / capBuildFoodChart 都在本函数后面才声明（const 有 TDZ），
+  // 开场某些早期调用可能赶在它们之前，整段 try 住、算不出就当"没有基准"处理
+  let top = 0, savedLv = null, savedBuild = null, savedPity = null, swapped = false;
+  try{
+    savedLv = capState.level; savedBuild = userPrefs.capPanelBuild.food; savedPity = capState.ctrl.pity;
+    swapped = true;
+    capState.level = level;
+    userPrefs.capPanelBuild.food = capPanelDefaultBuild('food');
+    capState.ctrl.pity = false;
+    const bars = withNoCamping(()=> capBuildFoodChart());
+    top = (bars && bars.length) ? bars[0].top : 0;
+  }catch(e){ top = 0; }
+  finally{
+    if(swapped){
+      try{ capState.level = savedLv; userPrefs.capPanelBuild.food = savedBuild; capState.ctrl.pity = savedPity; }catch(e){}
+    }
+  }
+  if(top > 0) foodTopBaselineCache[level] = top;   // 算失败不写缓存，下次重新试
+  return top;
+}
+// 覆盖率行 → 每日食材总能量（尾巴没有"每日食谱需求量"、算不出覆盖率，但它实打实是产量，照样计能量）
+function foodRowsTotalEnergy(rows){
+  return (rows||[]).reduce((sum, r)=> sum + (r.actual||0) * ((typeof CAP_ING_ENERGY!=='undefined' && CAP_ING_ENERGY[r.ingName])||0), 0);
+}
+function foodYieldGateOk(rows, level, minRatio){
+  const base = foodTopBaselineEnergy(level);
+  if(!(base > 0)) return true;   // 基准算不出来就不拦，维持改动前的判定，别把结论凭空变严
+  return foodRowsTotalEnergy(rows) >= base * minRatio;
+}
 const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
 // 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率，且固定忽略露营券开关）
 function computeXiexiuNow(labels, persona){
@@ -10420,7 +10465,10 @@ function computeXiexiuNow(labels, persona){
   if(!xiexiuEffGateOk(state.type, state.level, labels, persona, rec && rec[1], state.selected)) return null;
   return withNoCamping(()=>{
     const effFood = computeEfficiency(labels, 'food', state.level, persona);
-    return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true));
+    const rows = gradFoodCoverageRows(effFood, undefined, true);
+    // 产量门槛拦在覆盖率判定之前：够不到榜首的 80% 就退回原判定（见 foodYieldGateOk）
+    if(!foodYieldGateOk(rows, state.level, XIEXIU_YIELD_MIN)) return null;
+    return xiexiuInfoFromRows(rows);
   });
 }
 // 「恐怖宝可梦」（内部代号，页面上任何地方都不出现这四个字）：
@@ -10434,7 +10482,9 @@ function isTerrorPanel(labels, persona){
     if(ffloat(effFood) <= 2) return false;
     const rows = computeFoodCoverageRows(effFood, undefined, true);
     const cRow = rows && rows.find(r=>r.letter==='c');
-    return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
+    if(!(cRow && cRow.ratio!=null && cRow.ratio > 1.2)) return false;
+    // 产量门槛：每日食材总能量要够到榜首的 90%（见 foodYieldGateOk）
+    return foodYieldGateOk(rows, state.level, TERROR_YIELD_MIN);
   });
 }
 
@@ -19454,6 +19504,8 @@ function boxXiexiuInfo(entry, x, dtype){
       const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
       rows = mergeSpecialFoodRows(rows, capSkillIngredientItems(spec).map(it=>({name:it.name, amt: it.amt*count})), eSkill);
     }
+    // 跟 computeXiexiuNow 同一道产量门槛（榜首的 80%），同样拦在覆盖率判定之前
+    if(!foodYieldGateOk(rows, entry.level, XIEXIU_YIELD_MIN)) return null;
     return xiexiuInfoFromRows(rows);
   });
 }
@@ -19468,7 +19520,9 @@ function boxTerrorInfo(entry, x){
     if(ffloat(effFood) <= 2) return false;
     const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
     const cRow = rows && rows.find(r=>r.letter==='c');
-    return !!(cRow && cRow.ratio!=null && cRow.ratio > 1.2);
+    if(!(cRow && cRow.ratio!=null && cRow.ratio > 1.2)) return false;
+    // 跟 isTerrorPanel 同一道产量门槛（榜首的 90%）
+    return foodYieldGateOk(rows, entry.level, TERROR_YIELD_MIN);
   });
 }
 /* 拆成 Raw + 包装层：Raw 是【原始档位】，谁也盖不住它，PVP 计分和"视为毕业"自己的
