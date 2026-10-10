@@ -3026,6 +3026,19 @@
 .isl-legend{ display:flex; flex-direction:column; gap:3px; margin-top:7px; font-size:10.5px; color:#7a7568; font-weight:700; }
 .isl-legend span{ display:inline-flex; align-items:center; gap:4px; white-space:nowrap; }
 .isl-dot{ width:7px; height:7px; border-radius:50%; flex:0 0 auto; }
+/* 睡眠类型分页：类型小牌压在岛屿图片左上角。
+   试过放在标题行（名字 + 小牌 + 分数同一行），结果窄卡片里岛屿名被截成"宝…""天…"——
+   名字才是最该看清的，所以挪到图上去，标题行保持跟岛屿浏览一模一样的"名字 + 分数"。 */
+.isl-sleep-pic{ position:relative; }
+.isl-sleep-tag{
+  position:absolute; top:6px; left:6px; padding:2px 7px; border-radius:7px;
+  color:#fff; font-size:10.5px; font-weight:900; white-space:nowrap;
+  box-shadow:0 1px 3px rgba(0,0,0,.35);
+}
+/* 明细页头那枚：那一行本来就是 flex-wrap:wrap，正常内联排即可 */
+.isl-sleep-tag-inline{
+  position:static; display:inline-block; box-shadow:none; padding:2px 8px;
+}
 
 .isl-detail{ margin-top:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 14px 6px; }
 .isl-detail-h{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; }
@@ -3840,6 +3853,19 @@
       <div class="isl-hint">得分＝该岛全部睡姿对应宝可梦标签分值的平均值 × 1000。点岛屿卡片展开各等级睡姿明细。</div>
       <div class="isl-grid" id="islGrid"></div>
       <div id="islDetail"></div>
+    </div>
+    <!-- v3.35 睡眠类型：把每座岛按「浅浅 / 安然 / 深深」拆成三份各自评分（结构照搬岛屿浏览） -->
+    <div id="islPaneSleep" style="display:none;">
+      <div class="isl-hint">每座岛按浅浅 / 安然 / 深深拆成三份，各自只统计该睡眠类型会出的睡姿，算分方式跟岛屿浏览一致（标签分值平均 × 1000）。皮丘 / 皮卡丘 / 雷丘 两种类型都会出，安然和深深各算一次。点卡片展开各等级明细。</div>
+      <div class="isl-tool-row">
+        <span class="isl-tool-cap">类型</span>
+        <button type="button" class="isl-tool-btn" data-islslp="">全部</button>
+        <button type="button" class="isl-tool-btn" data-islslp="light">浅浅</button>
+        <button type="button" class="isl-tool-btn" data-islslp="calm">安然</button>
+        <button type="button" class="isl-tool-btn" data-islslp="deep">深深</button>
+      </div>
+      <div class="isl-grid" id="islSleepGrid"></div>
+      <div id="islSleepDetail"></div>
     </div>
     <div id="islPaneTags" style="display:none;">
       <div class="isl-hint">改标签名称、分值或颜色后，所有宝可梦与岛屿得分会立刻重算。最多 20 个标签，名称最长 20 字。登录后跟着账号走。</div>
@@ -15961,14 +15987,22 @@ function sleepAttrOfName(name){
   const cx = (typeof CAP_DEX !== 'undefined') ? CAP_DEX.find(function(c){ return c.name === name; }) : null;
   return cx ? cx.attr : null;
 }
+/* 睡眠类型的原始判定，返回 'deep'/'light'/'calm'/'split'/null。
+   排名行配色和岛屿评分的「睡眠类型」分页共用这一处，别各写一份——两边口径必须一致。
+   入参是 CAP_DEX 条目（要用到 name/baby/attr），所以岛屿那边得先把未进化形态追到最终形态。 */
+function sleepTypeKeyOf(x){
+  if(!x) return null;
+  if(SLEEP_SPLIT_NAMES[x.name]) return 'split';
+  const key = (x.baby && x.baby !== x.name) ? x.baby : x.name;   // 幼体优先，不进化就是自身
+  return SLEEP_NAME_SPECIAL[key] || SLEEP_ATTR_MAP[sleepAttrOfName(key)] || null;
+}
 // 返回 {cls, labHtml}：cls 挂在 .cap-rank 上决定配色，labHtml 是圆底下面那行小字
 function capSleepTypeOf(x){
-  if(SLEEP_SPLIT_NAMES[x.name]){
+  const t = sleepTypeKeyOf(x);
+  if(t === 'split'){
     return { cls:'cap-sleep-split',
              labHtml:'<span class="s-calm">安</span>/<span class="s-deep">深</span>' };
   }
-  const key = (x.baby && x.baby !== x.name) ? x.baby : x.name;   // 幼体优先，不进化就是自身
-  let t = SLEEP_NAME_SPECIAL[key] || SLEEP_ATTR_MAP[sleepAttrOfName(key)] || null;
   if(!t) return { cls:'cap-sleep-none', labHtml:'—' };
   return { cls:'cap-sleep-' + t, labHtml:SLEEP_LABELS[t] };
 }
@@ -20617,8 +20651,10 @@ function islEsc(s){
 
 let islandTags = [];
 let islandPokeTags = {};       // pscId -> tagId
-let islandPane = 'islands';    // 'islands' / 'tags' / 'box'
+let islandPane = 'islands';    // 'islands' / 'sleep' / 'tags' / 'box'
 let islandSelId = null;        // 展开中的岛屿
+let islandSleepSel = null;     // 「睡眠类型」分页展开中的那张卡：{id:岛id, type:'light'/'calm'/'deep'}
+let islandSleepFilter = null;  // 「睡眠类型」分页的类型筛选：null=全部
 let islandFilterTag = null;    // null=不筛选，'__none__'=未标记，其余=tagId
 let islandSortBy = 'id';
 let islandBatchTag = null;     // null=未进入批量选择模式，'__none__'=批量清除标签，其余=批量打这个tagId
@@ -20705,6 +20741,44 @@ function applyIslandCloudSnapshot(snap){
   }catch(e){}
   islandLoadState(); // 把合并结果刷进内存变量，跟正常打开子页时的初始化路径一致
 }
+/* ---- v3.35「睡眠类型」分页：把每座岛按 浅浅/安然/深深 拆成三份 ----
+   睡眠类型复用排名页那套判定（sleepTypeKeyOf，按【幼体属性】判，不进化按自身），
+   岛屿名册 ISLAND_POKES 里有大量未进化形态、而 CAP_DEX 只收最终/徽章/不进化，
+   所以要先用 POKEMON_FINAL_DEX_MAP 追到最终形态再查；追不到就退回按自己的名字判。
+   实测 235 只全部能判出类型，没有"未知"这一档。 */
+const ISLAND_SLEEP_TYPES = [
+  {key:'light', label:'浅浅', full:'浅浅入梦', color:'#b5891f'},
+  {key:'calm',  label:'安然', full:'安然入睡', color:'#3fa9e0'},
+  {key:'deep',  label:'深深', full:'深深入眠', color:'#1d3f8f'},
+];
+const ISLAND_SLEEP_LABEL = {light:'浅浅', calm:'安然', deep:'深深'};
+const islandSleepTypeCache = {};
+function islandSleepTypeOf(pokeId){
+  if(islandSleepTypeCache[pokeId] !== undefined) return islandSleepTypeCache[pokeId];
+  let t = null;
+  const pk = islandPokeById[pokeId];
+  if(pk){
+    try{
+      const dex = pk[1];
+      const finals = (typeof POKEMON_FINAL_DEX_MAP !== 'undefined') ? POKEMON_FINAL_DEX_MAP[dex] : null;
+      const fdex = (finals && finals.length) ? finals[0] : dex;
+      const x = (typeof capFindDex === 'function') ? capFindDex(fdex) : null;
+      t = x ? sleepTypeKeyOf(x)
+            : (SLEEP_NAME_SPECIAL[pk[2]] || SLEEP_ATTR_MAP[sleepAttrOfName(pk[2])] || null);
+    }catch(e){ t = null; }
+  }
+  islandSleepTypeCache[pokeId] = t;
+  return t;
+}
+/* 这个睡姿算不算进某一类。皮丘 / 皮卡丘 / 雷丘 在游戏里安然、深深两种睡姿都会出，
+   而 ISLAND_MAPS 的睡姿池只给了「宝可梦+星数」、分不出单个睡姿属于哪一类，
+   所以按用户 2026-10-10 的要求【安然和深深各算一次】——代价是这两类的睡姿数
+   加起来会比全岛总数多出这部分，换来的是哪一类都不会漏掉它们。 */
+function islandStyleInSleepType(pokeId, typeKey){
+  const t = islandSleepTypeOf(pokeId);
+  if(t === 'split') return typeKey === 'calm' || typeKey === 'deep';
+  return t === typeKey;
+}
 function islandTagOf(pokeId){
   return islandTags.find(t=>t.id === islandPokeTags[pokeId]) || null;
 }
@@ -20735,24 +20809,30 @@ function islandNameOf(pokeId){
 }
 
 // 得分 = 全岛睡姿标签分值的平均数 × 1000，保留一位小数（沿用朋友那版的美化算法）
-function islandMapScore(map){
+// typeKey 传了就只统计该睡眠类型的睡姿（「睡眠类型」分页用），不传＝全岛，跟改动前完全一致
+function islandMapScore(map, typeKey){
   let sum = 0, n = 0;
   map.lv.forEach((lv, i)=>{
-    islandLevelStyles(map.id, i).forEach(st=>{ sum += islandScoreOf(st[0]); n++; });
+    islandLevelStyles(map.id, i).forEach(st=>{
+      if(typeKey && !islandStyleInSleepType(st[0], typeKey)) return;
+      sum += islandScoreOf(st[0]); n++;
+    });
   });
   if(!n) return 0;
   return Math.round((sum / n) * 10000) / 10;
 }
-function islandMapDist(map){
+function islandMapDist(map, typeKey){
   const cnt = {}; let total = 0;
   map.lv.forEach((lv, i)=>{
     islandLevelStyles(map.id, i).forEach(st=>{
+      if(typeKey && !islandStyleInSleepType(st[0], typeKey)) return;
       const t = islandTagOf(st[0]);
       const name = t ? t.name : '未标记';
       cnt[name] = (cnt[name] || 0) + 1;
       total++;
     });
   });
+  if(!total) return [];
   const rows = Object.keys(cnt).map(name=>{
     const t = islandTags.find(x=>x.name === name);
     return {name, count:cnt[name], pct:Math.round(cnt[name]/total*1000)/10, color:t ? t.color : ISLAND_NO_TAG_COLOR};
@@ -20800,24 +20880,38 @@ function islandRenderGrid(){
   });
 }
 function islandRenderDetail(){
-  const box = document.getElementById('islDetail'); if(!box) return;
-  const map = ISLAND_MAPS.find(m=>m.id === islandSelId);
+  islandRenderDetailInto('islDetail', ISLAND_MAPS.find(m=>m.id === islandSelId), null);
+}
+/* 岛屿浏览和睡眠类型两个分页共用这一份明细渲染。typeKey 不传＝全岛（跟改动前逐字等价），
+   传了就只列该睡眠类型的睡姿，并且把该类型下一个睡姿都没有的等级整段跳过。 */
+function islandRenderDetailInto(boxId, map, typeKey){
+  const box = document.getElementById(boxId); if(!box) return;
   if(!map){ box.innerHTML = ''; return; }
-  const dist = islandMapDist(map);
+  const dist = islandMapDist(map, typeKey);
+  const cntOf = (i)=> typeKey
+    ? islandLevelStyles(map.id,i).filter(st=> islandStyleInSleepType(st[0], typeKey)).length
+    : islandLevelStyles(map.id,i).length;
   let total = 0;
-  map.lv.forEach((lv,i)=> total += islandLevelStyles(map.id,i).length);
+  map.lv.forEach((lv,i)=> total += cntOf(i));
   // 等级里的宝可梦格子等展开时再填（一座岛最多六百多个睡姿，一次性铺出来光头像就够呛）
-  const lvHtml = map.lv.map((lv,i)=>`
+  const lvHtml = map.lv.map((lv,i)=>{
+    const c = cntOf(i);
+    if(!c) return '';   // 这一类在这个等级一个都不出，整段不列
+    return `
     <div class="isl-lv">
       <div class="isl-lv-h" data-isllv="${i}">
-        <span><span class="isl-lv-n">${islEsc(lv.n)}</span><span class="isl-lv-c">${islandLevelStyles(map.id,i).length}只</span></span>
+        <span><span class="isl-lv-n">${islEsc(lv.n)}</span><span class="isl-lv-c">${c}只</span></span>
         <span class="isl-lv-e">睡意 ${lv.e.toLocaleString()}</span>
       </div>
       <div class="isl-lv-body" data-isllvbody="${i}"></div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
+  const typeBadge = typeKey
+    ? `<span class="isl-sleep-tag isl-sleep-tag-inline" style="background:${islandSleepTypeColor(typeKey)}">${ISLAND_SLEEP_LABEL[typeKey]||''}</span>`
+    : '';
   box.innerHTML = `<div class="isl-detail">
-    <div class="isl-detail-h"><span class="isl-detail-name">${islEsc(map.n)}</span><span class="isl-detail-sub">共 ${total} 个睡姿</span></div>
-    <div class="isl-detail-score">${islandMapScore(map).toFixed(1)}</div>
+    <div class="isl-detail-h"><span class="isl-detail-name">${islEsc(map.n)}</span>${typeBadge}<span class="isl-detail-sub">共 ${total} 个睡姿</span></div>
+    <div class="isl-detail-score">${islandMapScore(map, typeKey).toFixed(1)}</div>
     ${islandBarHtml(dist,true)}
     ${islandLegendHtml(dist)}
     <div style="margin-top:12px">${lvHtml}</div>
@@ -20828,10 +20922,70 @@ function islandRenderDetail(){
       const body = box.querySelector(`[data-isllvbody="${i}"]`);
       if(!body) return;
       if(body.classList.contains('open')){ body.classList.remove('open'); return; }
-      if(!body.innerHTML) body.innerHTML = islandMonGridHtml(map.id, i);
+      if(!body.innerHTML) body.innerHTML = islandMonGridHtml(map.id, i, typeKey);
       body.classList.add('open');
     };
   });
+}
+function islandSleepTypeColor(typeKey){
+  const t = ISLAND_SLEEP_TYPES.find(x=>x.key===typeKey);
+  return t ? t.color : ISLAND_NO_TAG_COLOR;
+}
+/* ---- 睡眠类型分页：9 座岛 × 3 类 = 27 张卡，按得分从高到低排 ---- */
+function islandRenderSleepGrid(){
+  const grid = document.getElementById('islSleepGrid'); if(!grid) return;
+  document.querySelectorAll('#islPaneSleep [data-islslp]').forEach(b=>{
+    const v = b.getAttribute('data-islslp');
+    b.classList.toggle('active', (islandSleepFilter||'') === v);
+    b.onclick = ()=>{
+      islandSleepFilter = v || null;
+      // 筛掉了当前展开的那张卡就顺手收起，免得明细跟网格对不上
+      if(islandSleepSel && islandSleepFilter && islandSleepSel.type !== islandSleepFilter) islandSleepSel = null;
+      islandRenderSleepGrid(); islandRenderSleepDetail();
+    };
+  });
+  const items = [];
+  ISLAND_MAPS.forEach(m=>{
+    ISLAND_SLEEP_TYPES.forEach(t=>{
+      if(islandSleepFilter && t.key !== islandSleepFilter) return;
+      const n = m.lv.reduce((sum,lv,i)=> sum + islandLevelStyles(m.id,i).filter(st=> islandStyleInSleepType(st[0], t.key)).length, 0);
+      if(!n) return;   // 这座岛这一类压根不出睡姿，不列空卡
+      items.push({m, t, n, score: islandMapScore(m, t.key)});
+    });
+  });
+  items.sort((a,b)=> b.score - a.score);
+  grid.innerHTML = items.map(({m, t, n, score})=>{
+    const dist = islandMapDist(m, t.key);
+    const on = !!(islandSleepSel && islandSleepSel.id === m.id && islandSleepSel.type === t.key);
+    return `<div class="isl-card${on?' active':''}" data-islslpcard="${m.id}:${t.key}">
+      <div class="isl-sleep-pic">
+        <img class="isl-card-pic" src="island_assets/${m.p}.png" alt="" loading="lazy">
+        <span class="isl-sleep-tag" style="background:${t.color}">${t.label}</span>
+      </div>
+      <div class="isl-card-body">
+        <div class="isl-card-head">
+          <span class="isl-card-name">${islEsc(m.n)}</span>
+          <span class="isl-card-score">${score.toFixed(1)}</span>
+        </div>
+        ${islandBarHtml(dist,false)}
+        ${islandLegendHtml(dist)}
+      </div>
+    </div>`;
+  }).join('') || '<div class="isl-hint">这一类没有可统计的睡姿。</div>';
+  grid.querySelectorAll('[data-islslpcard]').forEach(el=>{
+    el.onclick = ()=>{
+      const [idStr, type] = el.getAttribute('data-islslpcard').split(':');
+      const id = Number(idStr);
+      const same = islandSleepSel && islandSleepSel.id === id && islandSleepSel.type === type;
+      islandSleepSel = same ? null : {id, type};
+      islandRenderSleepGrid();
+      islandRenderSleepDetail();
+    };
+  });
+}
+function islandRenderSleepDetail(){
+  const sel = islandSleepSel;
+  islandRenderDetailInto('islSleepDetail', sel ? ISLAND_MAPS.find(m=>m.id === sel.id) : null, sel && sel.type);
 }
 /* ---- v3.19 地址栏深链接：本站所有页面切换原来都不改 URL，Safari"添加到主屏幕"存的
    图标只会永远指向添加那一刻的地址栏内容，所以不管添加时停在哪个岛屿明细，图标点开都
@@ -20854,7 +21008,7 @@ function islandApplyHashOnBoot(){
   const m = /^#island(?:\/([^/]+))?$/.exec(location.hash);
   if(!m) return false;
   const seg = m[1];
-  if(seg === 'tags' || seg === 'box'){ islandPane = seg; }
+  if(seg === 'tags' || seg === 'box' || seg === 'sleep'){ islandPane = seg; }
   else{
     islandPane = 'islands';
     if(seg != null){
@@ -20891,8 +21045,10 @@ function ptrApplyRestoreOnBoot(){
   }
   return true;
 }
-function islandMonGridHtml(mapId, lvIdx){
-  return islandLevelStyles(mapId, lvIdx).map(st=>{
+function islandMonGridHtml(mapId, lvIdx, typeKey){
+  let list = islandLevelStyles(mapId, lvIdx);
+  if(typeKey) list = list.filter(st=> islandStyleInSleepType(st[0], typeKey));
+  return list.map(st=>{
     const t = islandTagOf(st[0]);
     return `<div class="isl-mon">
       ${islandAvatarImg(st[0], 'isl-mon-img')}
@@ -21068,6 +21224,7 @@ function islandApplyBatchTag(pokeId, itemEl){
 /* ---- 子标签页与整体渲染 ---- */
 const ISLAND_PANES = [
   {id:'islands', label:'岛屿浏览'},
+  {id:'sleep',   label:'睡眠类型'},
   {id:'tags',    label:'标签管理'},
   {id:'box',     label:'宝可梦'},
 ];
@@ -21101,9 +21258,11 @@ function islandRenderAll(){
   }
   islandRenderTabs();
   document.getElementById('islPaneIslands').style.display = islandPane==='islands' ? '' : 'none';
+  document.getElementById('islPaneSleep').style.display   = islandPane==='sleep'   ? '' : 'none';
   document.getElementById('islPaneTags').style.display    = islandPane==='tags'    ? '' : 'none';
   document.getElementById('islPaneBox').style.display     = islandPane==='box'     ? '' : 'none';
   if(islandPane === 'islands'){ islandRenderGrid(); islandRenderDetail(); }
+  else if(islandPane === 'sleep'){ islandRenderSleepGrid(); islandRenderSleepDetail(); }
   else if(islandPane === 'tags') islandRenderTags();
   else { islandRenderChips(); islandRenderBox(); }
 }
