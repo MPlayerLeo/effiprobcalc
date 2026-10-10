@@ -40,6 +40,14 @@
   font-size:16px; font-weight:800; color:var(--accent-dk); letter-spacing:.02em;
 }
 #bootLoadingDots{ display:inline-block; width:1.6em; text-align:left; }
+/* 慢网兜底入口：遮罩不再定时强行摘除（会露出半成品页面），但万一 window.load 永远
+   不来（某个资源卡死），45s 后露出这颗按钮让用户自己决定要不要硬进去 */
+#bootSlowEscape{
+  display:none; margin-top:-16px; font-family:inherit; border:none; background:none;
+  font-size:13px; font-weight:700; color:var(--accent); opacity:.8;
+  text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:6px 10px;
+}
+#bootSlowEscape.on{ display:block; }
 /* 旧域名(mplayerleo.github.io)兜底跳转提示：两行加粗文字，替掉原本的"加载中"单行，
    点哪都跳转新址，遮罩永不打开——旧站从用户视角只剩这一屏 */
 #bootLoadingMask.boot-oldsite{ cursor:pointer; }
@@ -90,8 +98,9 @@
 <div id="bootLoadingMask" aria-hidden="true" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#efe9d8 0%,#e7e0cc 100%);display:flex;align-items:center;justify-content:center;">
   <div id="bootLoadingInner" style="display:flex;flex-direction:column;align-items:center;gap:28px;padding:24px;">
     <div id="bootLoadingSite">IQDOOH.TOP</div>
-    <img id="bootLoadingLogo" src="boot-logo.jpg" alt="">
+    <img id="bootLoadingLogo" src="boot-logo.webp?v=1" alt="">
     <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
+    <button type="button" id="bootSlowEscape">加载太久？点此直接进入</button>
     <div id="bootLoadingMascots">
       <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
       <img class="boot-mascot boot-mascot-quagsire" src="box_assets/normal/quagsire.gif" alt="">
@@ -171,6 +180,23 @@
     if(dotsEl) dotsEl.textContent = '.'.repeat(n);
   }, 450);
   var done = false;
+  // 慢网文案：到点还没 load 完就把"加载中"换成"爬行中"，但【不】揭遮罩——宁可继续挡着，
+  // 也不要露出一个还在下载 / 主脚本还没跑完的半成品页面。只改那个文字节点，不碰 dotsEl
+  var slowTimer = setTimeout(function(){
+    if(done) return;
+    if(textEl && textEl.firstChild && textEl.firstChild.nodeType === 3){
+      textEl.firstChild.nodeValue = '土王爬行中';
+    }
+  }, 6000);
+  // 兜底入口：万一 load 永远不来，45s 后让用户自己选择硬进去（点了就是用户自己同意
+  // 看半成品，跟定时自动揭开不是一回事）
+  var escTimer = setTimeout(function(){
+    if(done) return;
+    var esc = document.getElementById('bootSlowEscape');
+    if(!esc) return;
+    esc.classList.add('on');
+    esc.addEventListener('click', function(){ finish(); });
+  }, 45000);
   // "从中间开圆洞并向四周扩散打开"：用 mask-image 的径向渐变控制遮罩自身的可见度——
   // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
   // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
@@ -198,7 +224,7 @@
   }
   function finish(){
     if(done) return; done = true;
-    clearInterval(dotTimer);
+    clearInterval(dotTimer); clearTimeout(slowTimer); clearTimeout(escTimer);
     var mask = document.getElementById('bootLoadingMask');
     if(!mask) return;
     if(textEl){
@@ -228,8 +254,9 @@
   }
   if(document.readyState === 'complete') finish();
   else window.addEventListener('load', finish);
-  // 兜底：极端情况下 load 一直不触发，别让遮罩把用户永远挡在外面
-  setTimeout(finish, 20000);
+  // ⚠️ 这里原来有一条 setTimeout(finish, 20000)。单文件 4MB 左右(br 压缩后)，慢网下
+  // 下载+解析超过 20s 很常见，于是这条兜底反而成了"定时掀开一个半成品页面"的罪魁祸首。
+  // 现在遮罩只认 window.load，超时只换文案(slowTimer)、再超时只给入口(escTimer)。
 })();
 </script>
 <script>
@@ -9142,7 +9169,7 @@ document.getElementById('pwaBannerCloseBtn').onclick = ()=>{ hidePwaBanner(); };
     mask.id = 'ptrCloseMask';
     mask.style.cssText = 'position:fixed;inset:0;z-index:9999;background:linear-gradient(180deg,#efe9d8 0%,#e7e0cc 100%);display:flex;align-items:center;justify-content:center;';
     const logo = document.createElement('img');
-    logo.src = 'boot-logo.jpg';
+    logo.src = 'boot-logo.webp?v=1';
     logo.style.cssText = 'width:148px;height:148px;border-radius:22px;object-fit:cover;box-shadow:0 8px 22px rgba(0,0,0,.2);';
     mask.appendChild(logo);
     document.body.appendChild(mask);

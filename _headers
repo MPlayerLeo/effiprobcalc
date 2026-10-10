@@ -1,0 +1,47 @@
+# Cloudflare Pages 响应头。index.html 不在这里出现——保持 Pages 默认的
+# max-age=0 + must-revalidate，单文件站发布频繁，绝不能让用户卡在旧版本上。
+# 下面这几类是"只增不改"的静态素材（加新宝可梦是加新文件，不是改旧文件），
+# 一年强缓存 + immutable，回访时浏览器连条件请求都不发。
+#
+# ⚠️ 真要替换某个已有文件名的素材时，不能原地改内容——要么改文件名，要么在页面里
+# 引用处加 ?v=N（boot-logo.webp 就是这么引的），否则老用户会一直吃缓存里的旧图。
+
+/species_icons/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/box_assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/island_assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/boot-logo.webp
+  Cache-Control: public, max-age=31536000, immutable
+
+/boot-logo.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-192.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon-32x32.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.ico
+  Cache-Control: public, max-age=31536000, immutable
+
+/ios-add-guide.jpg
+  Cache-Control: public, max-age=31536000, immutable
+
+# manifest 和 service worker 要能更新，短缓存就够
+/manifest.json
+  Cache-Control: public, max-age=3600
+
+/sw.js
+  Cache-Control: public, max-age=0, must-revalidate
