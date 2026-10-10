@@ -3115,6 +3115,8 @@
   border-radius:8px; padding:5px 11px; font-size:12px; font-weight:800; color:var(--ink);
 }
 .isl-tool-btn.active{ background:var(--accent); border-color:var(--accent); color:#fff; }
+/* 睡眠类型分页的「清除所选」：一个都没选时置灰，免得点了没反应 */
+.isl-tool-btn[disabled]{ opacity:.4; cursor:default; }
 .isl-box{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
 .isl-box-item{
   background:var(--panel); border:1px solid var(--line); border-radius:10px;
@@ -3864,6 +3866,8 @@
         <button type="button" class="isl-tool-btn" data-islslp="calm">安然</button>
         <button type="button" class="isl-tool-btn" data-islslp="deep">深深</button>
       </div>
+      <!-- 岛屿筛选（可多选，空＝全部）：按钮按 ISLAND_MAPS 动态生成，以后加岛不用改 HTML -->
+      <div class="isl-tool-row" id="islSleepIslRow"></div>
       <div class="isl-grid" id="islSleepGrid"></div>
       <div id="islSleepDetail"></div>
     </div>
@@ -20709,6 +20713,7 @@ let islandPane = 'islands';    // 'islands' / 'sleep' / 'tags' / 'box'
 let islandSelId = null;        // 展开中的岛屿
 let islandSleepSel = null;     // 「睡眠类型」分页展开中的那张卡：{id:岛id, type:'light'/'calm'/'deep'}
 let islandSleepFilter = null;  // 「睡眠类型」分页的类型筛选：null=全部
+const islandSleepIslFilter = new Set();  // 「睡眠类型」分页的岛屿筛选（可多选），空集＝全部
 let islandFilterTag = null;    // null=不筛选，'__none__'=未标记，其余=tagId
 let islandSortBy = 'id';
 let islandBatchTag = null;     // null=未进入批量选择模式，'__none__'=批量清除标签，其余=批量打这个tagId
@@ -20985,6 +20990,30 @@ function islandSleepTypeColor(typeKey){
   const t = ISLAND_SLEEP_TYPES.find(x=>x.key===typeKey);
   return t ? t.color : ISLAND_NO_TAG_COLOR;
 }
+/* 岛屿筛选那一行：每次重画都整行重建并重新绑事件——按钮的 onclick 闭包里抓着
+   islandSleepIslFilter 的当下状态，不重建就会出现"点了没反应"（跟 islandRenderBox
+   那个批量选择闭包是同一类坑，见 [[project-island-scoring]]）。 */
+function islandRenderSleepIslRow(){
+  const row = document.getElementById('islSleepIslRow'); if(!row) return;
+  const sel = islandSleepIslFilter;
+  row.innerHTML = '<span class="isl-tool-cap">岛屿</span>'
+    + ISLAND_MAPS.map(m=>
+        `<button type="button" class="isl-tool-btn${sel.has(m.id)?' active':''}" data-islslpisl="${m.id}">${islEsc(m.n)}</button>`
+      ).join('')
+    + `<button type="button" class="isl-tool-btn" id="islSleepIslClear"${sel.size?'':' disabled'}>清除所选</button>`;
+  row.querySelectorAll('[data-islslpisl]').forEach(b=>{
+    b.onclick = ()=>{
+      const id = Number(b.getAttribute('data-islslpisl'));
+      if(sel.has(id)) sel.delete(id); else sel.add(id);
+      // 把当前展开的那张卡筛掉了就顺手收起，免得明细跟网格对不上（跟类型筛选同一套处理）
+      if(islandSleepSel && sel.size && !sel.has(islandSleepSel.id)) islandSleepSel = null;
+      islandRenderSleepGrid(); islandRenderSleepDetail();
+    };
+  });
+  const clr = document.getElementById('islSleepIslClear');
+  // 清除只会让范围变大，展开中的卡片一定还在，不用收起
+  if(clr) clr.onclick = ()=>{ if(!sel.size) return; sel.clear(); islandRenderSleepGrid(); islandRenderSleepDetail(); };
+}
 /* ---- 睡眠类型分页：9 座岛 × 3 类 = 27 张卡，按得分从高到低排 ---- */
 function islandRenderSleepGrid(){
   const grid = document.getElementById('islSleepGrid'); if(!grid) return;
@@ -20998,8 +21027,10 @@ function islandRenderSleepGrid(){
       islandRenderSleepGrid(); islandRenderSleepDetail();
     };
   });
+  islandRenderSleepIslRow();
   const items = [];
   ISLAND_MAPS.forEach(m=>{
+    if(islandSleepIslFilter.size && !islandSleepIslFilter.has(m.id)) return;   // 空集＝不筛
     ISLAND_SLEEP_TYPES.forEach(t=>{
       if(islandSleepFilter && t.key !== islandSleepFilter) return;
       const n = m.lv.reduce((sum,lv,i)=> sum + islandLevelStyles(m.id,i).filter(st=> islandStyleInSleepType(st[0], t.key)).length, 0);
@@ -21025,7 +21056,7 @@ function islandRenderSleepGrid(){
         ${islandLegendHtml(dist)}
       </div>
     </div>`;
-  }).join('') || '<div class="isl-hint">这一类没有可统计的睡姿。</div>';
+  }).join('') || '<div class="isl-hint">没有符合当前筛选的岛屿睡眠类型。</div>';
   grid.querySelectorAll('[data-islslpcard]').forEach(el=>{
     el.onclick = ()=>{
       const [idStr, type] = el.getAttribute('data-islslpcard').split(':');
