@@ -10448,8 +10448,12 @@ function xiexiuInfoFromRows(rows){
    它的每日食材总能量，所以两边口径是对等的。
    【两边按同一等级比】：基准若固定按 60 级，50 级的面板要达到 50 级榜首的 123% 才过线，等于把
    恐怖/邪修变成 60 级专属；同级比下这个比值与等级无关（各槽位用量是等比的），规则更干净。 */
-const TERROR_YIELD_MIN = 0.90;   // 恐怖：榜首的 90%
-const XIEXIU_YIELD_MIN = 0.80;   // 邪修：榜首的 80%
+/* 恐怖：榜首的 100%。2026-10-10 先定的 90% 实测一只都拦不掉（能同时过"效率>2 + c覆盖率>120%"
+   的 28 个组合里产量最低的袋兽就有 90.4%），用户要求必须能筛掉沼王这类，当天改成 100%。
+   这条线不能随便往下挪到 96% 以下：沼王 aac 正好是 95.8%，95% 只能筛掉它的 abc。
+   改之前先按 foodYieldGateOk 那段注释里的办法重算一遍各档后果，别凭感觉调。 */
+const TERROR_YIELD_MIN = 1.00;
+const XIEXIU_YIELD_MIN = 0.80;   // 邪修：榜首的 80%（2026-10-10 用户定）
 const foodTopBaselineCache = {};
 function foodTopBaselineEnergy(level){
   if(foodTopBaselineCache[level] != null) return foodTopBaselineCache[level];
@@ -10509,7 +10513,7 @@ function isTerrorPanel(labels, persona){
     const rows = computeFoodCoverageRows(effFood, undefined, true);
     const cRow = rows && rows.find(r=>r.letter==='c');
     if(!(cRow && cRow.ratio!=null && cRow.ratio > 1.2)) return false;
-    // 产量门槛：每日食材总能量要够到榜首的 90%（见 foodYieldGateOk）
+    // 产量门槛：每日食材总能量要够到榜首的 100%（见 foodYieldGateOk / TERROR_YIELD_MIN）
     return foodYieldGateOk(rows, state.level, TERROR_YIELD_MIN);
   });
 }
@@ -19555,7 +19559,7 @@ function boxTerrorInfo(entry, x){
     const rows = computeFoodCoverageRowsForBuild(x, entry.level, entry.ingChoice2, entry.ingChoice3, effFood);
     const cRow = rows && rows.find(r=>r.letter==='c');
     if(!(cRow && cRow.ratio!=null && cRow.ratio > 1.2)) return false;
-    // 跟 isTerrorPanel 同一道产量门槛（榜首的 90%）
+    // 跟 isTerrorPanel 同一道产量门槛（榜首的 100%）
     return foodYieldGateOk(rows, entry.level, TERROR_YIELD_MIN);
   });
 }
