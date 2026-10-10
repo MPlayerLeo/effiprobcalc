@@ -10079,6 +10079,7 @@ const GRAD_STD_TABS = [
                   ]),
             ]),
       ])
+    + gstdP('<b>这几种组合判废优先于「不推荐使用」红标。</b>像地鼠 / 袋兽 / 百变怪 / 大嘴娃这种本身被数据表标了不推荐使用、同时又选了 abc / aba / aax 组合的，结论按上面的组合判废写（aax 报废 / aba 滚粗 / abc 逆贼），不再显示成「不推荐使用 ＋ 划掉的档位」——组合走不通跟练到几级无关，也就不该再给出「70 级能到大毕业」这种永远追不到的提示。（<b>aaa / abb 的「组合不可用」不在此列</b>，仍然排在不推荐使用之后，展示口径不变。）')
     + gstdP('这几种被盖章的组合本身不参与食谱覆盖率毕业判定，但覆盖率数字仍会照常显示供你参考。');
   }},
   {key:'xiexiu', label:'食材精选', tone:'xiexiu', html:function(){ return ''
@@ -10591,6 +10592,41 @@ function isTerrorPanel(labels, persona){
   });
 }
 
+/* 「这个食材组合本身走不通」的三类判废，从 getGradOverrideInfo 里拆出来单独成函数，
+   好让它在物种级「不推荐使用」之前先跑一遍（顺序原因见调用点注释）。
+   返回 null ＝ 这个组合不属于结构性判废（含 aaa/abb，以及食材槽还没选满）。 */
+function foodComboForceInfo(pattern, availItems){
+  if(!pattern) return null;
+  if(pattern==='abc'){
+    return {kind:'forceGrade', heading:'abc逆贼', gradeName:'不合格', comment:'病入膏肓 神仙难救'};
+  }
+  if(pattern==='aba'){
+    return {kind:'forceGrade', heading:'aba滚粗', gradeName:'不合格', comment:'一把抓住 顷刻炼化'};
+  }
+  if(pattern!=='aab' && pattern!=='aac') return null;
+  if(!availItems.includes('aaa')){
+    return {kind:'forceGrade', heading:'aax报废', gradeName:'不合格', comment:'人为刀俎 我为鱼肉'};
+  }
+  const labels = currentLabels();
+  const persona = currentPersona();
+  const sums = windowSums(labels, 2);
+  const workEff = computeEfficiencyFromSums(sums, 'food', persona);
+  if(fcmp(workEff, F(163,100)) < 0){
+    // 效率没到打工门槛时，再看a食材当前（按用户实际选中的等级）的食谱覆盖率是否达标——
+    // 跟"食材和解经食谱覆盖率转化为毕业"同一个思路、用的也是同一套食谱覆盖率算法：
+    // 效率不够也能靠食谱覆盖率转成够格，而不是直接判废（这条覆盖率判定固定忽略露营券开关）
+    const aRow = withNoCamping(()=>{
+      const fcEffForA = computeEfficiency(labels, 'food', state.level, persona);
+      const coverageRows = computeFoodCoverageRows(fcEffForA);
+      return coverageRows && coverageRows.find(r=>r.letter==='a');
+    });
+    if(aRow && aRow.ratio >= 1.2){
+      return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散', conversionNote:'效率不足以打工，由食谱覆盖率转化为可打工'};
+    }
+    return {kind:'forceGrade', heading:'aax报废', gradeName:'不合格', comment:'人为刀俎 我为鱼肉'};
+  }
+  return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散'};
+}
 function getGradOverrideInfo(){
   const rec = getSelectedPokemonRecord();
   if(!rec) return null;
@@ -10598,6 +10634,17 @@ function getGradOverrideInfo(){
   const weakComment = rec[5];
   const availItems = rec[6] || '';
   const mappedType = DEX_TYPE_MAP[rec[3]];
+
+  // ⚠️ 顺序要紧：组合级判废（abc逆贼 / aba滚粗 / aax报废·aax打工）必须排在物种级
+  // 「不推荐使用」(rec[4]) 之前。这三类说的是"这个食材组合本身走不通"，跟这只宝可梦强不强、
+  // 练到几级都没关系；rec[4] 只是物种级的红字标，盖不住它。原来 rec[4] 的 return 挡在前面，
+  // 地鼠/三地鼠/袋兽/魔墙人偶/百变怪/大嘴娃/魔尼尼/花疗环环这八只一旦选了 aax/aba/abc，
+  // 整段组合判废就被短路，面板退回普通路径按纯效率算档位，50 级还会长出「70级大毕业」
+  // 这种永远兑现不了的追高·未来块（2026-10-10 用户报的 bug）。
+  // 只提前这四种组合；aaa/abb 的「组合不可用」仍排在 rec[4] 之后，口径不变。
+  const comboForce = (mappedType==='food' && state.type==='food')
+    ? foodComboForceInfo(currentIngredientPattern(), availItems) : null;
+  if(comboForce) return comboForce;
 
   if(unavailReason){
     // v3.29：拉帝亚斯专属文案——她的"不推荐使用"是相对拉帝欧斯而言的，不是泛泛的弱，
@@ -10611,37 +10658,7 @@ function getGradOverrideInfo(){
     if(!pattern){
       return {kind:'needIngredient'};
     }
-    if(pattern==='abc'){
-      return {kind:'forceGrade', heading:'abc逆贼', gradeName:'不合格', comment:'病入膏肓 神仙难救'};
-    }
-    if(pattern==='aba'){
-      return {kind:'forceGrade', heading:'aba滚粗', gradeName:'不合格', comment:'一把抓住 顷刻炼化'};
-    }
-    if(pattern==='aab' || pattern==='aac'){
-      const hasAAA = availItems.includes('aaa');
-      if(!hasAAA){
-        return {kind:'forceGrade', heading:'aax报废', gradeName:'不合格', comment:'人为刀俎 我为鱼肉'};
-      }
-      const labels = currentLabels();
-      const persona = currentPersona();
-      const sums = windowSums(labels, 2);
-      const workEff = computeEfficiencyFromSums(sums, 'food', persona);
-      if(fcmp(workEff, F(163,100)) < 0){
-        // 效率没到打工门槛时，再看a食材当前（按用户实际选中的等级）的食谱覆盖率是否达标——
-        // 跟"食材和解经食谱覆盖率转化为毕业"同一个思路、用的也是同一套食谱覆盖率算法：
-        // 效率不够也能靠食谱覆盖率转成够格，而不是直接判废（这条覆盖率判定固定忽略露营券开关）
-        const aRow = withNoCamping(()=>{
-          const fcEffForA = computeEfficiency(labels, 'food', state.level, persona);
-          const coverageRows = computeFoodCoverageRows(fcEffForA);
-          return coverageRows && coverageRows.find(r=>r.letter==='a');
-        });
-        if(aRow && aRow.ratio >= 1.2){
-          return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散', conversionNote:'效率不足以打工，由食谱覆盖率转化为可打工'};
-        }
-        return {kind:'forceGrade', heading:'aax报废', gradeName:'不合格', comment:'人为刀俎 我为鱼肉'};
-      }
-      return {kind:'forceGrade', heading:null, gradeName:'aax打工', gradeColor:'#7a4f9e', comment:'昙花一现 盛筵易散'};
-    }
+    // abc / aba / aab / aac 已经在上面的 foodComboForceInfo 里处理掉了，这里只剩 aaa/abb
     if(pattern==='aaa' || pattern==='abb'){
       const has = availItems.includes(pattern);
       if(!has){
@@ -19663,13 +19680,19 @@ function boxEntryGradeCategoryRaw(entry){
   const pattern = (dtype==='food') ? ('a'+(entry.ingChoice2||'')+(entry.ingChoice3||'')) : null;
 
   let struck = false, forced = null;
-  if(rec[4]){
+  // 跟 getGradOverrideInfo 同一个优先级：组合级判废（abc/aba/aax）排在物种级 rec[4]
+  // 「不推荐使用」之前，aaa/abb 的「组合不可用」仍排在 rec[4] 之后。不这么分层的话，
+  // 地鼠 aab 这类会在盒子/战力榜被当成"不推荐使用"、走 pvpUnrecommendedQuarterScore 那条
+  // 1/4 分路径按纯效率档位计分（实测出现过「不推荐·金帮超级毕业」25分），跟毕业判定页对不上
+  const comboDead = (dtype==='food') && pattern.length===3
+    && (pattern==='abc' || pattern==='aba' || pattern==='aab' || pattern==='aac');
+  if(comboDead){
+    forced = (pattern==='aab' || pattern==='aac') ? boxAaxCategory(entry, x, availItems) : '不合格';
+  } else if(rec[4]){
     struck = true; // 不推荐使用：红字删除线
   } else if(dtype==='food'){
     if(pattern.length!==3) return '其他'; // 食材槽没选全，判不出档位
-    if(pattern==='abc' || pattern==='aba') forced = '不合格';
-    else if(pattern==='aab' || pattern==='aac') forced = boxAaxCategory(entry, x, availItems);
-    else if(!availItems.includes(pattern)) struck = true; // aaa/abb 这个组合不可用
+    if(!availItems.includes(pattern)) struck = true; // aaa/abb 这个组合不可用
   } else if(dtype==='energy'){
     const labels = buildLabels(boxEntryBuild(entry));
     const ws = windowSizeOf(entry.level);
