@@ -3224,6 +3224,37 @@
 .candy-poke .candy-avatar-none{ font-size:15px; font-weight:900; color:#9aa3ad; }
 .candy-row-empty{ font-size:11.5px; font-weight:800; color:rgba(255,255,255,.72); padding:4px 2px; }
 
+/* 契合度面板：查码页和社交大卡共用 */
+.candy-aff{
+  background:#efe9d8; border:1px solid #ded6c2; border-radius:12px;
+  padding:11px 13px; margin:0 0 10px;
+}
+.candy-aff-thin{ font-size:12px; font-weight:800; color:#7a7568; line-height:1.6; }
+.candy-aff-top{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; }
+.candy-aff-label{ font-size:12.5px; font-weight:900; color:#7a7568; }
+.candy-aff-pct{ font-size:25px; font-weight:900; color:var(--accent); line-height:1; }
+.candy-aff-bar{
+  height:7px; border-radius:4px; background:#ded6c2; overflow:hidden; margin:7px 0 6px;
+}
+.candy-aff-bar > i{ display:block; height:100%; background:var(--accent); border-radius:4px; }
+.candy-aff-note{ font-size:11.5px; font-weight:800; color:#7a7568; line-height:1.5; }
+.candy-aff-note b{ color:var(--ink); }
+.candy-aff-sec{ margin-top:9px; }
+.candy-aff-h{ font-size:11.5px; font-weight:900; color:#7a7568; margin-bottom:5px; }
+.candy-aff-hint{ font-weight:800; color:#9b9484; margin-left:6px; }
+.candy-aff-row{ display:flex; flex-wrap:wrap; gap:8px; }
+.candy-aff-cell{ display:flex; flex-direction:column; align-items:center; gap:3px; }
+/* 跟 .candy-poke 同一个道理：方形头像的角会探出圆角，必须裁 */
+.candy-aff-poke{
+  width:34px; height:34px; border-radius:8px; background:rgba(255,255,255,.92);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+  box-shadow:0 1px 2px rgba(0,0,0,.1);
+}
+.candy-aff-poke img{ width:32px; height:32px; object-fit:contain; display:block; pointer-events:none; }
+.candy-aff-poke .candy-avatar-none{ font-size:13px; font-weight:900; color:#9aa3ad; }
+.candy-aff-dots{ display:flex; gap:3px; }
+.candy-aff-dot{ width:11px; height:11px; border-radius:3px; display:block; box-shadow:0 0 0 1px rgba(255,255,255,.75) inset; }
+
 /* 分享码：卡片下方独立一块米色圆角矩形，码本身用主题紫 */
 .candy-code-box{
   margin-top:10px; background:#efe9d8; border:1px solid #ded6c2; border-radius:12px;
@@ -21189,6 +21220,82 @@ function applyCandyCloudSnapshot(snap){
   }catch(e){}
 }
 
+/* ---- 契合度 ----
+   ⚠️ 别用"档位相同的比例"当契合度：每个人的卡默认值都一样（按岛屿评分自动排的），
+   两个人只要都没怎么动过，重合度天然就是 100%。107 个家族里改了 10 只也还有 90.7%，
+   于是所有人都挤在 85~100%，一点区分度都没有。
+
+   真正有意义的是【观点】有多接近：只看"至少一方偏离了默认档位"的家族。
+   两人都把皮卡丘从 B 提到 S 才算契合；两人都没动过，那是没表态，不计入。 */
+let candyBaselineCache = null;
+function candyBaselineGrades(){
+  if(candyBaselineCache) return candyBaselineCache;
+  /* 基线必须用【全站默认标签】算，不能用用户自己改过的那套——
+     两个人各自的基线不同的话，"偏离基线"就失去了共同参照，根本没法比。 */
+  const rank = {};
+  ISLAND_DEFAULT_TAGS.slice()
+    .sort((a,b)=> (Number(b.score)||0) - (Number(a.score)||0))
+    .forEach((t,i)=>{ rank[t.name] = Math.min(i, 4); });
+  const byPoke = {};
+  ISLAND_POKES.forEach(p=>{ byPoke[p[0]] = (rank[p[3]] !== undefined) ? rank[p[3]] : CANDY_DEFAULT_TIER; });
+  const out = {};
+  candyRoster().forEach(f=>{
+    const v = byPoke[f.pokeId];
+    out[f.key] = (v == null) ? CANDY_DEFAULT_TIER : v;   // 查不到标签的（新补录的）跟 candyResolveGrades 一样落 B
+  });
+  candyBaselineCache = out;
+  return out;
+}
+/* 把档位编号换算成 0~1 的相对位置（1=最高档）。
+   为什么不直接比档位编号：有人把 D 档藏了只剩四档，他心目中"最好的一档"是 0，
+   另一个五档的人也是 0，但两人的"第三档"含义完全不同。按实际用到的档位重新铺开才对齐。 */
+function candyTierPosMap(grades){
+  const used = [];
+  Object.keys(grades).forEach(k=>{ const v = grades[k]; if(used.indexOf(v) < 0) used.push(v); });
+  used.sort((a,b)=> a - b);
+  const m = {}, n = used.length;
+  used.forEach((t,i)=>{ m[t] = (n <= 1) ? 1 : 1 - i / (n - 1); });
+  return m;
+}
+const CANDY_AFF_MIN = 5;    // 表过态的家族少于这么多就不给分数了，样本太小的百分比是骗人的
+const CANDY_AFF_LABELS = [
+  [85, '灵魂糖友'], [70, '相当合拍'], [55, '大体一致'],
+  [40, '各有各的想法'], [25, '分歧不小'], [0, '水火不容'],
+];
+function candyAffinity(gA, gB){
+  const base = candyBaselineGrades();
+  const posA = candyTierPosMap(gA), posB = candyTierPosMap(gB);
+  let wsum = 0, acc = 0, flat = 0, same = 0, total = 0;
+  const items = [];
+  candyRoster().forEach(f=>{
+    const a = gA[f.key], b = gB[f.key];
+    if(a == null || b == null) return;   // 对方卡里没有这只（隐藏档的成员不上传）
+    total++;
+    if(a === b) same++;
+    const bs = base[f.key];
+    if(a === bs && b === bs) return;     // 两人都没表态，不计入
+    const pa = posA[a], pb = posB[b];
+    const diff = Math.abs(pa - pb);
+    const w = Math.max(pa, pb);          // 高档位的分歧更值钱：S 档吵起来比 D 档吵起来重要
+    wsum += w; acc += w * (1 - diff);
+    flat += (1 - diff);
+    items.push({fam:f, a:a, b:b, diff:diff, high:Math.max(pa, pb)});
+  });
+  if(items.length < CANDY_AFF_MIN){
+    return {ok:false, voted:items.length, total:total,
+            msg: total ? '你们俩一共只对 ' + items.length + ' 只宝可梦表过态，样本太小，算不出靠谱的契合度' : '拿不到对方的档位数据'};
+  }
+  // wsum 为 0 ＝ 所有分歧都发生在最低档（权重全是 0），这时退回不加权的平均
+  const ratio = wsum > 0 ? (acc / wsum) : (flat / items.length);
+  const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  let label = '水火不容';
+  for(const [lo, txt] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; break; } }
+  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 5);
+  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 5);
+  return {ok:true, pct:pct, label:label, voted:items.length, same:same, total:total,
+          agree:agree, clash:clash};
+}
+
 /* ---- 渲染 ---- */
 function candyAvatarHtml(fam){
   let b64 = '';
@@ -21204,6 +21311,42 @@ function candyAvatarHtml(fam){
    所有已发布的卡凭空多一只躺在最低档，而卡主根本没表过态。所以缺失就不画，
    等卡主下次发布时新宝可梦自然带进去。
    自己的卡走 strict=false：candyResolveGrades() 本来就会把 105 个家族补齐。 */
+/* 契合度面板。myNames/hisNames 只用来做 title 提示，档位本身靠颜色点表达——
+   档名最长 5 个字，真写出来会把这一排挤爆。 */
+function candyAffinityHtml(card, compact){
+  let r;
+  try{ r = candyAffinity(candyEffectiveGrades(), card.grades || {}); }
+  catch(e){ return ''; }
+  if(!r.ok) return '<div class="candy-aff candy-aff-thin">' + islEsc(r.msg) + '</div>';
+  const myNames = candyState.names, hisNames = card.names || CANDY_DEFAULT_NAMES;
+  const dot = (t, who, nms)=> '<i class="candy-aff-dot" style="background:' + CANDY_TIERS[t].color + '"'
+      + ' title="' + islEsc(who + '：' + (nms[t] || CANDY_DEFAULT_NAMES[t])) + '"></i>';
+  const cell = (x, both)=>
+      '<div class="candy-aff-cell">'
+    + '<div class="candy-aff-poke">' + candyAvatarHtml(x.fam) + '</div>'
+    + '<div class="candy-aff-dots">'
+    + (both ? dot(x.a, '你们俩', myNames)
+            : dot(x.a, '你', myNames) + dot(x.b, 'TA', hisNames))
+    + '</div></div>';
+  let html = '<div class="candy-aff">'
+    + '<div class="candy-aff-top"><span class="candy-aff-label">与你的契合度</span>'
+    + '<span class="candy-aff-pct">' + r.pct + '%</span></div>'
+    + '<div class="candy-aff-bar"><i style="width:' + r.pct + '%"></i></div>'
+    + '<div class="candy-aff-note"><b>' + islEsc(r.label) + '</b> · 你们俩一共对 ' + r.voted + ' 只宝可梦表过态</div>';
+  /* 社交界面点开的形变大卡只放到这里（compact）：那个浮层被 max-height 夹在一屏以内，
+     再挤两个榜会把卡片本体挤没。完整版留给查码页，那里是正常文档流，多长都能滑。 */
+  if(compact) return html + '</div>';
+  if(r.agree.length){
+    html += '<div class="candy-aff-sec"><div class="candy-aff-h">最合拍</div>'
+          + '<div class="candy-aff-row">' + r.agree.map(x=> cell(x, true)).join('') + '</div></div>';
+  }
+  if(r.clash.length){
+    html += '<div class="candy-aff-sec"><div class="candy-aff-h">最有分歧'
+          + '<span class="candy-aff-hint">左＝你，右＝TA</span></div>'
+          + '<div class="candy-aff-row">' + r.clash.map(x=> cell(x, false)).join('') + '</div></div>';
+  }
+  return html + '</div>';
+}
 function candyCardHtml(names, grades, editable, strict, hidden){
   const roster = candyRoster();
   const byTier = [[],[],[],[],[]];
@@ -21555,6 +21698,7 @@ function candyRenderLookup(){
     card.innerHTML = candyLookupData
       ? ('<div style="font-size:14px;font-weight:900;color:var(--ink);margin:4px 0 8px;">'
          + islEsc(candyLookupData.username || '匿名训练家') + ' 的选糖卡</div>'
+         + candyAffinityHtml(candyLookupData)
          + candyCardHtml(candyLookupData.names, candyLookupData.grades, false, true))
       : '';
   }
@@ -21932,6 +22076,7 @@ function candyOpenCardFrom(chipEl, card){
   if(!ov || !wrap || !inner || !card) return;
   inner.innerHTML =
       '<div class="candy-ov-head"><span class="candy-ov-name">' + islEsc(card.username || '选糖卡') + '</span></div>'
+    + candyAffinityHtml(card, true)
     + candyCardHtml(card.names, card.grades, false, true);
   ov.classList.add('on');
   ov.classList.remove('shown');
