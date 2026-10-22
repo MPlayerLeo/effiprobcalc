@@ -3170,6 +3170,19 @@
    都是「圆角矩形 + 五条等高横色带」，只是尺寸不同。点开时走 FLIP 形变
    （candyOpenCardFrom），小条直接长成大卡，不是"按钮消失→弹窗淡入"那种两段式。
    改这块 CSS 时别把两者的结构拆开，否则形变动画会穿帮。 */
+/* 拖头像时电脑端会把色带上的档名、整行内容刷成蓝条（浏览器原生文本选中），手机端则是
+   长按弹"保存图片"把拖动手势打断。跟 #mfHubView 同一套治法：挂在容器上一次性全盖住，
+   比给每个子元素分别贴省心也更保险。
+   ⚠️ 输入框必须排除回来，否则档名改不了、查码框里也选不中文本。
+   ⚠️ 只盖 #mfSubCandy 和 .candy-ov（社交界面点开的大卡）——导出图的保存浮层
+   #candyImgSheet 在这两者之外，那里【必须】能长按保存图片，别把它圈进来。 */
+#mfSubCandy, #mfSubCandy *,
+.candy-ov, .candy-ov *{
+  -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+  -webkit-user-drag:none; -webkit-tap-highlight-color:transparent;
+}
+#mfSubCandy input, #mfSubCandy textarea{ -webkit-user-select:text; user-select:text; }
+
 /* 圆角露边（"穿模"）的修法：别只靠父元素 overflow:hidden 去裁子元素的实色背景——
    那样在圆角曲线外侧会漏出一条抗锯齿发丝线。让首尾两条色带自己也带上同样的圆角，
    裁切就不再是唯一的依靠；父元素的 overflow 保留当兜底。
@@ -5833,6 +5846,7 @@ function boxAddEntry(nickname){
 }
 function boxRemoveEntries(ids){
   const idSet = new Set(ids);
+  boxTombAdd(ids);   // 先立碑再删：不记的话并集合并会把它从另一台设备的旧列表里again塞回来
   boxData = boxData.filter(e=>!idSet.has(e.id));
   saveBoxData();
 }
@@ -9106,6 +9120,80 @@ async function authApi(path, {method='GET', body=null, auth=false}={}){
   return data;
 }
 
+/* ---- 各子字段的「内容最后修改时刻」 ----
+   没有它的话合并只能走并集，而并集的毛病是【删除同步不过去】：
+   手机上把某只从 S 拖回默认档（grades 里删掉这条），Object.assign 并集会把
+   云端那条旧的 S 又塞回来，用户看到的就是"我明明改了，过一会儿又变回去"。
+
+   时间戳单独存一个 key，不混进原来的数据结构里——island/plan 的本地数据本来就
+   分散在好几个 localStorage key 上，没有统一的 state 对象可挂。
+
+   ⚠️ 这是【客户端时间】，设备时钟不准就会判错。cloudSaneTs 夹了一道上限，
+   不让一台时间错到 2030 年的设备永远赢。 */
+const CLOUD_TS_PREFIX = 'effiprobcalc_ts_';
+function cloudSaneTs(v){
+  const n = Number(v);
+  if(!isFinite(n) || n <= 0) return 0;
+  return Math.min(n, Date.now() + 60 * 1000);   // 比现在还晚一分钟以上的，按现在算
+}
+function cloudTsGet(name){
+  try{ return cloudSaneTs(localStorage.getItem(CLOUD_TS_PREFIX + name)); }catch(e){ return 0; }
+}
+function cloudTsTouch(name){
+  try{ localStorage.setItem(CLOUD_TS_PREFIX + name, String(Date.now())); }catch(e){}
+}
+function cloudTsSet(name, v){
+  try{ localStorage.setItem(CLOUD_TS_PREFIX + name, String(cloudSaneTs(v))); }catch(e){}
+}
+/* 云端这份比本地新吗？相等时算云端新——本地只要有改动就会 cloudTsTouch 推高自己，
+   所以"打平"只可能发生在两边本来就是同一份内容的时候，让云端赢没有副作用。 */
+function cloudNewer(snapTs, localTs){ return cloudSaneTs(snapTs) >= cloudSaneTs(localTs); }
+
+/* ---- 宝可梦盒的墓碑 ----
+   盒子跟 island/plan/candy 不一样，【不能】改成"谁新谁整体覆盖"：
+   用户的浏览器清一次缓存，本地就空了，这时只要他再加一只，时间戳就是最新的，
+   整体覆盖会拿这 1 只把云端 500 只冲掉。并集在这种场景下是救命的，必须留着。
+
+   但并集又让【删除同步不过去】。所以给删除单独记一份墓碑（只存 id 和删除时刻），
+   合并时把墓碑里的 id 剔掉。重新添加的宝可梦走 genBoxId() 拿新 id，不受影响。
+   墓碑本身取并集（跟列表相反）——漏掉一条就等于"这次删除没同步"。 */
+const BOX_TOMB_KEY = 'effiprobcalc_box_tomb_v1';
+const BOX_TOMB_MAX = 2000;
+const BOX_TOMB_TTL = 180 * 24 * 3600 * 1000;   // 半年前删的就别再背着了
+function boxTombLoad(){
+  try{
+    const t = JSON.parse(localStorage.getItem(BOX_TOMB_KEY));
+    return (t && typeof t === 'object' && !Array.isArray(t)) ? t : {};
+  }catch(e){ return {}; }
+}
+function boxTombSave(t){
+  const now = Date.now();
+  let keys = Object.keys(t).filter(k=> now - cloudSaneTs(t[k]) < BOX_TOMB_TTL);
+  if(keys.length > BOX_TOMB_MAX){
+    keys.sort((a, b)=> cloudSaneTs(t[b]) - cloudSaneTs(t[a]));   // 新的排前面，裁掉最老的
+    keys = keys.slice(0, BOX_TOMB_MAX);
+  }
+  const out = {};
+  keys.forEach(k=>{ out[k] = cloudSaneTs(t[k]); });
+  try{ localStorage.setItem(BOX_TOMB_KEY, JSON.stringify(out)); }catch(e){}
+  return out;
+}
+function boxTombAdd(ids){
+  const t = boxTombLoad(), now = Date.now();
+  (ids || []).forEach(id=>{ if(id) t[id] = now; });
+  boxTombSave(t);
+}
+function boxTombMerge(cloudTomb){
+  const t = boxTombLoad();
+  if(cloudTomb && typeof cloudTomb === 'object' && !Array.isArray(cloudTomb)){
+    Object.keys(cloudTomb).forEach(k=>{
+      const v = cloudSaneTs(cloudTomb[k]);
+      if(v > (t[k] || 0)) t[k] = v;
+    });
+  }
+  return boxTombSave(t);
+}
+
 // 种族+昵称+面板（不含等级、睡饱饱）完全一致时判定为同一只重复记录——面板取"选中副技能槽位+性格加减+食材b/c选择+是否闪光"
 function boxDupKey(e){
   return JSON.stringify([
@@ -9116,11 +9204,12 @@ function boxDupKey(e){
 }
 /* ---- 融合：盒子取并集（按 id 去重，云端优先排前面），设置以云端为准；
    另外种族+昵称+面板一致（不比等级和睡饱饱）的重复记录只保留先出现的那份，不再两边都留 ---- */
-function mergeBoxLists(cloudList, localList){
+function mergeBoxLists(cloudList, localList, tomb){
   const out = [], seenId = new Set(), seenDup = new Set();
   [cloudList, localList].forEach(list=>{
     (Array.isArray(list)?list:[]).forEach(e=>{
       if(!e || typeof e!=='object' || !e.id || seenId.has(e.id)) return;
+      if(tomb && tomb[e.id]) return;   // 已经被某台设备删掉了，并集别再把它塞回来
       const dupKey = boxDupKey(e);
       if(seenDup.has(dupKey)) return;
       seenId.add(e.id); seenDup.add(dupKey); out.push(e);
@@ -9131,13 +9220,19 @@ function mergeBoxLists(cloudList, localList){
 // 融合后的收尾：写回本地 → 重画 → 立刻整体推一次云端，让两边彻底一致
 function applyMergedData(cloud){
   const hasRecord = !!cloud.hasCloudRecord;
-  const merged = mergeBoxLists(cloud.box, boxData);
+  // 墓碑先并起来再合列表：顺序反了的话这一轮刚从云端拿到的删除不会生效
+  const tomb = boxTombMerge(cloud.prefs && cloud.prefs.boxTomb);
+  const merged = mergeBoxLists(cloud.box, boxData, tomb);
   let overflow = 0;
   if(merged.length > BOX_MAX_COUNT){ overflow = merged.length - BOX_MAX_COUNT; merged.length = BOX_MAX_COUNT; }
   boxData = merged;
   try{ localStorage.setItem(BOX_STORAGE_KEY, JSON.stringify(boxData)); }catch(e){}
 
   if(hasRecord && cloud.prefs && typeof cloud.prefs==='object'){
+    /* 设置项也比一次时间戳：以前是无条件"云端赢"，于是电脑端挂着的老页面随便推一次，
+       就能把手机上刚改的设置盖回去。⚠️ 这个判断只管 userPrefs，不能把
+       island/plan/candy 的合并也圈进来——那三个各有各的时间戳，在各自的 apply 里判。 */
+    if(cloudNewer(cloud.prefs.prefsTs, cloudTsGet('prefs'))){
     // 逐字段套用而不是整体替换：云端可能是旧版本存的，缺字段时要保留本地默认值
     Object.keys(PREFS_DEFAULT).forEach(k=>{
       if(cloud.prefs[k] !== undefined) userPrefs[k] = cloud.prefs[k];
@@ -9152,6 +9247,8 @@ function applyMergedData(cloud){
     }
     clampSleepPrefs();
     try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
+    cloudTsSet('prefs', cloud.prefs.prefsTs);
+    }
     // 岛屿标签走自己独立的 localStorage、不挂在 userPrefs 下（见 islandSaveState），
     // 云端也是单独一个 island 字段存的，融合逻辑得单独跑一遍，且用并集不是整体覆盖——
     // 避免这台设备手动打的标签被另一台设备的旧数据盖掉
@@ -9170,7 +9267,12 @@ function applyMergedData(cloud){
   return overflow;
 }
 function cloudPayload(){
-  return {box: boxData, prefs: Object.assign({}, userPrefs, {island: islandCloudSnapshot(), plan: planCloudSnapshot(), candy: candyCloudSnapshot()})};
+  // prefsTs / boxTomb 都不在 PREFS_DEFAULT 里，所以拉回来时那个逐字段循环扫不到它们，
+  // 不会污染 userPrefs——跟 island/plan/candy 同一个套路
+  return {box: boxData, prefs: Object.assign({}, userPrefs, {
+    island: islandCloudSnapshot(), plan: planCloudSnapshot(), candy: candyCloudSnapshot(),
+    prefsTs: cloudTsGet('prefs'), boxTomb: boxTombLoad(),
+  })};
 }
 /* ---- 「没传上去就补传」的脏标记 ----
    背景（用户反馈「手机端改完电脑端没变」的根因）：scheduleCloudPush 只是个 setTimeout，
@@ -9882,6 +9984,7 @@ async function pscUnlink(){
 // （不影响非 PSC 来源的条目），再整个重新拉一遍
 async function pscResyncFresh(){
   if(!confirm('将删除盒子里所有来自' + PSC_PARTNER_NAME + '的记录，然后重新同步一次，确定继续？')) return;
+  boxTombAdd(boxData.filter(e=> e.source === 'psc').map(e=> e.id));
   boxData = boxData.filter(e=> e.source !== 'psc');
   saveBoxData();
   renderBoxPage();
@@ -11683,6 +11786,7 @@ function loadUserPrefs(){
 }
 function saveUserPrefs(){
   try{ localStorage.setItem(PREFS_KEY, JSON.stringify(userPrefs)); }catch(e){}
+  cloudTsTouch('prefs');
   scheduleCloudPush(); // v3.17：同上，个人设置改动也跟着上云
 }
 function clampSleepPrefs(){
@@ -21055,27 +21159,33 @@ function candyLoadState(){
 }
 function candySaveState(){
   try{ localStorage.setItem(CANDY_KEY, JSON.stringify(candyState)); }catch(e){}
+  cloudTsTouch('candy');
   // 跟岛屿标签同一个节奏（5s）：拖头像是连续操作，1.5s 会把 D1 写次数打爆
   if(typeof scheduleCloudPush === 'function') scheduleCloudPush(5000);
 }
 function candyCloudSnapshot(){
   return {names: candyState.names, grades: candyState.grades, code: candyState.code,
-          showFc: candyState.showFc, pubSig: candyState.pubSig, hidden: candyState.hidden};
+          showFc: candyState.showFc, pubSig: candyState.pubSig, hidden: candyState.hidden,
+          updatedAt: cloudTsGet('candy')};
 }
-// 合并口径跟岛屿标签一致：并集、云端赢（避免两台设备互相吞掉对方拖的结果）
+/* 合并口径：比时间戳，谁新谁赢，赢的那份【整体】替换。
+   ⚠️ 以前 grades 走的是 Object.assign 并集，那样【把某只拖回默认档】永远同步不过去——
+   本地从 grades 里删掉了这条，并集又把云端那条旧的塞回来。 */
 function applyCandyCloudSnapshot(snap){
+  if(!cloudNewer(snap.updatedAt, cloudTsGet('candy'))) return;   // 云端这份旧，整份丢掉
   try{
     if(Array.isArray(snap.names) && snap.names.length === 5){
       candyState.names = snap.names.map((n,i)=> candyClampName(n, CANDY_DEFAULT_NAMES[i]));
     }
     if(snap.grades && typeof snap.grades === 'object' && !Array.isArray(snap.grades)){
-      candyState.grades = Object.assign({}, candyState.grades, snap.grades);
+      candyState.grades = snap.grades;
     }
     if(typeof snap.code === 'string' && /^\d{8}$/.test(snap.code)) candyState.code = snap.code;
     if(typeof snap.showFc === 'boolean') candyState.showFc = snap.showFc;
     if(typeof snap.pubSig === 'string') candyState.pubSig = snap.pubSig;
     if(Array.isArray(snap.hidden)) candyState.hidden = candyClampHidden(snap.hidden);
     localStorage.setItem(CANDY_KEY, JSON.stringify(candyState));
+    cloudTsSet('candy', snap.updatedAt);
   }catch(e){}
 }
 
@@ -22245,12 +22355,14 @@ function islandSaveState(){
     localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(islandTags));
     localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(islandPokeTags));
   }catch(e){}
+  cloudTsTouch('island');
   scheduleCloudPush(5000); // 标签定义/打标改动也跟着上云；delay 拉长到 5s——这里经常是连续快速点几十只，防抖窗口比盒子/设置项（1.5s）更长一些（未登录时是空操作）
 }
 /* ---- 岛屿标签跟账号走：直接复用已有的 prefs_json 云端字段，塞一个 island 子字段进去，
-   不用另开数据库列、不用改后端。合并策略跟盒子一样走并集、不整体覆盖——
-   避免这台设备手动打的标签被另一台设备的旧数据盖掉。
-   tag 定义按 id 去重、pokeId→tagId 映射按 key 去重，都是云端优先、本地独有的保留 ---- */
+   不用另开数据库列、不用改后端。
+   合并策略：比时间戳，谁新谁赢，赢的那份【整体】替换。
+   ⚠️ 以前是并集（tag 按 id 去重、pokeTags 按 key 合并），那样【删标签 / 取消打标】
+   永远同步不过去——本地删掉的，并集又从云端那份旧数据里捞回来了。 ---- */
 function islandCloudSnapshot(){
   try{
     const t = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
@@ -22258,34 +22370,26 @@ function islandCloudSnapshot(){
     return {
       tags: Array.isArray(t) ? t : null,
       pokeTags: (m && typeof m==='object' && !Array.isArray(m)) ? m : null,
+      updatedAt: cloudTsGet('island'),
     };
   }catch(e){ return null; }
 }
-function mergeIslandTagDefs(cloudList, localList){
-  const out = [], seen = new Set();
-  (Array.isArray(cloudList) ? cloudList : []).forEach(t=>{
-    if(t && typeof t.id==='string' && !seen.has(t.id)){ seen.add(t.id); out.push(t); }
-  });
-  (Array.isArray(localList) ? localList : []).forEach(t=>{
-    if(t && typeof t.id==='string' && !seen.has(t.id)){ seen.add(t.id); out.push(t); }
-  });
-  return out.length ? out.slice(0, ISLAND_TAG_MAX) : JSON.parse(JSON.stringify(ISLAND_DEFAULT_TAGS));
-}
-function mergeIslandPokeTags(cloudMap, localMap){
-  return Object.assign(
-    {},
-    (localMap && typeof localMap==='object') ? localMap : {},
-    (cloudMap && typeof cloudMap==='object') ? cloudMap : {}
-  );
-}
 function applyIslandCloudSnapshot(snap){
+  if(!cloudNewer(snap.updatedAt, cloudTsGet('island'))) return;   // 云端这份旧，整份丢掉
   try{
-    const localTags = JSON.parse(localStorage.getItem(ISLAND_TAGS_KEY));
-    const localPoke = JSON.parse(localStorage.getItem(ISLAND_POKETAGS_KEY));
-    localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(mergeIslandTagDefs(snap.tags, localTags)));
-    localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(mergeIslandPokeTags(snap.pokeTags, localPoke)));
+    /* null 的含义是"云端这份压根没存上"（老版本 / 读取失败），不是"用户清空了"，
+       所以 null 要保留本地，只有真的拿到数组/对象才替换。 */
+    if(Array.isArray(snap.tags)){
+      localStorage.setItem(ISLAND_TAGS_KEY, JSON.stringify(snap.tags.slice(0, ISLAND_TAG_MAX)));
+    }
+    if(snap.pokeTags && typeof snap.pokeTags==='object' && !Array.isArray(snap.pokeTags)){
+      localStorage.setItem(ISLAND_POKETAGS_KEY, JSON.stringify(snap.pokeTags));
+    }
+    cloudTsSet('island', snap.updatedAt);
   }catch(e){}
-  islandLoadState(); // 把合并结果刷进内存变量，跟正常打开子页时的初始化路径一致
+  /* ⚠️ cloudTsSet 必须在这句之前：islandLoadState 发现有新宝可梦没标签时会补齐并
+     islandSaveState()，那是一笔【本地新改动】，它的 cloudTsTouch 应该盖过上面那行。 */
+  islandLoadState(); // 把结果刷进内存变量，跟正常打开子页时的初始化路径一致
 }
 /* ---- v3.35「睡眠类型」分页：把每座岛按 浅浅/安然/深深 拆成三份 ----
    睡眠类型复用排名页那套判定（sleepTypeKeyOf，按【幼体属性】判，不进化按自身），
@@ -22969,6 +23073,7 @@ function planSaveState(){
     localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(planData));
     localStorage.setItem(PLAN_OPTS_KEY, JSON.stringify(planOpts));
   }catch(e){}
+  cloudTsTouch('plan');
   scheduleCloudPush(5000); // 跟岛屿打标一样用 5s 长防抖：连续改标签/加一批条目时不必每次都推
 }
 function planCloudSnapshot(){
@@ -22976,29 +23081,27 @@ function planCloudSnapshot(){
     const t = JSON.parse(localStorage.getItem(PLAN_TAGS_KEY));
     const d = JSON.parse(localStorage.getItem(PLAN_DATA_KEY));
     return { tags: Array.isArray(t) ? t : null, entries: Array.isArray(d) ? d : null,
-             opts: JSON.parse(JSON.stringify(planOpts)) };
+             opts: JSON.parse(JSON.stringify(planOpts)), updatedAt: cloudTsGet('plan') };
   }catch(e){ return null; }
 }
-function planMergeById(cloudList, localList, cap){
-  const out = [], seen = new Set();
-  (Array.isArray(cloudList) ? cloudList : []).forEach(x=>{
-    if(x && typeof x.id==='string' && !seen.has(x.id)){ seen.add(x.id); out.push(x); }
-  });
-  (Array.isArray(localList) ? localList : []).forEach(x=>{
-    if(x && typeof x.id==='string' && !seen.has(x.id)){ seen.add(x.id); out.push(x); }
-  });
-  return out.slice(0, cap);
-}
+/* 比时间戳，谁新谁赢，赢的那份【整体】替换。
+   ⚠️ 以前 tags/entries 走的是按 id 并集，那样【移出培养 / 删标签】永远同步不过去——
+   本地删掉的条目，并集又从云端那份旧数据里捞回来了。 */
 function applyPlanCloudSnapshot(snap){
   if(!snap) return;
+  if(!cloudNewer(snap.updatedAt, cloudTsGet('plan'))) return;   // 云端这份旧，整份丢掉
   try{
-    const localTags = JSON.parse(localStorage.getItem(PLAN_TAGS_KEY));
-    const localData = JSON.parse(localStorage.getItem(PLAN_DATA_KEY));
-    const mergedTags = planMergeById(snap.tags, localTags, PLAN_TAG_MAX);
-    localStorage.setItem(PLAN_TAGS_KEY, JSON.stringify(mergedTags.length ? mergedTags : JSON.parse(JSON.stringify(PLAN_DEFAULT_TAGS))));
-    localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(planMergeById(snap.entries, localData, PLAN_MAX_ENTRIES)));
-    // opts 是单值开关，没有"并集"可言，云端有就以云端为准
+    // null = 云端压根没存上（老版本/读取失败），不是"用户清空了"，这种保留本地
+    if(Array.isArray(snap.tags)){
+      const tg = snap.tags.slice(0, PLAN_TAG_MAX);
+      localStorage.setItem(PLAN_TAGS_KEY, JSON.stringify(tg.length ? tg : JSON.parse(JSON.stringify(PLAN_DEFAULT_TAGS))));
+    }
+    if(Array.isArray(snap.entries)){
+      localStorage.setItem(PLAN_DATA_KEY, JSON.stringify(snap.entries.slice(0, PLAN_MAX_ENTRIES)));
+    }
+    // opts 是单值开关，云端有就以云端为准
     if(snap.opts && typeof snap.opts==='object') localStorage.setItem(PLAN_OPTS_KEY, JSON.stringify(snap.opts));
+    cloudTsSet('plan', snap.updatedAt);
   }catch(e){}
   planLoadState();
   // 云端和本地各自独立分配过排序数字，合并之后同一组里撞号很正常，得再跑一遍体检
