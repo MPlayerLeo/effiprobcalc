@@ -3183,7 +3183,8 @@
 .candy-card .candy-row:only-child{ border-radius:16px; }
 .candy-row{ display:flex; align-items:stretch; min-height:58px; }
 /* 档名压在色带左端：色带本身「横亘左右」，名字只是盖在它上面的一块固定宽度区域。
-   5 个汉字按 13px 字号两行放得下，所以不用缩字号 */
+   折行由 candyNameLines() 插 <br> 硬控（每行两个字），不靠容器宽度自动断——
+   这样页面和导出图的折行位置才一致。word-break 留着当兜底。 */
 .candy-row-name{
   flex:0 0 56px; display:flex; align-items:center; justify-content:center; text-align:center;
   color:#fff; font-size:13px; font-weight:900; line-height:1.18; padding:6px 4px;
@@ -20859,6 +20860,19 @@ function candyTextWidth(str){
   }
   return w;
 }
+/* 档名按【每行两个字】折行。宽度口径沿用 candyTextWidth：全角 1、半角 0.5，
+   一行塞到 2 个全角宽就换行 —— 「大毕业」→ 大毕 / 业，10 个字母 → 4/4/2。
+   ⚠️ 页面卡片和导出图必须共用这一个函数，否则两边折行位置会对不上。 */
+function candyNameLines(str){
+  const lines = [];
+  let cur = '';
+  for(const ch of String(str == null ? '' : str)){
+    if(cur && candyTextWidth(cur + ch) > 2){ lines.push(cur); cur = ch; }
+    else cur += ch;
+  }
+  if(cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
 function candyClampName(str, fallback){
   let out = '';
   for(const ch of String(str == null ? '' : str).replace(/\s+/g, '')){
@@ -21041,7 +21055,9 @@ function candyCardHtml(names, grades, editable, strict, hidden){
     ).join('');
     const body = pokes || '<div class="candy-row-empty">'+(editable ? '把头像拖到这里' : '（空）')+'</div>';
     return '<div class="candy-row" data-candytier="'+i+'" style="background:'+t.color+'">'
-         + '<div class="candy-row-name">'+islEsc(names[i] || CANDY_DEFAULT_NAMES[i])+'</div>'
+         + '<div class="candy-row-name">'
+           + candyNameLines(names[i] || CANDY_DEFAULT_NAMES[i]).map(t=> islEsc(t)).join('<br>')
+           + '</div>'
          + '<div class="candy-row-pokes">'+body+'</div>'
          + '</div>';
   }).join('') + '</div>';
@@ -21478,6 +21494,7 @@ function candyCopyCode(){
 const CANDY_IMG = {
   PAD: 32,
   NAME_W: 78,          // 色带左侧档名那一栏
+  NAME_LH: 21,         // 档名行高（每行两个字，5 字会折成 3 行）
   PER_ROW: 8,          // 一行几只，锁死
   AV: 60, GAP: 6, BANDPAD: 12,
   HEAD_H: 62, ROW2_H: 44,
@@ -21635,7 +21652,10 @@ async function candyRenderImage(card){
     ctx.fillStyle = '#ffffff';
     ctx.font = '900 17px ' + C.FONT;
     ctx.textAlign = 'center';
-    ctx.fillText((card.names && card.names[ti]) || CANDY_DEFAULT_NAMES[ti], cardX + C.NAME_W / 2, by + band.h / 2);
+    // 档名跟页面上一样每行两个字；多行时整块相对色带垂直居中（textBaseline 是 middle）
+    const nmLines = candyNameLines((card.names && card.names[ti]) || CANDY_DEFAULT_NAMES[ti]);
+    let nmY = by + band.h / 2 - (nmLines.length - 1) * C.NAME_LH / 2;
+    nmLines.forEach(t=>{ ctx.fillText(t, cardX + C.NAME_W / 2, nmY); nmY += C.NAME_LH; });
     // 头像：从档名栏右侧再留一个 BANDPAD 起画，右侧同样留一个——
     // 之前只扣了一侧，最后一列会顶出圆角边框被裁掉
     let px = cardX + C.NAME_W + C.BANDPAD, py = by + C.BANDPAD, col = 0;
