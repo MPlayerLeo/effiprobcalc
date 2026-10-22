@@ -21247,17 +21247,15 @@ function candyBaselineGrades(){
   candyBaselineCache = out;
   return out;
 }
-/* 把档位编号换算成 0~1 的相对位置（1=最高档）。
-   为什么不直接比档位编号：有人把 D 档藏了只剩四档，他心目中"最好的一档"是 0，
-   另一个五档的人也是 0，但两人的"第三档"含义完全不同。按实际用到的档位重新铺开才对齐。 */
-function candyTierPosMap(grades){
-  const used = [];
-  Object.keys(grades).forEach(k=>{ const v = grades[k]; if(used.indexOf(v) < 0) used.push(v); });
-  used.sort((a,b)=> a - b);
-  const m = {}, n = used.length;
-  used.forEach((t,i)=>{ m[t] = (n <= 1) ? 1 : 1 - i / (n - 1); });
-  return m;
-}
+/* 档位 → 0~1 的位置分（1=最高档）。
+   ⚠️ 固定按五档刻度算，【不要】改成按"这张卡实际用了几档"重新铺开。
+   试过后者，错得更厉害：只留 S/A/B 三档的人，他的 B 会被铺成最低位 0，
+   而五档的人 B 是 0.5 —— 两个人明明都把这只放在 B 档，却被判成差了半张卡。
+   档位有固定的颜色和语义（金红蓝绿黑），藏掉一档的意思是"我不需要这一档"，
+   不是"我把刻度重新定义了"，所以绝对编号才是两张卡之间真正对得上的东西。
+   代价：藏掉 S 档的人，他的"最爱"标在 A，跟别人比会差一档（0.25）——
+   比上面那个 0.5 的偏差小一半，而且那是他自己主动选的。 */
+function candyTierPos(t){ return 1 - t / (CANDY_TIERS.length - 1); }
 const CANDY_AFF_MIN = 5;    // 表过态的家族少于这么多就不给分数了，样本太小的百分比是骗人的
 /* 八档评语配色。金/蓝/绿/黑直接复用 CANDY_TIERS 的档位色，紫是全站主题紫 --accent，
    黄特意压暗成 #b59a00（纯亮黄在米色底上根本看不清，也跟最高档的金撞脸）。 */
@@ -21273,7 +21271,6 @@ const CANDY_AFF_LABELS = [
 ];
 function candyAffinity(gA, gB){
   const base = candyBaselineGrades();
-  const posA = candyTierPosMap(gA), posB = candyTierPosMap(gB);
   let wsum = 0, acc = 0, flat = 0, same = 0, total = 0;
   const items = [];
   candyRoster().forEach(f=>{
@@ -21283,7 +21280,7 @@ function candyAffinity(gA, gB){
     if(a === b) same++;
     const bs = base[f.key];
     if(a === bs && b === bs) return;     // 两人都没表态，不计入
-    const pa = posA[a], pb = posB[b];
+    const pa = candyTierPos(a), pb = candyTierPos(b);
     const diff = Math.abs(pa - pb);
     const w = Math.max(pa, pb);          // 高档位的分歧更值钱：S 档吵起来比 D 档吵起来重要
     wsum += w; acc += w * (1 - diff);
@@ -21292,7 +21289,7 @@ function candyAffinity(gA, gB){
   });
   if(items.length < CANDY_AFF_MIN){
     return {ok:false, voted:items.length, total:total,
-            msg: total ? '你们俩一共只对 ' + items.length + ' 只宝可梦表过态，样本太小，算不出靠谱的契合度' : '拿不到对方的档位数据'};
+            msg: total ? '你们俩一共只调整过 ' + items.length + ' 只宝可梦的档位，样本太小，算不出靠谱的契合度' : '拿不到对方的档位数据'};
   }
   // wsum 为 0 ＝ 所有分歧都发生在最低档（权重全是 0），这时退回不加权的平均
   const ratio = wsum > 0 ? (acc / wsum) : (flat / items.length);
@@ -21343,7 +21340,7 @@ function candyAffinityHtml(card, compact){
     + '<span class="candy-aff-pct" style="color:' + r.color + '">' + r.pct + '%</span></div>'
     + '<div class="candy-aff-bar"><i style="width:' + r.pct + '%;background:' + r.color + '"></i></div>'
     + '<div class="candy-aff-say" style="color:' + r.color + '">' + islEsc(r.label) + '</div>'
-    + '<div class="candy-aff-note">你们俩一共对 ' + r.voted + ' 只宝可梦表过态</div>';
+    + '<div class="candy-aff-note">这个分数只看你们俩调整过档位的 ' + r.voted + ' 只</div>';
   /* 社交界面点开的形变大卡只放到这里（compact）：那个浮层被 max-height 夹在一屏以内，
      再挤两个榜会把卡片本体挤没。完整版留给查码页，那里是正常文档流，多长都能滑。 */
   if(compact) return html + '</div>';
