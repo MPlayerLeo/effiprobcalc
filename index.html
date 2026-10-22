@@ -3361,8 +3361,9 @@
 .candy-ov-wrap{
   position:fixed; transform-origin:top left; will-change:transform;
   transition:transform .34s cubic-bezier(.22,1,.3,1);
-  /* 105 个家族排下来远高于一屏，必须限高自滚，否则卡片直接溢出屏幕 */
-  max-height:calc(100vh - 24px); max-height:calc(100dvh - 24px);
+  /* 105 个家族排下来远高于一屏，必须限高自滚，否则卡片直接溢出屏幕。
+     减掉的 86px = 底部那条(44) + 它的下边距(14) + 上下各留一点气口 */
+  max-height:calc(100vh - 86px); max-height:calc(100dvh - 86px);
   overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
@@ -3373,18 +3374,13 @@
    等色带长到位了再淡入。所以淡入的选择器是这四个，不是整个 .candy-ov-inner。 */
 .candy-ov .candy-row-name,
 .candy-ov .candy-row-pokes,
-.candy-ov .candy-ov-head,
+.candy-ov .candy-aff,
 .candy-ov .candy-code-box{ opacity:0; transition:opacity .17s ease .15s; }
 .candy-ov.shown .candy-row-name,
 .candy-ov.shown .candy-row-pokes,
-.candy-ov.shown .candy-ov-head,
+.candy-ov.shown .candy-aff,
 .candy-ov.shown .candy-code-box{ opacity:1; }
-.candy-ov-head{
-  display:flex; align-items:center; gap:8px; margin-bottom:8px;
-}
-.candy-ov-name{ font-size:15px; font-weight:900; color:#fff; flex:1 1 auto; min-width:0;
-  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 1px 3px rgba(0,0,0,.5); }
-/* 关闭按钮钉在浮层右上角，不放进会滚动、会被形变缩放的 wrap 里 */
+/* 保存按钮钉在浮层右上角，不放进会滚动、会被形变缩放的 wrap 里 */
 .candy-ov-close{
   position:absolute; right:12px; top:12px; z-index:2;
   border:none; background:rgba(0,0,0,.45); color:#fff; font-size:16px;
@@ -3392,6 +3388,41 @@
   opacity:0; transition:opacity .2s ease .14s;
 }
 .candy-ov.shown .candy-ov-close{ opacity:1; }
+
+/* 底部那条。固定在视口底部而不是卡片底部——卡片高度随档位分布变，
+   钉在卡片上会满屏乱跑；wrap 的 max-height 已经为这条让出了位置。 */
+.candy-ov-foot{
+  position:fixed; left:0; right:0; bottom:14px; z-index:3;
+  display:flex; align-items:stretch; justify-content:center; gap:9px;
+  padding:0 16px; pointer-events:none;
+  opacity:0; transition:opacity .2s ease .14s;
+}
+.candy-ov.shown .candy-ov-foot{ opacity:1; }
+.candy-ov-foot > *{ pointer-events:auto; }
+.candy-ov-code{
+  display:flex; align-items:center; gap:10px; min-width:0; max-width:420px;
+  height:44px; padding:0 15px; border-radius:22px; cursor:pointer;
+  border:1px solid #ded6c2; background:#efe9d8; font-family:inherit;
+  box-shadow:0 3px 12px rgba(0,0,0,.28);
+}
+.candy-ov-code:active{ transform:translateY(1px); }
+.candy-ov-who{
+  font-size:13.5px; font-weight:900; color:var(--ink);
+  max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.candy-ov-num{
+  font-family:'Consolas',monospace; font-size:15px; font-weight:900;
+  color:var(--accent-dk); letter-spacing:1px; white-space:nowrap;
+}
+.candy-ov-num:empty{ display:none; }
+/* 关闭：跟左边那条等高的圆钮，叉用站内那套直角画法 */
+.candy-ov-x{
+  flex:0 0 auto; width:44px; height:44px; border-radius:50%; cursor:pointer;
+  border:1px solid #ded6c2; background:#efe9d8; color:#5e5848;
+  display:flex; align-items:center; justify-content:center; padding:0;
+  box-shadow:0 3px 12px rgba(0,0,0,.28); -webkit-tap-highlight-color:transparent;
+}
+.candy-ov-x:active{ transform:translateY(1px); }
 
 /* ---- 子页自己的东西 ---- */
 .candy-tabs{ display:flex; gap:8px; margin:10px 0 12px; }
@@ -4457,10 +4488,18 @@
 
 <div class="candy-ov" id="candyOv">
   <div class="candy-ov-bg" id="candyOvBg"></div>
-  <button type="button" class="candy-ov-close" id="candyOvSave" aria-label="保存图片" style="right:54px;font-size:12px;">保存</button>
-  <button type="button" class="candy-ov-close" id="candyOvClose" aria-label="关闭">✕</button>
+  <button type="button" class="candy-ov-close" id="candyOvSave" aria-label="保存图片" style="font-size:12px;">保存</button>
   <div class="candy-ov-wrap" id="candyOvWrap">
     <div class="candy-ov-inner" id="candyOvInner"></div>
+  </div>
+  <!-- 底部一条：左边是卡主昵称 + 分享码（点一下复制），右边是关闭。
+       这条不放进 .candy-ov-wrap——那一层会跟着形变缩放，也会滚动。 -->
+  <div class="candy-ov-foot" id="candyOvFoot">
+    <button type="button" class="candy-ov-code" id="candyOvCode">
+      <span class="candy-ov-who" id="candyOvWho"></span>
+      <span class="candy-ov-num" id="candyOvNum"></span>
+    </button>
+    <button type="button" class="candy-ov-x" id="candyOvX" aria-label="关闭"></button>
   </div>
 </div>
 
@@ -21523,8 +21562,9 @@ function candyNameEditorHtml(){
     + '</div>';
 }
 // 直角风格的叉，跟站内 checkIconSvg() 的调性一致，不用圆润的 ✕ 字形
-function candyIconCross(){
-  return '<svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">'
+function candyIconCross(size){
+  const w = size || 13;
+  return '<svg viewBox="0 0 16 16" width="' + w + '" height="' + w + '" aria-hidden="true">'
        + '<path d="M3 3 L13 13 M13 3 L3 13" stroke="currentColor" stroke-width="2.4" fill="none"/></svg>';
 }
 // 圆圈箭头（刷新那个符号）＝恢复
@@ -22082,14 +22122,15 @@ function candyOpenCardFrom(chipEl, card){
   const wrap = document.getElementById('candyOvWrap');
   const inner = document.getElementById('candyOvInner');
   if(!ov || !wrap || !inner || !card) return;
+  // 昵称从左上角搬到了底部那条上，这里只画契合度 + 卡片本体
   inner.innerHTML =
-      '<div class="candy-ov-head"><span class="candy-ov-name">' + islEsc(card.username || '选糖卡') + '</span></div>'
-    + candyAffinityHtml(card, true)
+      candyAffinityHtml(card, true)
     + candyCardHtml(card.names, card.grades, false, true);
+  candyOvFillFoot(card);
   ov.classList.add('on');
   ov.classList.remove('shown');
   // 先按最终布局摆好：左右留 16px 安全边、最宽 520、垂直居中且不顶出视口
-  const vw = window.innerWidth, vh = window.innerHeight;
+  const vw = window.innerWidth, vh = window.innerHeight - CANDY_OV_FOOT_H;   // 底部那条占掉的高度不算进居中
   const w = Math.min(vw - 32, 520);
   wrap.style.transition = 'none';
   wrap.style.transform = 'none';
@@ -22117,13 +22158,63 @@ function candyOpenCardFrom(chipEl, card){
   });
   const bg = document.getElementById('candyOvBg');
   if(bg) bg.onclick = candyCloseCard;
-  const cl = document.getElementById('candyOvClose');
+  const cl = document.getElementById('candyOvX');
   if(cl) cl.onclick = candyCloseCard;
   const sv = document.getElementById('candyOvSave');
   if(sv) sv.onclick = ()=>{ if(candyOvCard) candySaveImage(Object.assign({}, candyOvCard, {mine:false})); };
   // 展开期间锁住背后页面的滚动，免得手指滑到卡片外面把底下的页面带着滚
   document.body.style.overflow = 'hidden';
   candyOvCard = card;
+}
+const CANDY_OV_FOOT_H = 58;   // 44 的按钮 + 14 的下边距，跟 .candy-ov-wrap 的 max-height 对应
+/* 填底部那条：左边卡主昵称，右边分享码，点一下复制。
+   没有分享码的卡（别人还没发布过）就只剩昵称，整条不可点。 */
+function candyOvFillFoot(card){
+  const who = document.getElementById('candyOvWho');
+  const num = document.getElementById('candyOvNum');
+  const btn = document.getElementById('candyOvCode');
+  const x = document.getElementById('candyOvX');
+  if(x && !x.innerHTML) x.innerHTML = candyIconCross(18);   // 叉是 SVG，在这儿补上
+  if(!who || !num || !btn) return;
+  const code = (card && /^\d{8}$/.test(String(card.code || ''))) ? String(card.code) : '';
+  who.textContent = (card && card.username) || '匿名训练家';
+  num.textContent = code ? (code.slice(0,4) + ' ' + code.slice(4)) : '';
+  btn.disabled = !code;
+  btn.style.cursor = code ? 'pointer' : 'default';
+  btn.onclick = code ? (()=> candyOvCopyCode(code)) : null;
+}
+function candyOvCopyCode(code){
+  const num = document.getElementById('candyOvNum');
+  if(!num) return;
+  const done = ()=>{
+    const old = num.textContent;
+    num.textContent = '已复制';
+    setTimeout(()=>{ if(num.textContent === '已复制') num.textContent = old; }, 1200);
+  };
+  /* 兜底：临时 textarea + execCommand。
+     ⚠️ 不能只在"浏览器没有 clipboard API"时才用它——writeText 在非安全上下文、
+     权限被拒、或者当前没有用户手势时都会 reject，那种情况同样得退到这条路上来，
+     否则用户点了之后毫无反应、连句提示都没有。 */
+  const fallback = ()=>{
+    try{
+      const ta = document.createElement('textarea');
+      ta.value = code; ta.style.cssText = 'position:fixed;opacity:0;';
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand('copy');
+      ta.remove();
+      if(ok){ done(); return; }
+    }catch(e){}
+    const old = num.textContent;
+    num.textContent = '复制失败';
+    setTimeout(()=>{ if(num.textContent === '复制失败') num.textContent = old; }, 1400);
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(code).then(done, fallback);
+      return;
+    }
+  }catch(e){}
+  fallback();
 }
 function candyCloseCard(){
   const ov = document.getElementById('candyOv');
