@@ -3264,9 +3264,11 @@
   display:inline-flex; align-items:center; border:none; background:none; cursor:pointer;
   padding:8px 7px; margin:-8px -3px; flex:0 0 auto; -webkit-tap-highlight-color:transparent;
 }
+/* 正方形圆角矩形：宽高都锁 1.15em（高度跟昵称同高）。
+   别只改宽度不改高度——两者必须相等，不然又会变回被拉宽的长条。 */
 .candy-chip{
-  display:flex; flex-direction:column; width:1.65em; height:1.15em;
-  border-radius:4px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.25);
+  display:flex; flex-direction:column; width:1.15em; height:1.15em;
+  border-radius:3px; overflow:hidden; box-shadow:0 1px 2px rgba(0,0,0,.25);
 }
 .candy-chip-b{ flex:1 1 0; min-height:0; }
 .candy-chip-hit:active .candy-chip{ transform:scale(.92); }
