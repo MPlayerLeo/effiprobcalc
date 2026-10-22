@@ -2759,7 +2759,7 @@
    跟土王PVP 同一个口径：代码里的标识符一律保留 candy 前缀，只有文案叫「土王选糖卡」 */
 .mf-hub-ic-candy{
   background:linear-gradient(180deg,
-    #d4a017 0 20%, #c0392b 20% 40%, #2f6fb5 40% 60%, #3f8a44 60% 80%, #2b2b2b 80% 100%);
+    #d4a017 0 20%, #c0392b 20% 40%, #2f6fb5 40% 60%, #3f8a44 60% 80%, #3a3a3a 80% 100%);
 }
 /* 娱乐声明：红调、常驻在子页最上方，不给关闭按钮——这条是这个功能存在的前提，
    不是可以随手划掉的提示 */
@@ -3208,27 +3208,56 @@
   font-variant-numeric:tabular-nums;
 }
 .candy-code-none{ font-size:12.5px; font-weight:800; color:#9a9484; }
-/* 分享码浮窗：不进文档流，固定钉在「宝可梦盒」那颗圆球正上方（bottom 由 JS 按圆球实测位置算，
-   不写死——圆球位置受安全区/视口高度影响）。z-index 要压过展开浮层(1200)，
-   因为看别人的卡时它显示的是对方的码，必须浮在卡片之上。 */
-.candy-code-float{
-  position:fixed; left:50%; transform:translateX(-50%) translateY(6px);
-  z-index:1300; display:none; align-items:center; gap:9px;
-  background:#efe9d8; border:1px solid #ded6c2; border-radius:999px;
-  padding:9px 18px; box-shadow:0 5px 16px rgba(0,0,0,.2);
-  cursor:pointer; -webkit-tap-highlight-color:transparent;
-  opacity:0; transition:opacity .2s ease, transform .2s ease;
+/* 分享码：卡片正上方的静态一行，样式参照好友帖里的好友码（等宽字体 + accent-dk）。
+   v2 之前这里是个固定浮窗，钉在「宝可梦盒」圆球上方；改成静态行之后卡片底部那段
+   96px 占位留白也一并撤掉了——没有浮窗挡着，不需要多拉一截了。 */
+.candy-code-row{
+  display:flex; align-items:center; justify-content:center; gap:10px;
+  margin:0 0 10px; padding:9px 14px; cursor:pointer;
+  background:#efe9d8; border:1px solid #ded6c2; border-radius:12px;
+  -webkit-tap-highlight-color:transparent;
 }
-.candy-code-float.on{ display:flex; }
-/* 三段文字必须各自不折行、不收缩：默认 flex 子项可收缩，窄屏上会被压成三行 */
-.candy-code-float > span{ flex:0 0 auto; white-space:nowrap; }
-.candy-code-float.shown{ opacity:1; transform:translateX(-50%) translateY(0); }
-.candy-code-float:active{ transform:translateX(-50%) translateY(1px) scale(.97); }
-.candy-code-float .candy-code-cap{ font-size:12px; }
-.candy-code-float .candy-code-val{ font-size:18px; }
-.candy-code-float .candy-code-copy{ font-size:11.5px; font-weight:800; color:#9a9484; }
-/* 卡片底下补一段留白：拉到底之后还能再往上拉一截，否则最后一档永远压在浮窗底下 */
-.candy-pad-bottom{ height:96px; }
+.candy-code-row > span{ flex:0 0 auto; white-space:nowrap; }
+.candy-code-row:active{ transform:translateY(1px); }
+.candy-code-row .candy-code-copy{ font-size:11.5px; font-weight:800; color:#9a9484; }
+/* 分享码本体：跟好友帖 .friend-code-cell 同一套等宽字体口径，方便抄写 */
+.candy-code-row .candy-code-val{
+  font-family:'Consolas',monospace; font-size:18px; font-weight:900;
+  color:var(--accent-dk); letter-spacing:1px;
+}
+/* 好友码 + 「图片中展示」开关，排在分享码那行下面 */
+.candy-fc-row{
+  display:flex; align-items:center; gap:9px;
+  margin:0 0 12px; padding:9px 14px;
+  background:#fff; border:1px solid var(--line); border-radius:12px;
+}
+.candy-fc-cap{ flex:0 0 auto; font-size:12.5px; font-weight:800; color:#7a7568; }
+.candy-fc-val{
+  flex:1 1 auto; min-width:0; font-family:'Consolas',monospace; font-size:15px;
+  font-weight:900; color:var(--accent-dk); letter-spacing:.5px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.candy-fc-lab{ flex:0 0 auto; font-size:12px; font-weight:800; color:#9a9484; white-space:nowrap; }
+/* 没填过好友码：整行压灰、开关点不动（而不是把这行藏掉——藏掉用户不知道这个功能存在） */
+.candy-fc-row.off{ opacity:.5; }
+.candy-fc-row.off .mf-switch{ pointer-events:none; }
+
+/* 导出图的保存浮层：图片本身摆出来让用户长按保存（iOS Safari 对 blob/dataURL 的
+   download 属性一直不可靠，多半直接在新标签打开而不是存相册），下载按钮只是锦上添花 */
+.candy-img-sheet{ position:fixed; inset:0; z-index:1400; display:none; background:rgba(0,0,0,.6); }
+.candy-img-sheet.on{ display:flex; align-items:center; justify-content:center; padding:16px; }
+.candy-img-box{
+  background:#fff; border-radius:16px; padding:14px; max-width:min(92vw,520px);
+  max-height:92vh; overflow-y:auto; display:flex; flex-direction:column; gap:10px; align-items:center;
+}
+.candy-img-prev{ display:block; width:100%; height:auto; border-radius:10px; }
+.candy-img-tip{ font-size:12.5px; font-weight:800; color:#7a7568; }
+.candy-img-wait{ font-size:13px; font-weight:800; color:#7a7568; padding:28px 10px; }
+.candy-img-dl{ text-decoration:none; text-align:center; }
+.candy-img-close{
+  border:1px solid var(--line); background:#fff; border-radius:10px; padding:8px 18px;
+  font-family:inherit; font-size:13px; font-weight:800; color:var(--ink); cursor:pointer;
+}
 
 /* ---- 社交界面那颗按钮：高度跟昵称同高，但点击范围靠 padding+负 margin 撑大 ---- */
 .candy-chip-hit{
@@ -3262,8 +3291,7 @@
   scrollbar-width:none;
 }
 .candy-ov-wrap::-webkit-scrollbar{ display:none; }
-/* 浮层自己滚，所以它内部也要补一段，让最后一档能被拉到浮窗上方 */
-#candyOvInner{ padding-bottom:96px; }
+#candyOvInner{ padding-bottom:4px; }
 /* 形变过程中【色带必须始终可见】——它就是那颗小按钮长大的样子。
    会被非等比缩放拉变形的只有内容（档名、头像、标题、分享码），这几样先藏着，
    等色带长到位了再淡入。所以淡入的选择器是这四个，不是整个 .candy-ov-inner。 */
@@ -4182,8 +4210,6 @@
     <div id="candyPaneMe">
       <div class="candy-hint" id="candyMeHint"></div>
       <div id="candyMeCard"></div>
-      <div id="candyMeCode"></div>
-      <div class="candy-act-row" id="candyMeActs"></div>
       <div class="candy-msg" id="candyMeMsg"></div>
     </div>
     <div id="candyPaneLookup" style="display:none;">
@@ -4344,15 +4370,17 @@
 </div>
 
 <!-- 选糖卡形变浮层：社交界面那颗五色条按钮点开时，小条直接长成这张大卡（见 candyOpenCardFrom） -->
-<!-- 分享码浮窗：固定在「宝可梦盒」圆球上方，点一下复制。展开浮层和子页共用这一个 -->
-<div class="candy-code-float" id="candyCodeFloat" role="button" tabindex="0">
-  <span class="candy-code-cap">分享码</span>
-  <span class="candy-code-val" id="candyCodeFloatVal"></span>
-  <span class="candy-code-copy">点击复制</span>
+<!-- 导出图的保存浮层（长按保存 + 下载按钮） -->
+<div class="candy-img-sheet" id="candyImgSheet">
+  <div class="candy-img-box">
+    <div id="candyImgSheetBody"></div>
+    <button type="button" class="candy-img-close" id="candyImgSheetClose">关闭</button>
+  </div>
 </div>
 
 <div class="candy-ov" id="candyOv">
   <div class="candy-ov-bg" id="candyOvBg"></div>
+  <button type="button" class="candy-ov-close" id="candyOvSave" aria-label="保存图片" style="right:54px;font-size:12px;">保存</button>
   <button type="button" class="candy-ov-close" id="candyOvClose" aria-label="关闭">✕</button>
   <div class="candy-ov-wrap" id="candyOvWrap">
     <div class="candy-ov-inner" id="candyOvInner"></div>
@@ -17813,9 +17841,9 @@ function updatePageActionBar(){
   const onFriend = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'friend';
   // v3.30：睡意之力计算同理，没有可调的计算参数
   const onSpwr = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'spwr';
-  // v3.36：选糖卡子页同理，没有可调的计算参数，也没借用这两颗按钮
-  const onCandy = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'candy';
-  const show = !(inDetail || inBox || onHub || onSettings || onPvp || onFriend || onSpwr || onCandy || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
+  // v3.36 选糖卡：这两颗按钮被借去做「档位改名 / 发布糖卡」（查看他人分页右侧换成「保存」），
+  // 所以【不】排除它——跟岛屿评分借按钮做批量选择是同一个路数，文案在 updatePanelBtnLabel 里换
+  const show = !(inDetail || inBox || onHub || onSettings || onPvp || onFriend || onSpwr || (onIsland && !onIslandBox) || (onPlanSub && !onPlanList));
   const circleMode = !!userPrefs.fabCircleModeOn;
   // 圆形浮窗模式下按钮条本身整条不出现，功能改由 updateFabCircles() 里的 #fabPanel/#fabControls 提供
   bar.style.display = (show && !circleMode) ? 'flex' : 'none';
@@ -17823,15 +17851,16 @@ function updatePageActionBar(){
   // 用 .tabbar-merged 抹掉；按钮条整条收起时把这个类摘掉，切换栏变回独立的原样。
   const tabbar = document.getElementById('tabBar');
   if(tabbar) tabbar.classList.toggle('tabbar-merged', show && !circleMode);
-  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIslandBox && !onPlanList;
+  // 左槽：选糖卡的「我的选糖卡」分页要用它做「档位改名」，所以别把它压成 hidden；
+  // 「查看他人」分页没有改名这回事，照旧收起
+  const onCandyMe = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'candy' && candyPane === 'me';
+  const ctrlHidden = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIslandBox && !onPlanList && !onCandyMe;
   const ctrlBtn = document.getElementById('pageActControlsBtn');
   if(ctrlBtn) ctrlBtn.style.visibility = ctrlHidden ? 'hidden' : '';
   updatePagePanelMonBubble();
   updateFabCircles();
   if(typeof updateMfHubViewFab==='function') updateMfHubViewFab();
   updatePanelBtnLabel(inBox);
-  // 分享码浮窗跟着页面走：这里是全站页面/分页切换的公共汇合点，挂这一处就够
-  if(typeof candyUpdateCodeFloat==='function') candyUpdateCodeFloat();
 }
 function updateFabVisibility(){ updatePageActionBar(); }
 // 页4(捕捉推荐)里"修改面板"改叫"加入面板"（点开的是选副技能+性格的轻量浮窗，不是完整修改面板）；
@@ -17855,10 +17884,24 @@ function updatePanelBtnLabel(inBox){
        移出培养    左=移出培养(红)        右=取消(灰)
        资源总计    左=资源总计(高亮)      右=取消(灰)
      两种多选态互斥，同一时刻最多进一种。 */
+  // v3.36 选糖卡：左=档位改名 右=发布糖卡；「查看他人」分页右=保存（左槽在 updatePageActionBar 里收起）
+  const page2El2 = document.getElementById('page2');
+  const onCandySub = !inBox && !!(page2El2 && page2El2.classList.contains('active-page')) && mfSubView === 'candy';
   let leftTxt = onIsland ? '批量选择' : '控制参数';
   let rightTxt = onIsland ? '取消' : (onPage4 ? '加入面板' : '修改面板');
   let rightFab = onIsland ? '取消' : (onPage4 ? '加入<br>面板' : '修改<br>面板');
   let leftDanger = false, leftOn = false, rightPlain = false;
+  if(onCandySub){
+    if(candyPane === 'me'){
+      leftTxt = candyNameEditOn ? '完成改名' : '档位改名';
+      leftOn = candyNameEditOn;
+      rightTxt = '发布糖卡'; rightFab = '发布<br>糖卡';
+    } else {
+      leftTxt = '控制参数';                 // 左槽这会儿是隐藏的，文案无所谓，给个默认值别留空
+      rightTxt = '保存'; rightFab = '保存';
+      rightPlain = !candyLookupData;        // 还没查出卡就先灰着
+    }
+  }
   if(onPlan){
     if(planRemoveMode){
       leftTxt = '移出培养'; leftDanger = true;
@@ -17960,10 +18003,10 @@ function updateFabCircles(){
     // v3.27：岛屿评分/培养计划切到非罗列分页（岛屿浏览、两边的标签管理）时，两颗圆跟 hub/更多设置一样整条收起
     const onIslandOther = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'island' && !onIsland;
     const onPlanOther = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'plan' && !onPlan;
-    // v3.36：选糖卡子页两颗圆也一起收起（按钮条那边同步排除，两条腿必须一起长）
-    const onCandy = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'candy';
-    const show = !inDetail && !onHub && !onSettings && !onCandy && !onIslandOther && !onPlanOther;
-    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlan;
+    // v3.36 选糖卡：两颗圆照常出现（被借去做改名/发布），跟按钮条那边保持一致
+    const onCandyMe2 = !!(page2El && page2El.classList.contains('active-page')) && mfSubView === 'candy' && candyPane === 'me';
+    const show = !inDetail && !onHub && !onSettings && !onIslandOther && !onPlanOther;
+    const noCtrl = !!(page2El && page2El.classList.contains('active-page')) && mfSubView !== 'effi' && !onIsland && !onPlan && !onCandyMe2;
     fabPanel.style.display = show ? 'flex' : 'none';
     fabControls.style.display = (show && !noCtrl) ? 'flex' : 'none';
     // v3.22：「取消全选」借 fabMore 在普通页面里空出来的左下角坐标，只在培养计划的
@@ -18140,6 +18183,7 @@ document.getElementById('pageActPanelBtn').onclick = ()=>{
     else planOpenAddBubble(document.getElementById('pageActPanelBtn'));
     return;
   }
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='candy'){ candyFooterRight(); return; }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -18160,6 +18204,7 @@ document.getElementById('fabPanel').onclick = ()=>{
     else planOpenAddBubble(document.getElementById('fabPanel'));
     return;
   }
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='candy'){ candyFooterRight(); return; }
   const page4 = document.getElementById('page4');
   const inBox = (typeof boxOverlayOpen!=='undefined') && boxOverlayOpen;
   if(!inBox && page4 && page4.classList.contains('active-page')){ openCapPanelModal(); return; }
@@ -18266,6 +18311,7 @@ document.getElementById('pageActControlsBtn').onclick = (e)=>{
   }
   // 捕捉推荐页(page4)跟其他三页共用一颗"控制参数"按钮，但内容风马牛不相及——
   // 那三页开的是等级/持有上限那套共享浮窗，这里换成页4专用的"标记已毕业"小浮窗
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='candy'){ candyFooterLeft(); return; }
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
@@ -18278,6 +18324,7 @@ document.getElementById('fabControls').onclick = (e)=>{
     if(planRemoveMode) planFooterRemoveConfirm(); else planToggleSumMode();
     return;
   }
+  if(page2El && page2El.classList.contains('active-page') && mfSubView==='candy'){ candyFooterLeft(); return; }
   const page4 = document.getElementById('page4');
   if(page4 && page4.classList.contains('active-page')){ openCapGradModal(); return; }
   if(controlsDashboardOpen) closeControlsDashboard(); else openControlsDashboard();
@@ -20747,12 +20794,12 @@ const CANDY_TIERS = [
   {key:'A', color:'#c0392b'},   // 红
   {key:'B', color:'#2f6fb5'},   // 蓝
   {key:'C', color:'#3f8a44'},   // 绿
-  {key:'D', color:'#2b2b2b'},   // 黑
+  {key:'D', color:'#3a3a3a'},   // 黑
 ];
 const CANDY_DEFAULT_NAMES = ['S','A','B','C','D'];
 const CANDY_NAME_MAX_W = 5;     // 全角宽度上限：5 个汉字，或 10 个半角字符
 
-let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null};
+let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null, showFc:true};
 let candyPane = 'me';
 let candyNameEditOn = false;
 let candyLookupData = null;
@@ -20852,6 +20899,7 @@ function candyLoadState(){
       }
       if(raw.grades && typeof raw.grades === 'object' && !Array.isArray(raw.grades)) candyState.grades = raw.grades;
       if(typeof raw.code === 'string' && /^\d{8}$/.test(raw.code)) candyState.code = raw.code;
+      if(typeof raw.showFc === 'boolean') candyState.showFc = raw.showFc;
     }
   }catch(e){}
 }
@@ -20861,7 +20909,7 @@ function candySaveState(){
   if(typeof scheduleCloudPush === 'function') scheduleCloudPush(5000);
 }
 function candyCloudSnapshot(){
-  return {names: candyState.names, grades: candyState.grades, code: candyState.code};
+  return {names: candyState.names, grades: candyState.grades, code: candyState.code, showFc: candyState.showFc};
 }
 // 合并口径跟岛屿标签一致：并集、云端赢（避免两台设备互相吞掉对方拖的结果）
 function applyCandyCloudSnapshot(snap){
@@ -20873,6 +20921,7 @@ function applyCandyCloudSnapshot(snap){
       candyState.grades = Object.assign({}, candyState.grades, snap.grades);
     }
     if(typeof snap.code === 'string' && /^\d{8}$/.test(snap.code)) candyState.code = snap.code;
+    if(typeof snap.showFc === 'boolean') candyState.showFc = snap.showFc;
     localStorage.setItem(CANDY_KEY, JSON.stringify(candyState));
   }catch(e){}
 }
@@ -20919,6 +20968,37 @@ function candyChipHtml(code){
 }
 
 
+/* 好友码从好友帖那份草稿里拿。草稿是懒加载的（只有进过好友帖子页才拉过），
+   这里没有就异步补拉一次，拉回来再重画——不阻塞选糖卡本身的渲染。 */
+let candyFcLoading = false;
+function candyMyFriendCode(){
+  try{
+    if(typeof friendDraft !== 'undefined' && friendDraft && friendDraft.friendCode) return friendDraft.friendCode;
+  }catch(e){}
+  return '';
+}
+function candyEnsureFriendCode(){
+  if(candyFcLoading) return;
+  try{
+    if(typeof friendDraft !== 'undefined' && friendDraft !== null) return;   // 拉过了（哪怕是空的）
+    if(typeof authLoggedIn !== 'function' || !authLoggedIn()) return;
+    if(typeof friendLoadMe !== 'function') return;
+  }catch(e){ return; }
+  candyFcLoading = true;
+  friendLoadMe().then(()=>{ candyFcLoading = false; if(candyPane === 'me') candyRenderMe(); },
+                       ()=>{ candyFcLoading = false; });
+}
+function candyFcRowHtml(){
+  const fc = candyMyFriendCode();
+  const fmt = (fc && typeof friendFmtCode === 'function') ? friendFmtCode(fc) : fc;
+  const on = !!fc && !!candyState.showFc;
+  return '<div class="candy-fc-row' + (fc ? '' : ' off') + '" id="candyFcRow">'
+       + '<span class="candy-fc-cap">好友码</span>'
+       + '<span class="candy-fc-val">' + (fmt || '还没填写') + '</span>'
+       + '<span class="candy-fc-lab">图片中展示</span>'
+       + '<div class="mf-switch' + (on ? ' on' : '') + '" id="candyFcSwitch"></div>'
+       + '</div>';
+}
 /* ---- 「我的选糖卡」分页 ---- */
 function candyRenderAll(){
   const tabs = document.querySelectorAll('[data-candypane]');
@@ -20931,14 +21011,13 @@ function candyRenderAll(){
   if(me) me.style.display = candyPane === 'me' ? '' : 'none';
   if(lk) lk.style.display = candyPane === 'lookup' ? '' : 'none';
   if(candyPane === 'me') candyRenderMe(); else candyRenderLookup();
-  candyUpdateCodeFloat();
+  updatePageActionBar();          // 两个分页的页脚按钮文案不一样，切分页要刷一次
 }
 function candyRenderMe(){
   const hint = document.getElementById('candyMeHint');
   const cardEl = document.getElementById('candyMeCard');
-  const codeEl = document.getElementById('candyMeCode');
-  const actEl = document.getElementById('candyMeActs');
   if(!cardEl) return;
+  candyEnsureFriendCode();
   const grades = candyResolveGrades();
   const overrides = Object.keys(candyState.grades).length;
   if(hint){
@@ -20946,35 +21025,36 @@ function candyRenderMe(){
       + '轻点头像也能直接选档。<br>没手动改过的家族跟着<b>岛屿评分</b>的标签走，改了那边这里会同步变；'
       + '已手动改过 <b>' + overrides + '</b> 个家族。';
   }
-  cardEl.innerHTML = candyNameEditOn ? candyNameEditorHtml() : '';
-  cardEl.insertAdjacentHTML('beforeend', candyCardHtml(candyState.names, grades, true));
+  // 顺序：改名编辑器（开着时）→ 分享码 → 好友码开关 → 卡片
+  cardEl.innerHTML = (candyNameEditOn ? candyNameEditorHtml() : '')
+    + candyCodeRowHtml(candyState.code)
+    + candyFcRowHtml()
+    + candyCardHtml(candyState.names, grades, true);
   if(candyNameEditOn) candyBindNameEditor(cardEl);
   candyBindCard(cardEl);
-  cardEl.insertAdjacentHTML('beforeend', '<div class="candy-pad-bottom"></div>');
+  const codeRow = cardEl.querySelector('.candy-code-row');
+  if(codeRow && candyState.code) codeRow.onclick = ()=> candyCopyCode();
+  const fcSw = document.getElementById('candyFcSwitch');
+  if(fcSw && candyMyFriendCode()) fcSw.onclick = ()=>{
+    candyState.showFc = !candyState.showFc;
+    candySaveState();
+    candyRenderMe();
+  };
   // 分享码已经改成浮窗（candyUpdateCodeFloat），这里只在【还没有码】时留一句说明
-  if(codeEl) codeEl.innerHTML = candyState.code ? '' : candyCodeBoxHtml(null);
-  if(actEl){
-    const logged = (typeof authLoggedIn === 'function') && authLoggedIn();
-    actEl.innerHTML =
-        '<button type="button" class="candy-act-btn primary" id="candyPubBtn">' + (candyState.code ? '更新分享码内容' : '发布并生成分享码') + '</button>'
-      + (candyState.code ? '<button type="button" class="candy-act-btn" id="candyCopyBtn">复制分享码</button>' : '')
-      + '<button type="button" class="candy-act-btn" id="candyNameBtn">' + (candyNameEditOn ? '完成改名' : '改档位名') + '</button>'
-      + '<button type="button" class="candy-act-btn" id="candyResetBtn"' + (overrides ? '' : ' disabled') + '>重置为岛屿评分</button>';
-    const pub = document.getElementById('candyPubBtn');
-    if(pub) pub.onclick = ()=>{ if(!logged){ candyMsg('candyMeMsg', '发布要先登录账号', false); return; } candyPublish(); };
-    const cp = document.getElementById('candyCopyBtn');
-    if(cp) cp.onclick = ()=> candyCopyCode();
-    const nb = document.getElementById('candyNameBtn');
-    if(nb) nb.onclick = ()=>{ candyNameEditOn = !candyNameEditOn; candyRenderMe(); };
-    const rb = document.getElementById('candyResetBtn');
-    if(rb) rb.onclick = ()=>{
-      if(!Object.keys(candyState.grades).length) return;
-      candyState.grades = {};
-      candySaveState();
-      candyRenderMe();
-      candyMsg('candyMeMsg', '已全部改回跟岛屿评分一致', true);
-    };
+  // 发布 / 改档位名这两个动作已经搬到页脚按钮条上（见 updatePanelBtnLabel 里的 onCandy 分支），
+  // 页内不再放动作按钮；「重置为岛屿评分」按用户 2026-10-22 的要求整个去掉
+  updatePageActionBar();
+}
+// 分享码：卡片正上方的静态一行，点一下复制（没有码时显示一句提示，点了不复制）
+function candyCodeRowHtml(code){
+  if(!code){
+    return '<div class="candy-code-row" style="cursor:default;">'
+         + '<span class="candy-code-none">还没有分享码，点右下角「发布糖卡」生成</span></div>';
   }
+  return '<div class="candy-code-row">'
+       + '<span class="candy-code-cap">分享码</span>'
+       + '<span class="candy-code-val">' + code.slice(0,4) + ' ' + code.slice(4) + '</span>'
+       + '<span class="candy-code-copy">点击复制</span></div>';
 }
 function candyMsg(id, text, ok){
   const el = document.getElementById(id);
@@ -21086,7 +21166,12 @@ function candyPokeUp(){
   clearTimeout(d.timer);
   candyEndDrag();
   if(wasActive && tier != null && !isNaN(tier)) candySetTier(fam, tier);
-  else if(tap) candyOpenTierBubble(el, fam);
+  else if(tap){
+    // ⚠️ 必须推迟：触摸端 pointerup 之后浏览器还会补发一个 click，而 capShowBubble 是靠
+    // setTimeout(0) 挂"点外面就关"的监听的——那个补发的 click 比监听晚到，会把刚弹出来的
+    // 气泡立刻关掉，表现就是手机上"轻点头像没反应"。桌面端 click 派发得早，撞不上，所以只有手机复现。
+    setTimeout(()=> candyOpenTierBubble(el, fam), 80);
+  }
 }
 function candyEndDrag(){
   const d = candyDrag;
@@ -21196,8 +21281,8 @@ async function candyPublish(){
       candySaveState();
     }
     candyRenderMe();
-    candyUpdateCodeFloat();
     candyMsg('candyMeMsg', '已发布，别人用分享码就能看到这张卡', true);
+    candySaveImage(candyMyCardForImage());   // 发布＝生成分享码 + 出一张图给用户存
   }catch(e){
     candyMsg('candyMeMsg', e.message || '发布失败', false);
   }
@@ -21214,83 +21299,256 @@ function candyCopyCode(){
   candyMsg('candyMeMsg', '这个浏览器不支持一键复制：' + candyState.code, true);
 }
 
-/* ---- 分享码浮窗 ----
-   钉在「宝可梦盒」那颗圆球正上方。bottom 按圆球实测位置现算而不是写死：
-   圆球的位置受安全区(env(safe-area-inset-bottom))和视口高度影响，写死的话
-   iOS 全面屏和安卓小屏会各错一截。 */
-let candyOvCode = null;
-function candyCodeFloatBottom(){
-  const ball = document.querySelector('#tabBtnBox .tab-bubble-ball');
-  if(ball){
-    const r = ball.getBoundingClientRect();
-    if(r.height > 0) return Math.round(window.innerHeight - r.top) + 12;
-  }
-  const bar = document.getElementById('tabBar');
-  if(bar){
-    const r = bar.getBoundingClientRect();
-    if(r.height > 0) return Math.round(window.innerHeight - r.top) + 26;
-  }
-  return 100;
+
+/* ---- 选糖卡导出成图片 ----
+   整张图用 canvas 画，不走 html2canvas 之类的库：卡片结构简单（五条色带 + 头像网格），
+   自己画反而可控，也不用往这个单文件里再塞一个库。
+   头像是站内内嵌的 base64（同源 data: URI），不会污染 canvas，toBlob 正常可用。
+
+   版式（用户 2026-10-22 定稿）：
+     第一行  左＝站点图标+站名   中＝主标题「土王选糖卡」   右＝网址
+     第二行  左＝昵称            中＝分享码                 右＝好友码
+     下方    选糖卡全图
+   ⚠️ 宽度不是拍脑袋定的，是【一行固定 8 只】反推出来的（手机端就是这个密度，用户认可）。
+   标题区定高，整张图的高度随档位分布自然变化——不再强求 3:4，用户明确说了比例可以不固定。 */
+const CANDY_IMG = {
+  PAD: 32,
+  NAME_W: 78,          // 色带左侧档名那一栏
+  PER_ROW: 8,          // 一行几只，锁死
+  AV: 60, GAP: 6, BANDPAD: 12,
+  HEAD_H: 62, ROW2_H: 44,
+  FONT: '"Zen Kaku Gothic New","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',
+  MONO: "'Consolas',monospace",
+  ACCENT_DK: '#4f3167',   // 全站主题紫的深色档，网址/分享码/好友码统一用它
+};
+// 宽度 = 两侧外边距 + 档名栏 + 色带两侧内边距 + 8 只头像 + 7 个间隙
+function candyImgWidth(){
+  const C = CANDY_IMG;
+  return C.PAD * 2 + C.NAME_W + C.BANDPAD * 2 + C.PER_ROW * C.AV + (C.PER_ROW - 1) * C.GAP;
 }
-/* 什么时候露出来：展开浮层开着就显示【那张卡】的码（看别人的卡时是对方的），
-   否则只在「我的选糖卡」分页且自己已经有码时显示自己的 */
-function candyUpdateCodeFloat(){
-  const el = document.getElementById('candyCodeFloat');
-  if(!el) return;
-  const ov = document.getElementById('candyOv');
-  const onOv = !!(ov && ov.classList.contains('on'));
-  let code = null;
-  if(onOv) code = candyOvCode;
-  else{
-    const page2El = document.getElementById('page2');
-    const onPane = !!(page2El && page2El.classList.contains('active-page'))
-                && mfSubView === 'candy' && candyPane === 'me';
-    if(onPane) code = candyState.code;
+function candyLoadImg(src){
+  return new Promise(res=>{
+    const im = new Image();
+    im.onload = ()=> res(im);
+    im.onerror = ()=> res(null);   // 单张失败不能让整张图画不出来
+    im.src = src;
+  });
+}
+/* 预先把要用到的位图都解码好。canvas 的 drawImage 要求图片已经 decode 完，
+   否则画出来是空白——这是最容易踩的坑，所以统一在这里 await 齐了再开画。 */
+async function candyPrepareImages(){
+  const roster = candyRoster();
+  const jobs = roster.map(f=>{
+    let b64 = '';
+    try{ const pair = POKEMON_PORTRAITS[f.name]; b64 = (pair && pair[0]) || ''; }catch(e){}
+    return b64 ? candyLoadImg('data:image/webp;base64,' + b64).then(im=>[f.key, im]) : Promise.resolve([f.key, null]);
+  });
+  jobs.push(candyLoadImg('icon-192.png?v=2').then(im=>['__logo', im]));
+  const pairs = await Promise.all(jobs);
+  const map = {};
+  pairs.forEach(([k, im])=>{ map[k] = im; });
+  return map;
+}
+function candyRoundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y,     x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x,     y + h, r);
+  ctx.arcTo(x,     y + h, x,     y,     r);
+  ctx.arcTo(x,     y,     x + w, y,     r);
+  ctx.closePath();
+}
+function candyImgLayout(grades){
+  const C = CANDY_IMG;
+  const byTier = [[],[],[],[],[]];
+  candyRoster().forEach(f=>{
+    const g = grades[f.key];
+    byTier[(g >= 0 && g <= 4) ? g : 4].push(f);
+  });
+  const bands = byTier.map(list=>{
+    const rows = Math.max(1, Math.ceil(list.length / C.PER_ROW));
+    return {list, rows, h: rows * C.AV + (rows - 1) * C.GAP + C.BANDPAD * 2};
+  });
+  return {bands, cardW: candyImgWidth() - C.PAD * 2, cardH: bands.reduce((a, b)=> a + b.h, 0)};
+}
+/* card: {username, names, grades, code, friendCode, mine}
+   mine=false（看别人的卡）时第二行只画分享码，不画昵称和好友码
+   —— 用户 2026-10-22 定：别人的卡不带那两样；分享码留着，它是照着查卡的入口。 */
+async function candyRenderImage(card){
+  const C = CANDY_IMG;
+  try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
+  const imgs = await candyPrepareImages();
+  const L = candyImgLayout(card.grades);
+  const W = candyImgWidth();
+  const H = C.PAD + C.HEAD_H + C.ROW2_H + L.cardH + C.PAD;
+
+  const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+  const cv = document.createElement('canvas');
+  cv.width = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  const ctx = cv.getContext('2d');
+  ctx.scale(dpr, dpr);
+  ctx.textBaseline = 'middle';
+
+  ctx.fillStyle = '#efe9d8';     // 底色跟站内 body 一致
+  ctx.fillRect(0, 0, W, H);
+
+  let y = C.PAD;
+  // ---- 第一行：左 图标+站名 / 中 主标题 / 右 网址，三者都压在图标中心线 y+24 上 ----
+  const logo = imgs.__logo;
+  if(logo){
+    ctx.save();
+    candyRoundRect(ctx, C.PAD, y, 48, 48, 12);
+    ctx.clip();
+    ctx.drawImage(logo, C.PAD, y, 48, 48);
+    ctx.restore();
   }
-  if(!code){
-    el.classList.remove('shown');
-    el.classList.remove('on');
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#1c1f24';
+  ctx.font = '800 21px ' + C.FONT;
+  ctx.fillText('土王智商高', C.PAD + 58, y + 16);
+  ctx.fillStyle = '#7a7568';
+  ctx.font = '700 13px ' + C.FONT;
+  ctx.fillText('宝可梦睡眠攻略站', C.PAD + 58, y + 35);
+  // 主标题
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#1c1f24';
+  ctx.font = '900 25px ' + C.FONT;
+  ctx.fillText('土王选糖卡', W / 2, y + 24);
+  // 网址：全大写 + 居中点 · （不是英文句点，发群里能规避一些平台对网址的自动识别/屏蔽）
+  ctx.textAlign = 'right';
+  ctx.fillStyle = C.ACCENT_DK;
+  ctx.font = '900 19px ' + C.FONT;
+  ctx.fillText('IQDOOH·TOP', W - C.PAD, y + 24);
+  y += C.HEAD_H;
+
+  // ---- 第二行：左 昵称 / 中 分享码 / 右 好友码（昵称和好友码只有自己的卡才有）----
+  const midY = y + 20;
+  if(card.mine){
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#1c1f24';
+    ctx.font = '800 18px ' + C.FONT;
+    ctx.fillText(card.username || '训练家', C.PAD, midY);   // 单行，压在两行组的视觉中线上
+    if(card.friendCode){
+      // 跟中间那组分享码同款：小标签压在数字上方，整体右对齐
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#7a7568';
+      ctx.font = '800 11.5px ' + C.FONT;
+      ctx.fillText('好友码', W - C.PAD, midY - 11);
+      ctx.fillStyle = C.ACCENT_DK;
+      ctx.font = '900 18px ' + C.MONO;
+      ctx.fillText(card.friendCode, W - C.PAD, midY + 8);
+    }
+  }
+  if(card.code){
+    // 小标签压在数字【上方】、整组居中（用户 2026-10-22：标签放左侧不好看，字本来就小）
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#7a7568';
+    ctx.font = '800 11.5px ' + C.FONT;
+    ctx.fillText('分享码', W / 2, midY - 11);
+    ctx.fillStyle = C.ACCENT_DK;
+    ctx.font = '900 19px ' + C.MONO;
+    ctx.fillText(card.code.slice(0, 4) + ' ' + card.code.slice(4), W / 2, midY + 8);
+  }
+  y += C.ROW2_H;
+
+  // ---- 选糖卡全图 ----
+  const cardX = C.PAD, cardY = y;
+  ctx.save();
+  candyRoundRect(ctx, cardX, cardY, L.cardW, L.cardH, 18);
+  ctx.clip();
+  let by = cardY;
+  L.bands.forEach((band, i)=>{
+    ctx.fillStyle = CANDY_TIERS[i].color;
+    ctx.fillRect(cardX, by, L.cardW, band.h);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '900 17px ' + C.FONT;
+    ctx.textAlign = 'center';
+    ctx.fillText((card.names && card.names[i]) || CANDY_DEFAULT_NAMES[i], cardX + C.NAME_W / 2, by + band.h / 2);
+    // 头像：从档名栏右侧再留一个 BANDPAD 起画，右侧同样留一个——
+    // 之前只扣了一侧，最后一列会顶出圆角边框被裁掉
+    let px = cardX + C.NAME_W + C.BANDPAD, py = by + C.BANDPAD, col = 0;
+    band.list.forEach(f=>{
+      if(col >= C.PER_ROW){ col = 0; px = cardX + C.NAME_W + C.BANDPAD; py += C.AV + C.GAP; }
+      ctx.save();
+      candyRoundRect(ctx, px, py, C.AV, C.AV, 12);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fill();
+      ctx.clip();
+      const im = imgs[f.key];
+      if(im) ctx.drawImage(im, px + 2, py + 2, C.AV - 4, C.AV - 4);
+      ctx.restore();
+      px += C.AV + C.GAP;
+      col++;
+    });
+    by += band.h;
+  });
+  ctx.restore();
+  return cv;
+}
+
+
+/* ---- 页脚那两颗按钮在选糖卡子页里的动作 ----
+   左槽：我的选糖卡 → 档位改名开关；查看他人分页左槽本来就收起了，走不到这儿
+   右槽：我的选糖卡 → 发布糖卡（发完顺带出图）；查看他人 → 保存当前这张卡的图 */
+function candyFooterLeft(){
+  if(candyPane !== 'me') return;
+  candyNameEditOn = !candyNameEditOn;
+  candyRenderMe();
+}
+function candyFooterRight(){
+  if(candyPane === 'me'){
+    if(typeof authLoggedIn !== 'function' || !authLoggedIn()){
+      candyMsg('candyMeMsg', '发布要先登录账号', false);
+      return;
+    }
+    candyPublish();
     return;
   }
-  const val = document.getElementById('candyCodeFloatVal');
-  if(val) val.textContent = code.slice(0,4) + ' ' + code.slice(4);
-  el.setAttribute('data-code', code);
-  el.style.bottom = candyCodeFloatBottom() + 'px';
-  el.classList.add('on');
-  // 不用 rAF：display:none → flex 这一步必须先落地，transition 才认得出 opacity 变化。
-  // 强制回流一次再加类，既达到同样效果，又不受后台标签页 rAF 节流的影响
-  void el.offsetWidth;
-  el.classList.add('shown');
+  if(!candyLookupData){ candyMsg('candyLookupMsg', '先查出一张卡再保存', false); return; }
+  candySaveImage(Object.assign({}, candyLookupData, {mine:false}));
 }
-(function candyBindCodeFloat(){
-  const el = document.getElementById('candyCodeFloat');
-  if(!el) return;
-  const copy = ()=>{
-    const code = el.getAttribute('data-code');
-    if(!code) return;
-    const ok = ()=>{ if(typeof showBoxToastOk === 'function') showBoxToastOk('分享码已复制：' + code); };
-    try{
-      if(navigator.clipboard && navigator.clipboard.writeText){
-        navigator.clipboard.writeText(code).then(ok, ()=>{
-          if(typeof showBoxToast === 'function') showBoxToast('复制失败，手动记一下：' + code);
-        });
-        return;
-      }
-    }catch(e){}
-    if(typeof showBoxToast === 'function') showBoxToast('这个浏览器不支持一键复制：' + code);
-  };
-  el.onclick = copy;
-  el.onkeydown = (e)=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); copy(); } };
-  window.addEventListener('resize', ()=>{
-    if(el.classList.contains('on')) el.style.bottom = candyCodeFloatBottom() + 'px';
-  });
-})();
+// 自己的卡：带昵称；好友码看开关（candyState.showFc）和有没有填过
+function candyMyCardForImage(){
+  let nm = '';
+  try{ nm = (authState.user && (authState.user.displayName || authState.user.username)) || ''; }catch(e){}
+  const fcRaw = candyMyFriendCode();
+  const fc = (candyState.showFc && fcRaw && typeof friendFmtCode === 'function') ? friendFmtCode(fcRaw)
+           : (candyState.showFc ? fcRaw : '');
+  return {username: nm || '训练家', names: candyState.names, grades: candyResolveGrades(),
+          code: candyState.code, friendCode: fc, mine: true};
+}
+/* 出图 + 弹保存浮层。
+   ⚠️ 不能只给一个 <a download> 就完事：iOS Safari 对 blob: 的 download 属性支持一直不可靠，
+   多数情况是直接在新标签打开而不是存相册。所以浮层里【图片本身】也摆出来，
+   提示长按保存——这条路在所有平台都成立，下载按钮只是锦上添花。 */
+async function candySaveImage(card){
+  const sheet = document.getElementById('candyImgSheet');
+  const body = document.getElementById('candyImgSheetBody');
+  if(!sheet || !body) return;
+  body.innerHTML = '<div class="candy-img-wait">正在生成图片…</div>';
+  sheet.classList.add('on');
+  let cv = null;
+  try{ cv = await candyRenderImage(card); }
+  catch(e){ body.innerHTML = '<div class="candy-img-wait">生成失败：' + islEsc(e && e.message || '未知错误') + '</div>'; return; }
+  const name = '土王选糖卡_' + (card.code || 'card') + '.png';
+  const url = cv.toDataURL('image/png');
+  body.innerHTML = '<img class="candy-img-prev" src="' + url + '" alt="选糖卡">'
+    + '<div class="candy-img-tip">长按图片即可保存到相册</div>'
+    + '<a class="candy-act-btn primary candy-img-dl" download="' + name + '" href="' + url + '">下载图片</a>';
+}
+function candyCloseImgSheet(){
+  const sheet = document.getElementById('candyImgSheet');
+  if(sheet) sheet.classList.remove('on');
+  const body = document.getElementById('candyImgSheetBody');
+  if(body) body.innerHTML = '';     // 一张 PNG 的 dataURL 挺占内存，关掉就丢
+}
 
 /* ---- 形变展开：小五色条 → 大卡片 ----
    FLIP：先把浮层摆到它最终该在的位置量出 last 矩形，再用 transform 把它"压"回
    小按钮的位置和尺寸（first），下一帧放开 transform 让它自己长过去。
    transform-origin 是 top left，所以位移直接用两个矩形的左上角差，不用再补中心偏移。 */
-let candyOvFrom = null;
+let candyOvFrom = null, candyOvCard = null;
 function candyOpenCardFrom(chipEl, card){
   const ov = document.getElementById('candyOv');
   const wrap = document.getElementById('candyOvWrap');
@@ -21332,10 +21590,11 @@ function candyOpenCardFrom(chipEl, card){
   if(bg) bg.onclick = candyCloseCard;
   const cl = document.getElementById('candyOvClose');
   if(cl) cl.onclick = candyCloseCard;
+  const sv = document.getElementById('candyOvSave');
+  if(sv) sv.onclick = ()=>{ if(candyOvCard) candySaveImage(Object.assign({}, candyOvCard, {mine:false})); };
   // 展开期间锁住背后页面的滚动，免得手指滑到卡片外面把底下的页面带着滚
   document.body.style.overflow = 'hidden';
-  candyOvCode = card.code || null;
-  candyUpdateCodeFloat();
+  candyOvCard = card;
 }
 function candyCloseCard(){
   const ov = document.getElementById('candyOv');
@@ -21352,10 +21611,9 @@ function candyCloseCard(){
     wrap.style.transform = 'scale(.9)';
   }
   document.body.style.overflow = '';
-  candyOvCode = null;
+  candyOvCard = null;
   setTimeout(()=>{
     ov.classList.remove('on');
-    candyUpdateCodeFloat();
     wrap.style.transition = 'none';
     wrap.style.transform = 'none';
     candyOvFrom = null;
@@ -21378,6 +21636,13 @@ function candyBindChipDelegate(){
   });
 }
 candyBindChipDelegate();
+// 保存浮层的关闭入口：点「关闭」或点浮层空白处
+(function candyBindImgSheet(){
+  const sheet = document.getElementById('candyImgSheet');
+  const btn = document.getElementById('candyImgSheetClose');
+  if(btn) btn.onclick = candyCloseImgSheet;
+  if(sheet) sheet.onclick = (e)=>{ if(e.target === sheet) candyCloseImgSheet(); };
+})();
 // 社交界面那颗按钮的统一入口：点一下 → 拉卡 → 原地长成大卡
 async function candyOpenByCode(chipEl, code){
   if(!code) return;
@@ -21441,7 +21706,6 @@ function mfShowSub(sub){
     }
   }
   window.scrollTo(0,0);
-  if(typeof candyUpdateCodeFloat === 'function') candyUpdateCodeFloat();   // 离开选糖卡子页要把分享码浮窗收起
   // 锁金数量/强求金帮那一行、以及吸底的"控制参数"按钮都只对效率概率子页有意义
   updatePageActionBar();
   if(typeof syncViewHash==='function') syncViewHash();
