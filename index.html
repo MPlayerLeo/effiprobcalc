@@ -9172,15 +9172,67 @@ function applyMergedData(cloud){
 function cloudPayload(){
   return {box: boxData, prefs: Object.assign({}, userPrefs, {island: islandCloudSnapshot(), plan: planCloudSnapshot(), candy: candyCloudSnapshot()})};
 }
+/* ---- 「没传上去就补传」的脏标记 ----
+   背景（用户反馈「手机端改完电脑端没变」的根因）：scheduleCloudPush 只是个 setTimeout，
+   而手机浏览器一旦把页面切到后台就会【冻结计时器】——改完立刻锁屏/切微信/回桌面，
+   那 5 秒的闹钟根本不会响，这次改动就永远没发出去。本地 localStorage 有、云端没有，
+   手机上自己看还是对的，只有换台设备才露馅。
+
+   ⚠️ 不能靠 navigator.sendBeacon 兜底：它不支持自定义 header，Bearer token 发不出去。
+   fetch(keepalive:true) 能带 header 但 body 限 64KB，而 cloudPayload() 带着整个 boxData
+   很容易超。所以走【持久化脏标记】：改动时往 localStorage 落一个标记，真推成功才清掉，
+   下次开页发现标记还在就补推一次。计时器被冻住也好、进程被杀也好，都丢不了。 */
+const CLOUD_DIRTY_KEY = 'effiprobcalc_cloud_dirty_v1';
+let cloudDirtySeq = 0;   // 防止"推送途中又改了一笔"被成功回调误清掉标记
+function cloudMarkDirty(){ cloudDirtySeq++; try{ localStorage.setItem(CLOUD_DIRTY_KEY, '1'); }catch(e){} }
+function cloudIsDirty(){ try{ return localStorage.getItem(CLOUD_DIRTY_KEY) === '1'; }catch(e){ return false; } }
+
 async function pushCloudData(){
   if(!authLoggedIn()) return;
-  await authApi('/api/data', {method:'PUT', body:cloudPayload(), auth:true});
+  const body = cloudPayload();
+  const seq = cloudDirtySeq;          // 快照：await 期间用户可能又改了东西
+  await authApi('/api/data', {method:'PUT', body, auth:true});
+  // 只有「这一发之后没再产生新改动」才敢清标记；否则留着等下一轮
+  if(cloudDirtySeq === seq){ try{ localStorage.removeItem(CLOUD_DIRTY_KEY); }catch(e){} }
 }
 let cloudPushTimer = null;
 function scheduleCloudPush(delayMs){
   if(!authState || !authState.token) return;
+  cloudMarkDirty();   // 先落盘标记再排队，顺序不能反——反了的话"排好队就被冻住"这一瞬间没标记
   clearTimeout(cloudPushTimer);
   cloudPushTimer = setTimeout(()=>{ pushCloudData().catch(()=>{}); }, delayMs || 1500);
+}
+/* 页面要进后台/被关掉了：别再等那几秒防抖，立刻推。
+   这一发在移动端【不保证】送达（系统随时可能把页面冻住），送不到也没关系——
+   脏标记还在盘上，下次开页会补推。这里只是把"大多数情况"抢救回来。 */
+function cloudFlushNow(){
+  if(!authLoggedIn() || !cloudIsDirty()) return;
+  clearTimeout(cloudPushTimer);
+  cloudPushTimer = null;
+  pushCloudData().catch(()=>{});
+}
+
+/* 拉云端并融合。以前这段内联在启动代码里、只在开页跑一次，
+   所以电脑端标签页挂一整天就永远看不到手机上的新改动——抽出来给"切回前台"复用。 */
+let cloudLastPull = 0;
+async function cloudPullAndApply(pushBack){
+  if(!authLoggedIn()) return;
+  /* ⚠️ 顺序不能反：本地还有没推上去的改动时必须【先推再拉】。
+     applyMergedData 对档名/分享码/隐藏档这些是"云端赢"，先拉的话会拿云端的旧值
+     把本地那份还没来得及上传的改动盖掉——正是我们要修的那个 bug。 */
+  if(cloudIsDirty()){ try{ await pushCloudData(); }catch(e){ return; } }
+  let data;
+  try{ data = await authApi('/api/data', {auth:true}); }
+  catch(e){ return; }   // 拉不到就照常用本地数据，不打断使用
+  cloudLastPull = Date.now();
+  applyMergedData(data);
+  if(pushBack){ try{ await pushCloudData(); }catch(e){} }   // 融合结果回传，只在开页时做
+  if(typeof renderBoxPage==='function' && typeof boxOverlayOpen!=='undefined' && boxOverlayOpen) renderBoxPage();
+  renderAll();
+  if(typeof mfSubView==='undefined') return;
+  if(mfSubView==='island' && typeof islandRenderAll==='function') islandRenderAll();
+  else if(mfSubView==='candy' && typeof candyRenderAll==='function') candyRenderAll();
+  else if(mfSubView==='plan' && typeof planRenderAll==='function') planRenderAll();
 }
 
 /* v3.18：v3.17 的 updateBoxAuthUI / updateBoxFabAuthOffset 一并撤掉。
@@ -10178,16 +10230,22 @@ document.querySelectorAll('#authFieldsRegister input, #authFieldsLogin input').f
 document.querySelectorAll('#pwdModal .auth-fields input').forEach(el=>{
   el.addEventListener('keydown', e=>{ if(e.key==='Enter') pwdSubmit(); });
 });
-// 已登录时开页先拉一次云端：换设备/多端编辑后打开就能拿到最新的，同样走并集融合
-if(authLoggedIn()){
-  authApi('/api/data', {auth:true}).then(async data=>{
-    applyMergedData(data);
-    await pushCloudData();
-    if(typeof renderBoxPage==='function' && typeof boxOverlayOpen!=='undefined' && boxOverlayOpen) renderBoxPage();
-    renderAll();
-    if(typeof mfSubView!=='undefined' && mfSubView==='island' && typeof islandRenderAll==='function') islandRenderAll();
-  }).catch(()=>{}); // 拉不到就照常用本地数据，不打断使用
-}
+// 已登录时开页先拉一次云端：换设备/多端编辑后打开就能拿到最新的，同样走并集融合。
+// 本地若还留着上次没推成功的脏标记，cloudPullAndApply 内部会先补推再拉。
+if(authLoggedIn()) cloudPullAndApply(true);
+
+/* 前后台切换。
+   hidden 是移动端唯一可靠的"要走了"信号——pagehide 在 iOS 上经常不触发，
+   beforeunload 在移动端基本等于没有。所以主力押在 visibilitychange 上，
+   pagehide 只是桌面端的加保险。 */
+const CLOUD_REPULL_MS = 2 * 60 * 1000;   // 切回前台时隔这么久才值得重拉，免得来回切就狂打接口
+document.addEventListener('visibilitychange', ()=>{
+  if(document.visibilityState === 'hidden'){ cloudFlushNow(); return; }
+  if(!authLoggedIn()) return;
+  if(Date.now() - cloudLastPull < CLOUD_REPULL_MS) return;
+  cloudPullAndApply(false);   // 不回传：本地要是有改动，上面那句 flush 早推过了
+});
+window.addEventListener('pagehide', cloudFlushNow);
 
 /* ---- 盒子详情页里改睡饱饱/南瓜尺寸时，实时写回该条目（沿用 18.20 那套"选完即写回"的做法）---- */
 function persistBoxLiveField(field, val){
