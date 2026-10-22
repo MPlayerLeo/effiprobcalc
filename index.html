@@ -3196,16 +3196,17 @@
   overflow:hidden;
 }
 /* 头像底下垫一块半透明白：黑档/蓝档上直接放 object-fit:contain 的透明头像会糊成一团 */
-/* ⚠️ 头像是"脸占满方框"的方形图，必须内缩到圆角曲线以内，否则四个角会探出去盖在色带上
-   （伊布耳朵 / 呆火鳄右下 / 嗡蝠最明显，因为它们角上真有内容）。
-   内缩量要 >= 0.293×圆角：这里 (38-32)/2 = 3 >= 0.293×7 = 2.05 ✓。
-   别改成 overflow:hidden 去裁——那才是真的把耳朵削掉。 */
+/* 站内头像的构图是"脸占满方框"，249 张全都顶满四边。方形的画放进带圆角的 tile 里，
+   四个角会探出圆角曲线盖到色带上（伊布耳朵 / 呆火鳄右下 / 嗡蝠最明显，它们角上真有内容）。
+   ⚠️ overflow:hidden 是必须的——靠它把探出去的那一点点裁掉。
+   用户 2026-10-23 明确要求「裁掉露边」而不是缩小头像，所以尺寸保持 38/36 别动。 */
 .candy-poke{
-  width:38px; height:38px; flex:0 0 auto; border-radius:7px; background:rgba(255,255,255,.92);
+  width:38px; height:38px; flex:0 0 auto; border-radius:9px; background:rgba(255,255,255,.92);
   display:flex; align-items:center; justify-content:center; position:relative;
+  overflow:hidden;
   box-shadow:0 1px 2px rgba(0,0,0,.12);
 }
-.candy-poke img{ width:32px; height:32px; object-fit:contain; display:block; pointer-events:none; }
+.candy-poke img{ width:36px; height:36px; object-fit:contain; display:block; pointer-events:none; }
 .candy-poke .candy-avatar-none{ font-size:15px; font-weight:900; color:#9aa3ad; }
 .candy-row-empty{ font-size:11.5px; font-weight:800; color:rgba(255,255,255,.72); padding:4px 2px; }
 
@@ -3375,8 +3376,9 @@
   position:fixed; z-index:1400; width:44px; height:44px; border-radius:10px; pointer-events:none;
   background:rgba(255,255,255,.95); box-shadow:0 6px 16px rgba(0,0,0,.3);
   display:flex; align-items:center; justify-content:center; transform:translate(-50%,-50%);
+  overflow:hidden;   /* 跟 .candy-poke 同理：把探出圆角的那点裁掉 */
 }
-.candy-drag-ghost img{ width:36px; height:36px; object-fit:contain; }
+.candy-drag-ghost img{ width:40px; height:40px; object-fit:contain; }
 .candy-poke.candy-dragging{ opacity:.25; }
 .candy-row.candy-drop-hot{ outline:3px solid #fff; outline-offset:-3px; }
 .isl-box{ display:grid; grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); gap:8px; }
