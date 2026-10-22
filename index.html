@@ -3170,10 +3170,17 @@
    都是「圆角矩形 + 五条等高横色带」，只是尺寸不同。点开时走 FLIP 形变
    （candyOpenCardFrom），小条直接长成大卡，不是"按钮消失→弹窗淡入"那种两段式。
    改这块 CSS 时别把两者的结构拆开，否则形变动画会穿帮。 */
+/* 圆角露边（"穿模"）的修法：别只靠父元素 overflow:hidden 去裁子元素的实色背景——
+   那样在圆角曲线外侧会漏出一条抗锯齿发丝线。让首尾两条色带自己也带上同样的圆角，
+   裁切就不再是唯一的依靠；父元素的 overflow 保留当兜底。
+   background 去掉：卡片本身被色带铺满，留着白底只会在圆角处多一层能漏出来的东西。 */
 .candy-card{
-  border-radius:16px; overflow:hidden; background:#fff;
+  border-radius:16px; overflow:hidden; background:transparent;
   box-shadow:0 3px 14px rgba(0,0,0,.14);
 }
+.candy-card .candy-row:first-child{ border-radius:16px 16px 0 0; }
+.candy-card .candy-row:last-child{ border-radius:0 0 16px 16px; }
+.candy-card .candy-row:only-child{ border-radius:16px; }
 .candy-row{ display:flex; align-items:stretch; min-height:58px; }
 /* 档名压在色带左端：色带本身「横亘左右」，名字只是盖在它上面的一块固定宽度区域。
    5 个汉字按 13px 字号两行放得下，所以不用缩字号 */
@@ -3184,7 +3191,9 @@
 }
 .candy-row-pokes{
   flex:1 1 auto; min-width:0; display:flex; flex-wrap:wrap; align-content:center;
-  gap:3px; padding:7px 8px 7px 2px;
+  gap:3px; padding:7px 10px 7px 2px;
+  /* 兜底：任何宽度下都不让头像探出色带（圆角处尤其容易看出一条露边） */
+  overflow:hidden;
 }
 /* 头像底下垫一块半透明白：黑档/蓝档上直接放 object-fit:contain 的透明头像会糊成一团 */
 .candy-poke{
@@ -20866,6 +20875,27 @@ function candyClampHidden(arr){
   return out;
 }
 function candyTierHidden(i){ return candyState.hidden.indexOf(i) >= 0; }
+/* 隐藏一档＝【真的少一档】，不是把那一档连人带货藏起来——所以里面的宝可梦要改派到
+   相邻的可见档。方向：先往下（更差的一档），下面没有了再往上。
+   这样"隐藏最低档"（最常见的用法）会把它们并进倒数第二档，而不是凭空消失。
+
+   ⚠️ 改派只发生在【读取时】，candyState.grades 里存的原始档位一个字不动——
+   所以点恢复之后它们会原样回到自己那一档，不是留下一个空档。 */
+function candyNearestVisibleTier(i){
+  if(!candyTierHidden(i)) return i;
+  for(let d = 1; d <= CANDY_TIERS.length; d++){
+    if(i + d < CANDY_TIERS.length && !candyTierHidden(i + d)) return i + d;
+    if(i - d >= 0 && !candyTierHidden(i - d)) return i - d;
+  }
+  return i;
+}
+// 实际用于展示/发布/出图的档位：在 candyResolveGrades 之上再套一层"隐藏档改派"
+function candyEffectiveGrades(){
+  const raw = candyResolveGrades();
+  const out = {};
+  Object.keys(raw).forEach(k=>{ out[k] = candyNearestVisibleTier(raw[k]); });
+  return out;
+}
 function candyVisibleTierCount(){ return CANDY_TIERS.length - candyState.hidden.length; }
 /* ---- 家族名册 ---- */
 let candyRosterCache = null;
@@ -21074,7 +21104,7 @@ function candyRenderMe(){
   const cardEl = document.getElementById('candyMeCard');
   if(!cardEl) return;
   candyEnsureFriendCode();
-  const grades = candyResolveGrades();
+  const grades = candyEffectiveGrades();   // 隐藏档的成员已经改派到相邻可见档
   const overrides = Object.keys(candyState.grades).length;
   if(hint){
     hint.innerHTML = '按住宝可梦头像拖到别的色带就能改档位（电脑上直接拖，手机按住约 0.2 秒再拖）。'
@@ -21148,7 +21178,7 @@ function candyNameEditorHtml(){
       }).join('')
     + '<div style="font-size:11.5px;color:#7a7568;font-weight:700;line-height:1.6;">'
     + '每档最多 5 个汉字（或 10 个字母/数字，按宽度算）。留空会退回默认的 S/A/B/C/D。<br>'
-    + '点左边的叉可以隐藏某一档（卡上连同里面的宝可梦一起不显示），至少保留 2 档。</div>'
+    + '点左边的叉可以<b>去掉某一档</b>，里面的宝可梦会并进相邻的那一档（不会消失）；点圆圈箭头恢复，它们会原样回到自己那一档。至少保留 2 档。</div>'
     + '</div>';
 }
 // 直角风格的叉，跟站内 checkIconSvg() 的调性一致，不用圆润的 ✕ 字形
@@ -21376,9 +21406,7 @@ async function candyPublish(){
      被隐藏那几档的成员【不上传】——viewer 侧是 strict 渲染（只画数据里真有的家族）
      且会跳过空档，所以别人看到的自然就是隐藏之后的样子，不需要再给后端加一个字段。
      代价：卡主留着可见但恰好一个成员都没有的档，在别人那边也会被当成空档跳掉。 */
-  const all = candyResolveGrades();
-  const grades = {};
-  Object.keys(all).forEach(k=>{ if(!candyTierHidden(all[k])) grades[k] = all[k]; });
+  const grades = candyEffectiveGrades();
   candyMsg('candyMeMsg', '发布中…', true);
   try{
     const data = await authApi('/api/candy/me', {method:'PUT', auth:true, body:{names: candyState.names, grades: grades}});
@@ -21387,7 +21415,7 @@ async function candyPublish(){
     }
     // 指纹用【解析后的完整档位 + 隐藏集】算，而不是实际上传的那份——
     // 不然把某一档藏起来之后，指纹反而跟藏之前一样，按钮会错误地停在「保存糖卡」
-    candyState.pubSig = candySigOf(candyState.names, all, candyState.hidden);
+    candyState.pubSig = candySigOf(candyState.names, grades, candyState.hidden);
     candySaveState();
     candyRenderMe();
     candyMsg('candyMeMsg', '已发布，别人用分享码就能看到这张卡', true);
@@ -21636,7 +21664,7 @@ function candySigOf(names, grades, hidden){
 // 还没发布过、或内容跟上次发布的不一样＝"脏"，要走发布；否则只出图
 function candyIsDirty(){
   if(!candyState.code || !candyState.pubSig) return true;
-  return candySigOf(candyState.names, candyResolveGrades(), candyState.hidden) !== candyState.pubSig;
+  return candySigOf(candyState.names, candyEffectiveGrades(), candyState.hidden) !== candyState.pubSig;
 }
 /* ---- 页脚那两颗按钮在选糖卡子页里的动作 ----
    左槽：我的选糖卡 → 档位改名开关；查看他人分页左槽本来就收起了，走不到这儿
@@ -21669,7 +21697,7 @@ function candyMyCardForImage(){
   const fcRaw = candyMyFriendCode();
   const fc = (candyState.showFc && fcRaw && typeof friendFmtCode === 'function') ? friendFmtCode(fcRaw)
            : (candyState.showFc ? fcRaw : '');
-  return {username: nm || '训练家', names: candyState.names, grades: candyResolveGrades(),
+  return {username: nm || '训练家', names: candyState.names, grades: candyEffectiveGrades(),
           code: candyState.code, friendCode: fc, mine: true, hidden: candyState.hidden};
 }
 /* 出图 + 弹保存浮层。
