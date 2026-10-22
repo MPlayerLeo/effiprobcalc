@@ -17895,7 +17895,10 @@ function updatePanelBtnLabel(inBox){
     if(candyPane === 'me'){
       leftTxt = candyNameEditOn ? '完成改名' : '档位改名';
       leftOn = candyNameEditOn;
-      rightTxt = '发布糖卡'; rightFab = '发布<br>糖卡';
+      // 没改动过就只是存图，文案跟着换，免得用户以为每次都在往服务器写
+      const dirty = (typeof candyIsDirty === 'function') ? candyIsDirty() : true;
+      rightTxt = dirty ? '发布糖卡' : '保存糖卡';
+      rightFab = dirty ? '发布<br>糖卡' : '保存<br>糖卡';
     } else {
       leftTxt = '控制参数';                 // 左槽这会儿是隐藏的，文案无所谓，给个默认值别留空
       rightTxt = '保存'; rightFab = '保存';
@@ -20797,9 +20800,11 @@ const CANDY_TIERS = [
   {key:'D', color:'#3a3a3a'},   // 黑
 ];
 const CANDY_DEFAULT_NAMES = ['S','A','B','C','D'];
+// 没有任何依据可判时落哪一档：取中间的 B（index 2），不落最低档
+const CANDY_DEFAULT_TIER = 2;
 const CANDY_NAME_MAX_W = 5;     // 全角宽度上限：5 个汉字，或 10 个半角字符
 
-let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null, showFc:true};
+let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null, showFc:true, pubSig:null};
 let candyPane = 'me';
 let candyNameEditOn = false;
 let candyLookupData = null;
@@ -20884,7 +20889,9 @@ function candyResolveGrades(){
     let tagId = null;
     try{ tagId = islandPokeTags ? islandPokeTags[f.pokeId] : null; }catch(e){}
     const r = (tagId != null) ? rank[tagId] : undefined;
-    out[f.key] = (r === undefined) ? 4 : r;
+    // 查不到岛屿标签的家族（主要是刚加进站的新宝可梦）默认落【B 档】而不是最低档——
+    // 新宝可梦直接躺在最底下不合适，卡主还没表过态就先被判了死刑
+    out[f.key] = (r === undefined) ? CANDY_DEFAULT_TIER : r;
   });
   return out;
 }
@@ -20900,6 +20907,7 @@ function candyLoadState(){
       if(raw.grades && typeof raw.grades === 'object' && !Array.isArray(raw.grades)) candyState.grades = raw.grades;
       if(typeof raw.code === 'string' && /^\d{8}$/.test(raw.code)) candyState.code = raw.code;
       if(typeof raw.showFc === 'boolean') candyState.showFc = raw.showFc;
+      if(typeof raw.pubSig === 'string') candyState.pubSig = raw.pubSig;
     }
   }catch(e){}
 }
@@ -20909,7 +20917,8 @@ function candySaveState(){
   if(typeof scheduleCloudPush === 'function') scheduleCloudPush(5000);
 }
 function candyCloudSnapshot(){
-  return {names: candyState.names, grades: candyState.grades, code: candyState.code, showFc: candyState.showFc};
+  return {names: candyState.names, grades: candyState.grades, code: candyState.code,
+          showFc: candyState.showFc, pubSig: candyState.pubSig};
 }
 // 合并口径跟岛屿标签一致：并集、云端赢（避免两台设备互相吞掉对方拖的结果）
 function applyCandyCloudSnapshot(snap){
@@ -20922,6 +20931,7 @@ function applyCandyCloudSnapshot(snap){
     }
     if(typeof snap.code === 'string' && /^\d{8}$/.test(snap.code)) candyState.code = snap.code;
     if(typeof snap.showFc === 'boolean') candyState.showFc = snap.showFc;
+    if(typeof snap.pubSig === 'string') candyState.pubSig = snap.pubSig;
     localStorage.setItem(CANDY_KEY, JSON.stringify(candyState));
   }catch(e){}
 }
@@ -20935,12 +20945,19 @@ function candyAvatarHtml(fam){
 }
 /* 一张卡的 HTML。names/grades 都从参数来，所以同一个函数既画自己的卡、也画别人的卡。
    editable 只影响有没有 data-candyfam（拖动钩子）和空档的提示文案。 */
-function candyCardHtml(names, grades, editable){
+/* strict=true：只画 grades 里【真有】的家族。
+   给"看别人的卡"用——别人的卡是发布那一刻的快照，之后站内加了新宝可梦，
+   快照里自然没有那个家族。要是按"缺失＝最低档"处理，等于加一只新宝可梦就让全站
+   所有已发布的卡凭空多一只躺在最低档，而卡主根本没表过态。所以缺失就不画，
+   等卡主下次发布时新宝可梦自然带进去。
+   自己的卡走 strict=false：candyResolveGrades() 本来就会把 105 个家族补齐。 */
+function candyCardHtml(names, grades, editable, strict){
   const roster = candyRoster();
   const byTier = [[],[],[],[],[]];
   roster.forEach(f=>{
     const g = grades[f.key];
-    byTier[(g >= 0 && g <= 4) ? g : 4].push(f);
+    if(g >= 0 && g <= 4){ byTier[g].push(f); return; }
+    if(!strict) byTier[CANDY_DEFAULT_TIER].push(f);
   });
   return '<div class="candy-card">' + CANDY_TIERS.map((t,i)=>{
     const pokes = byTier[i].map(f=>
@@ -21029,11 +21046,17 @@ function candyRenderMe(){
   cardEl.innerHTML = (candyNameEditOn ? candyNameEditorHtml() : '')
     + candyCodeRowHtml(candyState.code)
     + candyFcRowHtml()
-    + candyCardHtml(candyState.names, grades, true);
+    + candyCardHtml(candyState.names, grades, true)
+    + (candyState.code
+        ? '<div class="candy-act-row" style="justify-content:center;margin-top:12px;">'
+          + '<button type="button" class="candy-act-btn" id="candyRecodeBtn">重新随机分享码</button></div>'
+        : '');
   if(candyNameEditOn) candyBindNameEditor(cardEl);
   candyBindCard(cardEl);
   const codeRow = cardEl.querySelector('.candy-code-row');
   if(codeRow && candyState.code) codeRow.onclick = ()=> candyCopyCode();
+  const rc = document.getElementById('candyRecodeBtn');
+  if(rc) rc.onclick = ()=> candyRecode();
   const fcSw = document.getElementById('candyFcSwitch');
   if(fcSw && candyMyFriendCode()) fcSw.onclick = ()=>{
     candyState.showFc = !candyState.showFc;
@@ -21235,7 +21258,7 @@ function candyRenderLookup(){
     card.innerHTML = candyLookupData
       ? ('<div style="font-size:14px;font-weight:900;color:var(--ink);margin:4px 0 8px;">'
          + islEsc(candyLookupData.username || '匿名训练家') + ' 的选糖卡</div>'
-         + candyCardHtml(candyLookupData.names, candyLookupData.grades, false))
+         + candyCardHtml(candyLookupData.names, candyLookupData.grades, false, true))
       : '';
   }
 }
@@ -21278,13 +21301,35 @@ async function candyPublish(){
     const data = await authApi('/api/candy/me', {method:'PUT', auth:true, body:{names: candyState.names, grades: grades}});
     if(data && /^\d{8}$/.test(String(data.code || ''))){
       candyState.code = String(data.code);
-      candySaveState();
     }
+    candyState.pubSig = candySigOf(candyState.names, grades);   // 记下这次发布的内容指纹
+    candySaveState();
     candyRenderMe();
     candyMsg('candyMeMsg', '已发布，别人用分享码就能看到这张卡', true);
     candySaveImage(candyMyCardForImage());   // 发布＝生成分享码 + 出一张图给用户存
   }catch(e){
     candyMsg('candyMeMsg', e.message || '发布失败', false);
+  }
+}
+/* 换一个分享码。正常情况下码是固定的（发布只换内容不换码），这颗按钮是给
+   "码被恶意传播了想换掉"准备的逃生口，所以后端限了 24 小时一次。
+   换完旧码立刻失效——别人手里那串数字就查不到了，所以要二次确认。 */
+async function candyRecode(){
+  if(!candyState.code) return;
+  if(!confirm('换一个新的分享码？\n\n旧的分享码会立刻失效，已经把旧码发给别人的话他们就查不到你的卡了。\n每 24 小时只能换一次。')) return;
+  candyMsg('candyMeMsg', '正在换码…', true);
+  try{
+    const data = await authApi('/api/candy/recode', {method:'POST', auth:true});
+    if(data && /^\d{8}$/.test(String(data.code || ''))){
+      candyState.code = String(data.code);
+      candySaveState();
+      candyRenderMe();
+      candyMsg('candyMeMsg', '新的分享码：' + candyState.code, true);
+    } else {
+      candyMsg('candyMeMsg', '换码失败，重试一下', false);
+    }
+  }catch(e){
+    candyMsg('candyMeMsg', e.message || '换码失败', false);
   }
 }
 function candyCopyCode(){
@@ -21358,12 +21403,13 @@ function candyRoundRect(ctx, x, y, w, h, r){
   ctx.arcTo(x,     y,     x + w, y,     r);
   ctx.closePath();
 }
-function candyImgLayout(grades){
+function candyImgLayout(grades, strict){
   const C = CANDY_IMG;
   const byTier = [[],[],[],[],[]];
   candyRoster().forEach(f=>{
     const g = grades[f.key];
-    byTier[(g >= 0 && g <= 4) ? g : 4].push(f);
+    if(g >= 0 && g <= 4){ byTier[g].push(f); return; }
+    if(!strict) byTier[CANDY_DEFAULT_TIER].push(f);   // strict 的理由同 candyCardHtml
   });
   const bands = byTier.map(list=>{
     const rows = Math.max(1, Math.ceil(list.length / C.PER_ROW));
@@ -21378,7 +21424,7 @@ async function candyRenderImage(card){
   const C = CANDY_IMG;
   try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
   const imgs = await candyPrepareImages();
-  const L = candyImgLayout(card.grades);
+  const L = candyImgLayout(card.grades, !card.mine);
   const W = candyImgWidth();
   const H = C.PAD + C.HEAD_H + C.ROW2_H + L.cardH + C.PAD;
 
@@ -21488,6 +21534,18 @@ async function candyRenderImage(card){
 }
 
 
+/* 发布指纹：拿"真正会上传的那份内容"（档名 + 解析后的全部档位）算一个稳定字符串。
+   家族编号排过序，所以 {a:1,b:2} 和 {b:2,a:1} 算出来一样——用户把一只拖走又拖回来，
+   指纹会变回原值，按钮也就从「发布糖卡」变回「保存糖卡」，这正是要的效果。 */
+function candySigOf(names, grades){
+  const keys = Object.keys(grades).sort();
+  return JSON.stringify(names) + '|' + keys.map(k=> k + ':' + grades[k]).join(',');
+}
+// 还没发布过、或内容跟上次发布的不一样＝"脏"，要走发布；否则只出图
+function candyIsDirty(){
+  if(!candyState.code || !candyState.pubSig) return true;
+  return candySigOf(candyState.names, candyResolveGrades()) !== candyState.pubSig;
+}
 /* ---- 页脚那两颗按钮在选糖卡子页里的动作 ----
    左槽：我的选糖卡 → 档位改名开关；查看他人分页左槽本来就收起了，走不到这儿
    右槽：我的选糖卡 → 发布糖卡（发完顺带出图）；查看他人 → 保存当前这张卡的图 */
@@ -21498,6 +21556,10 @@ function candyFooterLeft(){
 }
 function candyFooterRight(){
   if(candyPane === 'me'){
+    // 内容跟上次发布的完全一样就别再打一次后端——直接出图。
+    // 分享码本来就不会因为重新发布而改变（后端 handleCandyPut 里刻意保持原码），
+    // 所以这里省掉的只是一次无意义的写请求。
+    if(!candyIsDirty()){ candySaveImage(candyMyCardForImage()); return; }
     if(typeof authLoggedIn !== 'function' || !authLoggedIn()){
       candyMsg('candyMeMsg', '发布要先登录账号', false);
       return;
@@ -21556,7 +21618,7 @@ function candyOpenCardFrom(chipEl, card){
   if(!ov || !wrap || !inner || !card) return;
   inner.innerHTML =
       '<div class="candy-ov-head"><span class="candy-ov-name">' + islEsc(card.username || '选糖卡') + '</span></div>'
-    + candyCardHtml(card.names, card.grades, false);
+    + candyCardHtml(card.names, card.grades, false, true);
   ov.classList.add('on');
   ov.classList.remove('shown');
   // 先按最终布局摆好：左右留 16px 安全边、最宽 520、垂直居中且不顶出视口
