@@ -3236,9 +3236,10 @@
 .candy-aff-bar{
   height:7px; border-radius:4px; background:#ded6c2; overflow:hidden; margin:7px 0 6px;
 }
-.candy-aff-bar > i{ display:block; height:100%; background:var(--accent); border-radius:4px; }
-.candy-aff-note{ font-size:11.5px; font-weight:800; color:#7a7568; line-height:1.5; }
-.candy-aff-note b{ color:var(--ink); }
+.candy-aff-bar > i{ display:block; height:100%; border-radius:4px; }
+/* 评语是八个字的成语，单独占一行；letter-spacing 把两个四字词拉开一点，读着像一副对子 */
+.candy-aff-say{ font-size:14.5px; font-weight:900; letter-spacing:.5px; line-height:1.4; }
+.candy-aff-note{ font-size:11.5px; font-weight:800; color:#7a7568; line-height:1.5; margin-top:2px; }
 .candy-aff-sec{ margin-top:9px; }
 .candy-aff-h{ font-size:11.5px; font-weight:900; color:#7a7568; margin-bottom:5px; }
 .candy-aff-hint{ font-weight:800; color:#9b9484; margin-left:6px; }
@@ -21258,9 +21259,17 @@ function candyTierPosMap(grades){
   return m;
 }
 const CANDY_AFF_MIN = 5;    // 表过态的家族少于这么多就不给分数了，样本太小的百分比是骗人的
+/* 八档评语配色。金/蓝/绿/黑直接复用 CANDY_TIERS 的档位色，紫是全站主题紫 --accent，
+   黄特意压暗成 #b59a00（纯亮黄在米色底上根本看不清，也跟最高档的金撞脸）。 */
 const CANDY_AFF_LABELS = [
-  [85, '灵魂糖友'], [70, '相当合拍'], [55, '大体一致'],
-  [40, '各有各的想法'], [25, '分歧不小'], [0, '水火不容'],
+  [90, '钟期既遇 高山流水', '#d4a017'],
+  [80, '同气连枝 珠联璧合', '#7a4f9e'],
+  [70, '情同手足 相得益彰', '#2f6fb5'],
+  [60, '意气相投 一拍即合', '#3f8a44'],
+  [50, '泛泛之交 和而不同', '#b59a00'],
+  [30, '素昧平生 萍水相逢', '#cc6f66'],
+  [10, '貌合神离 形同陌路', '#8a8475'],
+  [0,  '方枘圆凿 南辕北辙', '#3a3a3a'],
 ];
 function candyAffinity(gA, gB){
   const base = candyBaselineGrades();
@@ -21288,11 +21297,12 @@ function candyAffinity(gA, gB){
   // wsum 为 0 ＝ 所有分歧都发生在最低档（权重全是 0），这时退回不加权的平均
   const ratio = wsum > 0 ? (acc / wsum) : (flat / items.length);
   const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
-  let label = '水火不容';
-  for(const [lo, txt] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; break; } }
+  let label = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][1];
+  let color = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][2];
+  for(const [lo, txt, c] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; color = c; break; } }
   const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 5);
   const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 5);
-  return {ok:true, pct:pct, label:label, voted:items.length, same:same, total:total,
+  return {ok:true, pct:pct, label:label, color:color, voted:items.length, same:same, total:total,
           agree:agree, clash:clash};
 }
 
@@ -21330,9 +21340,10 @@ function candyAffinityHtml(card, compact){
     + '</div></div>';
   let html = '<div class="candy-aff">'
     + '<div class="candy-aff-top"><span class="candy-aff-label">与你的契合度</span>'
-    + '<span class="candy-aff-pct">' + r.pct + '%</span></div>'
-    + '<div class="candy-aff-bar"><i style="width:' + r.pct + '%"></i></div>'
-    + '<div class="candy-aff-note"><b>' + islEsc(r.label) + '</b> · 你们俩一共对 ' + r.voted + ' 只宝可梦表过态</div>';
+    + '<span class="candy-aff-pct" style="color:' + r.color + '">' + r.pct + '%</span></div>'
+    + '<div class="candy-aff-bar"><i style="width:' + r.pct + '%;background:' + r.color + '"></i></div>'
+    + '<div class="candy-aff-say" style="color:' + r.color + '">' + islEsc(r.label) + '</div>'
+    + '<div class="candy-aff-note">你们俩一共对 ' + r.voted + ' 只宝可梦表过态</div>';
   /* 社交界面点开的形变大卡只放到这里（compact）：那个浮层被 max-height 夹在一屏以内，
      再挤两个榜会把卡片本体挤没。完整版留给查码页，那里是正常文档流，多长都能滑。 */
   if(compact) return html + '</div>';
