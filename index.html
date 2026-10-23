@@ -3364,11 +3364,14 @@
   position:fixed; transform-origin:top left; will-change:transform;
   transition:transform .34s cubic-bezier(.22,1,.3,1);
   /* 105 个家族排下来远高于一屏，必须限高自滚，否则卡片直接溢出屏幕。
-     减掉的 120px = 底部那条(44+28) + 顶上留的 40 + 一点气口。
+     减掉的 152px = 底部那条(44+28) + 顶上留的 72 + 一点气口。
      ⚠️ 这里只是兜底，真正生效的是 candyOpenCardFrom 里按 visualViewport 算出来的行内 max-height */
-  max-height:calc(100vh - 120px); max-height:calc(100dvh - 120px);
+  max-height:calc(100vh - 152px); max-height:calc(100dvh - 152px);
   overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
+  /* contain：滚到顶/底之后别把剩下的滚动量甩给下层页面（iOS 上那会表现成整个浮层跟着页面走）。
+     pan-y：明确告诉浏览器这一块是纵向滚动区，手势别被别处的监听器抢走。 */
+  overscroll-behavior:contain; touch-action:pan-y;
 }
 .candy-ov-wrap::-webkit-scrollbar{ display:none; }
 /* 上下各留一段空白：内容比浮层高时，手指能把整块往上/往下拖出一段，
@@ -22311,18 +22314,21 @@ function candyOpenCardFrom(chipEl, card){
   if(cl) cl.onclick = candyCloseCard;
   const sv2 = document.getElementById('candyOvSave');
   if(sv2) sv2.onclick = ()=>{ if(candyOvCard) candySaveImage(candyOtherCardForImage(candyOvCard)); };
-  /* 展开期间锁住背后页面的滚动。
-     ⚠️ 光靠 body.overflow:hidden 在移动端不够——触摸滚动照样会穿到下层去。
-     必须同时上 lockPageScroll()（它在 window 上挂 passive:false 的 touchmove 拦截），
-     而 blockOuterScroll 的放行名单里已经加了 .candy-ov-wrap，所以卡片自己还能滚。 */
-  document.body.style.overflow = 'hidden';
+  /* 展开期间锁住背后页面的滚动，只用 lockPageScroll()：它在 window 上挂 passive:false 的
+     touchmove/wheel 拦截，而 blockOuterScroll 的放行名单里有 .candy-ov-wrap，卡片自己照样能滚。
+     ⚠️ 【绝对不要】再加 document.body.style.overflow='hidden'。本文件 blockOuterScroll
+     上面那段注释写过这个坑：页面一变成"不可滚动"，手机浏览器就把之前滑走时收起的地址栏
+     又弹回来，视口瞬间矮一百多 px。而浮层的 maxHeight / top 是在那之前按旧视口算好的，
+     地址栏一回来整块就比可视区高出一截——底下的卡片连同底部那条一起被盖住，手指去滑
+     也只能滑到被工具栏盖住的区域，表现就是"选糖卡划不动"。盒子浮层（openBoxOverlay）
+     从来只用 lockPageScroll，这里跟它保持一致。 */
   if(typeof lockPageScroll === 'function') lockPageScroll();
   candyOvCard = card;
 }
 /* 44 的按钮 + 28 的下边距。下边距从 14 提到 28 是因为贴底太近（手机底部还有手势条），
    顶上对应也留 CANDY_OV_TOP_MIN，不然契合度那一块会怼到屏幕最上沿被状态栏/刘海糊住。 */
 const CANDY_OV_FOOT_H = 72;
-const CANDY_OV_TOP_MIN = 40;   // 默认位置整体下移一点，别贴着状态栏
+const CANDY_OV_TOP_MIN = 72;   // 顶上留这么多：别贴状态栏，也给手指留一段可以往下拖的空位
 /* ⚠️ 必须用 visualViewport：iOS Safari 的 window.innerHeight 把被状态栏 / 地址栏
    盖住的部分也算在内，拿它算出来的浮层高度比真正看得见的区域大一截——
    结果就是顶上的契合度被顶出屏幕、底下的卡片被截掉，而且因为 scrollHeight
@@ -22333,6 +22339,28 @@ function candyOvViewH(){
   }catch(e){}
   return window.innerHeight;
 }
+/* 地址栏弹出/收起、转屏、软键盘开合都会改变真实可视高度。浮层开着的时候必须跟着重算，
+   否则它会一直按打开那一刻的视口撑着，比可视区高出一截，底下的内容和底部那条都够不着。
+   只改 maxHeight 和 top，不碰 transform —— 形变动画还在跑时改这两个值不会打断它。 */
+function candyOvRefit(){
+  const ov = document.getElementById('candyOv');
+  const wrap = document.getElementById('candyOvWrap');
+  if(!ov || !wrap || !ov.classList.contains('on')) return;
+  const vh = candyOvViewH() - CANDY_OV_FOOT_H;
+  wrap.style.maxHeight = Math.max(160, vh - CANDY_OV_TOP_MIN) + 'px';
+  const h = wrap.offsetHeight;
+  wrap.style.top = Math.max(CANDY_OV_TOP_MIN, Math.round((vh - h) / 2)) + 'px';
+}
+try{
+  if(window.visualViewport){
+    // resize 是地址栏/软键盘导致的高度变化；scroll 是 iOS 上页面被"推上去"时可视区的偏移
+    window.visualViewport.addEventListener('resize', candyOvRefit);
+    window.visualViewport.addEventListener('scroll', candyOvRefit);
+  }
+}catch(e){}
+window.addEventListener('resize', candyOvRefit);
+window.addEventListener('orientationchange', ()=> setTimeout(candyOvRefit, 250));
+
 /* 填底部那条：左边卡主昵称，右边分享码，点一下复制。
    没有分享码的卡（别人还没发布过）就只剩昵称，整条不可点。 */
 function candyOvFillFoot(card){
@@ -22398,7 +22426,6 @@ function candyCloseCard(){
   } else {
     wrap.style.transform = 'scale(.9)';
   }
-  document.body.style.overflow = '';
   // ⚠️ 盒子浮层也在用这把锁。它开着的时候别顺手解开，否则关掉选糖卡会把盒子的滚动锁一起撤了
   if(typeof unlockPageScroll === 'function' && !(typeof boxOverlayOpen !== 'undefined' && boxOverlayOpen)){
     unlockPageScroll();
@@ -25608,24 +25635,16 @@ async function pvpLeaveBoard(){
    物种榜跟前两个口径故意不同：总分是所有个体累加(盒子规模也算战力)，
    物种榜每人只上榜自己最好的一只(否则一个人能把前十占满)。 */
 /* ===== 土王睡姿榜 ===== */
-/* 站内一共有多少个睡姿 —— 完成度百分比的分母。
-   ⚠️ 必须按【宝可梦+星级】去重：ISLAND_MAPS 是"每座岛每个等级的睡姿池"，同一只宝可梦的
-   同一个睡姿会在好几座岛、好几个等级里反复出现（带重复一共 2683 条，去重后 903 个）。
-   游戏里一只宝可梦的某个星级就对应图鉴里固定的一个睡姿，所以去重后的组合数才是图鉴总数。
-   现算而不写死常量：以后补录新宝可梦，这个数自己就跟上了，后端那边也不用改（STYLE_MAX
-   只是个宽松的防灌水上限，不参与百分比计算）。 */
-var styleTotalCache = null;
-function styleTotalAll(){
-  if(styleTotalCache != null) return styleTotalCache;
-  const seen = new Set();
-  ISLAND_MAPS.forEach(m=>{
-    m.lv.forEach((lv, i)=>{
-      islandLevelStyles(m.id, i).forEach(st=>{ seen.add(st[0] + '|' + st[1]); });
-    });
-  });
-  styleTotalCache = seen.size;
-  return styleTotalCache;
-}
+/* 游戏里睡姿图鉴一共有多少个 —— 完成度百分比的分母。用户 2026-10-23 核的实际值。
+   ⚠️ 【不要】改回从 ISLAND_MAPS 现算。试过，去重后只有 903 个，少 46 个：
+      岛屿睡姿池记的是"哪座岛的哪个等级会出什么"，跟"图鉴里一共能收集多少"不是一回事。
+      差的部分一是压根不进常规睡姿池的 5 只（超梦 / 梦幻 / 达克莱伊 / 哎呀球菇 / 败露球菇），
+      二是活动限定睡姿——这两样岛屿数据里都没有，再怎么去重也补不出来。
+      （现算的口径供参考：232 只宝可梦，25 只各 3 个星级、207 只各 4 个，共 903。）
+   所以这个数只能写死，游戏更新加了新睡姿要手动跟一次。
+   后端 STYLE_MAX=1500 是独立的防灌水上限，不参与百分比计算，加睡姿时不用动它。 */
+const STYLE_TOTAL = 949;
+function styleTotalAll(){ return STYLE_TOTAL; }
 function stylePct(n){
   const t = styleTotalAll();
   if(!t || n == null) return null;
@@ -25787,7 +25806,7 @@ function pvpRenderStyleBoard(el, head, bind){
   el.innerHTML = head + `<div class="pvp-card">
       <div class="pvp-card-t">睡姿榜（${d.participants} 人）</div>
       ${meHtml}
-      <div class="isl-hint" style="margin-bottom:8px">比的是睡姿图鉴收集数，站内一共 ${total} 个睡姿。这个数是各人自填的，仅供娱乐。</div>
+      <div class="isl-hint" style="margin-bottom:8px">比的是睡姿图鉴收集数，图鉴一共 ${total} 个。这个数是各人自填的，仅供娱乐。</div>
       ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
     </div>`;
   bind();
@@ -26000,7 +26019,7 @@ function pvpRenderSet(){
              value="${styleN!=null?styleN:''}">
       <div class="isl-hint" id="pvpStylePct" style="margin-top:9px;font-weight:800;color:var(--accent)">${styleN!=null?('完成度 '+pvpFmt(stylePct(styleN),1)+'% （'+styleN+' / '+styleTotalAll()+'）'):''}</div>
       <div class="isl-hint" style="margin-top:7px">
-        站内一共收录了 ${styleTotalAll()} 个睡姿（按「宝可梦＋星级」算，同一只在多座岛反复出现的只算一个）。<br>
+        游戏里的睡姿图鉴一共 ${styleTotalAll()} 个。<br>
         填好点下面的按钮保存，你的用户名、头像和这个数字就会出现在「大家的榜 › 睡姿榜」上。
         清空再保存即从榜上撤下。这个数没法验证，全靠自觉。
       </div>
