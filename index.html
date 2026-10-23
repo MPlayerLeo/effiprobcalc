@@ -11804,7 +11804,7 @@ const PREFS_KEY = 'effiprobcalc_prefs_v1';
 // v3.18 才给它加开关，默认必须保持"显示"，否则老用户升级上来会觉得等级凭空丢了
 // capGradNewbieOn 默认 true：捕捉推荐"标记已毕业"从上线起就是按萌新版标准（原始档位不下调）判定的，
 // 默认必须保持 true，否则老用户升级上来会看到一批已毕业标记突然消失
-const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, boxViewMode: 'grid', mfHubViewMode: 'list', pwaBannerDismissed: false}; // 26格=6.5h，8格=2h；
+const PREFS_DEFAULT = {sleep1: 26, sleep2: 8, boxMedalOn: false, boxLevelOn: true, boxPscBadgeOn: true, campingTicket: false, capGradMarkOn: false, capGradNewbieOn: true, fabCircleModeOn: false, mainSkillMaxOn: false, avatarDex: null, avatarShiny: false, boxUniformScaleOn: false, capFullBagOn: true, pvpJoinOn: false, pvpShowNamesOn: true, pvpCatchTotal: null, styleCount: null, boxViewMode: 'grid', mfHubViewMode: 'list', pwaBannerDismissed: false}; // 26格=6.5h，8格=2h；
 // boxViewMode：盒子网格/列表视图，'grid'=原来的gif方块平铺，'list'=横向列表（毕业等级/睡饱饱/联动徽章一目了然）；mainSkillMaxOn：主技能满级开关，默认关闭（默认效果），目前只影响大嘴娃/蝶结萌虻；avatarDex/avatarShiny：更多设置页头像框，没选过就是 null；boxUniformScaleOn：盒子等比显示，关闭=沿用原来"素材超框才缩小"的样子，开启=所有素材按原生像素1:1显示，不再有任何缩放；capFullBagOn：捕捉推荐树果/能量榜单"满包"开关，默认开启——只对dtype=树果生效（能量型不存在满包，恒按不满包/扣食材概率算），达克莱伊/巨锻匠这类技能产能量的树果型开启时额外多显示一条"满包"角标行，见 capBuildBerryEnergy；pvpJoinOn：PVP"参加排行"，默认 false 且必须保持 false——打开等于把自己的盒子成绩和账号名公开给其他人看，只能由用户自己在 PVP 页里点开，任何情况下都不许改成默认开启；pvpShowNamesOn：只影响自己看榜时显不显示别人的人名，默认 true
 const CAMPING_SPEED_MULT = 1.2; // 露营券：真实帮忙间隔÷1.2（更快）
 const CAMPING_CARRY_MULT = 1.2; // 露营券：实际持有上限×1.2
@@ -11848,6 +11848,7 @@ function loadUserPrefs(){
       if(typeof o.pvpJoinOn==='boolean') userPrefs.pvpJoinOn = o.pvpJoinOn;
       if(typeof o.pvpShowNamesOn==='boolean') userPrefs.pvpShowNamesOn = o.pvpShowNamesOn;
       if(typeof o.pvpCatchTotal==='number' && isFinite(o.pvpCatchTotal)) userPrefs.pvpCatchTotal = o.pvpCatchTotal;
+      if(typeof o.styleCount==='number' && isFinite(o.styleCount)) userPrefs.styleCount = o.styleCount;
       if(typeof o.pwaBannerDismissed==='boolean') userPrefs.pwaBannerDismissed = o.pwaBannerDismissed;
       if(o.capPanelBuild && typeof o.capPanelBuild==='object'){
         ['berryEnergy','food','skill'].forEach(t=>{
@@ -25606,7 +25607,51 @@ async function pvpLeaveBoard(){
    三个榜：总分榜/欧非榜是跨人比总量，物种榜是"同一只宝可梦谁练得好"。
    物种榜跟前两个口径故意不同：总分是所有个体累加(盒子规模也算战力)，
    物种榜每人只上榜自己最好的一只(否则一个人能把前十占满)。 */
-var pvpBoardKind = 'total';   // 'total' | 'luck' | 'species'
+/* ===== 土王睡姿榜 ===== */
+/* 站内一共有多少个睡姿 —— 完成度百分比的分母。
+   ⚠️ 必须按【宝可梦+星级】去重：ISLAND_MAPS 是"每座岛每个等级的睡姿池"，同一只宝可梦的
+   同一个睡姿会在好几座岛、好几个等级里反复出现（带重复一共 2683 条，去重后 903 个）。
+   游戏里一只宝可梦的某个星级就对应图鉴里固定的一个睡姿，所以去重后的组合数才是图鉴总数。
+   现算而不写死常量：以后补录新宝可梦，这个数自己就跟上了，后端那边也不用改（STYLE_MAX
+   只是个宽松的防灌水上限，不参与百分比计算）。 */
+var styleTotalCache = null;
+function styleTotalAll(){
+  if(styleTotalCache != null) return styleTotalCache;
+  const seen = new Set();
+  ISLAND_MAPS.forEach(m=>{
+    m.lv.forEach((lv, i)=>{
+      islandLevelStyles(m.id, i).forEach(st=>{ seen.add(st[0] + '|' + st[1]); });
+    });
+  });
+  styleTotalCache = seen.size;
+  return styleTotalCache;
+}
+function stylePct(n){
+  const t = styleTotalAll();
+  if(!t || n == null) return null;
+  return Math.round(n / t * 1000) / 10;
+}
+/* 输入框 → 睡姿数。空/非数字/<=0 一律当"没填"（null＝撤下），超出站内总数的夹回上限——
+   填 9999 也只会按 903 算，后端那边还有一道 STYLE_MAX 兜底。 */
+function styleReadInput(el){
+  const v = el ? String(el.value).trim() : '';
+  if(v === '') return null;
+  const n = Math.floor(Number(v));
+  if(!isFinite(n) || n <= 0) return null;
+  return Math.min(n, styleTotalAll());
+}
+/* 保存＝上榜，清空＝撤下。不再另给一个"参加排行"开关：填了这个数就是想比一比，
+   再加一个开关只是让人多点一下（PVP 那边的开关是因为要上传整盒宝可梦的快照，份量完全不同）。 */
+async function stylePushMine(){
+  const n = userPrefs.styleCount;
+  if(n == null) return await authApi('/api/style/me', {method:'DELETE', auth:true});
+  return await authApi('/api/style/me', {
+    method:'PUT', auth:true,
+    body:{styleCount:n, avatarDex:userPrefs.avatarDex, avatarShiny:!!userPrefs.avatarShiny},
+  });
+}
+
+var pvpBoardKind = 'total';   // 'total' | 'luck' | 'species' | 'style'
 var pvpSpeciesSel = null;     // 物种榜里点进去的那个 dex，null=还在物种网格
 var pvpIndexCache = null, pvpSpeciesCache = null;
 function pvpRenderBoard(){
@@ -25618,16 +25663,18 @@ function pvpRenderBoard(){
   // 总榜传给后端的是字符串 'all'（不是 0/1），boardColumn/handlePvpSpecies/handlePvpIndex
   // 三处后端接口都认这个值——见 D:\土王智商高\后端\src\pvp.js
   const shiny = pvpShinyView==='all' ? 'all' : (pvpShinyView==='shiny' ? 1 : 0);
+  // 睡姿榜比的是图鉴收集数，跟闪光不闪光没关系，那一排分段直接不渲染
   const head = `
-    <div class="pvp-seg">
+    ${pvpBoardKind==='style' ? '' : `<div class="pvp-seg">
       <div class="pvp-seg-b${pvpShinyView==='all'?' active':''}" data-pvpshiny="all">总榜</div>
       <div class="pvp-seg-b${pvpShinyView==='normal'?' active':''}" data-pvpshiny="normal">不闪光</div>
       <div class="pvp-seg-b${pvpShinyView==='shiny'?' active':''}" data-pvpshiny="shiny">✨闪光</div>
-    </div>
+    </div>`}
     <div class="pvp-seg">
       <div class="pvp-seg-b${pvpBoardKind==='total'?' active':''}" data-pvpkind="total">总分榜</div>
       <div class="pvp-seg-b${pvpBoardKind==='luck'?' active':''}" data-pvpkind="luck">欧非榜</div>
       <div class="pvp-seg-b${pvpBoardKind==='species'?' active':''}" data-pvpkind="species">物种榜</div>
+      <div class="pvp-seg-b${pvpBoardKind==='style'?' active':''}" data-pvpkind="style">睡姿榜</div>
     </div>`;
   const bind = ()=>{
     el.querySelectorAll('[data-pvpshiny]').forEach(b=> b.onclick = ()=>{
@@ -25640,6 +25687,7 @@ function pvpRenderBoard(){
     });
   };
   if(pvpBoardKind==='species'){ pvpRenderSpecies(el, head, bind, shiny); return; }
+  if(pvpBoardKind==='style'){ pvpRenderStyleBoard(el, head, bind); return; }
   const key = pvpBoardKind+'|'+shiny;
   if(!pvpBoardCache || pvpBoardCache.key!==key){
     el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">加载中…</div></div>`;
@@ -25686,6 +25734,60 @@ function pvpRenderBoard(){
       <div class="pvp-card-t">${boardTitle}${isLuck?'欧非榜':'总分榜'}（${d.participants} 人）</div>
       ${meHtml}
       ${isLuck?`<div class="isl-hint" style="margin-bottom:8px">欧非分 ＝ 总分 ÷ 总捕捉数 × 100。分母是各人自填的，仅供娱乐。</div>`:''}
+      ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
+    </div>`;
+  bind();
+}
+
+/* ---- 睡姿榜 ----
+   跟总分榜同一套行结构（名次/头像/人名+选糖卡入口/数值），只是数值换成睡姿数、
+   副标题换成完成度。缓存单独一个变量，跟 pvpBoardCache 的 key 体系不混（它按 kind|shiny 建键，
+   睡姿榜没有 shiny 维度）。 */
+var pvpStyleCache = null, pvpStyleBusy = false;
+function pvpRenderStyleBoard(el, head, bind){
+  if(!pvpStyleCache){
+    el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">加载中…</div></div>`;
+    bind();
+    if(pvpStyleBusy) return;
+    pvpStyleBusy = true;
+    authApi('/api/style/board?limit=50', {auth:true})
+      .then(d=>{ pvpStyleCache = d; })
+      .catch(e=>{ pvpStyleCache = {error: e.message||'加载失败'}; })
+      .then(()=>{ pvpStyleBusy = false; pvpRenderBoard(); });
+    return;
+  }
+  const d = pvpStyleCache;
+  if(d.error){
+    el.innerHTML = head + `<div class="pvp-card"><div class="pvp-empty">${d.error}</div></div>`;
+    bind(); return;
+  }
+  const total = styleTotalAll();
+  const showNames = userPrefs.pvpShowNamesOn !== false;
+  const rowsHtml = (d.list||[]).map(r=>{
+    const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
+    const avShow = r.isMe || showNames;
+    const pct = stylePct(r.score);
+    return `<div class="pvp-row${r.isMe?' pvp-row-me':''}">
+      <div class="pvp-row-rank">${r.rank}</div>
+      <div class="${avShow ? pvpAvClass(r.avatarShiny) : 'pvp-av'}">${avShow ? pvpPlayerAvatarImg(r.avatarDex, r.avatarShiny) : `<span class="cap-portrait-q">?</span>`}</div>
+      <div class="pvp-row-main">
+        <div class="pvp-row-name${r.candyCode?' has-candy':''}">${r.candyCode ? ('<span class="pvp-row-name-t">'+who+'</span>'+candyChipHtml(r.candyCode)) : who}</div>
+        <div class="pvp-row-sub">${pct!=null?('完成度 '+pvpFmt(pct,1)+'%'):''}</div>
+      </div>
+      <div class="pvp-pt" style="width:auto">${r.score}</div>
+    </div>`;
+  }).join('');
+  const meHtml = d.me
+    ? `<div class="pvp-score-row" style="margin-bottom:10px">
+         <div class="pvp-score-box"><div class="pvp-score-v">#${d.me.rank}</div><div class="pvp-score-k">我的名次</div><div class="pvp-score-sub">共 ${d.participants} 人</div></div>
+         <div class="pvp-score-box"><div class="pvp-score-v">${pvpFmt(stylePct(d.me.score),1)}%</div><div class="pvp-score-k">我的完成度</div><div class="pvp-score-sub">${d.me.score} / ${total}</div></div>
+         <div class="pvp-score-box"><div class="pvp-score-v">${pvpFmt(d.me.percentile,0)}%</div><div class="pvp-score-k">百分位</div><div class="pvp-score-sub">超过了这么多人</div></div>
+       </div>`
+    : `<div class="isl-hint" style="margin-bottom:10px">你还没上睡姿榜。去「设置」里填一下睡姿图鉴收集数。</div>`;
+  el.innerHTML = head + `<div class="pvp-card">
+      <div class="pvp-card-t">睡姿榜（${d.participants} 人）</div>
+      ${meHtml}
+      <div class="isl-hint" style="margin-bottom:8px">比的是睡姿图鉴收集数，站内一共 ${total} 个睡姿。这个数是各人自填的，仅供娱乐。</div>
       ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
     </div>`;
   bind();
@@ -25873,6 +25975,7 @@ function pvpRenderSet(){
   const joined = !!userPrefs.pvpJoinOn;
   const names = userPrefs.pvpShowNamesOn !== false;
   const catches = userPrefs.pvpCatchTotal;
+  const styleN = userPrefs.styleCount;
   const boxN = (typeof boxData!=='undefined') ? boxData.length : 0;
   el.innerHTML = `
     <div class="pvp-card">
@@ -25889,6 +25992,19 @@ function pvpRenderSet(){
         或者录入只数超过总捕捉数 1/3 的，都不参与欧非榜。
         榜单上会连分母一起显示，填得离谱大家都看得见。
       </div>
+    </div>
+    <div class="pvp-card">
+      <div class="pvp-card-t">睡姿图鉴收集数（睡姿榜）</div>
+      <input type="number" class="pvp-input" id="pvpStyleInput" min="0" max="${styleTotalAll()}" step="1"
+             placeholder="填你图鉴里已经收集到的睡姿数"
+             value="${styleN!=null?styleN:''}">
+      <div class="isl-hint" id="pvpStylePct" style="margin-top:9px;font-weight:800;color:var(--accent)">${styleN!=null?('完成度 '+pvpFmt(stylePct(styleN),1)+'% （'+styleN+' / '+styleTotalAll()+'）'):''}</div>
+      <div class="isl-hint" style="margin-top:7px">
+        站内一共收录了 ${styleTotalAll()} 个睡姿（按「宝可梦＋星级」算，同一只在多座岛反复出现的只算一个）。<br>
+        填好点下面的按钮保存，你的用户名、头像和这个数字就会出现在「大家的榜 › 睡姿榜」上。
+        清空再保存即从榜上撤下。这个数没法验证，全靠自觉。
+      </div>
+      <button type="button" class="pvp-more-btn" id="pvpStyleSaveBtn"${styleN==null?' disabled':''}>${styleN!=null?'保存并上榜':'保存并上榜'}</button>
     </div>
     <div class="pvp-card">
       <div class="pvp-card-t">参加排行</div>
@@ -25934,6 +26050,36 @@ function pvpRenderSet(){
     try{ const d = await pvpPushMine(); pvpBoardCache = null; rb.textContent = '已上传 '+d.saved+' 只'; }
     catch(e){ alert('上传失败：'+(e.message||'出错了')); rb.textContent = '重新上传我的成绩'; }
     setTimeout(()=>{ rb.disabled = false; pvpRenderSet(); }, 1500);
+  };
+  const si = document.getElementById('pvpStyleInput');
+  const sb = document.getElementById('pvpStyleSaveBtn');
+  // 输入框只改本地（跟捕捉数一样），真正上榜/撤下要点按钮——避免每敲一个数字就打一次接口
+  // 输入框里的值 → 按钮该写什么、能不能点。空值分两种：曾经上过榜的是"撤下"，
+  // 从没上过榜的没什么可撤，按钮直接禁用（否则新用户进来看到「从榜上撤下」莫名其妙）
+  const styleSyncBtn = (n)=>{
+    if(!sb) return;
+    const canPull = (n == null && styleN != null);
+    sb.textContent = canPull ? '从榜上撤下' : '保存并上榜';
+    sb.disabled = (n == null && styleN == null);
+    const pe = document.getElementById('pvpStylePct');
+    if(pe) pe.textContent = n!=null ? ('完成度 '+pvpFmt(stylePct(n),1)+'% （'+n+' / '+styleTotalAll()+'）') : '';
+  };
+  if(si) si.oninput = ()=> styleSyncBtn(styleReadInput(si));
+  if(sb) sb.onclick = async ()=>{
+    if(!authLoggedIn()){ alert('睡姿榜要登录后才能上。去「更多设置」登录一下。'); return; }
+    const n = styleReadInput(si);
+    userPrefs.styleCount = n;
+    saveUserPrefs();
+    sb.disabled = true; sb.textContent = n!=null ? '保存中…' : '撤下中…';
+    try{
+      await stylePushMine();
+      pvpStyleCache = null;            // 榜单下次打开要重新拉，否则看到的还是旧名次
+      sb.textContent = n!=null ? '已上榜' : '已撤下';
+    }catch(e){
+      alert((n!=null?'保存失败：':'撤下失败：')+(e.message||'出错了'));
+      sb.textContent = n!=null ? '保存并上榜' : '从榜上撤下';
+    }
+    setTimeout(()=>{ sb.disabled = false; pvpRenderSet(); }, 1200);
   };
   const ci = document.getElementById('pvpCatchInput');
   if(ci) ci.onchange = ()=>{
