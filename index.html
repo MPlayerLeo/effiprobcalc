@@ -21309,6 +21309,19 @@ function candyBaselineGrades(){
    比上面那个 0.5 的偏差小一半，而且那是他自己主动选的。 */
 function candyTierPos(t){ return 1 - t / (CANDY_TIERS.length - 1); }
 const CANDY_AFF_MIN = 5;    // 表过态的家族少于这么多就不给分数了，样本太小的百分比是骗人的
+/* 档位 → "表态强度"。离中间档(B)越远越强烈：S 和 D 都是 1，A 和 C 是 0.5，B 是 0。
+   ⚠️ 别退回成"档位越高越重要"(candyTierPos)——那样 D 档权重是 0，
+   "两人都把某只扔进 D"这个真共识会被整个丢掉，可它跟"两人都放 S"一样说明问题。
+   B 档权重 0 也是故意的：放 B 等于没表态，不该影响契合度。 */
+function candyTierExtremity(t){ return Math.abs(candyTierPos(t) - 0.5) * 2; }
+/* 最后把分数拉开。
+   原始 ratio 实测挤在 0.38~0.75（30 张卡 435 对），直接当百分比显示的话所有人都在
+   50~75 分，八档评语有一半用不上。以实测中位数为支点放大 SPREAD 倍，两头溢出的夹到 0/100。
+   ⚠️ 这两个数是【从当前数据量出来的】，不是什么普适常数。卡涨到一两百张之后中位会漂，
+   得重新量一次再调——量法见 scratchpad 里那个 aff_matrix.py 的思路。
+   实测 435 对里只有 7 对(1.6%)会撞到 0 或 100，区分度基本没丢。 */
+const CANDY_AFF_CENTER = 0.55;
+const CANDY_AFF_SPREAD = 3;
 /* 八档评语配色。金/蓝/绿/黑直接复用 CANDY_TIERS 的档位色，紫是全站主题紫 --accent，
    黄特意压暗成 #b59a00（纯亮黄在米色底上根本看不清，也跟最高档的金撞脸）。 */
 const CANDY_AFF_LABELS = [
@@ -21334,18 +21347,22 @@ function candyAffinity(gA, gB){
     if(a === bs && b === bs) return;     // 两人都没表态，不计入
     const pa = candyTierPos(a), pb = candyTierPos(b);
     const diff = Math.abs(pa - pb);
-    const w = Math.max(pa, pb);          // 高档位的分歧更值钱：S 档吵起来比 D 档吵起来重要
-    wsum += w; acc += w * (1 - diff);
-    flat += (1 - diff);
+    const w = Math.max(candyTierExtremity(a), candyTierExtremity(b));   // 至少一方态度强烈，这只才算数
+    // 平方而不是线性：差一档从扣 0.25 变成扣 0.44，分歧多的两个人掉得更快，分数才拉得开
+    const ag = (1 - diff) * (1 - diff);
+    wsum += w; acc += w * ag;
+    flat += ag;
+    // high 只用来给「最合拍」排序，照旧按档位高低（我们都爱的排前面），
+    // 不跟着 w 改成 extremity——不然"我们都讨厌这几只"会把前排占满
     items.push({fam:f, a:a, b:b, diff:diff, high:Math.max(pa, pb)});
   });
   if(items.length < CANDY_AFF_MIN){
     return {ok:false, voted:items.length, total:total,
             msg: total ? '你们俩一共只调整过 ' + items.length + ' 只宝可梦的档位，样本太小，算不出靠谱的契合度' : '拿不到对方的档位数据'};
   }
-  // wsum 为 0 ＝ 所有分歧都发生在最低档（权重全是 0），这时退回不加权的平均
+  // wsum 为 0 ＝ 计入的全是 B 档对 B 档（权重都是 0），这时退回不加权的平均
   const ratio = wsum > 0 ? (acc / wsum) : (flat / items.length);
-  const pct = Math.max(0, Math.min(100, Math.round(ratio * 100)));
+  const pct = Math.max(0, Math.min(100, Math.round((0.5 + (ratio - CANDY_AFF_CENTER) * CANDY_AFF_SPREAD) * 100)));
   let label = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][1];
   let color = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][2];
   for(const [lo, txt, c] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; color = c; break; } }
