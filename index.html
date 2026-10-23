@@ -3362,8 +3362,8 @@
   position:fixed; transform-origin:top left; will-change:transform;
   transition:transform .34s cubic-bezier(.22,1,.3,1);
   /* 105 个家族排下来远高于一屏，必须限高自滚，否则卡片直接溢出屏幕。
-     减掉的 86px = 底部那条(44) + 它的下边距(14) + 上下各留一点气口 */
-  max-height:calc(100vh - 86px); max-height:calc(100dvh - 86px);
+     减掉的 108px = 底部那条(44+28) + 顶上留的 28 + 一点气口 */
+  max-height:calc(100vh - 108px); max-height:calc(100dvh - 108px);
   overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch;
   scrollbar-width:none;
 }
@@ -3392,9 +3392,10 @@
 /* 底部那条。固定在视口底部而不是卡片底部——卡片高度随档位分布变，
    钉在卡片上会满屏乱跑；wrap 的 max-height 已经为这条让出了位置。 */
 .candy-ov-foot{
-  position:fixed; left:0; right:0; bottom:14px; z-index:3;
+  position:fixed; left:0; right:0; bottom:28px; z-index:3;
   display:flex; align-items:stretch; justify-content:center; gap:9px;
   padding:0 16px; pointer-events:none;
+  /* bottom 见 .candy-ov-foot 本身的声明：28px，跟 CANDY_OV_FOOT_H 对应 */
   opacity:0; transition:opacity .2s ease .14s;
 }
 .candy-ov.shown .candy-ov-foot{ opacity:1; }
@@ -4326,6 +4327,10 @@
         <input type="text" id="candyLookupInput" class="candy-lookup-input" inputmode="numeric"
                autocomplete="off" maxlength="9" placeholder="0000 0000">
         <button type="button" class="candy-act-btn primary" id="candyLookupBtn">查看</button>
+      </div>
+      <div class="candy-fc-row" id="candyAffImgRow">
+        <span class="candy-fc-cap" style="flex:1 1 auto;min-width:0;">保存他人选糖卡时显示契合度</span>
+        <div class="mf-switch" id="candyAffImgSwitch"></div>
       </div>
       <div class="candy-msg" id="candyLookupMsg"></div>
       <div id="candyLookupCard"></div>
@@ -17557,6 +17562,10 @@ function pageSwipeBlocked(){
   if(openClassIds.some(id=>{ const el=document.getElementById(id); return el && el.classList.contains('open'); })) return true;
   const displayCheckIds = ['creditModal','capCtrlPop','boxNicknameOverlay','ocrReviewOverlay','rankCalcOverlay','gradStdOverlay','terrorAskOverlay','boxSpeciesEditOverlay','islTagModal','planTagModal','planEditModal'];
   if(displayCheckIds.some(id=>{ const el=document.getElementById(id); return el && getComputedStyle(el).display !== 'none'; })) return true;
+  // 选糖卡浮层：它是 .candy-ov.on 控制显隐的，不走 display 也不在上面那两组 id 里。
+  // 漏了这一条的后果是在卡片上左右滑会把底下的页面翻走 / 退出子页。
+  const candyOv = document.getElementById('candyOv');
+  if(candyOv && candyOv.classList.contains('on')) return true;
   return false;
 }
 // 核心平移动画，step 只决定方向（>0 当前页向左退出/下一页从右侧进入，<0 反过来），
@@ -17737,7 +17746,9 @@ function blockOuterScroll(e){
   // .dashboard-panel 是「修改面板」「控制参数」「选择最终宝可梦」共用的面板外壳，内部
   // .dash-scroll-area 同样是 flex:1 1 auto + overflow-y:auto 的独立滚动区，之前漏放行，
   // 导致这几个面板内容超过一屏时触摸/滚轮都被这里拦掉，看起来像是"滚不动"。
-  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap, .cap-ctrl-box, .dashboard-panel')) return;
+  // .candy-ov-wrap 是选糖卡浮层自己的滚动容器（max-height + overflow-y:auto）。
+  // 不放行的话卡片比一屏长时完全滑不动——正是"选糖卡不能滑动"那个反馈。
+  if(e.target && e.target.closest && e.target.closest('.box-bubble-wrap, .cap-ctrl-box, .dashboard-panel, .candy-ov-wrap')) return;
   e.preventDefault();
 }
 function lockPageScroll(){
@@ -21075,7 +21086,8 @@ const CANDY_NAME_MAX_W = 5;     // 全角宽度上限：5 个汉字，或 10 个
 /* hidden：被隐藏的档位下标数组。隐藏＝这一档连同里面的宝可梦都不在卡上出现
    （不是把它们挪到别的档——恢复时要原样回来，所以底下的档位数据一个字都不动）。
    至少留 2 档可见，也就是允许 2~5 档。 */
-let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null, showFc:true, pubSig:null, hidden:[]};
+// affInImg：保存【别人】的卡时，图上要不要带契合度那一块（自己的卡没有契合度可言）
+let candyState = {names:CANDY_DEFAULT_NAMES.slice(), grades:{}, code:null, showFc:true, pubSig:null, hidden:[], affInImg:true};
 let candyPane = 'me';
 let candyNameEditOn = false;
 let candyLookupData = null;
@@ -21226,6 +21238,7 @@ function candyLoadState(){
       if(raw.grades && typeof raw.grades === 'object' && !Array.isArray(raw.grades)) candyState.grades = raw.grades;
       if(typeof raw.code === 'string' && /^\d{8}$/.test(raw.code)) candyState.code = raw.code;
       if(typeof raw.showFc === 'boolean') candyState.showFc = raw.showFc;
+      if(typeof raw.affInImg === 'boolean') candyState.affInImg = raw.affInImg;
       if(typeof raw.pubSig === 'string') candyState.pubSig = raw.pubSig;
       if(Array.isArray(raw.hidden)) candyState.hidden = candyClampHidden(raw.hidden);
     }
@@ -21240,7 +21253,7 @@ function candySaveState(){
 function candyCloudSnapshot(){
   return {names: candyState.names, grades: candyState.grades, code: candyState.code,
           showFc: candyState.showFc, pubSig: candyState.pubSig, hidden: candyState.hidden,
-          updatedAt: cloudTsGet('candy')};
+          affInImg: candyState.affInImg, updatedAt: cloudTsGet('candy')};
 }
 /* 合并口径：比时间戳，谁新谁赢，赢的那份【整体】替换。
    ⚠️ 以前 grades 走的是 Object.assign 并集，那样【把某只拖回默认档】永远同步不过去——
@@ -21256,6 +21269,7 @@ function applyCandyCloudSnapshot(snap){
     }
     if(typeof snap.code === 'string' && /^\d{8}$/.test(snap.code)) candyState.code = snap.code;
     if(typeof snap.showFc === 'boolean') candyState.showFc = snap.showFc;
+    if(typeof snap.affInImg === 'boolean') candyState.affInImg = snap.affInImg;
     if(typeof snap.pubSig === 'string') candyState.pubSig = snap.pubSig;
     if(Array.isArray(snap.hidden)) candyState.hidden = candyClampHidden(snap.hidden);
     localStorage.setItem(CANDY_KEY, JSON.stringify(candyState));
@@ -21339,8 +21353,9 @@ function candyAffinity(gA, gB){
   let label = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][1];
   let color = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][2];
   for(const [lo, txt, c] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; color = c; break; } }
-  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 5);
-  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 5);
+  // 取 8 只：出图时右半边一行正好放得下 8 个，页面上窄，渲染时自己再截到 5
+  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 8);
+  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 8);
   return {ok:true, pct:pct, label:label, color:color, voted:items.length, same:same, total:total,
           agree:agree, clash:clash};
 }
@@ -21388,12 +21403,12 @@ function candyAffinityHtml(card, compact){
   if(compact) return html + '</div>';
   if(r.agree.length){
     html += '<div class="candy-aff-sec"><div class="candy-aff-h">最合拍</div>'
-          + '<div class="candy-aff-row">' + r.agree.map(x=> cell(x, true)).join('') + '</div></div>';
+          + '<div class="candy-aff-row">' + r.agree.slice(0, 5).map(x=> cell(x, true)).join('') + '</div></div>';
   }
   if(r.clash.length){
     html += '<div class="candy-aff-sec"><div class="candy-aff-h">最有分歧'
           + '<span class="candy-aff-hint">左＝你，右＝TA</span></div>'
-          + '<div class="candy-aff-row">' + r.clash.map(x=> cell(x, false)).join('') + '</div></div>';
+          + '<div class="candy-aff-row">' + r.clash.slice(0, 5).map(x=> cell(x, false)).join('') + '</div></div>';
   }
   return html + '</div>';
 }
@@ -21745,6 +21760,15 @@ function candyRenderLookup(){
     inp.onkeydown = (e)=>{ if(e.key === 'Enter') candyLookup(); };
   }
   if(btn) btn.onclick = ()=> candyLookup();
+  const sw = document.getElementById('candyAffImgSwitch');
+  if(sw){
+    sw.classList.toggle('on', !!candyState.affInImg);
+    sw.onclick = ()=>{
+      candyState.affInImg = !candyState.affInImg;
+      candySaveState();
+      sw.classList.toggle('on', !!candyState.affInImg);
+    };
+  }
   if(card){
     card.innerHTML = candyLookupData
       ? ('<div style="font-size:14px;font-weight:900;color:var(--ink);margin:4px 0 8px;">'
@@ -21861,6 +21885,7 @@ const CANDY_IMG = {
   PER_ROW: 8,          // 一行几只，锁死
   AV: 60, GAP: 6, BANDPAD: 12,
   HEAD_H: 62, ROW2_H: 44,
+  AFF_H: 86, AFF_GAP: 10,     // 契合度那一块的高度和它与卡片之间的间距
   FONT: '"Zen Kaku Gothic New","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif',
   MONO: "'Consolas',monospace",
   ACCENT_DK: '#4f3167',   // 全站主题紫的深色档，网址/分享码/好友码统一用它
@@ -21923,13 +21948,89 @@ function candyImgLayout(grades, strict, hidden){
 /* card: {username, names, grades, code, friendCode, mine}
    mine=false（看别人的卡）时第二行只画分享码，不画昵称和好友码
    —— 用户 2026-10-22 定：别人的卡不带那两样；分享码留着，它是照着查卡的入口。 */
+// canvas 没有 text-overflow，超宽的昵称自己截
+function candyImgFitText(ctx, text, maxW){
+  const t = String(text == null ? '' : text);
+  if(ctx.measureText(t).width <= maxW) return t;
+  let out = t;
+  while(out.length > 1 && ctx.measureText(out + '…').width > maxW) out = out.slice(0, -1);
+  return out + '…';
+}
+/* 契合度那一块。版式照着页面上的 .candy-aff 来：标题 + 大号百分比 / 进度条 / 评语，
+   三者同色（颜色由 candyAffinity 按分档给出）。
+   ⚠️ 底色要比整张图的背景(#efe9d8)浅一点，不然这块跟背景糊成一片，只剩一道边框。 */
+function candyImgDrawAff(ctx, x, y, w, h, aff, imgs){
+  const C = CANDY_IMG;
+  ctx.save();
+  candyRoundRect(ctx, x, y, w, h, 13);
+  ctx.fillStyle = '#f7f3e8';
+  ctx.fill();
+  ctx.strokeStyle = '#ded6c2';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.clip();
+  const padX = 15;
+  const leftW = 260;                 // 左半边给文字，剩下的全给头像
+  // ---- 左：标题 / 百分比 / 进度条 / 评语 ----
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#7a7568';
+  ctx.font = '800 13px ' + C.FONT;
+  ctx.fillText('与你的契合度', x + padX, y + 21);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = aff.color;
+  ctx.font = '900 26px ' + C.FONT;
+  ctx.fillText(aff.pct + '%', x + padX + leftW, y + 22);
+  const barY = y + 38, barH = 7;
+  ctx.fillStyle = '#ded6c2';
+  candyRoundRect(ctx, x + padX, barY, leftW, barH, 4); ctx.fill();
+  if(aff.pct > 0){
+    ctx.fillStyle = aff.color;
+    candyRoundRect(ctx, x + padX, barY, Math.max(barH, leftW * aff.pct / 100), barH, 4); ctx.fill();
+  }
+  ctx.textAlign = 'left';
+  ctx.fillStyle = aff.color;
+  ctx.font = '900 16px ' + C.FONT;
+  ctx.fillText(aff.label, x + padX, barY + 24);
+  const labW = ctx.measureText(aff.label).width;
+  ctx.fillStyle = '#9a9484';
+  ctx.font = '800 11.5px ' + C.FONT;
+  ctx.fillText('· 共 ' + aff.voted + ' 只', x + padX + labW + 7, barY + 25);
+  // ---- 右：上行最合拍、下行最有分歧，各最多 8 只 ----
+  const rx = x + padX + leftW + 14;
+  const tagW = 26, av = 30, gap = 5;
+  const avX0 = rx + tagW + 6;
+  const room = Math.max(0, x + w - padX - avX0);
+  const maxN = Math.max(0, Math.floor((room + gap) / (av + gap)));
+  const drawRow = (list, tag, cy)=>{
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#9a9484';
+    ctx.font = '800 11px ' + C.FONT;
+    ctx.fillText(tag, rx, cy + av / 2);
+    let px = avX0;
+    list.slice(0, maxN).forEach(it=>{
+      ctx.save();
+      candyRoundRect(ctx, px, cy, av, av, 8);
+      ctx.fillStyle = 'rgba(255,255,255,.92)';
+      ctx.fill();
+      ctx.clip();
+      const im = imgs && it.fam ? imgs[it.fam.key] : null;
+      if(im) ctx.drawImage(im, px + 1, cy + 1, av - 2, av - 2);
+      ctx.restore();
+      px += av + gap;
+    });
+  };
+  if(aff.agree && aff.agree.length) drawRow(aff.agree, '合拍', y + 10);
+  if(aff.clash && aff.clash.length) drawRow(aff.clash, '分歧', y + 46);
+  ctx.restore();
+}
 async function candyRenderImage(card){
   const C = CANDY_IMG;
   try{ if(document.fonts && document.fonts.ready) await document.fonts.ready; }catch(e){}
   const imgs = await candyPrepareImages();
   const L = candyImgLayout(card.grades, !card.mine, card.hidden);
   const W = candyImgWidth();
-  const H = C.PAD + C.HEAD_H + C.ROW2_H + L.cardH + C.PAD;
+  const affH = card.aff ? (C.AFF_H + C.AFF_GAP) : 0;   // 没契合度就不占高度
+  const H = C.PAD + C.HEAD_H + C.ROW2_H + affH + L.cardH + C.PAD;
 
   const dpr = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
   const cv = document.createElement('canvas');
@@ -21968,7 +22069,11 @@ async function candyRenderImage(card){
   ctx.textAlign = 'right';
   ctx.fillStyle = C.ACCENT_DK;
   ctx.font = '900 19px ' + C.FONT;
+  // 放大镜在网址左边：emoji 走系统字体，字号比文字小一号才不会压过网址本身
   ctx.fillText('IQDOOH·TOP', W - C.PAD, y + 24);
+  const urlW = ctx.measureText('IQDOOH·TOP').width;
+  ctx.font = '400 17px ' + C.FONT;
+  ctx.fillText('🔍', W - C.PAD - urlW - 5, y + 24);
   y += C.HEAD_H;
 
   // ---- 第二行：左 昵称 / 中 分享码 / 右 好友码（昵称和好友码只有自己的卡才有）----
@@ -21988,6 +22093,16 @@ async function candyRenderImage(card){
       ctx.font = '900 18px ' + C.MONO;
       ctx.fillText(card.friendCode, W - C.PAD, midY + 8);
     }
+  } else {
+    /* 别人的卡：左边是我、右边是卡主，中间那组分享码（下面统一画）是【对方的】码。
+       两侧各留 237px，中间给分享码腾出 150px，昵称超了就截断加省略号。 */
+    const sideW = Math.floor((W - C.PAD * 2 - 150) / 2);
+    ctx.font = '800 18px ' + C.FONT;
+    ctx.fillStyle = '#1c1f24';
+    ctx.textAlign = 'left';
+    ctx.fillText(candyImgFitText(ctx, card.viewer || '训练家', sideW), C.PAD, midY);
+    ctx.textAlign = 'right';
+    ctx.fillText(candyImgFitText(ctx, card.username || '匿名训练家', sideW), W - C.PAD, midY);
   }
   if(card.code){
     // 小标签压在数字【上方】、整组居中（用户 2026-10-22：标签放左侧不好看，字本来就小）
@@ -22000,6 +22115,12 @@ async function candyRenderImage(card){
     ctx.fillText(card.code.slice(0, 4) + ' ' + card.code.slice(4), W / 2, midY + 8);
   }
   y += C.ROW2_H;
+
+  // ---- 契合度（只有看别人的卡、且开关开着、且算得出来时才有）----
+  if(card.aff){
+    candyImgDrawAff(ctx, C.PAD, y, W - C.PAD * 2, C.AFF_H, card.aff, imgs);
+    y += C.AFF_H + C.AFF_GAP;
+  }
 
   // ---- 选糖卡全图 ----
   const cardX = C.PAD, cardY = y;
@@ -22077,7 +22198,7 @@ function candyFooterRight(){
     return;
   }
   if(!candyLookupData){ candyMsg('candyLookupMsg', '先查出一张卡再保存', false); return; }
-  candySaveImage(Object.assign({}, candyLookupData, {mine:false}));
+  candySaveImage(candyOtherCardForImage(candyLookupData));
 }
 // 自己的卡：带昵称；好友码看开关（candyState.showFc）和有没有填过
 function candyMyCardForImage(){
@@ -22088,6 +22209,22 @@ function candyMyCardForImage(){
            : (candyState.showFc ? fcRaw : '');
   return {username: nm || '训练家', names: candyState.names, grades: candyEffectiveGrades(),
           code: candyState.code, friendCode: fc, mine: true, hidden: candyState.hidden};
+}
+/* 别人的卡出图时额外要带的两样：
+   - viewer：我的昵称，画在第二行左边（对方昵称去右边，分享码居中）
+   - aff：契合度结果，画成第二行和卡片之间的一块。受 affInImg 开关控制，
+     算不出来（两人都没表过态）时不带，图上就不出现那一块。 */
+function candyOtherCardForImage(card){
+  let nm = '';
+  try{ nm = (authState.user && (authState.user.displayName || authState.user.username)) || ''; }catch(e){}
+  const out = Object.assign({}, card, {mine:false, viewer: nm || '训练家'});
+  if(candyState.affInImg){
+    try{
+      const r = candyAffinity(candyEffectiveGrades(), card.grades || {});
+      if(r.ok) out.aff = r;
+    }catch(e){}
+  }
+  return out;
 }
 /* 出图 + 弹保存浮层。
    ⚠️ 不能只给一个 <a download> 就完事：iOS Safari 对 blob: 的 download 属性支持一直不可靠，
@@ -22143,7 +22280,7 @@ function candyOpenCardFrom(chipEl, card){
   wrap.scrollTop = 0;
   // offsetHeight 已经被 max-height 夹过了，所以内容再长这里也不会超过一屏
   const h = wrap.offsetHeight;
-  const top = Math.max(12, Math.round((vh - h) / 2));
+  const top = Math.max(CANDY_OV_TOP_MIN, Math.round((vh - h) / 2));
   wrap.style.top = top + 'px';
   const last = wrap.getBoundingClientRect();
   const first = chipEl ? chipEl.getBoundingClientRect() : null;
@@ -22164,12 +22301,19 @@ function candyOpenCardFrom(chipEl, card){
   const cl = document.getElementById('candyOvX');
   if(cl) cl.onclick = candyCloseCard;
   const sv = document.getElementById('candyOvSave');
-  if(sv) sv.onclick = ()=>{ if(candyOvCard) candySaveImage(Object.assign({}, candyOvCard, {mine:false})); };
-  // 展开期间锁住背后页面的滚动，免得手指滑到卡片外面把底下的页面带着滚
+  if(sv) sv.onclick = ()=>{ if(candyOvCard) candySaveImage(candyOtherCardForImage(candyOvCard)); };
+  /* 展开期间锁住背后页面的滚动。
+     ⚠️ 光靠 body.overflow:hidden 在移动端不够——触摸滚动照样会穿到下层去。
+     必须同时上 lockPageScroll()（它在 window 上挂 passive:false 的 touchmove 拦截），
+     而 blockOuterScroll 的放行名单里已经加了 .candy-ov-wrap，所以卡片自己还能滚。 */
   document.body.style.overflow = 'hidden';
+  if(typeof lockPageScroll === 'function') lockPageScroll();
   candyOvCard = card;
 }
-const CANDY_OV_FOOT_H = 58;   // 44 的按钮 + 14 的下边距，跟 .candy-ov-wrap 的 max-height 对应
+/* 44 的按钮 + 28 的下边距。下边距从 14 提到 28 是因为贴底太近（手机底部还有手势条），
+   顶上对应也留 CANDY_OV_TOP_MIN，不然契合度那一块会怼到屏幕最上沿被状态栏/刘海糊住。 */
+const CANDY_OV_FOOT_H = 72;
+const CANDY_OV_TOP_MIN = 28;
 /* 填底部那条：左边卡主昵称，右边分享码，点一下复制。
    没有分享码的卡（别人还没发布过）就只剩昵称，整条不可点。 */
 function candyOvFillFoot(card){
@@ -22234,6 +22378,10 @@ function candyCloseCard(){
     wrap.style.transform = 'scale(.9)';
   }
   document.body.style.overflow = '';
+  // ⚠️ 盒子浮层也在用这把锁。它开着的时候别顺手解开，否则关掉选糖卡会把盒子的滚动锁一起撤了
+  if(typeof unlockPageScroll === 'function' && !(typeof boxOverlayOpen !== 'undefined' && boxOverlayOpen)){
+    unlockPageScroll();
+  }
   candyOvCard = null;
   setTimeout(()=>{
     ov.classList.remove('on');
