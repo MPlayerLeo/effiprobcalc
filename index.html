@@ -3243,7 +3243,9 @@
 .candy-aff-sec{ margin-top:9px; }
 .candy-aff-h{ font-size:11.5px; font-weight:900; color:#7a7568; margin-bottom:5px; }
 .candy-aff-hint{ font-weight:800; color:#9b9484; margin-left:6px; }
-.candy-aff-row{ display:flex; flex-wrap:wrap; gap:8px; }
+/* 一行铺满，多出来的由 candyAffFitRows() 按实际宽度藏掉。
+   nowrap + overflow:hidden 是兜底：JS 还没跑到时宁可裁掉也别换行，免得闪一下变两行 */
+.candy-aff-row{ display:flex; flex-wrap:nowrap; overflow:hidden; gap:8px; }
 .candy-aff-cell{ display:flex; flex-direction:column; align-items:center; gap:3px; }
 /* 跟 .candy-poke 同一个道理：方形头像的角会探出圆角，必须裁 */
 .candy-aff-poke{
@@ -21353,9 +21355,10 @@ function candyAffinity(gA, gB){
   let label = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][1];
   let color = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][2];
   for(const [lo, txt, c] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; color = c; break; } }
-  // 合拍/分歧只在【查看他人】那一页上展示，出图的契合度框是纯文字版，所以 5 只就够
-  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 5);
-  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 5);
+  // 取 10 只备用：页面上按实际宽度铺满一行（candyAffFitRows），窄屏放不下的藏起来。
+  // 出图的契合度框是纯文字版，不用这两个列表。
+  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 10);
+  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 10);
   return {ok:true, pct:pct, label:label, color:color, voted:items.length, same:same, total:total,
           agree:agree, clash:clash};
 }
@@ -21411,6 +21414,18 @@ function candyAffinityHtml(card, compact){
           + '<div class="candy-aff-row">' + r.clash.map(x=> cell(x, false)).join('') + '</div></div>';
   }
   return html + '</div>';
+}
+/* 合拍/分歧那两行：一个 cell 宽 34 + 间距 8，按容器实际宽度算一行放得下几个，
+   多出来的藏起来。不这么做的话要么换行（窄屏变两行、第二行又是半空）、
+   要么写死个数（宽屏右边空一大块）。 */
+function candyAffFitRows(root){
+  if(!root) return;
+  root.querySelectorAll('.candy-aff-row').forEach(row=>{
+    const w = row.clientWidth;
+    if(!w) return;                                   // 还没布局（display:none 之类），下次再说
+    const n = Math.max(1, Math.floor((w + 8) / 42));
+    Array.prototype.forEach.call(row.children, (c, i)=>{ c.style.display = i < n ? '' : 'none'; });
+  });
 }
 function candyCardHtml(names, grades, editable, strict, hidden){
   const roster = candyRoster();
@@ -21776,6 +21791,7 @@ function candyRenderLookup(){
          + candyAffinityHtml(candyLookupData)
          + candyCardHtml(candyLookupData.names, candyLookupData.grades, false, true))
       : '';
+    candyAffFitRows(card);
   }
 }
 async function candyLookup(){
@@ -21808,6 +21824,9 @@ function candyNormalizeCard(data){
   }
   return {username: (data && typeof data.username === 'string') ? data.username : '', names: names, grades: grades, code: (data && data.code) || ''};
 }
+
+// 转屏/改窗口宽度后一行能放的只数变了，重算一次
+window.addEventListener('resize', ()=>{ candyAffFitRows(document.getElementById('candyLookupCard')); });
 
 /* ---- 发布 ---- */
 async function candyPublish(){
