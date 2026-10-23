@@ -9186,6 +9186,9 @@ async function authApi(path, {method='GET', body=null, auth=false}={}){
   if(!res.ok){
     // token 过期/被换掉：本地登录态已经没用了，直接清掉，让界面回到未登录
     if(res.status === 401 && auth){ clearAuthState(); updateBoxActionBar(); }
+    // 429 是 Cloudflare 的 WAF 限流挡下来的，返回的是它自己那张 HTML 页，
+    // 上面那句 res.json() 解不出 error 字段，不特判的话用户只会看到"请求失败（429）"
+    if(res.status === 429) throw new Error('点太快了，歇一会儿再试');
     throw new Error(data.error || ('请求失败（'+res.status+'）'));
   }
   return data;
@@ -22264,11 +22267,38 @@ candyBindChipDelegate();
   if(sheet) sheet.onclick = (e)=>{ if(e.target === sheet) candyCloseImgSheet(); };
 })();
 // 社交界面那颗按钮的统一入口：点一下 → 拉卡 → 原地长成大卡
+/* 点开过的卡记一下，别每点一次就打一次接口。
+   PVP 榜一屏就是上百个人，一个个点开看等于连着打几十次 /api/candy/:code——
+   WAF 那条限流规则按 IP 计数，真实用户点得快一点就会被当成扫号挡掉。
+   TTL 给 10 分钟：别人重新发布过的卡总得有机会刷新，但一次"逛榜单"的时间里不会重复请求。
+   ⚠️ 缓存只挡得住"反复点开同一张卡"；连着点开 N 个【不同的】人仍然是 N 次请求，
+   那部分只能靠 WAF 的阈值留余量。 */
+const CANDY_CARD_CACHE_TTL = 10 * 60 * 1000;
+const CANDY_CARD_CACHE_MAX = 200;      // 榜单上限 100 人，留一倍余量，免得逛久了无限涨
+const candyCardCache = new Map();
+function candyCardCacheGet(code){
+  const hit = candyCardCache.get(code);
+  if(!hit) return null;
+  if(Date.now() - hit.at > CANDY_CARD_CACHE_TTL){ candyCardCache.delete(code); return null; }
+  return hit.card;
+}
+function candyCardCachePut(code, card){
+  if(candyCardCache.size >= CANDY_CARD_CACHE_MAX){
+    // Map 迭代是插入序，删最早那条就够了，不用真做 LRU
+    const oldest = candyCardCache.keys().next();
+    if(!oldest.done) candyCardCache.delete(oldest.value);
+  }
+  candyCardCache.set(code, {card:card, at:Date.now()});
+}
 async function candyOpenByCode(chipEl, code){
   if(!code) return;
+  const cached = candyCardCacheGet(code);
+  if(cached){ candyOpenCardFrom(chipEl, cached); return; }
   try{
     const data = await authApi('/api/candy/' + code, {method:'GET'});
-    candyOpenCardFrom(chipEl, candyNormalizeCard(data));
+    const card = candyNormalizeCard(data);
+    candyCardCachePut(code, card);
+    candyOpenCardFrom(chipEl, card);
   }catch(e){
     if(typeof showBoxToast === 'function') showBoxToast(e.message || '这张选糖卡拉不到');
   }
@@ -25487,7 +25517,7 @@ function pvpRenderBoard(){
   el.innerHTML = head + `<div class="pvp-card">
       <div class="pvp-card-t">${boardTitle}${isLuck?'欧非榜':'总分榜'}（${d.participants} 人）</div>
       ${meHtml}
-      ${isLuck?`<div class="isl-hint" style="margin-bottom:8px">欧非分 ＝ 总分 ÷ 总捕捉数 × 100。分母是各人自填的，仅供娱乐。<br>录入只数超过总捕捉数 1/3 的不上榜——那是捕捉数没填或填得太小，算出来的分不真实。</div>`:''}
+      ${isLuck?`<div class="isl-hint" style="margin-bottom:8px">欧非分 ＝ 总分 ÷ 总捕捉数 × 100。分母是各人自填的，仅供娱乐。</div>`:''}
       ${rowsHtml ? `<div class="pvp-list">${rowsHtml}</div>` : `<div class="pvp-empty">还没有人上榜</div>`}
     </div>`;
   bind();
@@ -25687,9 +25717,8 @@ function pvpRenderSet(){
         用捕捉数而不是"盒子里录了几只"当分母，是因为差的宝可梦大家根本不会录进来，
         拿录入数当分母等于"录得越认真分越低"。<br>
         这个数没法验证，全靠自觉。两道兜底：分母不会低于你盒子里的只数（现在是 ${boxN} 只，
-        填得比这还小会自动抬上去）；总捕捉数不到 ${PVP_CATCH_MIN} 的不参与欧非榜。<br>
-        另外，录入只数超过总捕捉数 1/3 的也不上欧非榜——真实玩家抓几万次才攒下几百只值得录入的，
-        比值这么高说明捕捉数没填或填得太小，算出来的分不真实。
+        填得比这还小会自动抬上去）；总捕捉数不到 ${PVP_CATCH_MIN} 的、
+        或者录入只数超过总捕捉数 1/3 的，都不参与欧非榜。
         榜单上会连分母一起显示，填得离谱大家都看得见。
       </div>
     </div>
