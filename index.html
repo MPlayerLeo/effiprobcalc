@@ -21353,9 +21353,9 @@ function candyAffinity(gA, gB){
   let label = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][1];
   let color = CANDY_AFF_LABELS[CANDY_AFF_LABELS.length - 1][2];
   for(const [lo, txt, c] of CANDY_AFF_LABELS){ if(pct >= lo){ label = txt; color = c; break; } }
-  // 取 8 只：出图时右半边一行正好放得下 8 个，页面上窄，渲染时自己再截到 5
-  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 8);
-  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 8);
+  // 合拍/分歧只在【查看他人】那一页上展示，出图的契合度框是纯文字版，所以 5 只就够
+  const agree = items.filter(x=> x.diff === 0).sort((a,b)=> b.high - a.high).slice(0, 5);
+  const clash = items.slice().sort((a,b)=> b.diff - a.diff || b.high - a.high).slice(0, 5);
   return {ok:true, pct:pct, label:label, color:color, voted:items.length, same:same, total:total,
           agree:agree, clash:clash};
 }
@@ -21393,7 +21393,7 @@ function candyAffinityHtml(card, compact){
             : dot(x.a, '你', myNames) + dot(x.b, 'TA', hisNames))
     + '</div></div>';
   let html = '<div class="candy-aff">'
-    + '<div class="candy-aff-top"><span class="candy-aff-label">与你的契合度</span>'
+    + '<div class="candy-aff-top"><span class="candy-aff-label">我们的契合度</span>'
     + '<span class="candy-aff-pct" style="color:' + r.color + '">' + r.pct + '%</span></div>'
     + '<div class="candy-aff-bar"><i style="width:' + r.pct + '%;background:' + r.color + '"></i></div>'
     + '<div class="candy-aff-say" style="color:' + r.color + '">' + islEsc(r.label) + '</div>'
@@ -21403,12 +21403,12 @@ function candyAffinityHtml(card, compact){
   if(compact) return html + '</div>';
   if(r.agree.length){
     html += '<div class="candy-aff-sec"><div class="candy-aff-h">最合拍</div>'
-          + '<div class="candy-aff-row">' + r.agree.slice(0, 5).map(x=> cell(x, true)).join('') + '</div></div>';
+          + '<div class="candy-aff-row">' + r.agree.map(x=> cell(x, true)).join('') + '</div></div>';
   }
   if(r.clash.length){
     html += '<div class="candy-aff-sec"><div class="candy-aff-h">最有分歧'
           + '<span class="candy-aff-hint">左＝你，右＝TA</span></div>'
-          + '<div class="candy-aff-row">' + r.clash.slice(0, 5).map(x=> cell(x, false)).join('') + '</div></div>';
+          + '<div class="candy-aff-row">' + r.clash.map(x=> cell(x, false)).join('') + '</div></div>';
   }
   return html + '</div>';
 }
@@ -21959,7 +21959,7 @@ function candyImgFitText(ctx, text, maxW){
 /* 契合度那一块。版式照着页面上的 .candy-aff 来：标题 + 大号百分比 / 进度条 / 评语，
    三者同色（颜色由 candyAffinity 按分档给出）。
    ⚠️ 底色要比整张图的背景(#efe9d8)浅一点，不然这块跟背景糊成一片，只剩一道边框。 */
-function candyImgDrawAff(ctx, x, y, w, h, aff, imgs){
+function candyImgDrawAff(ctx, x, y, w, h, aff){
   const C = CANDY_IMG;
   ctx.save();
   candyRoundRect(ctx, x, y, w, h, 13);
@@ -21970,57 +21970,25 @@ function candyImgDrawAff(ctx, x, y, w, h, aff, imgs){
   ctx.stroke();
   ctx.clip();
   const padX = 15;
-  const leftW = 260;                 // 左半边给文字，剩下的全给头像
-  // ---- 左：标题 / 百分比 / 进度条 / 评语 ----
   ctx.textAlign = 'left';
   ctx.fillStyle = '#7a7568';
   ctx.font = '800 13px ' + C.FONT;
-  ctx.fillText('与你的契合度', x + padX, y + 21);
+  ctx.fillText('我们的契合度', x + padX, y + 21);
   ctx.textAlign = 'right';
   ctx.fillStyle = aff.color;
   ctx.font = '900 26px ' + C.FONT;
-  ctx.fillText(aff.pct + '%', x + padX + leftW, y + 22);
-  const barY = y + 38, barH = 7;
+  ctx.fillText(aff.pct + '%', x + w - padX, y + 22);
+  const barY = y + 38, barW = w - padX * 2, barH = 7;
   ctx.fillStyle = '#ded6c2';
-  candyRoundRect(ctx, x + padX, barY, leftW, barH, 4); ctx.fill();
+  candyRoundRect(ctx, x + padX, barY, barW, barH, 4); ctx.fill();
   if(aff.pct > 0){
     ctx.fillStyle = aff.color;
-    candyRoundRect(ctx, x + padX, barY, Math.max(barH, leftW * aff.pct / 100), barH, 4); ctx.fill();
+    candyRoundRect(ctx, x + padX, barY, Math.max(barH, barW * aff.pct / 100), barH, 4); ctx.fill();
   }
   ctx.textAlign = 'left';
   ctx.fillStyle = aff.color;
   ctx.font = '900 16px ' + C.FONT;
   ctx.fillText(aff.label, x + padX, barY + 24);
-  const labW = ctx.measureText(aff.label).width;
-  ctx.fillStyle = '#9a9484';
-  ctx.font = '800 11.5px ' + C.FONT;
-  ctx.fillText('· 共 ' + aff.voted + ' 只', x + padX + labW + 7, barY + 25);
-  // ---- 右：上行最合拍、下行最有分歧，各最多 8 只 ----
-  const rx = x + padX + leftW + 14;
-  const tagW = 26, av = 30, gap = 5;
-  const avX0 = rx + tagW + 6;
-  const room = Math.max(0, x + w - padX - avX0);
-  const maxN = Math.max(0, Math.floor((room + gap) / (av + gap)));
-  const drawRow = (list, tag, cy)=>{
-    ctx.textAlign = 'left';
-    ctx.fillStyle = '#9a9484';
-    ctx.font = '800 11px ' + C.FONT;
-    ctx.fillText(tag, rx, cy + av / 2);
-    let px = avX0;
-    list.slice(0, maxN).forEach(it=>{
-      ctx.save();
-      candyRoundRect(ctx, px, cy, av, av, 8);
-      ctx.fillStyle = 'rgba(255,255,255,.92)';
-      ctx.fill();
-      ctx.clip();
-      const im = imgs && it.fam ? imgs[it.fam.key] : null;
-      if(im) ctx.drawImage(im, px + 1, cy + 1, av - 2, av - 2);
-      ctx.restore();
-      px += av + gap;
-    });
-  };
-  if(aff.agree && aff.agree.length) drawRow(aff.agree, '合拍', y + 10);
-  if(aff.clash && aff.clash.length) drawRow(aff.clash, '分歧', y + 46);
   ctx.restore();
 }
 async function candyRenderImage(card){
@@ -22118,7 +22086,7 @@ async function candyRenderImage(card){
 
   // ---- 契合度（只有看别人的卡、且开关开着、且算得出来时才有）----
   if(card.aff){
-    candyImgDrawAff(ctx, C.PAD, y, W - C.PAD * 2, C.AFF_H, card.aff, imgs);
+    candyImgDrawAff(ctx, C.PAD, y, W - C.PAD * 2, C.AFF_H, card.aff);
     y += C.AFF_H + C.AFF_GAP;
   }
 
