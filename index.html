@@ -11095,6 +11095,20 @@ function foodYieldNoteHtml(row, level){
   return '<div class="grad-food-cov-note">是<b>' + row.ingName + '</b>食材榜首宝可梦<b>' + who
        + '</b>食概m+冷静面板产量的 <b>' + (r*100).toFixed(1) + '%</b></div>';
 }
+/* 判废 / 不可用的食材型（aaa·abb 不可用、不推荐使用、abc逆贼 / aba滚粗 / aax 这几类）也挂这行产量备注
+   （2026-10-26 用户要求）。口径跟邪修那行【完全一样】——无限持有、忽略露营券、拿覆盖率最高的那种
+   食材去比该食材列榜首的食概M+冷静面板——这样同一只宝可梦够不够邪修、差多少，两行数字能直接对上。
+   已经判成邪修的不走这里（邪修自己会带这行，别重复挂两遍）。 */
+function foodOverrideYieldNoteHtml(labels, persona){
+  if(state.type!=='food') return '';
+  try{
+    return withNoCamping(()=>{
+      const rows = gradFoodCoverageRows(computeEfficiency(labels, 'food', state.level, persona), undefined, true);
+      const trig = xiexiuTriggerRow(rows);
+      return trig ? foodYieldNoteHtml(trig, state.level) : '';
+    });
+  }catch(e){ return ''; }
+}
 const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
 // 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率，且固定忽略露营券开关）
 function computeXiexiuNow(labels, persona){
@@ -11232,7 +11246,7 @@ function renderForcedGradeBox(el, borderClass, overrideInfo, xiexiu){
   // "食材和解经食谱覆盖率转化为毕业"的备注是同一个展示套路；邪修也复用这条备注样式
   const noteText = xiexiu ? XIEXIU_NOTE : overrideInfo.conversionNote;
   const conversionNoteHtml = (noteText ? `<div class="grad-food-cov-note">${noteText}</div>` : '')
-    + ((xiexiu && xiexiu.yieldNoteHtml) || '');
+    + (xiexiu ? (xiexiu.yieldNoteHtml || '') : foodOverrideYieldNoteHtml(currentLabels(), currentPersona()));
   const strikeStyle = (!xiexiu && overrideInfo.strike) ? 'text-decoration:line-through;' : '';
   el.innerHTML = `${foodCoverageHtml}${conversionNoteHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
       <div class="grad-primary">
@@ -11338,6 +11352,15 @@ function applyFakeGradToGradBox(el){
   comment.style.color = FAKE_GRAD_COLOR;
   comment.style.fontSize = '28px';
   renderGradeText(grade);
+  /* 盖了「视为毕业」就把判定框里的备注一并撤掉（2026-10-26 用户要求）：
+     警示标题（aba滚粗 / 建议严选果S / aaa不可用 / 不推荐使用…）、不推荐那行小字、
+     覆盖率转化 / 邪修 / 产量备注、一线主力备注——它们说的都是"原判定为什么不是毕业"，
+     章已经盖了，再挂着只会跟金黄色的「视为毕业」打架。
+     ⚠️ 50 级的 70/80 追高块（.grad-sub）和萌新版那段 70/80 说明（.grad-7080-notes-block）【留着】：
+     用户明确要求追高块别删，那段说明是专门解释追高块的，跟着一起留。
+     其余留下的是数据本身：食谱覆盖率表（.grad-food-cov-box）和能量型的面板排名。 */
+  el.querySelectorAll('.grad-warning-heading, .grad-unavail-note, .grad-food-cov-note, .grad-mainstream-note')
+    .forEach(n=> n.remove());
 }
 function renderGraduation(pfx){
   pfx = pfx || '';
@@ -11721,6 +11744,9 @@ function renderGraduationCore(pfx){
     strikeStyle = '';
     extraHtml = '';
     xiexiuNoteHtml = `<div class="grad-food-cov-note">${XIEXIU_NOTE}</div>` + (xiexiu.yieldNoteHtml || '');
+  } else if(gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable')){
+    // 没够上邪修的判废食材型：产量备注照样挂，排在覆盖率表下面、跟邪修那行同一个位置
+    xiexiuNoteHtml = foodOverrideYieldNoteHtml(labels, persona);
   }
   let mainstreamNoteHtml = '';
   if(row && !(gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable'))){
@@ -25167,7 +25193,7 @@ const PVP_SCORE_TABLE = [
 ];
 const PVP_SCORE_MAP = PVP_SCORE_TABLE.reduce((m,r)=>{ m[r[0]]=r[1]; return m; }, {});
 // 十档以外这几个另类档位的配色：TIER_STYLE 里没有它们
-const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375', '不推荐使用':'#9a9484'};
+const PVP_EXTRA_COLOR = {'邪修':'#c0392b', '极致邪修':'#c0392b', '恐怖宝可梦':'#d946a6', '打工':'#8a8375', '不推荐使用':'#9a9484', '买椟还珠':'#a0522d'};
 // 「恐怖宝可梦」是内部代号（见 boxTerrorInfo 那条链路的注释：页面上任何地方都不出现这四个字），
 // PVP 这条计分线复用了同一套档位名字算分/配色，但排行榜是给所有人看的公共展示——之前直接把
 // r.cat/r.grade 原样塞进牌子文字，等于把这个内部代号原样广播给了全站用户，破坏了这条底线。
@@ -25323,6 +25349,43 @@ function pvpUnrecommendedQuarterScore(entry){
   return {score: base/divisor, grade: grade70, bumpGrade};
 }
 
+/* 「建议严选果S —— 买椟还珠」：能量型在 70 级窗口（PVP 的判档基准，4 格）里没有树果数量S。
+   毕业判定页把档位划掉，boxEntryGradeCategoryRaw 判 struck→'其他'，原来 PVP 直接不计分。
+   2026-10-26 用户定：按【没划掉之前的真实档位】计分，再扣 PVP_NOFS_PENALTY 分（不低于 0）。
+   · 70/80 均分照旧，跟 pvpLevelNormalizedGrade 同一套；扣分只看 70 级窗口有没有果S——
+     第 5 格里才有果S的，80 级那一档照样按原档位参与均分，但 70 级还是没有，照扣。
+   · 不推荐使用（rec[4]）的走 1/4 那条，不叠加这里——boxEntryGradeCategoryRaw 里 rec[4]
+     排在果S检查前面，两条本来就互斥，这里再显式挡一次。
+   · 35 分地板不适用：地板的参照线就是"果S+帮M"，没带果S本身就是扣分的理由。
+   ⚠️ 扣分数值必须与后端 pvp.js 的 PVP_NOFS_PENALTY 一致，改一边必须改另一边并重新 deploy，
+      否则整单上传会被后端判成"分数对不上"拒收。 */
+const PVP_NOFS_PENALTY = 10;
+function pvpIsNoFruitS(entry){
+  const rec = POKEMON_DEX_DATA.find(r=>r[0]===entry.dex);
+  if(!rec || rec[4]) return false;
+  if(DEX_TYPE_MAP[rec[3]] !== 'energy') return false;
+  const labels = buildLabels(boxEntryBuild(entry));
+  const ws = windowSizeOf(70);
+  for(let i=0;i<ws;i++){ if(labels[i]==='G1') return false; }
+  return true;
+}
+function pvpNoFruitSScore(entry){
+  if(!pvpIsNoFruitS(entry)) return null;
+  const x = capFindDex(boxEffectiveFinalDex(entry.dex));
+  if(!x) return null;
+  let g70 = null, g80 = null;
+  try{ g70 = boxEntryGraduationGrade(Object.assign({}, entry, {level:70}), x, 'energy'); }catch(e){ g70 = null; }
+  try{ g80 = boxEntryGraduationGrade(Object.assign({}, entry, {level:80}), x, 'energy'); }catch(e){ g80 = null; }
+  const s70 = g70 ? PVP_SCORE_MAP[g70] : null;
+  if(s70 == null) return null;
+  let base = s70, bumpGrade = null;
+  if(g80 && g80 !== g70){
+    const s80 = PVP_SCORE_MAP[g80];
+    if(s80 != null){ base = (s70 + s80) / 2; bumpGrade = g80; }
+  }
+  return {score: Math.max(0, base - PVP_NOFS_PENALTY), grade: g70, bumpGrade};
+}
+
 /* 把一组条目汇总成一份战绩。站长要求【所有个体都计分，不按物种合并】——
    同一个物种养了三只大毕业就是三份分，盒子本身的规模也是战力的一部分。 */
 /* 欧非分（第二个榜）＝ 总分 ÷ 捕捉次数 × 100，读作"每 100 次捕捉攒下多少战力"。
@@ -25412,8 +25475,15 @@ function pvpBuildMyStats(){
     // 不看条目真实等级，一律按 pvpLevelNormalizedGrade 的70/80归一化结果算分
     const norm = pvpLevelNormalizedGrade(re);
     if(norm == null){
-      // pvpLevelNormalizedGrade 返回 null 有两种情况：副技能没选满/物种没识别/组合判废（真判不出，沉底）；
-      // 或者是"不推荐使用"（rec[4]）触发的 struck→'其他'——后者按 1/4 规则给分，不直接沉底
+      // pvpLevelNormalizedGrade 返回 null 有三种情况：副技能没选满/物种没识别/组合判废（真判不出，沉底）；
+      // "不推荐使用"（rec[4]）触发的 struck→'其他'——按 1/4 规则给分；
+      // 能量型没带果S（买椟还珠）触发的 struck→'其他'——按原档位扣 10 分。后两种都不沉底
+      const nf = pvpNoFruitSScore(re);
+      if(nf){
+        // 扣到 0 分的也算"判出了档位"（跟普通不合格 0 分一样进列表），不算判不出
+        rows[g].push({entry:re, branchOf:entry, cat:'买椟还珠', score:nf.score, bumpGrade:nf.bumpGrade, nofs:nf.grade, unrecommended:null, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
+        return;
+      }
       const q = pvpUnrecommendedQuarterScore(re);
       if(q.score > 0){
         rows[g].push({entry:re, branchOf:entry, cat:'不推荐使用', score:q.score, bumpGrade:q.bumpGrade, unrecommended:q.grade, shiny:(g==='shiny'), eff: pvpEntryEff(re)});
@@ -25491,11 +25561,13 @@ function pvpRenderMe(){
     // 未来可期：档位牌显示"未来XX"；不推荐使用(穿山鼠这类)：档位牌显示实际档位、右下角挂1/4提示（拉帝亚斯是1/2，见 subExtra）。
     // 恐怖宝可梦（future/unrecommended 分数恒为0分支，永远不会跟它撞上）不能原样显示内部代号，
     // 换成占位文字+彩虹流光牌子，跟盒子列表那边的处理保持一致
-    const isTerror = !r.unrecommended && r.cat === '恐怖宝可梦';
-    const label = isTerror ? PVP_TERROR_LABEL : (r.unrecommended ? ('不推荐·'+r.unrecommended) : r.cat);
+    const isTerror = !r.unrecommended && !r.nofs && r.cat === '恐怖宝可梦';
+    const label = isTerror ? PVP_TERROR_LABEL
+      : (r.unrecommended ? ('不推荐·'+r.unrecommended) : (r.nofs ? ('买椟还珠·'+r.nofs) : r.cat));
     const badgeColor = pvpCatColor(r.cat);
     const bumpNote = r.bumpGrade ? ` · 80级可到${pvpDisplayLabel(r.bumpGrade)}，按70/80两档均分计分` : '';
-    const subExtra = (r.unrecommended ? ' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分' : '') + bumpNote;
+    const subExtra = (r.unrecommended ? ' · 不推荐使用，按实际档位'+(e.dex==='#380'?'1/2':'1/4')+'计分' : '')
+      + (r.nofs ? ' · 没带果S，按实际档位扣'+PVP_NOFS_PENALTY+'分' : '') + bumpNote;
     // 分支进化(伊布/呆呆兽等)且用户还没选过要算进哪个最终形态：挂个"选分支"小按钮，
     // 不选也照算(finals[0]兜底)，只是提醒——不强制打断，跟站内其它软提示一个调性
     const needsPick = pvpEntryNeedsBranchPick(r.branchOf);
@@ -25597,8 +25669,11 @@ function pvpSnapshotRecords(){
         // "不推荐使用"这个前端自用的展示分组标签、不是真档位，真档位在 r.unrecommended 里，得传那个。
         // bumpGrade 有值时代表80级窗口会跳到更高一档，score 已经是70/80两档均分后的数，
         // 后端要靠 bumpGrade 复核这个均分对不对——见 pvp.js 的 want 公式
-        grade: r.unrecommended || r.cat,
+        // 买椟还珠(nofs)的行同理：r.cat 是展示分组标签，真档位在 r.nofs 里
+        grade: r.unrecommended || r.nofs || r.cat,
         quarter: r.unrecommended ? 1 : 0,
+        // nofs=1：这条是"没带果S、按原档位扣 PVP_NOFS_PENALTY 分"算出来的，后端靠这一位复核
+        nofs: r.nofs ? 1 : 0,
         bump: r.bumpGrade ? 1 : 0,
         bumpGrade: r.bumpGrade || null,
         // floor=1：这条的 score 是靠"效率≥果S帮M"地板分顶上去的35分（见 pvpFloorScoreFor），
@@ -25609,6 +25684,8 @@ function pvpSnapshotRecords(){
           nick: e.nickname || '', sel: e.selected || [],
           inc: e.incAttr || null, dec: e.decAttr || null,
           i2: e.ingChoice2 || null, i3: e.ingChoice3 || null,
+          // 物种榜展示用：pvp_records 没有这一列，标记搭 detail 带回来（见 pvpRowNoFruitS）
+          nfs: r.nofs ? 1 : 0,
         }),
       });
     });
@@ -25826,6 +25903,14 @@ function pvpRowCombo(r){
   r.__comboCache = combo;
   return combo;
 }
+// 物种榜一行是不是"没带果S扣分"的：pvp_records 没有这一列，标记是上传时塞在 detail 里的
+function pvpRowNoFruitS(r){
+  if(r.__nfsCache !== undefined) return r.__nfsCache;
+  let v = false;
+  try{ const d = r.detail ? JSON.parse(r.detail) : null; v = !!(d && d.nfs); }catch(e){}
+  r.__nfsCache = v;
+  return v;
+}
 function pvpRowComboHtml(r){
   const combo = pvpRowCombo(r);
   if(!combo) return '';
@@ -25885,9 +25970,11 @@ function pvpRenderSpecies(el, head, bind, shiny){
       const who = r.isMe ? '<b>我</b>' : (showNames ? r.username : '———');
       // 恐怖宝可梦是内部代号（见 pvpDisplayLabel 定义处注释），物种榜是给所有人看的公共展示，
       // r.grade 直接来自后端存的原始档位字符串，不能就这么原样印出来
-      const isTerror = !r.quarter && r.grade === '恐怖宝可梦';
-      const label = isTerror ? PVP_TERROR_LABEL : (r.quarter ? ('不推荐·'+r.grade) : r.grade);
-      const badgeColor = pvpCatColor(r.quarter?'不推荐使用':r.grade);
+      const nfs = pvpRowNoFruitS(r);
+      const isTerror = !r.quarter && !nfs && r.grade === '恐怖宝可梦';
+      const label = isTerror ? PVP_TERROR_LABEL
+        : (r.quarter ? ('不推荐·'+r.grade) : (nfs ? ('买椟还珠·'+r.grade) : r.grade));
+      const badgeColor = pvpCatColor(r.quarter ? '不推荐使用' : (nfs ? '买椟还珠' : r.grade));
       const bumpNote = r.bump && r.bumpGrade ? ` · 80级可到${pvpDisplayLabel(r.bumpGrade)}` : '';
       const sizeM = r.name.match(/\(([^)]*)\)$/);
       const sizeTag = sizeM ? ` · ${sizeM[1]}` : '';
