@@ -11352,14 +11352,16 @@ function applyFakeGradToGradBox(el){
   comment.style.color = FAKE_GRAD_COLOR;
   comment.style.fontSize = '28px';
   renderGradeText(grade);
-  /* 盖了「视为毕业」就把判定框里的备注一并撤掉（2026-10-26 用户要求）：
+  /* 盖了「视为毕业」就把判定框里所有备注一并撤掉（2026-10-26 用户要求）：
      警示标题（aba滚粗 / 建议严选果S / aaa不可用 / 不推荐使用…）、不推荐那行小字、
-     覆盖率转化 / 邪修 / 产量备注、一线主力备注——它们说的都是"原判定为什么不是毕业"，
-     章已经盖了，再挂着只会跟金黄色的「视为毕业」打架。
-     ⚠️ 50 级的 70/80 追高块（.grad-sub）和萌新版那段 70/80 说明（.grad-7080-notes-block）【留着】：
-     用户明确要求追高块别删，那段说明是专门解释追高块的，跟着一起留。
-     其余留下的是数据本身：食谱覆盖率表（.grad-food-cov-box）和能量型的面板排名。 */
-  el.querySelectorAll('.grad-warning-heading, .grad-unavail-note, .grad-food-cov-note, .grad-mainstream-note')
+     覆盖率转化 / 邪修 / 产量备注、一线主力备注、50 级的 70/80 追高块和萌新版的 70/80 说明——
+     它们说的都是"原判定为什么不是毕业"，章已经盖了，再挂着只会跟金黄色的「视为毕业」打架。
+     追高块中途试过留着，用户看过之后还是要去掉：被划掉的那些宝可梦（不可用 / 买椟还珠）
+     追高块本身也是红字删除线 + 警示评语，留着等于把警示换个地方又挂了一遍。
+     留下的只有数据本身：食谱覆盖率表（.grad-food-cov-box）和能量型的面板排名。
+     ⚠️ .grad-sub 是 70/80 追高块；第一个 .grad-grade 已经在上面改成视为毕业了，它在 .grad-primary 里，
+     不在 .grad-sub 里，不会被一起删掉。 */
+  el.querySelectorAll('.grad-warning-heading, .grad-unavail-note, .grad-food-cov-note, .grad-mainstream-note, .grad-sub, .grad-7080-notes-block')
     .forEach(n=> n.remove());
 }
 function renderGraduation(pfx){
@@ -25461,7 +25463,19 @@ function pvpResolvedEntry(entry){
 }
 /* 闪光和不闪光完全分开算两套分、两个榜——闪光是稀有度而不是强度，混在一起
    既让闪光党的分虚高、也让非闪光党没法比。两边各自独立累计总分/均分。 */
+/* PVP 一律按【通用版】判档（2026-10-26 用户定）：萌新版 / 通用版只是"看起来舒服一点"的显示偏好，
+   不该改变打出来的分数——原来树果型在 boxEntryGraduationGrade 里会按 userPrefs.capGradNewbieOn
+   决定要不要下调一档（毕业→和解之类），同一个盒子开关不同、PVP 分就不同，跨人比较就没意义了。
+   整条判档链里只有那一处看这个开关，PVP 的判档又全都从这里进，所以在入口临时把它钉成 false
+   （＝通用版，下调生效），算完原样还回去，盒子 / 捕捉推荐那边照旧按用户自己的开关显示。
+   全程同步执行，中途不会有别的代码读到被改过的值；也不调 saveUserPrefs，不会落盘。 */
 function pvpBuildMyStats(){
+  const saved = userPrefs.capGradNewbieOn;
+  userPrefs.capGradNewbieOn = false;
+  try{ return pvpBuildMyStatsRaw(); }
+  finally{ userPrefs.capGradNewbieOn = saved; }
+}
+function pvpBuildMyStatsRaw(){
   const rows = {normal:[], shiny:[]};
   const unrated = {normal:0, shiny:0};
   const boxCount = {normal:0, shiny:0};
