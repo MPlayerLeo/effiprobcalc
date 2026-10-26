@@ -10953,6 +10953,25 @@ function gradFoodCoverageRows(effFood, levelOverride, infiniteCarry, forDisplay,
 }
 // 毕业判定里要不要出"食谱覆盖率"框：食材型一直都有；食材精选是本次新加的（它们的主业也是产食材）
 function gradShowsFoodCoverage(){ return state.type==='food' || isFoodPickPanel(); }
+/* 食材型「食谱覆盖率转化」的升降档：和解 + 任一食材覆盖率 ≥120% → 同金帮档的毕业；
+   毕业及以上 + 最高覆盖率 <105% → 封顶成同金帮档的和解。返回 {row, dir:'up'|'down'|null}。
+   毕业判定框的主判定和 50 级的 70/80 追高块共用这一份，阈值只写这一处。
+   （盒子侧 boxEntryGraduationGrade 另有一份同口径实现，改阈值要两边一起改。） */
+function foodCoverageShiftRow(row, decisionRows){
+  if(!row || !decisionRows) return {row, dir:null};
+  // 尾巴这类没有食谱覆盖率概念的食材，ratio 是 null，不能拿来参与"是否达标转正/降级"的判断
+  const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
+  const maxRatio = validRatios.length ? Math.max(...validRatios) : null;
+  if(maxRatio==null) return {row, dir:null};
+  if(GRAD_RANK[row.grade]===1 && maxRatio >= 1.2){
+    const up = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===2);
+    if(up) return {row:up, dir:'up'};
+  } else if(GRAD_RANK[row.grade] > 1 && maxRatio < 1.05){
+    const down = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===1);
+    if(down) return {row:down, dir:'down'};
+  }
+  return {row, dir:null};
+}
 
 /* 「视为毕业」：用户在盒子详情页手动给一只没毕业的宝可梦盖的章。
    跟邪修/恐怖那几种"算出来的"档位不同，这个纯粹是主观意愿，所以：
@@ -11653,29 +11672,17 @@ function renderGraduationCore(pfx){
       const level60DisplayRows = usesLevel60Rule
         ? gradFoodCoverageRows(computeEfficiency(labels, state.type, 60, persona), 60, undefined, true)
         : null;
-      if(decisionRows){
-        // 尾巴这类没有食谱覆盖率概念的食材，ratio 是 null，不能拿来参与"是否达标转正/降级"的判断
-        const validRatios = decisionRows.map(r=>r.ratio).filter(r=>r!=null);
-        const maxRatio = validRatios.length ? Math.max(...validRatios) : null;
-        if(GRAD_RANK[row.grade]===1 && maxRatio!=null && maxRatio >= 1.2){
-          const upgraded = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===2);
-          if(upgraded){
-            if(usesLevel60Rule){
-              foodCoverageUpgradeNote = `效率为${row.grade}，经由60级食谱覆盖率转化为${upgraded.grade}`;
-              foodCoverageLevel60Rows = level60DisplayRows;
-            } else {
-              foodCoverageUpgradeNote = `效率为${row.grade}，经由食谱覆盖率转化为${upgraded.grade}`;
-            }
-            row = upgraded;
-          }
-        } else if(GRAD_RANK[row.grade] > 1 && maxRatio!=null && maxRatio < 1.05){
-          const downgraded = GRAD_TABLE.find(r=>r.gold===row.gold && GRAD_RANK[r.grade]===1);
-          if(downgraded){
-            foodCoverageUpgradeNote = '由于食谱覆盖率不足，只能转化为和解';
-            if(usesLevel60Rule) foodCoverageLevel60Rows = level60DisplayRows;
-            row = downgraded;
-          }
-        }
+      const shifted = foodCoverageShiftRow(row, decisionRows);
+      if(shifted.dir==='up'){
+        foodCoverageUpgradeNote = usesLevel60Rule
+          ? `效率为${row.grade}，经由60级食谱覆盖率转化为${shifted.row.grade}`
+          : `效率为${row.grade}，经由食谱覆盖率转化为${shifted.row.grade}`;
+        if(usesLevel60Rule) foodCoverageLevel60Rows = level60DisplayRows;
+        row = shifted.row;
+      } else if(shifted.dir==='down'){
+        foodCoverageUpgradeNote = '由于食谱覆盖率不足，只能转化为和解';
+        if(usesLevel60Rule) foodCoverageLevel60Rows = level60DisplayRows;
+        row = shifted.row;
       }
     }
   }
@@ -11701,6 +11708,15 @@ function renderGraduationCore(pfx){
     let row80 = classifyGrade(state.type, hasHelper80, eff80, isSpecialSkillMon);
     row70 = applyFruitSGradBoost(row70, gradRec && gradRec[1], state.selected, 70);
     row80 = applyFruitSGradBoost(row80, gradRec && gradRec[1], state.selected, 80);
+    // 食材型追高块也要过食谱覆盖率升降档，口径跟"直接切到 70/80 级"时的主判定完全一样
+    // （70/80 用各自等级的覆盖率、不吃露营券、大器晚成型不参与）。以前这里只按效率分档，
+    // 于是出现「50 级被覆盖率压成和解，下面却挂着 70 级毕业」、真切到 70 级又是和解的自相矛盾
+    // （2026-10-26 用户报的耿鬼 abb）。盒子侧 boxEntryGraduationGrade 一直是按等级套这条规则的，没这个问题。
+    if(state.type==='food' && !LATE_BLOOMER_COVERAGE_EXCLUDE_DEX.has(effectiveYieldDex())){
+      const covRowsAt = (L)=> withNoCamping(()=> gradFoodCoverageRows(computeEfficiency(labels, state.type, L, persona), L));
+      row70 = foodCoverageShiftRow(row70, covRowsAt(70)).row;
+      row80 = foodCoverageShiftRow(row80, covRowsAt(80)).row;
+    }
     const baseGold = !!row.gold;
     const isUnavail = gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable');
     const show70 = row70 && row70[field70] && isGradeUpgrade(baseRank, baseGold, GRAD_RANK[row70.grade], row70.gold);
