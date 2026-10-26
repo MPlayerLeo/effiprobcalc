@@ -11137,31 +11137,63 @@ function foodOverrideYieldNoteHtml(labels, persona){
 }
 const XIEXIU_NOTE = '自身素质较差，但由食谱覆盖率转化为邪修';
 // 当前面板算不算邪修（判定固定按"无限持有"口径的覆盖率，且固定忽略露营券开关）
-function computeXiexiuNow(labels, persona){
+// level 不传＝当前等级；50 级的 70/80 追高块会传 70/80 进来，看"直接切到那个等级"会不会判成邪修
+function computeXiexiuNow(labels, persona, level){
   if(!xiexiuEligibleNow()) return null;
+  const L = level || state.level;
   const rec = getSelectedPokemonRecord();
   // 原效率够不到和解就不给邪修，直接退回原判定（那条路算出来必然是不合格）
-  if(!xiexiuEffGateOk(state.type, state.level, labels, persona, rec && rec[1], state.selected)) return null;
+  if(!xiexiuEffGateOk(state.type, L, labels, persona, rec && rec[1], state.selected)) return null;
   return withNoCamping(()=>{
-    const effFood = computeEfficiency(labels, 'food', state.level, persona);
+    const effFood = computeEfficiency(labels, 'food', L, persona);
     // 覆盖率门槛和产量门槛都在 xiexiuInfoFromRows 里，不过线返回 null＝退回原判定
-    return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, undefined, true), state.level);
+    return xiexiuInfoFromRows(gradFoodCoverageRows(effFood, level ? L : undefined, true), L);
   });
+}
+/* 50 级的 70/80 追高块走「邪修 → 极致邪修」这条路（2026-10-26 用户要求）：
+   直接切到 70/80 级会判成邪修 / 极致邪修的，追高块就写邪修，不再写按纯效率算的档位
+   （以前会出现「50 级判废 + 70 级超级毕业(删除线)」、真切到 70 级却是邪修的矛盾）。
+   只换文字（档位名 + 评语），样式沿用判废追高块的删除线 + 红色。
+   cur 是 50 级本身的邪修结论（null / 邪修 / 极致邪修）：只有比它更高才出块，
+   80 级还要比 70 级那块更高——跟普通追高块"80 只在比 70 更进一步时才出"同一个规矩。
+   返回 {x70, x80}＝该等级直接判出来的邪修（可能为 null），{b70, b80}＝真正要挂出来的块。 */
+const XIEXIU_RANK = {'邪修':1, '极致邪修':2};
+function xiexiuChaseInfo(labels, persona, cur){
+  if(state.level!==50 || !xiexiuEligibleNow()) return {x70:null, x80:null, b70:null, b80:null};
+  // 那一级会触发内部彩蛋（isTerrorPanel，优先级在邪修之上）就当它判不出邪修：
+  // 块里不能写邪修（切过去根本不是邪修），也不能把彩蛋写进块里（页面上不能剧透它）
+  const at = (L)=> isTerrorPanel(labels, persona, L) ? null : computeXiexiuNow(labels, persona, L);
+  const x70 = at(70);
+  const x80 = at(80);
+  const rk = x=> x ? XIEXIU_RANK[x.grade] : 0;
+  const b70 = rk(x70) > rk(cur) ? x70 : null;
+  const b80 = rk(x80) > Math.max(rk(cur), rk(b70)) ? x80 : null;
+  return {x70, x80, b70, b80};
+}
+// strike：跟着原判定走——判废（删除线）那条路的块照旧删除线；功能型食材精选这类原判定没划掉的，就只是红字
+function xiexiuChaseBlockHtml(lv, info, strike){
+  const label = lv + '级' + (state.shiny ? '闪光' : '') + info.grade;
+  const comment = state.newbieMode ? '' : info.comment;
+  return lv===70
+    ? gradBlockHtml('tier70', label, comment, 24, 20, GRAD_WARN_COLOR, !!strike)
+    : gradBlockHtml('tier80', label, comment, 16, 15, GRAD_WARN_COLOR, !!strike);
 }
 // 「恐怖宝可梦」（内部代号，页面上任何地方都不出现这四个字）：
 // abc/aac 组合、c 食材覆盖率 >120% 且效率值 >2 的食材型（判定固定忽略露营券开关）
-function isTerrorPanel(labels, persona){
+// level 不传＝当前等级；邪修追高块要问"切到 70/80 会不会是它"（它优先于邪修，是的话那一级不挂邪修块）
+function isTerrorPanel(labels, persona, level){
   if(state.type!=='food') return false;
   const pattern = currentIngredientPattern();
   if(pattern!=='abc' && pattern!=='aac') return false;
+  const L = level || state.level;
   return withNoCamping(()=>{
-    const effFood = computeEfficiency(labels, 'food', state.level, persona);
+    const effFood = computeEfficiency(labels, 'food', L, persona);
     if(ffloat(effFood) <= 2) return false;
-    const rows = computeFoodCoverageRows(effFood, undefined, true);
+    const rows = computeFoodCoverageRows(effFood, level ? L : undefined, true);
     const cRow = rows && rows.find(r=>r.letter==='c');
     if(!(cRow && cRow.ratio!=null && cRow.ratio > 1.2)) return false;
     // 产量门槛：c 位食材的每日能量要够到【该食材列】榜首的 90%
-    return foodYieldGateOk(cRow, state.level, TERROR_YIELD_MIN);
+    return foodYieldGateOk(cRow, L, TERROR_YIELD_MIN);
   });
 }
 
@@ -11274,6 +11306,11 @@ function renderForcedGradeBox(el, borderClass, overrideInfo, xiexiu){
   const conversionNoteHtml = (noteText ? `<div class="grad-food-cov-note">${noteText}</div>` : '')
     + (xiexiu ? (xiexiu.yieldNoteHtml || '') : foodOverrideYieldNoteHtml(currentLabels(), currentPersona()));
   const strikeStyle = (!xiexiu && overrideInfo.strike) ? 'text-decoration:line-through;' : '';
+  // 这条路（abc / aax 这类组合判废）以前没有 70/80 追高块；邪修路径的块照样挂（见 xiexiuChaseInfo），
+  // 删除线跟着原判定的 strike 走
+  const xc = xiexiuChaseInfo(currentLabels(), currentPersona(), xiexiu);
+  const chaseHtml = (xc.b70 ? xiexiuChaseBlockHtml(70, xc.b70, overrideInfo.strike) : '')
+                  + (xc.b80 ? xiexiuChaseBlockHtml(80, xc.b80, overrideInfo.strike) : '');
   el.innerHTML = `${foodCoverageHtml}${conversionNoteHtml}<div class="grad-outer ${borderClass}"><div class="grad-inner">
       <div class="grad-primary">
         ${headingHtml}
@@ -11281,6 +11318,8 @@ function renderForcedGradeBox(el, borderClass, overrideInfo, xiexiu){
         <div class="grad-rule" style="border-top:3px solid ${color}; width:56%; margin:10px auto;"></div>
         <div class="grad-comment" style="color:${color}; font-size:28px;">${gradCommentHtml(commentText)}</div>
       </div>
+      ${chaseHtml}
+      ${build7080NotesBlock(!!xc.b70, !!xc.b80)}
     </div></div>`;
   el.querySelectorAll('.grad-grade').forEach(renderGradeText);
 }
@@ -11691,6 +11730,10 @@ function renderGraduationCore(pfx){
 
   let extraHtml = '';
   let show70Flag = false, show80Flag = false;
+  let html70 = '', html80 = '';
+  const isUnavailMain = !!(gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable'));
+  // 邪修路径（见 xiexiuChaseInfo）：先算 70/80 直接判出来的邪修，下面普通追高块算完再按它覆盖
+  const xc = xiexiuChaseInfo(labels, persona, xiexiu);
   if(row && state.level===50 && GRAD_RANK[row.grade] < 4){
     const baseRank = GRAD_RANK[row.grade];
     const field70 = baseRank<=1 ? 'future70' : 'chase70';
@@ -11725,7 +11768,7 @@ function renderGraduationCore(pfx){
       const color70 = isUnavail ? GRAD_WARN_COLOR : (isChase ? tierStyleOf(dispGradeName(row70.grade)).color : TIER70_COLOR);
       const grade70Label = state.newbieMode ? (newbieGradeLabel(state.type, row70.grade)||row70.grade) : dispGradeName(row70.grade);
       const comment70 = state.newbieMode ? '' : (isUnavail?gradOverride.comment:row70[field70]);
-      extraHtml += gradBlockHtml('tier70', '70级'+(state.shiny?'闪光':'')+grade70Label, comment70, 24, 20, color70, isUnavail);
+      html70 = gradBlockHtml('tier70', '70级'+(state.shiny?'闪光':'')+grade70Label, comment70, 24, 20, color70, isUnavail);
     }
     const rankFloorFor80 = show70 ? GRAD_RANK[row70.grade] : baseRank;
     const goldFloorFor80 = show70 ? !!row70.gold : baseGold;
@@ -11734,9 +11777,15 @@ function renderGraduationCore(pfx){
       const color80 = isUnavail ? GRAD_WARN_COLOR : (isChase ? tierStyleOf(dispGradeName(row80.grade)).color : TIER80_COLOR);
       const grade80Label = state.newbieMode ? (newbieGradeLabel(state.type, row80.grade)||row80.grade) : dispGradeName(row80.grade);
       const comment80 = state.newbieMode ? '' : (isUnavail?gradOverride.comment:row80[field80]);
-      extraHtml += gradBlockHtml('tier80', '80级'+(state.shiny?'闪光':'')+grade80Label, comment80, 16, 15, color80, isUnavail);
+      html80 = gradBlockHtml('tier80', '80级'+(state.shiny?'闪光':'')+grade80Label, comment80, 16, 15, color80, isUnavail);
     }
   }
+  // 70 级直接判得出邪修，70 那块就归邪修路径管：更进一步才挂邪修块，否则不挂（按纯效率那块也不能留，
+  // 留着就又是"块里写超级毕业、切过去却是邪修"）。80 同理，70/80 任一判出邪修，80 那块都归邪修路径。
+  // 删除线跟着原判定走：判废（带删除线）那条路的块照旧删除线 + 红色，只换文字。
+  if(xc.x70){ html70 = xc.b70 ? xiexiuChaseBlockHtml(70, xc.b70, isUnavailMain) : ''; if(xc.b70) show70Flag = true; }
+  if(xc.x70 || xc.x80){ html80 = xc.b80 ? xiexiuChaseBlockHtml(80, xc.b80, isUnavailMain) : ''; if(xc.b80) show80Flag = true; }
+  extraHtml = html70 + html80;
   const notesBlockHtml = build7080NotesBlock(state.level===70 || show70Flag, state.level===80 || show80Flag);
 
   const newbieLabel = row ? newbieGradeLabel(state.type, row.grade) : null;
@@ -11759,15 +11808,16 @@ function renderGraduationCore(pfx){
       unavailNoteHtml = `<div class="grad-unavail-note">*不推荐使用建议仅出于强度考量，真爱党请随意</div>`;
     }
   }
-  // 邪修接管：档位名/评语/颜色整套换掉，删除线撤掉；50级的70/80追高块一并收起——
-  // 那几块算的是"原判定"的追高结果，跟已经改判成邪修的结论摆在一起只会互相打架
+  // 邪修接管：档位名/评语/颜色整套换掉，删除线撤掉；按"原判定"算的 70/80 追高块收起——
+  // 那几块跟已经改判成邪修的结论摆在一起只会互相打架。只留邪修路径自己的块（50 邪修 → 70/80 极致邪修）
   let xiexiuNoteHtml = '';
   if(xiexiu){
     gradeText = xiexiu.grade;
     commentText = xiexiu.comment;
     primaryStyle = {...primaryStyle, color: XIEXIU_COLOR};
     strikeStyle = '';
-    extraHtml = '';
+    extraHtml = (xc.b70 ? xiexiuChaseBlockHtml(70, xc.b70, isUnavailMain) : '')
+              + (xc.b80 ? xiexiuChaseBlockHtml(80, xc.b80, isUnavailMain) : '');
     xiexiuNoteHtml = `<div class="grad-food-cov-note">${XIEXIU_NOTE}</div>` + (xiexiu.yieldNoteHtml || '');
   } else if(gradOverride && (gradOverride.kind==='unavailable' || gradOverride.kind==='itemUnavailable')){
     // 没够上邪修的判废食材型：产量备注照样挂，排在覆盖率表下面、跟邪修那行同一个位置
