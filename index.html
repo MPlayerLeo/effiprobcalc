@@ -4258,6 +4258,8 @@
         <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
+        <!-- 同种族几只怎么分增强：一颗按钮两态切换，文字就是当前模式（见 planOpts.alloc） -->
+        <button type="button" class="plan-tool-btn" id="planAllocBtn">糖果最大化</button>
         <span class="plan-count" id="planCount"></span>
       </div>
       <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
@@ -23596,7 +23598,9 @@ let planData = [];
 // boostCap 打开时增强只作用于前 cap 颗糖，用完自动恢复正常消耗
 // boostUsed = 玩家在活动里【已经吃掉】的增强糖果数，两种增强各记一份（上限不同、是两个活动），
 // 表内可分配的额度 = cap - boostUsed
-let planOpts = {boost:'none', boostCap:true, boostUsed:{mini:0, candy:0}};
+// alloc = 同种族（同一糖果池）几只之间怎么分增强：'max' 糖果最大化（默认，整组一起算，见 planGroupBoostPlan）/
+// 'front' 前位优先（老算法：逐条决定，只保证前面那只拉满）。工具条上常驻一颗按钮切换
+let planOpts = {boost:'none', boostCap:true, boostUsed:{mini:0, candy:0}, alloc:'max'};
 let planPane = 'list';
 let planRemoveMode = false;      // 移出培养多选态：工具条那颗进入，页脚接管确认/取消
 let planSumMode = false;         // 资源总计多选态：页脚左槽进入
@@ -23681,6 +23685,7 @@ function planLoadState(){
     if(o && typeof o==='object'){
       planOpts.boost = PLAN_BOOSTS[o.boost] ? o.boost : 'none';
       planOpts.boostCap = o.boostCap !== false;   // 默认开启上限
+      planOpts.alloc = o.alloc === 'front' ? 'front' : 'max';   // 老数据没有这个字段 → 默认糖果最大化
       // 上限值在 PLAN_BOOSTS 里，这里只保证是个非负整数，真正的封顶交给 planBoostUsedOf
       planOpts.boostUsed = {mini:0, candy:0};
       if(o.boostUsed && typeof o.boostUsed==='object'){
@@ -24143,9 +24148,18 @@ function planPickBoostSim(run, budgetLeft, ownedForLevel){
   }
   return run(lo);
 }
+// 这一只的逐颗模拟器：run(b) = 吃 b 颗增强时升到目标等级要多少糖。planComputeEntry 和
+// 「糖果最大化」的同池分配（planGroupBoostPlan）共用，保证两边模拟口径一模一样
+function planEntryRunner(e, boost){
+  const curDex = planCurrentEvoDex(e);
+  const fromLv = e.levelReal, rExp = Math.max(0, Math.floor(Number(e.remainExp)) || 0);
+  const natK = planNatureKeyOf(e), mult = planSpeciesMult(curDex);
+  return b => planSimulate(fromLv, rExp, e.targetLevel, natK, mult, boost.expMul, boost.shardMul, b);
+}
 // ownedAvail = 这一只实际能动用的糖（同种族共享池被前面几只扣完之后剩下的）。
 // 不传就按整个种族池的总数算（弹窗兜底用）。
-function planComputeEntry(e, boost, budgetLeft, ownedAvail){
+// forcedBoost：给了就不再自己挑增强颗数，直接按这个数吃（糖果最大化模式由同池分配先定好）
+function planComputeEntry(e, boost, budgetLeft, ownedAvail, forcedBoost){
   // 现状/目标形态现在可能被链上选择改掉了，不能再假设现状永远是 e.dex——
   // 种族倍率跟着"现状形态"走，进化消耗跟着"现状→目标"这条区间走
   const curDex = planCurrentEvoDex(e), tgtDex = planTargetEvoDex(e);
@@ -24158,11 +24172,11 @@ function planComputeEntry(e, boost, budgetLeft, ownedAvail){
     return {ready:false, owned, levelCandy:0, evoCandy, totalCandy:evoCandy,
             needCandy:need, handyCandy:Math.ceil(need/3), handyCandyM:Math.floor(need/20), shards:0, boosted:0, ok:true};
   }
-  const fromLv = e.levelReal, rExp = Math.max(0, Math.floor(Number(e.remainExp)) || 0);
-  const natK = planNatureKeyOf(e), mult = planSpeciesMult(curDex);
-  const run = b => planSimulate(fromLv, rExp, e.targetLevel, natK, mult, boost.expMul, boost.shardMul, b);
+  const run = planEntryRunner(e, boost);
   // 进化糖果不产生经验、不占增强配额，但一样要从手上的糖里出，所以先把它从"能用来升级的糖"里扣掉
-  const sim = planPickBoostSim(run, Math.max(0, budgetLeft), Math.max(0, owned - evoCandy));
+  const sim = (forcedBoost != null)
+    ? run(Math.max(0, forcedBoost))
+    : planPickBoostSim(run, Math.max(0, budgetLeft), Math.max(0, owned - evoCandy));
   const total = sim.candies + evoCandy;
   const need  = Math.max(0, total - owned);
   return {ready:true, owned, levelCandy:sim.candies, evoCandy, totalCandy:total,
@@ -24172,21 +24186,72 @@ function planComputeEntry(e, boost, budgetLeft, ownedAvail){
 /* 全表计算：增强配额【全表共享】，按显示顺序（优先级）从上往下消耗。
    传了 ids 就只在这批里从头重新分配配额（资源总计多选时用这个口径，
    保证"页脚合计 = 被选中卡片上的数字之和"），不传就是全表。 */
+/* 「糖果最大化」的同池分配（2026-10-31 用户要求，默认模式）。
+   老算法（＝「前位优先」）逐条决定增强：第一只先看整池糖够不够【它自己】升满，够就一颗增强不吃，
+   不够才补到刚好够——于是它用普通糖把整池吃光，后面同种族的那只分到 0 颗、从头全靠缺口。
+   实测两只皮卡丘 10→40、池 400 颗、开糖果增强：老算法第一只只吃 197 颗增强就吃光 400 颗，
+   第二只缺 299，合计缺 299；两只都全吃增强是每只 299 颗，合计只缺 198——同一池糖少缺 101 颗。
+   这里把同一个糖果池的条目当一个整体：先看【全组】不吃增强时池子够不够，够就都不吃；
+   不够就找让全组刚好够的最少增强颗数 B（按显示顺序先填满前一只、再给下一只），
+   全吃满都不够就全部吃满（受全表增强配额限制）。只有一条的池子跟老算法结果一致。
+   返回 {ids → 该条吃几颗增强} 和实际用掉的总额度。 */
+function planGroupBoostPlan(entries, boost, budgetLeft, pool){
+  const items = entries.map(e=>{
+    const evo = planEvoTotalCost(planCurrentEvoDex(e), planTargetEvoDex(e));
+    if(!planEntryReady(e)) return {e, evo, run:null, cap:0};
+    const run = planEntryRunner(e, boost);
+    return {e, evo, run, cap: run(Infinity).boosted};    // cap＝每颗都吃增强时的颗数
+  });
+  const evoSum = items.reduce((s,it)=> s + it.evo, 0);
+  const split = (B)=>{ let rem = B; return items.map(it=>{ const b = Math.min(rem, it.cap); rem -= b; return b; }); };
+  const totalAt = (B)=>{
+    const bs = split(B);
+    return items.reduce((s,it,i)=> s + (it.run ? it.run(bs[i]).candies : 0), evoSum);
+  };
+  const capSum = items.reduce((s,it)=> s + it.cap, 0);
+  const maxB = Math.min(Math.max(0, budgetLeft), capSum);
+  let B = 0;
+  if(maxB > 0 && totalAt(0) > pool){
+    if(totalAt(maxB) > pool) B = maxB;                   // 全吃满也不够：全吃
+    else {                                                // 二分最少要几颗（totalAt 对 B 单调不增）
+      let lo = 1, hi = maxB;
+      while(lo < hi){ const mid = (lo + hi) >> 1; if(totalAt(mid) <= pool) hi = mid; else lo = mid + 1; }
+      B = lo;
+    }
+  }
+  const bs = split(B);
+  const byId = {};
+  let used = 0;
+  items.forEach((it,i)=>{ byId[it.e.id] = bs[i]; if(it.run) used += it.run(bs[i]).boosted; });
+  return {byId, used};
+}
 function planComputeAll(ids){
   const boost = planBoostCtx();
   let left = boost.budget;
   const res = {};
   const pools = {};                                 // 糖果池：一个种族（整条进化链）一份，同样按显示顺序从上往下扣
   const list = ids ? planSorted().filter(e=>ids.has(e.id)) : planSorted();
+  // 糖果最大化：开了增强时，每个池子在【遇到它的第一条】时整组一次性定好每条吃几颗增强，
+  // 额度当场从全表配额里扣掉（夹在中间的别的种族看到的就是扣过之后的剩余）
+  const maxMode = planOpts.alloc !== 'front' && !!boost.kind;
+  const forced = {};                                // entry.id → 已定好的增强颗数
   list.forEach(e=>{
     const key = planEntryCandyKey(e);
-    if(!(key in pools)) pools[key] = planGroupOwnedOf(key);
+    if(!(key in pools)){
+      pools[key] = planGroupOwnedOf(key);
+      if(maxMode){
+        const plan = planGroupBoostPlan(list.filter(x=> planEntryCandyKey(x) === key), boost, left, pools[key]);
+        Object.assign(forced, plan.byId);
+        if(Number.isFinite(left)) left -= plan.used;
+      }
+    }
     const avail = pools[key];
-    const r = planComputeEntry(e, boost, left, avail);
+    const r = maxMode ? planComputeEntry(e, boost, 0, avail, forced[e.id] || 0)
+                      : planComputeEntry(e, boost, left, avail);
     // 这一只实际吃掉的糖从池子里扣走，后面同种族的条目只能用剩下的
     pools[key] = Math.max(0, avail - Math.min(avail, r.totalCandy));
     res[e.id] = r;
-    if(Number.isFinite(left)) left -= r.boosted;
+    if(!maxMode && Number.isFinite(left)) left -= r.boosted;
   });
   res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
@@ -24366,13 +24431,22 @@ function planRenderBoostNote(all){
   if(kindChanged || document.activeElement !== inp) inp.value = String(used);
   document.getElementById('planBoostNoteTail').textContent =
     ' / ' + planFmtNum(b.cap) + ' 颗，还剩 ' + planFmtNum(budget) + ' 颗可分配，表内已分掉 ' +
-    planFmtNum(alloc) + ' 颗（按上方优先级顺序，只补给自己糖不够的那几只）';
+    planFmtNum(alloc) + (planOpts.alloc === 'front'
+      ? ' 颗（按上方优先级顺序，只补给自己糖不够的那几只）'
+      : ' 颗（按上方优先级顺序，同种族几只合起来算，只补给整池糖不够的种族）');
 }
 function planRenderBoostBar(){
   const set = (id, on)=>{ const b=document.getElementById(id); if(b) b.classList.toggle('on', on); };
   set('planBoostMiniBtn',  planOpts.boost==='mini');
   set('planBoostCandyBtn', planOpts.boost==='candy');
   set('planBoostCapBtn',   !!planOpts.boostCap);
+  const ab = document.getElementById('planAllocBtn');
+  if(ab){
+    const front = planOpts.alloc === 'front';
+    ab.textContent = front ? '前位优先' : '糖果最大化';
+    ab.title = front ? '同种族几只按顺序来：只保证排在前面的那只拉满，点一下切到糖果最大化'
+                     : '同种族几只合起来算：让整池糖果都吃到增强、总缺口最少，点一下切到前位优先';
+  }
 }
 /* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
    两种手势共用同一个 pointerdown 起点：往左滑（横向位移压过纵向）就立即把删除按钮拉出来，不设起手门槛；
@@ -25183,6 +25257,11 @@ function planRenderAll(){
     boostBtn('planBoostCandyBtn','candy');
     const capBtn = document.getElementById('planBoostCapBtn');
     if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); updatePageActionBar(); };
+    const allocBtn = document.getElementById('planAllocBtn');
+    if(allocBtn) allocBtn.onclick = ()=>{
+      planOpts.alloc = planOpts.alloc === 'front' ? 'max' : 'front';
+      planSaveState(); planRenderList(); updatePageActionBar();
+    };
     const rm = document.getElementById('planRemoveBtn');
     if(rm) rm.onclick = ()=>{
       if(planSumMode) return;                      // 两种多选态互斥
