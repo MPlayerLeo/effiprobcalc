@@ -24191,10 +24191,11 @@ function planComputeEntry(e, boost, budgetLeft, ownedAvail, forcedBoost){
    不够才补到刚好够——于是它用普通糖把整池吃光，后面同种族的那只分到 0 颗、从头全靠缺口。
    实测两只皮卡丘 10→40、池 400 颗、开糖果增强：老算法第一只只吃 197 颗增强就吃光 400 颗，
    第二只缺 299，合计缺 299；两只都全吃增强是每只 299 颗，合计只缺 198——同一池糖少缺 101 颗。
-   这里把同一个糖果池的条目当一个整体：先看【全组】不吃增强时池子够不够，够就都不吃；
-   不够就找让全组刚好够的最少增强颗数 B（按显示顺序先填满前一只、再给下一只），
-   全吃满都不够就全部吃满（受全表增强配额限制）。只有一条的池子跟老算法结果一致。
-   返回 {ids → 该条吃几颗增强} 和实际用掉的总额度。 */
+   这里把 entries（＝当前这只 + 排在它后面的同池条目）当一个整体：先看【这几只】不吃增强时
+   剩下的池子够不够，够就都不吃；不够就找让它们刚好够的最少增强颗数 B（按显示顺序先填满前一只、
+   再给下一只），全吃满都不够就全部吃满（受当前剩余的全表增强配额限制）。
+   planComputeAll 每轮只取第一只（当前这只）的那份，额度按显示顺序当场扣，不替后面的同种族预留。
+   只有一条的池子跟老算法结果一致。返回 {ids → 该条吃几颗增强} 和这组合计会用掉的额度。 */
 function planGroupBoostPlan(entries, boost, budgetLeft, pool){
   const items = entries.map(e=>{
     const evo = planEvoTotalCost(planCurrentEvoDex(e), planTargetEvoDex(e));
@@ -24231,27 +24232,28 @@ function planComputeAll(ids){
   const res = {};
   const pools = {};                                 // 糖果池：一个种族（整条进化链）一份，同样按显示顺序从上往下扣
   const list = ids ? planSorted().filter(e=>ids.has(e.id)) : planSorted();
-  // 糖果最大化：开了增强时，每个池子在【遇到它的第一条】时整组一次性定好每条吃几颗增强，
-  // 额度当场从全表配额里扣掉（夹在中间的别的种族看到的就是扣过之后的剩余）
+  // 糖果最大化：增强额度仍然【严格按显示顺序】从上往下发，不替后面的同种族预留（用户 2026-10-31 纠正过：
+  // 一开始做成"遇到池子第一条就整组预扣"，夹在中间的别的宝可梦就被饿着了）。
+  // 区别只在【每一只吃多少】：轮到某只时，把它和排在它后面的同池条目合起来看——剩下的池子糖
+  // 不够这几只都升满，它就按 planGroupBoostPlan 的顺序填法吃（前面这只先吃满），否则不吃；
+  // 只拿走属于它自己的那份，额度当场扣。于是：前面那只吃满增强 → 中间的照常分 → 后面的同种族拿剩下的
   const maxMode = planOpts.alloc !== 'front' && !!boost.kind;
-  const forced = {};                                // entry.id → 已定好的增强颗数
-  list.forEach(e=>{
+  list.forEach((e, idx)=>{
     const key = planEntryCandyKey(e);
-    if(!(key in pools)){
-      pools[key] = planGroupOwnedOf(key);
-      if(maxMode){
-        const plan = planGroupBoostPlan(list.filter(x=> planEntryCandyKey(x) === key), boost, left, pools[key]);
-        Object.assign(forced, plan.byId);
-        if(Number.isFinite(left)) left -= plan.used;
-      }
-    }
+    if(!(key in pools)) pools[key] = planGroupOwnedOf(key);
     const avail = pools[key];
-    const r = maxMode ? planComputeEntry(e, boost, 0, avail, forced[e.id] || 0)
-                      : planComputeEntry(e, boost, left, avail);
+    let r;
+    if(maxMode){
+      const rest = list.slice(idx).filter(x=> planEntryCandyKey(x) === key);   // 含它自己，它排第一
+      const plan = planGroupBoostPlan(rest, boost, left, avail);
+      r = planComputeEntry(e, boost, 0, avail, plan.byId[e.id] || 0);
+    } else {
+      r = planComputeEntry(e, boost, left, avail);
+    }
     // 这一只实际吃掉的糖从池子里扣走，后面同种族的条目只能用剩下的
     pools[key] = Math.max(0, avail - Math.min(avail, r.totalCandy));
     res[e.id] = r;
-    if(!maxMode && Number.isFinite(left)) left -= r.boosted;
+    if(Number.isFinite(left)) left -= r.boosted;
   });
   res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
