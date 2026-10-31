@@ -3496,6 +3496,15 @@
   border-radius:8px; padding:6px 11px; font-size:12.5px; font-weight:800;
 }
 .plan-tool-btn.on{ background:var(--accent); color:#fff; }
+/* 同种族分糖模式那一行：文字在左、拨动开关在右 */
+.plan-alloc-row{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:#fff; border:1px solid var(--line); border-radius:10px; padding:7px 10px; margin:0 0 10px;
+}
+.plan-alloc-text{ min-width:0; }
+.plan-alloc-label{ font-size:12.5px; font-weight:800; color:var(--ink); }
+.plan-alloc-label b{ color:var(--accent); }
+.plan-alloc-hint{ font-size:11px; font-weight:700; color:#8a8375; line-height:1.5; margin-top:2px; }
 .plan-tool-btn.plan-tool-danger{ border-color:#c1443a; color:#c1443a; }
 .plan-tool-btn.plan-tool-danger.on{ background:#c1443a; color:#fff; }
 .plan-count{ margin-left:auto; font-size:11px; font-weight:800; color:#7a7568; }
@@ -4258,11 +4267,18 @@
         <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
-        <!-- 同种族几只怎么分增强：一颗按钮两态切换，文字就是当前模式（见 planOpts.alloc） -->
-        <button type="button" class="plan-tool-btn" id="planAllocBtn">糖果最大化</button>
         <span class="plan-count" id="planCount"></span>
       </div>
       <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
+      <!-- 同种族几只怎么分增强（planOpts.alloc）：常驻一行，拨动开关，开＝糖果最大化 / 关＝前位优先，
+           下面那行小字是当前模式的说明。开关样式复用设置页的 .mf-switch -->
+      <div class="plan-alloc-row">
+        <div class="plan-alloc-text">
+          <div class="plan-alloc-label">同种族分糖：<b id="planAllocName">糖果最大化</b></div>
+          <div class="plan-alloc-hint" id="planAllocHint"></div>
+        </div>
+        <div class="mf-switch" id="planAllocSwitch" role="switch" title="开＝糖果最大化，关＝前位优先"></div>
+      </div>
       <div class="plan-list" id="planList"></div>
     </div>
     <div id="planPaneTags" style="display:none;">
@@ -24231,7 +24247,15 @@ function planComputeAll(ids){
   let left = boost.budget;
   const res = {};
   const pools = {};                                 // 糖果池：一个种族（整条进化链）一份，同样按显示顺序从上往下扣
-  const list = ids ? planSorted().filter(e=>ids.has(e.id)) : planSorted();
+  // 资源总计（传 ids）：勾选的条目之间从头分配；但【没勾的同种族】也拉进来一起算（2026-10-31 用户选的方案 2）——
+  // 它们也要练、要跟勾选的那只抢同一池糖，否则只勾一只时它会以为整池糖都归自己，
+  // 糖果最大化根本不起作用（只勾 A 显示 197 颗增强；把 B 一起勾上才变成 299）。
+  // 这些"陪算"的同种族照常吃糖、吃增强额度（当它也在练），算完从结果里拿掉，不进页脚合计、卡片上也不出数字。
+  let list;
+  if(ids){
+    const keys = new Set(planData.filter(e=> ids.has(e.id)).map(planEntryCandyKey));
+    list = planSorted().filter(e=> ids.has(e.id) || keys.has(planEntryCandyKey(e)));
+  } else list = planSorted();
   // 糖果最大化：增强额度仍然【严格按显示顺序】从上往下发，不替后面的同种族预留（用户 2026-10-31 纠正过：
   // 一开始做成"遇到池子第一条就整组预扣"，夹在中间的别的宝可梦就被饿着了）。
   // 区别只在【每一只吃多少】：轮到某只时，把它和排在它后面的同池条目合起来看——剩下的池子糖
@@ -24255,6 +24279,8 @@ function planComputeAll(ids){
     res[e.id] = r;
     if(Number.isFinite(left)) left -= r.boosted;
   });
+  // 陪算的同种族不出结果（按条目本身判断，不走 Object.keys——那会把数字 id 变成字符串、ids.has 对不上）
+  if(ids) list.forEach(e=>{ if(!ids.has(e.id)) delete res[e.id]; });
   res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
   res.__boostPre  = boost.used;                                                     // 玩家自己填的"已用"
@@ -24442,12 +24468,15 @@ function planRenderBoostBar(){
   set('planBoostMiniBtn',  planOpts.boost==='mini');
   set('planBoostCandyBtn', planOpts.boost==='candy');
   set('planBoostCapBtn',   !!planOpts.boostCap);
-  const ab = document.getElementById('planAllocBtn');
-  if(ab){
+  const sw = document.getElementById('planAllocSwitch');
+  if(sw){
     const front = planOpts.alloc === 'front';
-    ab.textContent = front ? '前位优先' : '糖果最大化';
-    ab.title = front ? '同种族几只按顺序来：只保证排在前面的那只拉满，点一下切到糖果最大化'
-                     : '同种族几只合起来算：让整池糖果都吃到增强、总缺口最少，点一下切到前位优先';
+    sw.classList.toggle('on', !front);
+    sw.setAttribute('aria-checked', front ? 'false' : 'true');
+    document.getElementById('planAllocName').textContent = front ? '前位优先' : '糖果最大化';
+    document.getElementById('planAllocHint').textContent = front
+      ? '同种族按顺序来：只保证排在前面的那只拉满，后面的拿剩下的糖'
+      : '同种族几只合起来算：整池糖都吃上增强、总缺口最少，排在前面的先吃满';
   }
 }
 /* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
@@ -25259,8 +25288,8 @@ function planRenderAll(){
     boostBtn('planBoostCandyBtn','candy');
     const capBtn = document.getElementById('planBoostCapBtn');
     if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); updatePageActionBar(); };
-    const allocBtn = document.getElementById('planAllocBtn');
-    if(allocBtn) allocBtn.onclick = ()=>{
+    const allocSw = document.getElementById('planAllocSwitch');
+    if(allocSw) allocSw.onclick = ()=>{
       planOpts.alloc = planOpts.alloc === 'front' ? 'max' : 'front';
       planSaveState(); planRenderList(); updatePageActionBar();
     };
