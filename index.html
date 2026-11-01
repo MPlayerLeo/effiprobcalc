@@ -24207,15 +24207,10 @@ function planComputeAll(ids){
   let left = boost.budget;
   const res = {};
   const pools = {};                                 // 糖果池：一个种族（整条进化链）一份，同样按显示顺序从上往下扣
-  // 资源总计（传 ids）：勾选的条目之间从头分配；但【没勾的同种族】也拉进来一起算（2026-10-31 用户选的方案 2）——
-  // 它们也要练、要跟勾选的那只抢同一池糖，否则只勾一只时它会以为整池糖都归自己，
-  // 糖果最大化根本不起作用（只勾 A 显示 197 颗增强；把 B 一起勾上才变成 299）。
-  // 这些"陪算"的同种族照常吃糖、吃增强额度（当它也在练），算完从结果里拿掉，不进页脚合计、卡片上也不出数字。
-  let list;
-  if(ids){
-    const keys = new Set(planData.filter(e=> ids.has(e.id)).map(planEntryCandyKey));
-    list = planSorted().filter(e=> ids.has(e.id) || keys.has(planEntryCandyKey(e)));
-  } else list = planSorted();
+  // 资源总计（传 ids）：只在勾选的条目之间从头分配，没勾的一律当不存在——同种族也一样，
+  // 它的糖还给池子、它占的增强额度也让出来（2026-11-01 用户定的；10-31 做过"没勾的同种族陪算、
+  // 照样占糖占额度"的版本，被改掉了，别再加回去）
+  const list = ids ? planSorted().filter(e=> ids.has(e.id)) : planSorted();
   /* 糖果最大化（默认）＝【每一颗糖都吃增强】（用户原话"全部糖果使用增强"），额度严格按显示顺序
      从上往下发、当场扣，排在前面的先吃满，用完为止——每只吃掉的糖最少，手上剩下的糖最多。
      ⚠️ 2026-10-31 我先后做错过两版，别再改回去：
@@ -24235,8 +24230,6 @@ function planComputeAll(ids){
     res[e.id] = r;
     if(Number.isFinite(left)) left -= r.boosted;
   });
-  // 陪算的同种族不出结果（按条目本身判断，不走 Object.keys——那会把数字 id 变成字符串、ids.has 对不上）
-  if(ids) list.forEach(e=>{ if(!ids.has(e.id)) delete res[e.id]; });
   res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
   res.__boostPre  = boost.used;                                                     // 玩家自己填的"已用"
