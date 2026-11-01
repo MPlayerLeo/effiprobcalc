@@ -24211,7 +24211,7 @@ function planComputeAll(ids){
   // 它的糖还给池子、它占的增强额度也让出来（2026-11-01 用户定的；10-31 做过"没勾的同种族陪算、
   // 照样占糖占额度"的版本，被改掉了，别再加回去）
   const list = ids ? planSorted().filter(e=> ids.has(e.id)) : planSorted();
-  /* 糖果最大化（默认）＝【每一颗糖都吃增强】（用户原话"全部糖果使用增强"），额度严格按显示顺序
+  /* 糖果最大化（默认）＝【同种族多只时，每一颗糖都吃增强】（用户原话"全部糖果使用增强"），额度严格按显示顺序
      从上往下发、当场扣，排在前面的先吃满，用完为止——每只吃掉的糖最少，手上剩下的糖最多。
      ⚠️ 2026-10-31 我先后做错过两版，别再改回去：
        ① 做成"同池合起来算、只补到整池刚好够为止"——池子糖够用时照样几乎不吃增强
@@ -24219,12 +24219,17 @@ function planComputeAll(ids){
        ② 更早一版还"遇到池子第一条就整组预扣额度"，把夹在中间的别的宝可梦饿着了。
      前位优先＝老算法：自己的糖够升满就一颗增强都不吃，不够才补到刚好够（planPickBoostSim）。 */
   const maxMode = planOpts.alloc !== 'front' && !!boost.kind;
+  // 糖果最大化只管【同种族有多只】的糖池（2026-11-01 用户：两种模式只该在有相同种族时才有区别）。
+  // 表里只有一只的种族省下来的糖也没人接着用，照老算法走，两种模式下数字一样
+  const poolCount = {};
+  list.forEach(e=>{ const k = planEntryCandyKey(e); poolCount[k] = (poolCount[k]||0) + 1; });
   list.forEach(e=>{
     const key = planEntryCandyKey(e);
     if(!(key in pools)) pools[key] = planGroupOwnedOf(key);
     const avail = pools[key];
-    const r = maxMode ? planComputeEntry(e, boost, 0, avail, left)    // 增强额度剩多少吃多少，吃满为止
-                      : planComputeEntry(e, boost, left, avail);
+    const r = (maxMode && poolCount[key] > 1)
+      ? planComputeEntry(e, boost, 0, avail, left)    // 增强额度剩多少吃多少，吃满为止
+      : planComputeEntry(e, boost, left, avail);
     // 这一只实际吃掉的糖从池子里扣走，后面同种族的条目只能用剩下的
     pools[key] = Math.max(0, avail - Math.min(avail, r.totalCandy));
     res[e.id] = r;
@@ -24410,7 +24415,7 @@ function planRenderBoostNote(all){
     ' / ' + planFmtNum(b.cap) + ' 颗，还剩 ' + planFmtNum(budget) + ' 颗可分配，表内已分掉 ' +
     planFmtNum(alloc) + (planOpts.alloc === 'front'
       ? ' 颗（按上方优先级顺序，只补给自己糖不够的那几只）'
-      : ' 颗（按上方优先级顺序，每颗糖都吃增强，用完为止）');
+      : ' 颗（按上方优先级顺序，同种族多只的每颗糖都吃增强，用完为止）');
 }
 function planRenderBoostBar(){
   const set = (id, on)=>{ const b=document.getElementById(id); if(b) b.classList.toggle('on', on); };
@@ -24425,7 +24430,7 @@ function planRenderBoostBar(){
     document.getElementById('planAllocName').textContent = front ? '前位优先' : '糖果最大化';
     document.getElementById('planAllocHint').textContent = front
       ? '自己的糖够升满就不吃增强，不够才补到刚好够：省梦之碎片；同种族只保证排在前面的那只拉满'
-      : '每颗糖都吃增强，按优先级从上往下分增强额度、前面的先吃满：用掉的糖最少，手上剩的糖最多';
+      : '同种族有多只时，每颗糖都吃增强，按优先级从上往下分增强额度、前面的先吃满：用掉的糖最少，留给后面同种族的糖最多（只有一只的种族跟前位优先一样）';
   }
 }
 /* ---- 列表条目手势：左滑删除 / 长按拖动排序 ----
