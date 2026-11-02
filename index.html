@@ -3630,6 +3630,18 @@
 /* 这一只自己的糖就够用、一颗增强都不需要占：徽标照出（0/xxx），但压成灰的，
    免得满屏紫色 0 把真正吃到增强的那几条盖过去 */
 .plan-res-boost.zero{ color:#a8a294; font-weight:800; }
+/* 增强分子输入框：平时像普通数字（只有一条虚下划线提示能点），手动改过的实底高亮 */
+.plan-boost-in{
+  margin:0 1px; padding:0 2px; box-sizing:content-box; min-width:2ch;
+  font:inherit; color:inherit; text-align:center; line-height:1.3;
+  background:transparent; border:none; border-bottom:1.5px dashed currentColor; border-radius:0;
+  -moz-appearance:textfield;
+}
+.plan-boost-in::-webkit-outer-spin-button,
+.plan-boost-in::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.plan-boost-in:focus{ outline:none; border-bottom-style:solid; background:#efe9f6; }
+.plan-boost-in.set{ background:var(--accent); color:#fff; border-bottom:none; border-radius:4px; padding:0 3px; }
+.plan-tool-btn:disabled{ opacity:.4; cursor:default; }
 .plan-up-ic{ width:10px; height:10px; flex:0 0 auto; fill:currentColor; }
 /* 一条 = 左边一根通高的标签竖条 + 右边「标题 + 箭头图」。箭头图原本只在编辑弹窗里出现，
    现在直接当条目本体，列表和弹窗共用 planArrowHtml() / .plan-arrow-wrap 一套东西。
@@ -4267,6 +4279,7 @@
         <button type="button" class="plan-tool-btn" id="planBoostMiniBtn">迷你增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCandyBtn">糖果增强</button>
         <button type="button" class="plan-tool-btn" id="planBoostCapBtn">增强上限</button>
+        <button type="button" class="plan-tool-btn" id="planBoostResetBtn" title="抹掉卡片上手动改过的增强颗数，回到默认分配">恢复默认分配</button>
         <span class="plan-count" id="planCount"></span>
       </div>
       <div class="plan-boost-note" id="planBoostNote" style="display:none;"></div>
@@ -23617,7 +23630,9 @@ let planData = [];
 // alloc = 增强怎么吃：'max' 糖果最大化（默认，每颗糖都吃增强，额度按优先级从上往下发，见 planComputeAll）/
 // 'front' 前位优先（老算法：自己的糖够升满就不吃，不够才补到刚好够，同种族只保证前面那只拉满）。
 // 工具条下方常驻一行拨动开关切换
-let planOpts = {boost:'none', boostCap:true, boostUsed:{mini:0, candy:0}, alloc:'max'};
+// boostManual = 玩家在卡片上手动指定的增强颗数，按增强种类各记一份 {mini:{id:n}, candy:{id:n}}；
+// 没写的条目走默认分配。工具条「恢复默认分配」清掉当前增强种类的这一份
+let planOpts = {boost:'none', boostCap:true, boostUsed:{mini:0, candy:0}, alloc:'max', boostManual:{mini:{}, candy:{}}};
 let planPane = 'list';
 let planRemoveMode = false;      // 移出培养多选态：工具条那颗进入，页脚接管确认/取消
 let planSumMode = false;         // 资源总计多选态：页脚左槽进入
@@ -23709,6 +23724,17 @@ function planLoadState(){
         ['mini','candy'].forEach(k=>{
           const n = Math.floor(Number(o.boostUsed[k]));
           planOpts.boostUsed[k] = (Number.isFinite(n) && n>0) ? n : 0;
+        });
+      }
+      planOpts.boostManual = {mini:{}, candy:{}};
+      if(o.boostManual && typeof o.boostManual==='object'){
+        ['mini','candy'].forEach(k=>{
+          const m = o.boostManual[k];
+          if(!m || typeof m!=='object') return;
+          Object.keys(m).forEach(id=>{
+            const n = Math.floor(Number(m[id]));
+            if(Number.isFinite(n) && n >= 0) planOpts.boostManual[k][id] = n;
+          });
         });
       }
     }
@@ -23836,6 +23862,8 @@ function planRemoveEntries(ids){
   const s = new Set(ids);
   const before = planData.length;
   planData = planData.filter(e=>!s.has(e.id));
+  const bm = planOpts.boostManual || {};
+  Object.keys(bm).forEach(k=> s.forEach(id=>{ if(bm[k]) delete bm[k][String(id)]; }));
   if(planData.length !== before) planSaveState();
   return before - planData.length;
 }
@@ -24202,6 +24230,15 @@ function planComputeEntry(e, boost, budgetLeft, ownedAvail, forcedBoost){
 /* 全表计算：增强配额【全表共享】，按显示顺序（优先级）从上往下消耗。
    传了 ids 就只在这批里从头重新分配配额（资源总计多选时用这个口径，
    保证"页脚合计 = 被选中卡片上的数字之和"），不传就是全表。 */
+// 当前增强种类下玩家手动指定的颗数表（键是 String(id)）
+function planBoostManualOf(kind){
+  const bm = planOpts.boostManual || (planOpts.boostManual = {mini:{}, candy:{}});
+  return kind ? (bm[kind] || (bm[kind] = {})) : {};
+}
+function planHasBoostManual(kind){
+  const m = planBoostManualOf(kind);
+  return planData.some(e=> String(e.id) in m);
+}
 function planComputeAll(ids){
   const boost = planBoostCtx();
   let left = boost.budget;
@@ -24223,21 +24260,37 @@ function planComputeAll(ids){
   // 表里只有一只的种族省下来的糖也没人接着用，照老算法走，两种模式下数字一样
   const poolCount = {};
   list.forEach(e=>{ const k = planEntryCandyKey(e); poolCount[k] = (poolCount[k]||0) + 1; });
+  // 玩家在卡片上手动指定了颗数的条目（2026-11-02）：先按显示顺序把它们要的额度预留出来，
+  // 剩下的才拿去走默认分配——不然排在下面的手动条目会被上面糖果最大化吃光，填了也白填。
+  // 实际吃到的颗数 = min(填的数, 预留时还剩的额度, 升到目标真正要吃的糖数)，跟糖池无关，所以能先算
+  const man = planBoostManualOf(boost.kind), manBoost = {};
+  if(boost.kind) list.forEach(e=>{
+    const k = String(e.id);
+    if(!(k in man)) return;
+    const b = planComputeEntry(e, boost, 0, null, Math.min(man[k], left)).boosted;
+    manBoost[k] = b;
+    if(Number.isFinite(left)) left -= b;
+  });
   list.forEach(e=>{
     const key = planEntryCandyKey(e);
     if(!(key in pools)) pools[key] = planGroupOwnedOf(key);
     const avail = pools[key];
-    const r = (maxMode && poolCount[key] > 1)
+    const mk = String(e.id);
+    const isMan = mk in manBoost;
+    const r = isMan ? planComputeEntry(e, boost, 0, avail, manBoost[mk])   // 额度上面已经预留过了
+      : (maxMode && poolCount[key] > 1)
       ? planComputeEntry(e, boost, 0, avail, left)    // 增强额度剩多少吃多少，吃满为止
       : planComputeEntry(e, boost, left, avail);
+    r.manual = isMan;
     // 这一只实际吃掉的糖从池子里扣走，后面同种族的条目只能用剩下的
     pools[key] = Math.max(0, avail - Math.min(avail, r.totalCandy));
     res[e.id] = r;
-    if(Number.isFinite(left)) left -= r.boosted;
+    if(!isMan && Number.isFinite(left)) left -= r.boosted;
   });
   res.__boostUsed = Number.isFinite(boost.budget) ? (boost.budget - left) : null;   // 表内分配掉的
   res.__boostCap  = Number.isFinite(boost.budget) ? boost.cap : null;               // 活动总上限
   res.__boostPre  = boost.used;                                                     // 玩家自己填的"已用"
+  res.__boostManual = Object.values(manBoost).reduce((a,b)=>a+b, 0);                // 其中手动指定的
   return res;
 }
 // 增强徽标上的向上箭头：扁平实心矢量，替掉原来的 ⚡ emoji（emoji 各平台字形不一，
@@ -24345,7 +24398,12 @@ function planArrowHtml(r, e, mini){
     // 开了增强就一直挂着，哪怕分子是 0——"这只不用吃增强"本身就是个要看的结论
     bot = `<span class="plan-res-item">${planIcon('shard')}${planFmtNum(r.shards)}</span>`+
           (mini && planOpts.boost !== 'none' && r.levelCandy > 0
-            ? `<span class="plan-res-boost${r.boosted ? '' : ' zero'}">${PLAN_UP_SVG}${planFmtNum(r.boosted)}/${planFmtNum(r.levelCandy)}</span>`
+            ? `<span class="plan-res-boost${r.boosted || r.manual ? '' : ' zero'}">${PLAN_UP_SVG}`+
+                // 分子可改：玩家自己定这只吃多少颗增强，改完整表重算（planBindBoostInputs）
+                `<input type="number" class="plan-boost-in${r.manual ? ' set' : ''}" data-boostin="${planEsc(String(e.id))}" `+
+                  `value="${r.boosted}" min="0" max="${r.levelCandy}" inputmode="numeric" `+
+                  `style="width:${String(Math.max(r.boosted, r.levelCandy)).length + 0.6}ch" aria-label="这只吃的增强颗数">`+
+                `/${planFmtNum(r.levelCandy)}</span>`
             : '');
   }
   return `<div class="plan-arrow-wrap${mini?' plan-arrow-mini':''}">`+
@@ -24415,13 +24473,16 @@ function planRenderBoostNote(all){
     ' / ' + planFmtNum(b.cap) + ' 颗，还剩 ' + planFmtNum(budget) + ' 颗可分配，表内已分掉 ' +
     planFmtNum(alloc) + (planOpts.alloc === 'front'
       ? ' 颗（按上方优先级顺序，只补给自己糖不够的那几只）'
-      : ' 颗（按上方优先级顺序，同种族多只的每颗糖都吃增强，用完为止）');
+      : ' 颗（按上方优先级顺序，同种族多只的每颗糖都吃增强，用完为止）') +
+    (all.__boostManual ? '，其中你手动指定的 ' + planFmtNum(all.__boostManual) + ' 颗优先占用' : '');
 }
 function planRenderBoostBar(){
   const set = (id, on)=>{ const b=document.getElementById(id); if(b) b.classList.toggle('on', on); };
   set('planBoostMiniBtn',  planOpts.boost==='mini');
   set('planBoostCandyBtn', planOpts.boost==='candy');
   set('planBoostCapBtn',   !!planOpts.boostCap);
+  const rb = document.getElementById('planBoostResetBtn');
+  if(rb) rb.disabled = !(planOpts.boost !== 'none' && planHasBoostManual(planOpts.boost));
   const sw = document.getElementById('planAllocSwitch');
   if(sw){
     const front = planOpts.alloc === 'front';
@@ -24632,7 +24693,7 @@ function planRenderList(){
   // 右边堆着这个标签下的所有条目；点标签色块＝整批勾/取消勾这个标签下所有条目，
   // 点右边单条还是单选。跟移出培养态（仍是每条各自一张卡）分开两条渲染路径，
   // 别把两种多选态的交互硬揉进同一段循环里
-  if(planSumMode){ planRenderSumGrouped(el, planSorted(), all, dup); return; }
+  if(planSumMode){ planRenderSumGrouped(el, planSorted(), all, dup); planBindBoostInputs(el); return; }
   planSorted().forEach(entry=>{
     const t = planTagOf(entry);
     const r = all[entry.id];
@@ -24687,6 +24748,26 @@ function planRenderList(){
       front.addEventListener('pointerdown', (ev)=> planRowPointerDown(ev, entry, wrap, front));
     }
     el.appendChild(wrap);
+  });
+  planBindBoostInputs(el);
+}
+/* 卡片上增强分子的输入框：卡片本体点一下会开编辑弹窗/多选态勾选、按住会起滑动/拖动手势，
+   这里把 pointerdown 和 click 都截在框上，别让它们冒到卡片去。
+   只在 change（失焦或回车）时提交——提交会整张表重画，边打边算会把焦点冲掉。
+   清空再提交＝这只回到默认分配 */
+function planBindBoostInputs(root){
+  root.querySelectorAll('[data-boostin]').forEach(inp=>{
+    ['pointerdown','click','touchstart','mousedown'].forEach(t=> inp.addEventListener(t, ev=> ev.stopPropagation()));
+    inp.addEventListener('keydown', ev=>{ if(ev.key === 'Enter') inp.blur(); });
+    inp.addEventListener('change', ()=>{
+      const m = planBoostManualOf(planOpts.boost);
+      const id = inp.dataset.boostin;
+      const raw = String(inp.value).trim();
+      const n = Math.floor(Number(raw));
+      if(raw === '' || !Number.isFinite(n)) delete m[id];
+      else m[id] = Math.max(0, n);
+      planSaveState(); planRenderList(); updatePageActionBar();
+    });
   });
 }
 // 资源总计态专用渲染：planSorted() 已经按优先级排过，同一个 tagId 的条目必然连在一起，
@@ -25242,6 +25323,13 @@ function planRenderAll(){
     boostBtn('planBoostCandyBtn','candy');
     const capBtn = document.getElementById('planBoostCapBtn');
     if(capBtn) capBtn.onclick = ()=>{ planOpts.boostCap = !planOpts.boostCap; planSaveState(); planRenderList(); updatePageActionBar(); };
+    const resetBtn = document.getElementById('planBoostResetBtn');
+    if(resetBtn) resetBtn.onclick = ()=>{
+      if(planOpts.boost === 'none') return;
+      planOpts.boostManual = planOpts.boostManual || {};
+      planOpts.boostManual[planOpts.boost] = {};
+      planSaveState(); planRenderList(); updatePageActionBar();
+    };
     const allocSw = document.getElementById('planAllocSwitch');
     if(allocSw) allocSw.onclick = ()=>{
       planOpts.alloc = planOpts.alloc === 'front' ? 'max' : 'front';
