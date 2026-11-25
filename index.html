@@ -6976,6 +6976,16 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
   const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
   // 保底仅对能量型/功能型（技能型）生效，食材/树果型即便勾了保底按钮也不吃保底
   const pityEligible = (x.dtype==='能量' || x.dtype==='功能');
+  // 保底系数：调用方拿到的次数会再乘一次技能效率 eff（=(1+技能概率加成)×性格×帮速），保底不是线性的，
+  // 必须按「这套面板的真实技能概率」算，不能按种族基础概率算完再乘 eff——基础概率越低保底占比越大，
+  // 之前这么算把 50 级土台龟概M帮M概性格从 6.80 次算成了 7.31 次（2026-11-25 修）
+  const skillCountFor = ()=>{
+    const n = capSkillCount(x, level, medal, false);
+    if(!(pityEligible && state.pityOn)) return n;
+    const lb = labelsOverride || (build ? buildLabels(build) : currentLabels());
+    const ps = personaOverride || (build ? buildPersona(build) : currentPersona());
+    return n * capPityFactor(x, ffloat(windowSums(lb, windowSizeOf(level)).s), ps.s);
+  };
   if(type==='fruit' || type==='energy'){
     const ctrl = {direction: state.fruitDirection, dragon: state.dragonCount, latias: state.latiasActive, pity: state.pityOn};
     // 下面这个 value 后面会在 capPageActualYieldValue/Html 里再乘一次 eff（computeEfficiencyFromSums
@@ -7005,7 +7015,7 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     // triggerCount 这里先不乘任何效率，留给调用方在拿到"技能类型eff"后再乘。
     let skillBonusValue = null;
     if(spec && spec.kind==='energy'){
-      const triggerCount = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
+      const triggerCount = skillCountFor();
       skillBonusValue = spec.energyPerTrigger * triggerCount;
       if(spec.staminaDeduct!=null) specialStaminaDeduct = spec.staminaDeduct * triggerCount;
     }
@@ -7030,7 +7040,7 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     // 食材精选宝可梦（大嘴娃/蝶结萌虻）主技能触发也会额外固定产出食材，按食材名匹配叠加进对应字母的产量，
     // 并单独记一份 skillValue 供展示时括号标注技能贡献的那部分（*号标记）
     const specItems = (spec && spec.kind==='ingredients') ? capSkillIngredientItems(spec) : null;
-    const specTriggerCount = specItems ? capSkillCount(x, level, medal, pityEligible ? state.pityOn : false) : 0;
+    const specTriggerCount = specItems ? skillCountFor() : 0;
     const items = letters.map(letter=>{
       const ingName = letterIng[letter];
       if(!ingName) return null;
@@ -7050,7 +7060,7 @@ function capPageBaseYield(type, level, build, labelsOverride, personaOverride){
     return {kind:'food', items, primary};
   }
   if(type==='skill'){
-    const count = capSkillCount(x, level, medal, pityEligible ? state.pityOn : false);
+    const count = skillCountFor();
     // 多类别（梦妖魔 开锅+暴击）：效果那一栏显示按效果计的那一类，次数照常
     const effCat = capEffectSkillCat(x);
     const byEffect = !!effCat;
@@ -16345,6 +16355,11 @@ function capFoodReco(x, ingName){
   for(const c of combos){ if(G.has(c)) return {level:'yellow', text:'可用'+c, combo:c}; }
   return {level:'red', text:'不宜使用', combo:combos[0]};
 }
+// 保底让「每次帮忙触发率」比裸概率高出的倍数，按真实技能概率（基础×(1+副技能)×性格）算
+function capPityFactor(x, sumsS, personaS){
+  const p = energySkillProb(x.skillProb||0, sumsS, personaS);
+  return p>0 ? capSkillRate(p, x.interval, 0, false, true) / p : 1;
+}
 function capSkillCount(x, level, medal, pity){ return capHelpsPerDay(x.interval, level, medal) * capSkillRate(x.skillProb, x.interval, level, medal, pity); }
 function capRecoFromGH(h,g){
   if(h) return {level:'green', text:'推荐'+String(h).replace(/\+/g,'/')};
@@ -20356,7 +20371,8 @@ function boxXiexiuInfo(entry, x, dtype){
       const spec = CAP_SKILL_SPECIAL_OUTPUT[x.dex];
       const medal = x.stage==='徽章';
       const pityFlag = (x.dtype==='能量'||x.dtype==='功能') ? state.pityOn : false;
-      const count = capSkillCount(x, entry.level, medal, pityFlag);
+      const count = capSkillCount(x, entry.level, medal, false)
+        * (pityFlag ? capPityFactor(x, ffloat(windowSums(labels, windowSizeOf(entry.level)).s), persona.s) : 1);
       const eSkill = ffloat(computeEfficiency(labels, 'skill', entry.level, persona));
       rows = mergeSpecialFoodRows(rows, capSkillIngredientItems(spec).map(it=>({name:it.name, amt: it.amt*count})), eSkill);
     }
