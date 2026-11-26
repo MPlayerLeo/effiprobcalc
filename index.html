@@ -48,6 +48,12 @@
   text-decoration:underline; text-underline-offset:3px; cursor:pointer; padding:6px 10px;
 }
 #bootSlowEscape.on{ display:block; }
+/* 20s 还没 load 完：文案换成「土王呆住了」，下面这块写出诊断到的原因（见启动脚本里的 bootDiagnose） */
+#bootDiag{
+  display:none; margin-top:-18px; max-width:300px; text-align:center;
+  font-size:12px; line-height:1.65; font-weight:700; color:var(--accent-dk); opacity:.85;
+}
+#bootDiag.on{ display:block; }
 /* 旧域名(mplayerleo.github.io)兜底跳转提示：两行加粗文字，替掉原本的"加载中"单行，
    点哪都跳转新址，遮罩永不打开——旧站从用户视角只剩这一屏 */
 #bootLoadingMask.boot-oldsite{ cursor:pointer; }
@@ -100,6 +106,7 @@
     <div id="bootLoadingSite">IQDOOH.TOP</div>
     <img id="bootLoadingLogo" src="boot-logo.webp?v=1" alt="">
     <div id="bootLoadingText">土王智商加载中<span id="bootLoadingDots">.</span></div>
+    <div id="bootDiag"></div>
     <button type="button" id="bootSlowEscape">加载太久？点此直接进入</button>
     <div id="bootLoadingMascots">
       <img class="boot-mascot boot-mascot-wooper" src="box_assets/normal/wooper.gif" alt="">
@@ -163,6 +170,16 @@
     })();
     return;
   }
+  // 启动期错误收集（捕获阶段才能收到 img/script 这类资源的加载失败）。给 20s 诊断用：
+  // 主脚本语法/运行报错是"浏览器内核太旧/不兼容"最直接的证据，资源失败则说明有东西被拦了
+  var bootErrs = [];
+  try{
+    window.addEventListener('error', function(ev){
+      var t = ev && ev.target;
+      if(t && t !== window && (t.src || t.href)){ bootErrs.push({kind:'res', url:String(t.src || t.href)}); return; }
+      if(ev && ev.message) bootErrs.push({kind:'js', msg:String(ev.message)});
+    }, true);
+  }catch(e){}
   var dotsEl = document.getElementById('bootLoadingDots');
   // 下拉刷新触发的硬刷新：加载文案从"土王智商加载中"换成"土王智商刷新中"，圆点动画
   // (dotsEl那部分)原样保留不动——只改这一个文字节点，不碰 dotsEl 这个 span
@@ -197,6 +214,79 @@
     esc.classList.add('on');
     esc.addEventListener('click', function(){ finish(); });
   }, 45000);
+  // 20s 还没进去：「土王呆住了」+ 诊断原因。只诊断、不揭遮罩（揭不揭仍然只认 load / 45s 那颗按钮）。
+  // 之后每 8s 重测一次，原因会跟着变（比如页面下完了、改成卡在某张图上）
+  var diagEl = document.getElementById('bootDiag');
+  var diagTimer = null;
+  function bootFileName(u){
+    try{ u = decodeURIComponent(String(u).split('?')[0]); }catch(e){ u = String(u).split('?')[0]; }
+    return u.slice(u.lastIndexOf('/') + 1) || u;
+  }
+  // 探针：向本站要一个很小的文件（不走缓存），看服务器连不连得上、要多久。
+  // cb(毫秒) = 连上了；cb(null) = 8 秒没响应或请求失败；cb(undefined) = 浏览器不支持 fetch，测不了
+  function bootProbe(cb){
+    if(typeof fetch !== 'function'){ cb(undefined); return; }
+    var t0 = Date.now(), fin = false;
+    var to = setTimeout(function(){ if(fin) return; fin = true; cb(null); }, 8000);
+    try{
+      fetch('favicon-32x32.png?probe=' + t0, {cache:'no-store'}).then(function(r){
+        if(fin) return; fin = true; clearTimeout(to); cb(r && r.ok ? Date.now() - t0 : null);
+      }, function(){
+        if(fin) return; fin = true; clearTimeout(to); cb(null);
+      });
+    }catch(e){ if(!fin){ fin = true; clearTimeout(to); cb(null); } }
+  }
+  function bootDiagnose(){
+    if(done || !diagEl) return;
+    var lines = [];
+    var jsErr = null, resErr = [];
+    for(var i = 0; i < bootErrs.length; i++){
+      if(bootErrs[i].kind === 'js' && !jsErr) jsErr = bootErrs[i].msg;
+      if(bootErrs[i].kind === 'res') resErr.push(bootFileName(bootErrs[i].url));
+    }
+    var conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    var netTxt = (conn && conn.effectiveType) ? ('当前网络 ' + String(conn.effectiveType).toUpperCase() +
+      (conn.downlink ? '，约 ' + conn.downlink + ' Mbps' : '')) : '';
+    function render(probeMs){
+      if(done) return;
+      var out = lines.slice();
+      if(probeMs === null) out.push('测试请求没有成功：现在连不上服务器，可能是网络断了、信号太差或被代理/VPN/浏览器拦截，建议切换 Wi-Fi/移动数据或关掉代理后刷新');
+      else if(typeof probeMs === 'number') out.push('服务器能连上（响应 ' + probeMs + ' 毫秒）' + (netTxt ? '，' + netTxt : '') + (probeMs > 3000 ? '，网络非常慢' : ''));
+      diagEl.textContent = '';
+      for(var k = 0; k < out.length; k++){
+        var d = document.createElement('div'); d.textContent = out[k]; diagEl.appendChild(d);
+      }
+      diagEl.classList.add('on');
+    }
+    if(navigator.onLine === false){
+      lines.push('手机现在处于离线状态（没连上网络），连上 Wi-Fi 或移动数据后刷新重试');
+      render(undefined);
+      return;
+    }
+    if(document.readyState === 'loading'){
+      lines.push('页面主体（约 4MB）还没下载完');
+    }else{
+      var pend = [];
+      for(var j = 0; j < document.images.length; j++){
+        var im = document.images[j];
+        if(im.src && !im.complete) pend.push(bootFileName(im.src));
+      }
+      if(pend.length) lines.push('页面已下载完，还在等 ' + pend.length + ' 张图片：' + pend.slice(0, 3).join('、') + (pend.length > 3 ? ' 等' : ''));
+      else lines.push('页面已下载完，正在收尾');
+    }
+    if(resErr.length) lines.push('有 ' + resErr.length + ' 个文件加载失败：' + resErr.slice(0, 3).join('、') + (resErr.length > 3 ? ' 等' : ''));
+    // 脚本报错本身不会让遮罩卡住（load 照样会来），但能说明浏览器内核不兼容，进去了也会有功能坏掉，一并报出来
+    if(jsErr) lines.push('另外页面脚本报错：' + jsErr.slice(0, 80) + '（可能是浏览器内核不兼容，建议换系统自带浏览器 / Chrome / Edge）');
+    bootProbe(render);
+  }
+  var stuckTimer = setTimeout(function(){
+    if(done) return;
+    if(textEl && textEl.firstChild && textEl.firstChild.nodeType === 3){
+      textEl.firstChild.nodeValue = '土王呆住了';
+    }
+    bootDiagnose();
+    diagTimer = setInterval(bootDiagnose, 8000);
+  }, 20000);
   // "从中间开圆洞并向四周扩散打开"：用 mask-image 的径向渐变控制遮罩自身的可见度——
   // 半径以内透明(=遮罩在那不可见，露出下面已经渲染好的页面)，半径以外不透明(=遮罩还挡着)，
   // 半径从0一路涨到能盖住最远角(百分比不带显式size关键字时，radial-gradient默认以
@@ -225,6 +315,8 @@
   function finish(){
     if(done) return; done = true;
     clearInterval(dotTimer); clearTimeout(slowTimer); clearTimeout(escTimer);
+    clearTimeout(stuckTimer); if(diagTimer) clearInterval(diagTimer);
+    if(diagEl) diagEl.classList.remove('on');
     var mask = document.getElementById('bootLoadingMask');
     if(!mask) return;
     if(textEl){
