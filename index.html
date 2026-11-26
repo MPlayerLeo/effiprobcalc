@@ -13148,7 +13148,15 @@ document.addEventListener('click', (e)=>{
 /* ============ 模块收起/展开 ============ */
 /* ============ 截图OCR识别 ============ */
 let tesseractLoadPromise = null;
+// 引擎文件优先从本站 ocr/5.0.4/ 加载（2026-11-27 起自托管）。起因：夸克浏览器点截图识别后乌波一直停在最左边——
+// 以前主脚本虽然从 cdnjs 拿，但 worker 脚本、识别核心(wasm)、繁中字库三样都是 Tesseract 在后台线程里
+// 默认去 jsdelivr 拉的，而且 worker 是用 blob: URL 起的；这两点任何一点在夸克上不通，createWorker 就永远不返回。
+// 现在四样东西全部同源、worker 直接用真实 URL 起（workerBlobURL:false），本站拿不到时才退回下面的 CDN。
+// ⚠️ 这个目录在 _headers 里是一年 immutable 强缓存，升级 Tesseract 版本必须换目录名，不能原地覆盖。
+const TESSERACT_SELF_DIR = 'ocr/5.0.4/';
+let tesseractFromSelf = false;
 const TESSERACT_CDN_URLS = [
+  TESSERACT_SELF_DIR + 'tesseract.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js',
   'https://cdn.jsdelivr.net/npm/tesseract.js@5.0.4/dist/tesseract.min.js',
   'https://unpkg.com/tesseract.js@5.0.4/dist/tesseract.min.js',
@@ -13178,6 +13186,58 @@ function loadScriptOnce(url, timeoutMs){
     document.head.appendChild(s);
   });
 }
+// createWorker 的参数：主脚本是本站这份，就让 worker/核心/字库也全走本站（必须是绝对地址——
+// corePath 是在 worker 里 importScripts 的，相对路径会按 worker 脚本所在目录解析，变成 ocr/5.0.4/ocr/5.0.4/…）。
+// 本站字库不进 IndexedDB 缓存（cacheMethod:'none'）：靠 _headers 的一年强缓存就够，顺便绕开
+// 某些浏览器 IndexedDB 打不开/一直挂起时整条加载跟着挂住的可能。
+function tesseractWorkerOptions(logger){
+  const opt = {logger};
+  if(tesseractFromSelf){
+    const base = new URL(TESSERACT_SELF_DIR, location.href).href;
+    Object.assign(opt, {
+      workerPath: base + 'worker.min.js',
+      corePath: base,
+      langPath: base.replace(/\/$/, ''),
+      workerBlobURL: false,
+      cacheMethod: 'none',
+    });
+  }
+  return opt;
+}
+const TESSERACT_STAGE_CN = {
+  'loading tesseract core': '下载识别核心',
+  'initializing tesseract': '初始化识别核心',
+  'loading language traineddata': '下载繁中字库',
+  'loading language traineddata (from cache)': '读取繁中字库缓存',
+  'initializing api': '初始化识别接口',
+};
+// 起 n 个 worker，带"无进展超时"：任何一个 worker 只要还在吐进度就继续等（慢网下载 4MB 核心可能要很久），
+// 连续 stallMs 毫秒一条进度都没有才判定卡死，报出卡在哪一步——以前这里没有超时，卡住就是乌波永远不动
+function createTesseractPool(n, onStage, stallMs){
+  let last = Date.now(), stage = '启动后台线程', rank = -1;
+  const order = Object.keys(TESSERACT_STAGE_CN);
+  // 几个 worker 各自报进度，阶段会交错（A 在下字库、B 还在初始化核心），提示只往前走、不回跳
+  const logger = m=>{
+    last = Date.now();
+    const k = m ? order.indexOf(m.status) : -1;
+    if(k > rank){ rank = k; stage = TESSERACT_STAGE_CN[m.status]; if(onStage) onStage(stage); }
+  };
+  const made = [];
+  const all = Promise.all(Array.from({length:n}, ()=> Tesseract.createWorker('chi_tra', 1, tesseractWorkerOptions(logger)).then(w=>{ made.push(w); return w; })));
+  let timer = null;
+  const watchdog = new Promise((_, reject)=>{
+    timer = setInterval(()=>{
+      if(Date.now() - last > stallMs){
+        clearInterval(timer);
+        made.forEach(w=>{ try{ w.terminate(); }catch(_){} });
+        reject(new Error('OCR 引擎卡在「'+stage+'」这一步，超过 '+Math.round(stallMs/1000)+' 秒没有进展'+
+          (tesseractFromSelf ? '' : '（引擎来自公共 CDN）')+
+          '。可以刷新页面重试；如果一直这样，换个浏览器（系统自带浏览器 / Chrome / Edge）试试，并把这句提示截图反馈给我们'));
+      }
+    }, 1000);
+  });
+  return Promise.race([all, watchdog]).finally(()=> clearInterval(timer));
+}
 function loadTesseract(){
   if(window.Tesseract) return Promise.resolve();
   if(tesseractLoadPromise) return tesseractLoadPromise;
@@ -13186,7 +13246,7 @@ function loadTesseract(){
     for(const url of TESSERACT_CDN_URLS){
       try{
         await loadScriptOnce(url, 15000);
-        if(window.Tesseract) return; // 成功
+        if(window.Tesseract){ tesseractFromSelf = (url.indexOf(TESSERACT_SELF_DIR) === 0); return; } // 成功
       }catch(err){
         errors.push(err.message);
       }
@@ -15127,7 +15187,9 @@ async function runOcrOnFile(file, silent){
     // 保底2（哪怕hardwareConcurrency读不到也至少并行一点）
     const POOL_SIZE = Math.max(2, Math.min(4, (navigator.hardwareConcurrency||4)));
     __s = Date.now();
-    const workerPool = await Promise.all(Array.from({length: POOL_SIZE}, ()=> Tesseract.createWorker('chi_tra')));
+    const workerPool = await createTesseractPool(POOL_SIZE, cn=>{
+      statusEl.textContent = '正在加载 OCR 引擎（'+cn+'…）';
+    }, 45000);
     __mark('worker池创建', __s);
     const __pxStart = Date.now();
 

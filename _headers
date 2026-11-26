@@ -39,6 +39,10 @@
 /ios-add-guide.jpg
   Cache-Control: public, max-age=31536000, immutable
 
+# 截图识别的 OCR 引擎（Tesseract.js 5.0.4 + 核心 + 繁中字库），目录名带版本号，升级就换新目录
+/ocr/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # manifest 和 service worker 要能更新，短缓存就够
 /manifest.json
   Cache-Control: public, max-age=3600
